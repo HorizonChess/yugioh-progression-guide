@@ -10,13 +10,14 @@ export default function Home() {
 
   useEffect(() => {
     if (hasLoaded) {
-      if (hasStarted) {
-        router.push('/map');
+      const name = localStorage.getItem("duelistName");
+      if (!name) {
+        router.push('/onboarding');
       } else {
-        router.push('/start');
+        router.push('/menu');
       }
     }
-  }, [hasLoaded, hasStarted, router]);
+  }, [hasLoaded, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white">

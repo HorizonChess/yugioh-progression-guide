@@ -50,20 +50,20 @@ export default function CollectionPage() {
                         <h2 className="text-2xl font-bold mb-2">Collection Empty</h2>
                         <p className="text-gray-400">Open some packs to start your collection!</p>
                         <Link
-                            href="/packs"
+                            href="/map"
                             className="inline-block mt-4 px-6 py-2 bg-[var(--primary)] text-black font-bold rounded-lg hover:bg-[var(--primary-hover)] transition-colors"
                         >
-                            Go to Packs
+                            Go to Campaign Map
                         </Link>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                         {cards.map((card) => (
-                            <div key={card.id} className="relative group aspect-[2/3]">
+                            <div key={card.id} className="relative group aspect-[59/86]">
                                 <img
                                     src={card.card_images[0].image_url}
                                     alt={card.name}
-                                    className="w-full h-full object-cover rounded-lg shadow-lg"
+                                    className="w-full h-full object-contain rounded-lg shadow-lg"
                                     loading="lazy"
                                 />
                                 <div className="absolute bottom-0 right-0 bg-black/80 text-white px-2 py-1 rounded-tl-lg font-bold border-t border-l border-white/20">

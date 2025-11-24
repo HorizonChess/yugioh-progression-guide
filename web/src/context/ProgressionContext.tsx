@@ -4,8 +4,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Card } from '@/lib/api';
 
 interface MatchResult {
-    winner: 'player' | 'opponent'; // 'player' is user, 'opponent' is friend/AI
-    packName: string; // The set name where this match happened
+    winner: 'player' | 'opponent';
+    packName: string;
     date: string;
 }
 
@@ -14,76 +14,164 @@ export interface RewardState {
     claimed: boolean;
 }
 
-interface ProgressionState {
+// The core data for a single run
+export interface SaveSlot {
+    id: string;
+    name: string;
+    createdAt: number;
+    lastPlayed: number;
+
+    // Game State
     currentSetIndex: number;
-    collection: Record<number, number>; // cardId -> count
+    collection: Record<number, number>;
     matchHistory: MatchResult[];
     pendingReward: RewardState | null;
-    hasLoaded: boolean;
-    hasStarted: boolean;
+
+    // Settings
+    settings: {
+        startSetIndex: number;
+        packsPerRound: number;
+    };
 }
 
-interface ProgressionContextType extends ProgressionState {
+interface ProgressionContextType {
+    // Global State
+    saves: SaveSlot[];
+    activeSaveId: string | null;
+    hasLoaded: boolean;
+
+    // Active Save Data (Convenience accessors for current UI)
+    currentSetIndex: number;
+    collection: Record<number, number>;
+    matchHistory: MatchResult[];
+    pendingReward: RewardState | null;
+
+    // Actions
+    createSave: (name: string, startSetIndex?: number, packsPerRound?: number) => void;
+    loadSave: (id: string) => void;
+    deleteSave: (id: string) => void;
+
+    // Game Actions (Apply to active save)
     addToCollection: (cards: Card[]) => void;
     recordMatch: (result: MatchResult) => void;
     advanceSet: () => void;
     claimReward: () => void;
-    resetProgress: () => void;
-    startSeries: () => void;
+    resetProgress: () => void; // Resets ACTIVE save
 }
 
 const ProgressionContext = createContext<ProgressionContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'yugioh-progression-save';
+const STORAGE_KEY = 'yugioh-progression-saves-v2';
+const LEGACY_KEY = 'yugioh-progression-save';
 
 export function ProgressionProvider({ children }: { children: ReactNode }) {
-    const [state, setState] = useState<ProgressionState>({
-        currentSetIndex: 0,
-        collection: {},
-        matchHistory: [],
-        pendingReward: null,
-        hasLoaded: false,
-        hasStarted: false,
-    });
+    const [saves, setSaves] = useState<SaveSlot[]>([]);
+    const [activeSaveId, setActiveSaveId] = useState<string | null>(null);
+    const [hasLoaded, setHasLoaded] = useState(false);
 
     // Load from localStorage on mount
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
+        const loadData = () => {
             try {
-                const parsed = JSON.parse(saved);
-                setState({ ...parsed, hasLoaded: true });
+                // 1. Try loading new v2 format
+                const savedV2 = localStorage.getItem(STORAGE_KEY);
+                if (savedV2) {
+                    const parsed = JSON.parse(savedV2);
+                    setSaves(parsed.saves || []);
+                    setActiveSaveId(parsed.activeSaveId || null);
+                } else {
+                    // 2. Check for legacy data to migrate
+                    const legacy = localStorage.getItem(LEGACY_KEY);
+                    if (legacy) {
+                        const parsedLegacy = JSON.parse(legacy);
+                        const legacySave: SaveSlot = {
+                            id: 'legacy-1',
+                            name: 'Legacy Run',
+                            createdAt: Date.now(),
+                            lastPlayed: Date.now(),
+                            currentSetIndex: parsedLegacy.currentSetIndex || 0,
+                            collection: parsedLegacy.collection || {},
+                            matchHistory: parsedLegacy.matchHistory || [],
+                            pendingReward: parsedLegacy.pendingReward || null,
+                            settings: { startSetIndex: 0, packsPerRound: 24 }
+                        };
+                        setSaves([legacySave]);
+                        setActiveSaveId(legacySave.id);
+                    }
+                }
             } catch (e) {
-                console.error("Failed to load save", e);
-                setState(s => ({ ...s, hasLoaded: true }));
+                console.error("Failed to load saves", e);
+            } finally {
+                setHasLoaded(true);
             }
-        } else {
-            setState(s => ({ ...s, hasLoaded: true }));
-        }
+        };
+        loadData();
     }, []);
 
     // Save to localStorage on change
     useEffect(() => {
-        if (state.hasLoaded) {
-            const { hasLoaded, ...saveData } = state;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+        if (hasLoaded) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ saves, activeSaveId }));
         }
-    }, [state]);
+    }, [saves, activeSaveId, hasLoaded]);
+
+    // Helper to update active save
+    const updateActiveSave = (updater: (save: SaveSlot) => SaveSlot) => {
+        if (!activeSaveId) return;
+        setSaves(prev => prev.map(save =>
+            save.id === activeSaveId
+                ? { ...updater(save), lastPlayed: Date.now() }
+                : save
+        ));
+    };
+
+    // --- Save Management ---
+
+    const createSave = (name: string, startSetIndex = 0, packsPerRound = 24) => {
+        const newSave: SaveSlot = {
+            id: crypto.randomUUID(),
+            name,
+            createdAt: Date.now(),
+            lastPlayed: Date.now(),
+            currentSetIndex: startSetIndex,
+            collection: {},
+            matchHistory: [],
+            pendingReward: null,
+            settings: { startSetIndex, packsPerRound }
+        };
+        setSaves(prev => [...prev, newSave]);
+        setActiveSaveId(newSave.id);
+    };
+
+    const loadSave = (id: string) => {
+        if (saves.find(s => s.id === id)) {
+            setActiveSaveId(id);
+        }
+    };
+
+    const deleteSave = (id: string) => {
+        if (confirm("Are you sure you want to delete this save file?")) {
+            setSaves(prev => prev.filter(s => s.id !== id));
+            if (activeSaveId === id) setActiveSaveId(null);
+        }
+    };
+
+    // --- Game Actions ---
 
     const addToCollection = (cards: Card[]) => {
-        setState(prev => {
-            const newCollection = { ...prev.collection };
+        updateActiveSave(save => {
+            const newCollection = { ...save.collection };
             cards.forEach(card => {
                 newCollection[card.id] = (newCollection[card.id] || 0) + 1;
             });
-            return { ...prev, collection: newCollection };
+            return { ...save, collection: newCollection };
         });
     };
 
     const recordMatch = (result: MatchResult) => {
-        setState(prev => ({
-            ...prev,
-            matchHistory: [...prev.matchHistory, result],
+        updateActiveSave(save => ({
+            ...save,
+            matchHistory: [...save.matchHistory, result],
             pendingReward: {
                 type: result.winner === 'player' ? 'wheel' : 'pity',
                 claimed: false
@@ -92,54 +180,57 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     };
 
     const advanceSet = () => {
-        setState(prev => ({
-            ...prev,
-            currentSetIndex: prev.currentSetIndex + 1
+        updateActiveSave(save => ({
+            ...save,
+            currentSetIndex: save.currentSetIndex + 1
         }));
     };
 
     const claimReward = () => {
-        setState(prev => ({
-            ...prev,
+        updateActiveSave(save => ({
+            ...save,
             pendingReward: null
         }));
     };
 
     const resetProgress = () => {
-        if (confirm("Are you sure you want to reset all progress? This cannot be undone.")) {
-            const newState = {
-                currentSetIndex: 0,
+        if (!activeSaveId) return;
+        if (confirm("Reset current run?")) {
+            updateActiveSave(save => ({
+                ...save,
+                currentSetIndex: save.settings.startSetIndex,
                 collection: {},
                 matchHistory: [],
-                pendingReward: null,
-                hasLoaded: true,
-                hasStarted: false
-            };
-            setState(newState);
-            localStorage.removeItem(STORAGE_KEY);
+                pendingReward: null
+            }));
         }
     };
 
-    const startSeries = () => {
-        setState({
-            currentSetIndex: 0,
-            collection: {},
-            matchHistory: [],
-            pendingReward: null,
-            hasLoaded: true,
-            hasStarted: true
-        });
-    };
+    // Derived State for Consumers
+    const activeSave = saves.find(s => s.id === activeSaveId);
 
     return (
         <ProgressionContext.Provider value={{
-            ...state,
+            saves,
+            activeSaveId,
+            hasLoaded,
+
+            // Expose active save data directly for backward compatibility
+            currentSetIndex: activeSave?.currentSetIndex ?? 0,
+            collection: activeSave?.collection ?? {},
+            matchHistory: activeSave?.matchHistory ?? [],
+            pendingReward: activeSave?.pendingReward ?? null,
+
+            createSave,
+            loadSave,
+            deleteSave,
+
             addToCollection,
             recordMatch,
             advanceSet,
             claimReward,
             resetProgress,
-            startSeries
+            startSeries: () => { } // Deprecated/No-op
         }}>
             {children}
         </ProgressionContext.Provider>
