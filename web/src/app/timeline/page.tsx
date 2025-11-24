@@ -12,6 +12,7 @@ export default function TimelinePage() {
     const [sets, setSets] = useState<CardSet[]>([]);
     const [loading, setLoading] = useState(true);
     const [isRecording, setIsRecording] = useState(false);
+    const [showAnimation, setShowAnimation] = useState<'victory' | 'defeat' | null>(null);
 
     useEffect(() => {
         async function loadSets() {
@@ -26,22 +27,43 @@ export default function TimelinePage() {
         const currentSet = sets[currentSetIndex];
         if (!currentSet) return;
 
-        if (confirm(`Confirm that ${winner === 'player' ? 'YOU' : 'OPPONENT'} won the match for ${currentSet.set_name}? This will advance to the next set.`)) {
+        // Show animation first
+        setShowAnimation(winner === 'player' ? 'victory' : 'defeat');
+
+        // Delay actual recording and navigation to let animation play
+        setTimeout(() => {
             recordMatch({
                 winner,
                 packName: currentSet.set_name,
                 date: new Date().toISOString()
             });
             advanceSet();
-            setIsRecording(false);
-            router.push('/'); // Go back to dashboard to see new set
-        }
+            router.push('/map'); // Go to map to see progress
+        }, 2000);
     };
 
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-xl animate-pulse">Loading Timeline...</div>
+            </div>
+        );
+    }
+
+    if (showAnimation) {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+                <div className="text-center animate-in zoom-in duration-500">
+                    <h1 className={`text-6xl md:text-8xl font-black uppercase tracking-tighter mb-4 ${showAnimation === 'victory'
+                            ? 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-[0_0_30px_rgba(234,179,8,0.5)]'
+                            : 'text-transparent bg-clip-text bg-gradient-to-b from-red-500 to-red-900 drop-shadow-[0_0_30px_rgba(220,38,38,0.5)]'
+                        }`}>
+                        {showAnimation === 'victory' ? 'VICTORY' : 'DEFEAT'}
+                    </h1>
+                    <p className="text-2xl text-white font-bold animate-pulse">
+                        Advancing to next set...
+                    </p>
+                </div>
             </div>
         );
     }
@@ -53,8 +75,8 @@ export default function TimelinePage() {
             <div className="max-w-4xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <h1 className="text-3xl font-bold text-white">Progression Timeline</h1>
-                    <Link href="/" className="text-[var(--primary)] hover:underline">
-                        Back to Dashboard
+                    <Link href="/map" className="text-[var(--primary)] hover:underline">
+                        Back to Map
                     </Link>
                 </div>
 
@@ -75,15 +97,17 @@ export default function TimelinePage() {
                                 <div className="flex gap-4">
                                     <button
                                         onClick={() => handleRecordMatch('player')}
-                                        className="flex-1 py-4 bg-green-900/50 border border-green-500/50 rounded-lg hover:bg-green-800/50 transition-colors font-bold text-green-400"
+                                        className="flex-1 py-4 bg-green-900/50 border border-green-500/50 rounded-lg hover:bg-green-800/50 transition-colors font-bold text-green-400 group relative overflow-hidden"
                                     >
-                                        I Won (Victory)
+                                        <span className="relative z-10">I Won (Victory)</span>
+                                        <div className="absolute inset-0 bg-green-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                                     </button>
                                     <button
                                         onClick={() => handleRecordMatch('opponent')}
-                                        className="flex-1 py-4 bg-red-900/50 border border-red-500/50 rounded-lg hover:bg-red-800/50 transition-colors font-bold text-red-400"
+                                        className="flex-1 py-4 bg-red-900/50 border border-red-500/50 rounded-lg hover:bg-red-800/50 transition-colors font-bold text-red-400 group relative overflow-hidden"
                                     >
-                                        Opponent Won (Defeat)
+                                        <span className="relative z-10">Opponent Won (Defeat)</span>
+                                        <div className="absolute inset-0 bg-red-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                                     </button>
                                 </div>
                                 <button

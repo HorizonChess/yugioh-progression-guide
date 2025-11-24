@@ -13,6 +13,10 @@ export default function MapPage() {
     const [loading, setLoading] = useState(true);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+    // Calculate Stats
+    const wins = matchHistory.filter(m => m.winner === 'player').length;
+    const losses = matchHistory.filter(m => m.winner === 'opponent').length;
+
     useEffect(() => {
         async function loadSets() {
             const data = await fetchAllSets();
@@ -63,6 +67,18 @@ export default function MapPage() {
 
             <div className="relative z-10 flex flex-col h-full">
                 <TopBar />
+
+                {/* Stats Counter Overlay */}
+                <div className="absolute bottom-8 right-8 z-30 flex gap-4 animate-in slide-in-from-right duration-700">
+                    <div className="bg-black/80 backdrop-blur-md border border-green-500/30 px-4 py-2 rounded-lg shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                        <span className="text-xs text-gray-400 uppercase tracking-wider block">Wins</span>
+                        <span className="text-2xl font-black text-green-500">{wins}</span>
+                    </div>
+                    <div className="bg-black/80 backdrop-blur-md border border-red-500/30 px-4 py-2 rounded-lg shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                        <span className="text-xs text-gray-400 uppercase tracking-wider block">Losses</span>
+                        <span className="text-2xl font-black text-red-500">{losses}</span>
+                    </div>
+                </div>
 
                 {/* Timeline Container */}
                 <div className="flex-1 relative flex items-center w-full">
@@ -120,7 +136,7 @@ export default function MapPage() {
                                     <div className="absolute top-1/2 -right-2 w-4 h-4 rounded-full bg-gray-400 border-2 border-gray-600 z-0"></div>
 
                                     {/* Pack Art Container */}
-                                    <Link href={isLocked ? '#' : `/packs?set=${idx}`} className={`relative block w-full aspect-[2/3] rounded-xl overflow-hidden shadow-2xl transition-all duration-300 ${isCurrent ? 'ring-4 ring-[var(--primary)] shadow-[0_0_30px_rgba(212,175,55,0.3)]' : 'hover:ring-2 hover:ring-gray-500'}`}>
+                                    <Link href={`/packs?set=${idx}`} className={`relative block w-full aspect-[2/3] rounded-xl overflow-hidden shadow-2xl transition-all duration-300 ${isCurrent ? 'ring-4 ring-[var(--primary)] shadow-[0_0_30px_rgba(212,175,55,0.3)]' : 'hover:ring-2 hover:ring-gray-500'}`}>
                                         {set.set_image ? (
                                             <div className="w-full h-full flex items-center justify-center overflow-hidden bg-black/30">
                                                 <img
@@ -139,7 +155,7 @@ export default function MapPage() {
                                         {match && (
                                             <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
                                                 <span className={`text-xl font-black uppercase -rotate-12 border-2 px-2 py-1 rounded ${match.winner === 'player' ? 'text-green-500 border-green-500' : 'text-red-500 border-red-500'}`}>
-                                                    {match.winner === 'player' ? 'CLEARED' : 'FAILED'}
+                                                    {match.winner === 'player' ? 'WON' : 'LOST'}
                                                 </span>
                                             </div>
                                         )}
