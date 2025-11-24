@@ -25,8 +25,9 @@ export default function GuideSprite() {
     const [visible, setVisible] = useState(false);
 
     useEffect(() => {
-        // Randomly pick character and quote on mount
-        const char = Math.random() > 0.5 ? 'yugi' : 'kaiba';
+        // Default to Yugi for now to match reference, or random
+        // const char = Math.random() > 0.5 ? 'yugi' : 'kaiba';
+        const char = 'yugi';
         const quotes = QUOTES[char];
         const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
@@ -41,17 +42,17 @@ export default function GuideSprite() {
     if (!visible) return null;
 
     return (
-        <div className="fixed bottom-4 right-4 flex items-end animate-in slide-in-from-bottom-10 duration-500 z-50 pointer-events-none">
-            <div className="bg-white text-black p-4 rounded-2xl rounded-br-none shadow-xl mb-8 mr-2 max-w-xs relative animate-in fade-in zoom-in duration-300 delay-300">
-                <p className="font-bold text-sm">{quote}</p>
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center animate-in slide-in-from-bottom-10 duration-500 z-50 pointer-events-none">
+            <div className="bg-white text-black p-6 rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] mb-4 max-w-xs relative animate-in fade-in zoom-in duration-300 delay-300 border-4 border-black z-10 text-center">
+                <p className="font-black text-lg font-comic leading-tight">{quote}</p>
                 {/* Speech bubble tail */}
-                <div className="absolute bottom-0 right-0 translate-y-1/2 translate-x-[-10px] w-4 h-4 bg-white rotate-45"></div>
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[100%] w-0 h-0 border-l-[20px] border-l-transparent border-t-[20px] border-t-black border-r-[20px] border-r-transparent"></div>
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[80%] w-0 h-0 border-l-[14px] border-l-transparent border-t-[14px] border-t-white border-r-[14px] border-r-transparent"></div>
             </div>
             <img
                 src={`/${character}_v2.png`}
                 alt={character}
-                className="w-48 h-48 object-cover mask-image-gradient mix-blend-screen drop-shadow-2xl"
-                style={{ maskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)' }}
+                className="w-96 h-96 object-contain drop-shadow-2xl mix-blend-screen"
             />
         </div>
     );

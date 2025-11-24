@@ -18,6 +18,14 @@ export interface Card {
     desc: string;
     race: string;
     archetype?: string;
+    atk?: number;
+    def?: number;
+    level?: number;
+    attribute?: string;
+    scale?: number;
+    linkval?: number;
+    linkmarkers?: string[];
+    archetype?: string;
     card_sets?: {
         set_name: string;
         set_code: string;
