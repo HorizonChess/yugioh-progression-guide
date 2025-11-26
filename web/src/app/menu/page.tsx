@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import SaveSlotList from "@/components/SaveSlotList";
+import TopBar from "@/components/TopBar";
 
 export default function MenuPage() {
     const [duelistName, setDuelistName] = useState("");
@@ -25,23 +26,7 @@ export default function MenuPage() {
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#1a1a1a_1px,transparent_1px),linear-gradient(to_bottom,#1a1a1a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20"></div>
 
             {/* Top Bar */}
-            <div className="relative z-10 bg-gradient-to-b from-gray-900 to-black border-b-2 border-gray-700 p-4 flex justify-between items-center shadow-lg">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gray-800 rounded-full border-2 border-[var(--primary)] flex items-center justify-center overflow-hidden">
-                        {/* Avatar Placeholder */}
-                        <div className="w-full h-full bg-[var(--primary)]/20"></div>
-                    </div>
-                    <div>
-                        <h2 className="text-[var(--primary)] font-bold text-xl tracking-wider uppercase">{duelistName}</h2>
-                        <p className="text-xs text-gray-500">DUELIST ID: 8492-001</p>
-                    </div>
-                </div>
-                <div className="text-right">
-                    <h1 className="text-2xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                        PROGRESSION SERIES
-                    </h1>
-                </div>
-            </div>
+            <TopBar />
 
             {/* Main Content Area */}
             <div className="flex-1 relative z-10 flex items-center justify-center p-8">
@@ -90,7 +75,7 @@ export default function MenuPage() {
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--primary)_0%,transparent_70%)] opacity-5 animate-pulse"></div>
                         {/* Placeholder for dynamic character art */}
                         <img
-                            src="/yugi_v2.png"
+                            src="/sprites/yugi_v2.png"
                             alt="Yugi"
                             className="absolute bottom-0 right-0 h-full object-contain drop-shadow-[0_0_50px_rgba(0,0,0,0.8)] mask-image-gradient"
                             style={{ maskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)' }}

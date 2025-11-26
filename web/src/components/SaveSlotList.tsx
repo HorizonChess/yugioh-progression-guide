@@ -5,7 +5,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { fetchAllSets, CardSet } from "@/lib/api";
 
-export default function SaveSlotList() {
+interface SaveSlotListProps {
+    onSaveSelect?: (saveId: string) => void;
+}
+
+export default function SaveSlotList({ onSaveSelect }: SaveSlotListProps) {
     const { saves, createSave, loadSave, deleteSave } = useProgression();
     const router = useRouter();
     const [isCreating, setIsCreating] = useState(false);
@@ -28,7 +32,11 @@ export default function SaveSlotList() {
 
     const handleLoad = (id: string) => {
         loadSave(id);
-        router.push('/map');
+        if (onSaveSelect) {
+            onSaveSelect(id);
+        } else {
+            router.push('/map');
+        }
     };
 
     const handleDelete = (e: React.MouseEvent, id: string) => {

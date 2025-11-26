@@ -4,22 +4,28 @@ import { useState, useEffect } from "react";
 
 const SPRITES = [
     {
-        url: "/yugi_v2.png",
-        alt: "Yugi Muto",
+        url: "/sprites/yugi_neutral_v2_transparent.png?v=4",
+        alt: "Yugi Muto (Neutral)",
         quote: "Believe in the heart of the cards!",
         style: {}
     },
     {
-        url: "/yugi_v2.png", // Using same image for now but maybe flipped or different filter
-        alt: "Yami Yugi",
-        quote: "It's time to duel!",
-        style: { filter: "hue-rotate(15deg) contrast(1.2)" } // Subtle change to simulate transformation
+        url: "/sprites/yugi_happy_v2_transparent.png?v=4",
+        alt: "Yugi Muto (Happy)",
+        quote: "We did it! The puzzle is complete!",
+        style: {}
     },
     {
-        url: "/yugi_v2.png",
-        alt: "Yami Yugi Action",
+        url: "/sprites/yugi_sad_v2_transparent.png?v=4",
+        alt: "Yugi Muto (Sad)",
+        quote: "I... I can't lose now...",
+        style: {}
+    },
+    {
+        url: "/sprites/yugi_happy_v2_transparent.png?v=4", // Placeholder until Action sprite is regenerated
+        alt: "Yugi Muto (Action)",
         quote: "My grandpa's deck has no pathetic cards!",
-        style: { transform: "scale(1.1)" }
+        style: {}
     }
 ];
 
@@ -66,7 +72,7 @@ export default function GuideSprite() {
                 <img
                     src={currentSprite.url}
                     alt={currentSprite.alt}
-                    className="h-[350px] w-auto object-contain drop-shadow-2xl"
+                    className="h-[500px] w-auto object-contain drop-shadow-2xl"
                     style={{
                         filter: "drop-shadow(0 0 10px rgba(255,255,255,0.2))",
                         ...currentSprite.style
