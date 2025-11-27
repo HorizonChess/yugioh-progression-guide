@@ -183,10 +183,9 @@ export default function MapPage() {
             </div>
 
             {/* Bottom HUD - Floating Stats & Bonus Button */}
-            <div className="fixed bottom-8 left-0 right-0 z-30 flex justify-center items-end pointer-events-none">
-                <div className="flex items-center gap-6 pointer-events-auto animate-in slide-in-from-bottom-10 duration-700">
-
-                    {/* Stats Box */}
+            <div className="fixed bottom-8 left-0 right-0 z-30 pointer-events-none">
+                {/* Centered Stats Box */}
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex justify-center pointer-events-auto animate-in slide-in-from-bottom-10 duration-700">
                     <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl px-8 py-4 flex gap-12 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
                         <div className="flex flex-col items-center">
                             <span className="text-[10px] text-green-400 uppercase tracking-[0.2em] font-bold mb-1">Wins</span>
@@ -198,8 +197,10 @@ export default function MapPage() {
                             <span className="text-4xl font-black text-white drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]">{losses}</span>
                         </div>
                     </div>
+                </div>
 
-                    {/* Bonus Matches Button */}
+                {/* Bonus Matches Button - Right Aligned */}
+                <div className="absolute bottom-0 right-8 pointer-events-auto animate-in slide-in-from-right-10 duration-700">
                     <button className="h-14 px-6 bg-purple-900/40 border border-purple-500/50 text-purple-300 font-bold rounded-xl hover:bg-purple-600/40 transition-all uppercase tracking-wider text-xs backdrop-blur-md shadow-[0_0_20px_rgba(147,51,234,0.2)] hover:shadow-[0_0_30px_rgba(147,51,234,0.4)] hover:-translate-y-1">
                         Bonus Matches
                     </button>
