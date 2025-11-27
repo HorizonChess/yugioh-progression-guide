@@ -1,4 +1,6 @@
-// YGOPRODECK API Wrapper
+import boosterImagesData from '@/data/booster_images.json';
+
+const boosterImages = boosterImagesData as Record<string, string>;
 
 const BASE_URL = 'https://db.ygoprodeck.com/api/v7';
 
@@ -8,6 +10,7 @@ export interface CardSet {
     num_of_cards: number;
     tcg_date: string;
     set_image?: string;
+    original_image?: string;
 }
 
 export interface Card {
@@ -25,7 +28,6 @@ export interface Card {
     scale?: number;
     linkval?: number;
     linkmarkers?: string[];
-    archetype?: string;
     card_sets?: {
         set_name: string;
         set_code: string;
@@ -47,6 +49,28 @@ export interface Card {
 // We can filter by date.
 const CUTOFF_DATE = '2017-08-01';
 
+const EXCLUDE_KEYWORDS = [
+    "Structure Deck",
+    "Starter Deck",
+    "Tournament Pack",
+    "Duelist Pack",
+    "Battle Pack",
+    "Star Pack",
+    "Turbo Pack",
+    "Astral Pack",
+    "Champion Pack",
+    "OTS Tournament Pack",
+    "Premium Pack",
+    "Movie Pack",
+    "Super Starter",
+    "Speed Duel",
+    "Duel Terminal",
+    "Legendary Decks",
+    "Box Set",
+    "Special Edition",
+    "Magic Ruler", // Identical to Spell Ruler
+];
+
 export async function fetchAllSets(): Promise<CardSet[]> {
     try {
         const response = await fetch(`${BASE_URL}/cardsets.php`);
@@ -59,9 +83,27 @@ export async function fetchAllSets(): Promise<CardSet[]> {
         return data
             .filter(set => {
                 if (!set.tcg_date) return false;
-                return set.tcg_date < CUTOFF_DATE && set.num_of_cards > 20;
+                if (set.tcg_date >= CUTOFF_DATE) return false;
+                if (set.num_of_cards <= 20) return false;
+
+                const name = set.set_name;
+                for (const keyword of EXCLUDE_KEYWORDS) {
+                    if (name.includes(keyword)) return false;
+                }
+                return true;
             })
-            .sort((a, b) => new Date(a.tcg_date).getTime() - new Date(b.tcg_date).getTime());
+            .sort((a, b) => new Date(a.tcg_date).getTime() - new Date(b.tcg_date).getTime())
+            .map(set => {
+                const fandomImage = boosterImages[set.set_code];
+                if (fandomImage) {
+                    return {
+                        ...set,
+                        original_image: set.set_image,
+                        set_image: fandomImage
+                    };
+                }
+                return set;
+            });
     } catch (error) {
         console.error('Error fetching sets:', error);
         return [];

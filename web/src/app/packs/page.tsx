@@ -361,6 +361,11 @@ export default function PacksPage() {
                                 src={currentSet.set_image}
                                 alt={currentSet.set_name}
                                 className="w-full max-w-[280px] mx-auto rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/10"
+                                onError={(e) => {
+                                    if (currentSet.original_image && e.currentTarget.src !== currentSet.original_image) {
+                                        e.currentTarget.src = currentSet.original_image;
+                                    }
+                                }}
                             />
                         ) : (
                             <div className="w-full max-w-[280px] mx-auto aspect-[2/3] bg-gray-800 rounded-xl flex items-center justify-center border border-white/10">
