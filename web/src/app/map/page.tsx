@@ -7,6 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import GuideSprite from "@/components/GuideSprite";
 import TopBar from "@/components/TopBar";
 import ChainConnector from "@/components/ChainConnector";
+import GoldButton from "@/components/GoldButton";
 
 export default function MapPage() {
     const { currentSetIndex, matchHistory, hasLoaded } = useProgression();
@@ -73,9 +74,9 @@ export default function MapPage() {
 
             {/* Prepare Your Deck Button - Top Center (Floating) */}
             <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-10 duration-700">
-                <button className="w-96 h-24 bg-[url('/ui/button_gold.png')] bg-[length:100%_100%] bg-center bg-no-repeat text-[#2d2414] text-xl uppercase tracking-wide hover:scale-105 transition-transform drop-shadow-2xl flex items-center justify-center pt-1 px-20 whitespace-nowrap" style={{ fontFamily: 'var(--font-techno)', textShadow: '0px 1px 1px rgba(255,255,255,0.6)' }}>
+                <GoldButton width="w-96" height="h-24" padding="px-20" textSize="text-xl">
                     Prepare Your Deck
-                </button>
+                </GoldButton>
             </div>
 
             {/* Main Content Area - Vertically Centered */}
@@ -166,43 +167,35 @@ export default function MapPage() {
 
             {/* Action Buttons - Fixed above Stats */}
             <div className="fixed bottom-48 left-0 right-0 z-30 flex justify-center gap-12 pointer-events-auto">
-                <Link
-                    href={`/packs?set=${currentSetIndex}`}
-                    className="w-80 h-24 bg-[url('/ui/button_gold.png')] bg-[length:100%_100%] bg-center bg-no-repeat flex items-center justify-center text-[#2d2414] text-xl tracking-wide hover:scale-105 transition-transform drop-shadow-[0_0_20px_rgba(255,215,0,0.4)] pt-1 px-14 whitespace-nowrap"
-                    style={{ fontFamily: 'var(--font-techno)', textShadow: '0px 1px 1px rgba(255,255,255,0.6)' }}
-                >
+                <GoldButton href={`/packs?set=${currentSetIndex}`} width="w-80" height="h-24" padding="px-14" textSize="text-xl">
                     OPEN PACKS
-                </Link>
-                <Link
-                    href="/timeline"
-                    className="w-80 h-24 bg-[url('/ui/button_gold.png')] bg-[length:100%_100%] bg-center bg-no-repeat flex items-center justify-center text-[#2d2414] text-xl tracking-wide hover:scale-105 transition-transform drop-shadow-[0_0_20px_rgba(255,215,0,0.4)] pt-1 px-14 whitespace-nowrap"
-                    style={{ fontFamily: 'var(--font-techno)', textShadow: '0px 1px 1px rgba(255,255,255,0.6)' }}
-                >
+                </GoldButton>
+                <GoldButton href="/timeline" width="w-80" height="h-24" padding="px-14" textSize="text-xl">
                     RECORD MATCH
-                </Link>
+                </GoldButton>
             </div>
 
             {/* Bottom HUD - Floating Stats & Bonus Button */}
             <div className="fixed bottom-8 left-0 right-0 z-30 pointer-events-none">
                 {/* Centered Stats Box */}
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex justify-center pointer-events-auto animate-in slide-in-from-bottom-10 duration-700">
-                    <div className="w-[500px] h-[140px] bg-[url('/ui/stats_panel.png')] bg-[length:100%_100%] bg-center bg-no-repeat flex items-center justify-center gap-32 pt-8">
-                        <div className="flex flex-col items-center w-24">
-                            <span className="text-xs text-[#aaffaa] uppercase tracking-[0.2em] font-bold mb-0 drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Wins</span>
-                            <span className="text-4xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{wins}</span>
+                    <div className="relative w-[400px] h-[160px] bg-[url('/ui/stats_panel_cropped.png')] bg-[length:100%_100%] bg-center bg-no-repeat">
+                        <div className="absolute top-1/2 -translate-y-1/2 left-[75px] w-24 flex flex-col items-center gap-3">
+                            <span className="text-sm text-[#aaffaa] uppercase tracking-[0.2em] font-bold drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Wins</span>
+                            <span className="text-3xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{wins}</span>
                         </div>
-                        <div className="flex flex-col items-center w-24">
-                            <span className="text-xs text-[#ffaaaa] uppercase tracking-[0.2em] font-bold mb-0 drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Losses</span>
-                            <span className="text-4xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{losses}</span>
+                        <div className="absolute top-1/2 -translate-y-1/2 right-[75px] w-24 flex flex-col items-center gap-3">
+                            <span className="text-sm text-[#ffaaaa] uppercase tracking-[0.2em] font-bold drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Losses</span>
+                            <span className="text-3xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{losses}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Bonus Matches Button - Right Aligned */}
                 <div className="absolute bottom-6 right-12 pointer-events-auto animate-in slide-in-from-right-10 duration-700">
-                    <button className="w-72 h-20 bg-[url('/ui/button_gold.png')] bg-[length:100%_100%] bg-center bg-no-repeat text-[#2d2414] text-lg uppercase tracking-wide hover:scale-105 transition-transform flex items-center justify-center pt-1 px-12 whitespace-nowrap" style={{ fontFamily: 'var(--font-techno)', textShadow: '0px 1px 1px rgba(255,255,255,0.6)' }}>
+                    <GoldButton width="w-72" height="h-20" padding="px-12" textSize="text-lg">
                         Bonus Matches
-                    </button>
+                    </GoldButton>
                 </div>
             </div>
 
