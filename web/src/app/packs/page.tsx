@@ -145,7 +145,7 @@ export default function PacksPage() {
     // Pack Details View (Read-Only)
     if (viewDetails) {
         return (
-            <div className="min-h-screen p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-[#050505] to-black">
+            <div className="min-h-screen p-8">
                 <GuideSprite />
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center justify-between mb-8 sticky top-0 z-50 bg-black/80 backdrop-blur-md p-4 rounded-2xl border border-white/10">
@@ -194,7 +194,7 @@ export default function PacksPage() {
     // Summary View
     if (showSummary) {
         return (
-            <div className="min-h-screen p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-[#050505] to-black">
+            <div className="min-h-screen p-8">
                 <GuideSprite />
                 <div className="max-w-7xl mx-auto">
                     <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 sticky top-0 z-50 bg-black/80 backdrop-blur-md p-4 rounded-2xl border border-white/10">
@@ -263,7 +263,7 @@ export default function PacksPage() {
         const currentPack = packsToOpen[currentPackIndex];
 
         return (
-            <div className="min-h-screen p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-[#050505] to-black flex flex-col items-center">
+            <div className="min-h-screen p-8 flex flex-col items-center">
                 <GuideSprite />
                 {/* Header / Controls */}
                 <div className="w-full max-w-6xl flex justify-between items-center mb-12">
@@ -345,7 +345,7 @@ export default function PacksPage() {
 
     // Store View (Initial State)
     return (
-        <div className="min-h-screen p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-[#050505] to-black flex items-center justify-center">
+        <div className="min-h-screen p-8 flex items-center justify-center">
             <GuideSprite />
             <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
 

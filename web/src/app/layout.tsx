@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Outfit, Russo_One } from "next/font/google";
 import "./globals.css";
 import { ProgressionProvider } from "@/context/ProgressionContext";
+import GlobalBackground from "@/components/GlobalBackground";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
@@ -24,6 +25,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ProgressionProvider>
+          <GlobalBackground />
           {children}
         </ProgressionProvider>
       </body>

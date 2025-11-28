@@ -118,7 +118,7 @@ export default function CollectionPage() {
     // If no save is active, show save selection
     if (!activeSaveId) {
         return (
-            <div className="min-h-screen bg-black text-white flex flex-col">
+            <div className="min-h-screen text-white flex flex-col">
                 <TopBar />
                 <div className="flex-1 flex flex-col items-center justify-center p-8">
                     <div className="max-w-md w-full">
@@ -137,14 +137,14 @@ export default function CollectionPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+            <div className="min-h-screen flex items-center justify-center">
                 <div className="text-xl animate-pulse text-[var(--primary)]">Loading Collection...</div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
+        <div className="min-h-screen flex flex-col">
             <TopBar />
             <div className="flex-1 p-8">
                 <div className="max-w-7xl mx-auto">

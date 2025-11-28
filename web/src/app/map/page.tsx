@@ -57,15 +57,7 @@ export default function MapPage() {
     }
 
     return (
-        <main className="min-h-screen bg-black text-white relative overflow-hidden font-sans selection:bg-[var(--primary)] selection:text-black">
-            {/* Background Texture - Full Screen */}
-            <div className="fixed inset-0 z-0 opacity-50" style={{
-                backgroundImage: "url('/bg-stone.png')",
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundAttachment: 'fixed'
-            }}></div>
-            <div className="fixed inset-0 bg-black/60 z-0"></div> {/* Overlay for readability */}
+        <main className="min-h-screen text-white relative overflow-hidden font-sans selection:bg-[var(--primary)] selection:text-black">
 
             {/* Top Bar */}
             <div className="relative z-40">
