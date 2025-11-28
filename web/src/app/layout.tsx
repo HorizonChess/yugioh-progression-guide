@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Inter, Outfit } from "next/font/google";
+import { Inter, Outfit, Russo_One } from "next/font/google";
 import "./globals.css";
 import { ProgressionProvider } from "@/context/ProgressionContext";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
+const russo = Russo_One({ weight: "400", subsets: ["latin"], variable: "--font-russo" });
 
 export const metadata: Metadata = {
   title: "Yu-Gi-Oh! Progression Series",
@@ -19,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${outfit.variable}`}
+        className={`${inter.variable} ${outfit.variable} ${russo.variable}`}
         suppressHydrationWarning
       >
         <ProgressionProvider>
