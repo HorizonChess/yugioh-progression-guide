@@ -74,13 +74,13 @@ export default function MapPage() {
 
             {/* Prepare Your Deck Button - Top Center (Floating) */}
             <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-10 duration-700">
-                <GoldButton width="w-96" height="h-24" padding="px-20" textSize="text-xl">
+                <GoldButton width="w-72" height="h-16" textSize="text-sm">
                     Prepare Your Deck
                 </GoldButton>
             </div>
 
             {/* Main Content Area - Vertically Centered */}
-            <div className="fixed inset-0 z-10 flex flex-col items-center justify-center pointer-events-none">
+            <div className="fixed inset-0 z-10 flex flex-col items-center justify-center pointer-events-none pb-20">
                 <div className="w-full flex flex-col items-center gap-10 pointer-events-auto">
 
                     {/* Timeline Section */}
@@ -119,7 +119,7 @@ export default function MapPage() {
 
                                         <div
                                             id={`set-${idx}`}
-                                            className={`relative flex-shrink-0 w-40 flex flex-col items-center gap-6 transition-all duration-500 z-10 ${isCurrent ? 'scale-125 z-20' : 'scale-90 opacity-60 hover:opacity-100 hover:scale-95 grayscale hover:grayscale-0'}`}
+                                            className={`relative flex-shrink-0 w-36 flex flex-col items-center gap-6 transition-all duration-500 z-10 ${isCurrent ? 'scale-125 z-20' : 'scale-90 opacity-60 hover:opacity-100 hover:scale-95 grayscale hover:grayscale-0'}`}
                                         >
                                             {/* Pack Art Container */}
                                             <Link href={`/packs?set=${idx}`} className={`relative block w-full aspect-[2/3] rounded-xl overflow-hidden shadow-2xl transition-all duration-300 bg-black ${isCurrent ? 'ring-4 ring-[var(--primary)] shadow-[0_0_50px_rgba(212,175,55,0.5)]' : 'hover:ring-2 hover:ring-gray-500'}`}>
@@ -166,34 +166,34 @@ export default function MapPage() {
             </div>
 
             {/* Action Buttons - Fixed above Stats */}
-            <div className="fixed bottom-48 left-0 right-0 z-30 flex justify-center gap-12 pointer-events-auto">
-                <GoldButton href={`/packs?set=${currentSetIndex}`} width="w-80" height="h-24" padding="px-14" textSize="text-xl">
+            <div className="fixed bottom-40 left-0 right-0 z-30 flex justify-center gap-6 pointer-events-auto">
+                <GoldButton href={`/packs?set=${currentSetIndex}`} width="w-64" height="h-16" textSize="text-lg">
                     OPEN PACKS
                 </GoldButton>
-                <GoldButton href="/timeline" width="w-80" height="h-24" padding="px-14" textSize="text-xl">
+                <GoldButton href="/timeline" width="w-64" height="h-16" textSize="text-lg">
                     RECORD MATCH
                 </GoldButton>
             </div>
 
             {/* Bottom HUD - Floating Stats & Bonus Button */}
-            <div className="fixed bottom-8 left-0 right-0 z-30 pointer-events-none">
+            <div className="fixed bottom-4 left-0 right-0 z-30 pointer-events-none">
                 {/* Centered Stats Box */}
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex justify-center pointer-events-auto animate-in slide-in-from-bottom-10 duration-700">
-                    <div className="relative w-[400px] h-[160px] bg-[url('/ui/stats_panel_cropped.png')] bg-[length:100%_100%] bg-center bg-no-repeat">
-                        <div className="absolute top-1/2 -translate-y-1/2 left-[75px] w-24 flex flex-col items-center gap-3">
-                            <span className="text-sm text-[#aaffaa] uppercase tracking-[0.2em] font-bold drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Wins</span>
-                            <span className="text-3xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{wins}</span>
+                    <div className="relative w-[300px] h-[120px] bg-[url('/ui/stats_panel_cropped.png')] bg-[length:100%_100%] bg-center bg-no-repeat">
+                        <div className="absolute top-1/2 -translate-y-1/2 left-[56px] w-20 flex flex-col items-center gap-1">
+                            <span className="text-[10px] text-[#aaffaa] uppercase tracking-[0.2em] font-bold drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Wins</span>
+                            <span className="text-2xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{wins}</span>
                         </div>
-                        <div className="absolute top-1/2 -translate-y-1/2 right-[75px] w-24 flex flex-col items-center gap-3">
-                            <span className="text-sm text-[#ffaaaa] uppercase tracking-[0.2em] font-bold drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Losses</span>
-                            <span className="text-3xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{losses}</span>
+                        <div className="absolute top-1/2 -translate-y-1/2 right-[56px] w-20 flex flex-col items-center gap-1">
+                            <span className="text-[10px] text-[#ffaaaa] uppercase tracking-[0.2em] font-bold drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Losses</span>
+                            <span className="text-2xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{losses}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Bonus Matches Button - Right Aligned */}
                 <div className="absolute bottom-6 right-12 pointer-events-auto animate-in slide-in-from-right-10 duration-700">
-                    <GoldButton width="w-72" height="h-20" padding="px-12" textSize="text-lg">
+                    <GoldButton width="w-56" height="h-14" textSize="text-sm">
                         Bonus Matches
                     </GoldButton>
                 </div>

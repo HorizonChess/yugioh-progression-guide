@@ -74,7 +74,7 @@ export default function GuideSprite() {
                     <img
                         src={currentSprite.url}
                         alt={currentSprite.alt}
-                        className="h-[350px] w-auto object-contain drop-shadow-2xl"
+                        className="h-[300px] w-auto object-contain drop-shadow-2xl"
                         style={{
                             filter: "drop-shadow(0 0 5px rgba(255,255,255,0.2))",
                             ...currentSprite.style
