@@ -5,6 +5,8 @@ import { fetchAllSets, CardSet } from "@/lib/api";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import StonePanel from "@/components/StonePanel";
+import ParchmentButton from "@/components/ParchmentButton";
 
 export default function TimelinePage() {
     const { matchHistory, recordMatch, advanceSet, currentSetIndex } = useProgression();
@@ -55,8 +57,8 @@ export default function TimelinePage() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
                 <div className="text-center animate-in zoom-in duration-500">
                     <h1 className={`text-6xl md:text-8xl font-black uppercase tracking-tighter mb-4 ${showAnimation === 'victory'
-                            ? 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-[0_0_30px_rgba(234,179,8,0.5)]'
-                            : 'text-transparent bg-clip-text bg-gradient-to-b from-red-500 to-red-900 drop-shadow-[0_0_30px_rgba(220,38,38,0.5)]'
+                        ? 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-[0_0_30px_rgba(234,179,8,0.5)]'
+                        : 'text-transparent bg-clip-text bg-gradient-to-b from-red-500 to-red-900 drop-shadow-[0_0_30px_rgba(220,38,38,0.5)]'
                         }`}>
                         {showAnimation === 'victory' ? 'VICTORY' : 'DEFEAT'}
                     </h1>
@@ -82,43 +84,42 @@ export default function TimelinePage() {
 
                 {/* Record Match Section */}
                 {currentSet && (
-                    <div className="glass-panel p-6 mb-12 border-l-4 border-[var(--primary)]">
-                        <h2 className="text-xl font-bold mb-4">Current Match: {currentSet.set_name}</h2>
+                    <StonePanel title={`Current Match: ${currentSet.set_name}`} className="mb-12 border-l-4 border-[var(--primary)]">
                         {!isRecording ? (
-                            <button
+                            <ParchmentButton
                                 onClick={() => setIsRecording(true)}
-                                className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors font-bold"
+                                className="w-full md:w-auto"
                             >
                                 Record Match Result
-                            </button>
+                            </ParchmentButton>
                         ) : (
                             <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                <p className="text-gray-300">Who won the match?</p>
+                                <p className="text-[#e6dcc3] font-bold drop-shadow-md">Who won the match?</p>
                                 <div className="flex gap-4">
                                     <button
                                         onClick={() => handleRecordMatch('player')}
-                                        className="flex-1 py-4 bg-green-900/50 border border-green-500/50 rounded-lg hover:bg-green-800/50 transition-colors font-bold text-green-400 group relative overflow-hidden"
+                                        className="flex-1 py-4 bg-green-900/80 border-2 border-green-500/50 rounded-xl hover:bg-green-800 transition-colors font-bold text-green-100 group relative overflow-hidden shadow-lg active:scale-95"
                                     >
-                                        <span className="relative z-10">I Won (Victory)</span>
-                                        <div className="absolute inset-0 bg-green-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                                        <span className="relative z-10 drop-shadow-md">I Won (Victory)</span>
+                                        <div className="absolute inset-0 bg-green-500/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                                     </button>
                                     <button
                                         onClick={() => handleRecordMatch('opponent')}
-                                        className="flex-1 py-4 bg-red-900/50 border border-red-500/50 rounded-lg hover:bg-red-800/50 transition-colors font-bold text-red-400 group relative overflow-hidden"
+                                        className="flex-1 py-4 bg-red-900/80 border-2 border-red-500/50 rounded-xl hover:bg-red-800 transition-colors font-bold text-red-100 group relative overflow-hidden shadow-lg active:scale-95"
                                     >
-                                        <span className="relative z-10">Opponent Won (Defeat)</span>
-                                        <div className="absolute inset-0 bg-red-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                                        <span className="relative z-10 drop-shadow-md">Opponent Won (Defeat)</span>
+                                        <div className="absolute inset-0 bg-red-500/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                                     </button>
                                 </div>
                                 <button
                                     onClick={() => setIsRecording(false)}
-                                    className="text-sm text-gray-500 hover:text-gray-300"
+                                    className="text-sm text-[#d4af37] hover:text-[#f5c542] hover:underline font-bold"
                                 >
                                     Cancel
                                 </button>
                             </div>
                         )}
-                    </div>
+                    </StonePanel>
                 )}
 
                 {/* Timeline */}

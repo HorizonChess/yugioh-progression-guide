@@ -7,6 +7,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import GuideSprite from "@/components/GuideSprite";
 import CardDetailModal from "@/components/CardDetailModal";
+import QuantitySelector from "@/components/QuantitySelector";
+import StonePanel from "@/components/StonePanel";
+import ParchmentButton from "@/components/ParchmentButton";
+import PackCard from "@/components/PackCard";
 import { useSearchParams } from "next/navigation";
 
 export default function PacksPage() {
@@ -97,6 +101,13 @@ export default function PacksPage() {
         setFlippedCards(allIndices);
     };
 
+    const handleOpenAll = () => {
+        const remainingPacks = packsToOpen.slice(currentPackIndex);
+        const newCards = remainingPacks.flat();
+        setAllOpenedCards(prev => [...prev, ...newCards]);
+        setShowSummary(true);
+    };
+
     const handleNextPack = () => {
         // Add current pack cards to allOpenedCards
         const currentPack = packsToOpen[currentPackIndex];
@@ -145,7 +156,7 @@ export default function PacksPage() {
     // Pack Details View (Read-Only)
     if (viewDetails) {
         return (
-            <div className="min-h-screen p-8">
+            <div className="min-h-screen p-8 pb-32">
                 <GuideSprite />
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center justify-between mb-8 sticky top-0 z-50 bg-black/80 backdrop-blur-md p-4 rounded-2xl border border-white/10">
@@ -162,7 +173,7 @@ export default function PacksPage() {
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 pb-20">
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
                         {setCards.map((card, idx) => (
                             <div
                                 key={`${card.id}-${idx}`}
@@ -194,7 +205,7 @@ export default function PacksPage() {
     // Summary View
     if (showSummary) {
         return (
-            <div className="min-h-screen p-8">
+            <div className="min-h-screen p-8 pb-32">
                 <GuideSprite />
                 <div className="max-w-7xl mx-auto">
                     <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 sticky top-0 z-50 bg-black/80 backdrop-blur-md p-4 rounded-2xl border border-white/10">
@@ -228,25 +239,27 @@ export default function PacksPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 pb-20">
-                        {allOpenedCards.map((card, idx) => (
-                            <div
-                                key={`${card.id}-${idx}`}
-                                className="relative group aspect-[2/3] animate-in fade-in zoom-in duration-300 cursor-pointer"
-                                style={{ animationDelay: `${idx * 30}ms` }}
-                                onClick={() => setSelectedCard(card)}
-                            >
-                                <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
-                                    <img
-                                        src={card.card_images[0].image_url}
-                                        alt={card.name}
-                                        className="w-full h-full object-cover"
-                                        loading="lazy"
-                                    />
+                    <StonePanel title="Opened Cards Summary">
+                        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                            {allOpenedCards.map((card, idx) => (
+                                <div
+                                    key={`${card.id}-${idx}`}
+                                    className="relative group aspect-[2/3] animate-in fade-in zoom-in duration-300 cursor-pointer"
+                                    style={{ animationDelay: `${Math.min(idx * 30, 1000)}ms` }}
+                                    onClick={() => setSelectedCard(card)}
+                                >
+                                    <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
+                                        <img
+                                            src={card.card_images[0].image_url}
+                                            alt={card.name}
+                                            className="w-full h-full object-cover"
+                                            loading="lazy"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    </StonePanel>
                 </div>
                 {selectedCard && (
                     <CardDetailModal
@@ -263,84 +276,89 @@ export default function PacksPage() {
         const currentPack = packsToOpen[currentPackIndex];
 
         return (
-            <div className="min-h-screen p-8 flex flex-col items-center">
+            <div className="h-screen w-full p-4 flex flex-col items-center justify-center overflow-hidden">
                 <GuideSprite />
-                {/* Header / Controls */}
-                <div className="w-full max-w-6xl flex justify-between items-center mb-12">
-                    <div className="text-white">
-                        <h2 className="text-2xl font-bold">{currentSet.set_name}</h2>
-                        <p className="text-gray-400">Pack {currentPackIndex + 1} of {packsToOpen.length}</p>
-                    </div>
-                    <div className="flex gap-4">
-                        <button
-                            onClick={handleDiscardAndExit}
-                            className="px-4 py-2 text-sm bg-red-500/10 text-red-500 font-bold rounded-lg hover:bg-red-500/20 transition-all border border-red-500/20"
-                        >
-                            Discard
-                        </button>
-                        {!isPackFullyOpened && (
-                            <button
-                                onClick={handleFlipAll}
-                                className="px-6 py-3 bg-white/10 text-white font-bold rounded-lg hover:bg-white/20 transition-all"
-                            >
-                                Flip All
-                            </button>
-                        )}
-                        <button
-                            onClick={handleNextPack}
-                            disabled={!isPackFullyOpened}
-                            className={`px-6 py-3 font-bold rounded-lg transition-all ${isPackFullyOpened
-                                ? 'bg-[var(--primary)] text-black hover:bg-[#f5c542] shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:scale-105'
-                                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                                }`}
-                        >
-                            {currentPackIndex < packsToOpen.length - 1 ? 'Next Pack' : 'Finish'}
-                        </button>
-                    </div>
-                </div>
 
-                {/* Pack Grid */}
-                <div className="grid grid-cols-5 gap-6 max-w-6xl w-full perspective-1000">
-                    {currentPack.map((card, idx) => {
-                        const isFlipped = flippedCards.has(idx);
-                        return (
-                            <div
-                                key={`${card.id}-${idx}`}
-                                onClick={() => handleCardClick(idx, card)}
-                                className="relative aspect-[2/3] cursor-pointer group perspective-1000"
-                            >
-                                <div className={`w-full h-full relative transform-style-3d transition-transform duration-500 ${isFlipped ? 'rotate-y-180' : ''}`}>
-                                    {/* Card Back (Front of the div before flip) */}
-                                    <div className="absolute inset-0 backface-hidden rounded-lg overflow-hidden shadow-xl border border-white/10">
-                                        <img
-                                            src="https://images.ygoprodeck.com/images/cards/back_high.jpg"
-                                            alt="Card Back"
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-white/10 transition-colors"></div>
-                                    </div>
+                {/* Main Container - Fits Screen */}
+                <div className="w-full max-w-[95vw] h-full max-h-[95vh] flex flex-col">
 
-                                    {/* Card Front (Back of the div before flip) */}
-                                    <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-lg overflow-hidden shadow-xl border border-white/10">
-                                        <img
-                                            src={card.card_images[0].image_url}
-                                            alt={card.name}
-                                            className="w-full h-full object-cover"
+                    {/* Header Info */}
+                    <div className="mb-2 text-center">
+                        <h2 className="text-3xl font-black text-white drop-shadow-md">{currentSet.set_name}</h2>
+                        <p className="text-[#d4af37] font-bold text-lg">Pack {currentPackIndex + 1} of {packsToOpen.length}</p>
+                    </div>
+
+                    {/* Stone Panel Container - Cards Only */}
+                    {/* Constrained width and centered to match "Ideal" layout */}
+                    {/* Stone Panel Container & Controls */}
+                    {/* Centered (mx-auto), constrained width (max-w-5xl) */}
+                    <div className="flex-1 flex flex-col items-center justify-center w-full max-w-5xl mx-auto min-h-0 mb-4">
+                        <StonePanel className="w-full flex-1 flex flex-col relative px-6 py-2 shadow-2xl">
+                            {/* Cards Container - Flex for better fitting */}
+                            {/* content-evenly distributes space equally between rows and borders */}
+                            <div className="flex flex-wrap items-center justify-center content-evenly w-full h-full gap-2">
+                                {currentPack.map((card, idx) => {
+                                    const isFlipped = flippedCards.has(idx);
+                                    // Find rarity for this set
+                                    const setInfo = card.card_sets?.find(s => s.set_code.split('-')[0] === currentSet.set_code.split('-')[0])
+                                        || card.card_sets?.[0];
+                                    const rarity = setInfo?.set_rarity_code || setInfo?.set_rarity || "C";
+
+                                    return (
+                                        <PackCard
+                                            key={`${card.id}-${idx}`}
+                                            card={card}
+                                            isFlipped={isFlipped}
+                                            onClick={() => handleCardClick(idx, card)}
+                                            rarity={rarity}
                                         />
-                                    </div>
-                                </div>
+                                    );
+                                })}
                             </div>
-                        );
-                    })}
+                        </StonePanel>
+
+                        {/* Controls - Below Stone Panel */}
+                        <div className="flex justify-center items-center gap-4 pt-4">
+                            <button
+                                onClick={handleDiscardAndExit}
+                                className="px-4 py-2 text-sm text-red-400 hover:text-red-300 font-bold transition-colors"
+                            >
+                                Discard
+                            </button>
+
+                            {!isPackFullyOpened && (
+                                <ParchmentButton onClick={handleFlipAll}>
+                                    Flip All
+                                </ParchmentButton>
+                            )}
+
+                            <ParchmentButton onClick={handleOpenAll}>
+                                Open All
+                            </ParchmentButton>
+
+                            <button
+                                onClick={handleNextPack}
+                                disabled={!isPackFullyOpened}
+                                className={`px-8 py-3 font-black rounded-xl transition-all uppercase tracking-wider ${isPackFullyOpened
+                                    ? 'bg-[var(--primary)] text-black hover:bg-[#f5c542] shadow-[0_4px_0_#b8860b] active:shadow-none active:translate-y-[4px] border border-[#b8860b]'
+                                    : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
+                                    }`}
+                            >
+                                {currentPackIndex < packsToOpen.length - 1 ? 'Next Pack' : 'Finish'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {selectedCard && (
+                        <CardDetailModal
+                            card={selectedCard}
+                            onClose={() => setSelectedCard(null)}
+                        />
+                    )}
                 </div>
-                {selectedCard && (
-                    <CardDetailModal
-                        card={selectedCard}
-                        onClose={() => setSelectedCard(null)}
-                    />
-                )}
             </div>
         );
+
     }
 
     // Store View (Initial State)
@@ -402,7 +420,7 @@ export default function PacksPage() {
                     </div>
 
                     {isLocked ? (
-                        <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center">
+                        <div className="p-6 stone-panel text-center">
                             <p className="text-gray-400 mb-6">You must complete previous sets to unlock pack opening for this set.</p>
                             <button
                                 onClick={() => setViewDetails(true)}
@@ -413,52 +431,14 @@ export default function PacksPage() {
                             </button>
                         </div>
                     ) : (
-                        <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
-                            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Select Quantity</h3>
+                        <div className="p-6 stone-panel">
+                            <h3 className="text-sm font-bold uppercase tracking-widest text-[#d4af37] mb-4 drop-shadow-md">Select Quantity</h3>
 
-                            {/* Custom Input */}
-                            <div className="flex gap-4 mb-4">
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={customQuantity}
-                                    onChange={(e) => setCustomQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                    className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:outline-none focus:border-[var(--primary)]"
-                                />
-                                <button
-                                    onClick={() => handleOpenPacks(customQuantity)}
-                                    className="px-6 py-3 bg-[var(--primary)] text-black font-black rounded-xl hover:bg-[#f5c542] shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all hover:scale-105"
-                                >
-                                    Open
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-4 gap-2">
-                                <button
-                                    onClick={() => setCustomQuantity(1)}
-                                    className="py-2 px-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white font-bold transition-all hover:scale-105 text-sm"
-                                >
-                                    1
-                                </button>
-                                <button
-                                    onClick={() => setCustomQuantity(5)}
-                                    className="py-2 px-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white font-bold transition-all hover:scale-105 text-sm"
-                                >
-                                    5
-                                </button>
-                                <button
-                                    onClick={() => setCustomQuantity(10)}
-                                    className="py-2 px-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white font-bold transition-all hover:scale-105 text-sm"
-                                >
-                                    10
-                                </button>
-                                <button
-                                    onClick={() => setCustomQuantity(24)}
-                                    className="py-2 px-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white font-bold transition-all hover:scale-105 text-sm"
-                                >
-                                    24
-                                </button>
-                            </div>
+                            <QuantitySelector
+                                quantity={customQuantity}
+                                setQuantity={setCustomQuantity}
+                                onOpen={() => handleOpenPacks(customQuantity)}
+                            />
                         </div>
                     )}
 

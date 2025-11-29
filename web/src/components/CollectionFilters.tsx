@@ -1,5 +1,7 @@
 
 import { useState, useEffect } from "react";
+import StonePanel from "./StonePanel";
+import ParchmentInput from "./ParchmentInput";
 
 export interface FilterState {
     search: string;
@@ -53,27 +55,27 @@ export default function CollectionFilters({ onFilterChange }: CollectionFiltersP
     };
 
     return (
-        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6 mb-8 shadow-lg">
+        <StonePanel className="mb-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 {/* Search */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Search</label>
-                    <input
+                    <label className="text-xs font-bold text-[#d4af37] uppercase drop-shadow-sm">Search</label>
+                    <ParchmentInput
                         type="text"
                         placeholder="Card name or description..."
                         value={filters.search}
                         onChange={(e) => handleChange('search', e.target.value)}
-                        className="bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-[var(--primary)] focus:outline-none transition-colors"
+                        className="w-full"
                     />
                 </div>
 
                 {/* Card Type */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Card Type</label>
+                    <label className="text-xs font-bold text-[#d4af37] uppercase drop-shadow-sm">Card Type</label>
                     <select
                         value={filters.cardType}
                         onChange={(e) => handleChange('cardType', e.target.value)}
-                        className="bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-[var(--primary)] focus:outline-none transition-colors appearance-none cursor-pointer"
+                        className="parchment-bg border-2 border-[#8b7355] rounded-xl px-4 py-2 text-[#2c1810] font-bold font-serif focus:outline-none focus:border-[#d4af37] shadow-inner transition-all opacity-70 focus:opacity-100 appearance-none cursor-pointer"
                     >
                         {CARD_TYPES.map(type => (
                             <option key={type} value={type}>{type}</option>
@@ -83,12 +85,12 @@ export default function CollectionFilters({ onFilterChange }: CollectionFiltersP
 
                 {/* Attribute */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Attribute</label>
+                    <label className="text-xs font-bold text-[#d4af37] uppercase drop-shadow-sm">Attribute</label>
                     <select
                         value={filters.attribute}
                         onChange={(e) => handleChange('attribute', e.target.value)}
                         disabled={filters.cardType === "Spell" || filters.cardType === "Trap"}
-                        className="bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-[var(--primary)] focus:outline-none transition-colors appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="parchment-bg border-2 border-[#8b7355] rounded-xl px-4 py-2 text-[#2c1810] font-bold font-serif focus:outline-none focus:border-[#d4af37] shadow-inner transition-all opacity-70 focus:opacity-100 appearance-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                         {ATTRIBUTES.map(attr => (
                             <option key={attr} value={attr}>{attr}</option>
@@ -98,12 +100,12 @@ export default function CollectionFilters({ onFilterChange }: CollectionFiltersP
 
                 {/* Monster Type */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Monster Type</label>
+                    <label className="text-xs font-bold text-[#d4af37] uppercase drop-shadow-sm">Monster Type</label>
                     <select
                         value={filters.monsterType}
                         onChange={(e) => handleChange('monsterType', e.target.value)}
                         disabled={filters.cardType === "Spell" || filters.cardType === "Trap"}
-                        className="bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-[var(--primary)] focus:outline-none transition-colors appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="parchment-bg border-2 border-[#8b7355] rounded-xl px-4 py-2 text-[#2c1810] font-bold font-serif focus:outline-none focus:border-[#d4af37] shadow-inner transition-all opacity-70 focus:opacity-100 appearance-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                         {MONSTER_TYPES.map(type => (
                             <option key={type} value={type}>{type}</option>
@@ -113,11 +115,11 @@ export default function CollectionFilters({ onFilterChange }: CollectionFiltersP
 
                 {/* Sort By */}
                 <div className="flex flex-col gap-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Sort By</label>
+                    <label className="text-xs font-bold text-[#d4af37] uppercase drop-shadow-sm">Sort By</label>
                     <select
                         value={filters.sort}
                         onChange={(e) => handleChange('sort', e.target.value)}
-                        className="bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-[var(--primary)] focus:outline-none transition-colors appearance-none cursor-pointer"
+                        className="parchment-bg border-2 border-[#8b7355] rounded-xl px-4 py-2 text-[#2c1810] font-bold font-serif focus:outline-none focus:border-[#d4af37] shadow-inner transition-all opacity-70 focus:opacity-100 appearance-none cursor-pointer"
                     >
                         {SORT_OPTIONS.map(option => (
                             <option key={option.value} value={option.value}>{option.label}</option>
@@ -125,6 +127,6 @@ export default function CollectionFilters({ onFilterChange }: CollectionFiltersP
                     </select>
                 </div>
             </div>
-        </div>
+        </StonePanel>
     );
 }
