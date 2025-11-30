@@ -95,19 +95,34 @@ export async function fetchAllSets(): Promise<CardSet[]> {
             .sort((a, b) => new Date(a.tcg_date).getTime() - new Date(b.tcg_date).getTime())
             .map(set => {
                 const fandomImage = boosterImages[set.set_code];
-                if (fandomImage) {
-                    return {
-                        ...set,
-                        original_image: set.set_image,
-                        set_image: fandomImage
-                    };
-                }
-                return set;
+                // STRICT: Do not use set.set_image from API to avoid hotlinking YGOPRODeck
+                return {
+                    ...set,
+                    original_image: undefined, // Don't keep the original URL either
+                    set_image: fandomImage || undefined // Only use safe image or undefined
+                };
             });
     } catch (error) {
         console.error('Error fetching sets:', error);
         return [];
     }
+}
+
+
+const IMAGE_HOST = process.env.NEXT_PUBLIC_IMAGE_HOST || '';
+
+function transformCardImages(card: Card): Card {
+    if (!IMAGE_HOST) return card;
+
+    return {
+        ...card,
+        card_images: card.card_images.map(img => ({
+            ...img,
+            image_url: `${IMAGE_HOST}/cards/${img.id}.jpg`,
+            image_url_small: `${IMAGE_HOST}/cards/${img.id}.jpg`, // We only uploaded high-res, use it for small too or handle resizing later
+            image_url_cropped: `${IMAGE_HOST}/cards/${img.id}.jpg`, // Same for cropped for now
+        }))
+    };
 }
 
 export async function fetchCardsInSet(setName: string): Promise<Card[]> {
@@ -117,7 +132,7 @@ export async function fetchCardsInSet(setName: string): Promise<Card[]> {
             throw new Error(`Failed to fetch cards for set: ${setName}`);
         }
         const data = await response.json();
-        return data.data as Card[];
+        return (data.data as Card[]).map(transformCardImages);
     } catch (error) {
         console.error(`Error fetching cards for ${setName}:`, error);
         return [];
@@ -134,7 +149,7 @@ export async function fetchCardsByIds(ids: number[]): Promise<Card[]> {
             throw new Error('Failed to fetch cards by IDs');
         }
         const data = await response.json();
-        return data.data as Card[];
+        return (data.data as Card[]).map(transformCardImages);
     } catch (error) {
         console.error('Error fetching cards by IDs:', error);
         return [];

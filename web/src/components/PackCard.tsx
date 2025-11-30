@@ -43,7 +43,7 @@ export default function PackCard({ card, isFlipped, onClick, rarity }: PackCardP
                     {/* Card Back */}
                     <div className="absolute inset-0 backface-hidden rounded-lg overflow-hidden shadow-xl border border-white/10">
                         <img
-                            src="https://images.ygoprodeck.com/images/cards/back_high.jpg"
+                            src={`${process.env.NEXT_PUBLIC_IMAGE_HOST}/cards/back_high.jpg`}
                             alt="Card Back"
                             className="w-full h-full object-cover"
                             style={{ imageRendering: 'auto' }}
