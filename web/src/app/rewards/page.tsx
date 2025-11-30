@@ -24,6 +24,7 @@ export default function RewardsPage() {
     const [pityCards, setPityCards] = useState<Card[]>([]);
     const [openingPity, setOpeningPity] = useState(false);
     const [setCards, setSetCards] = useState<Card[]>([]);
+    const [setCode, setSetCode] = useState<string>("");
 
     useEffect(() => {
         if (!pendingReward || pendingReward.claimed) {
@@ -47,6 +48,7 @@ export default function RewardsPage() {
             if (set) {
                 const cards = await fetchCardsInSet(set.set_name);
                 setSetCards(cards);
+                setSetCode(set.set_code);
             }
         }
         loadSet();
@@ -67,13 +69,14 @@ export default function RewardsPage() {
         setTimeout(() => {
             const newCards: Card[] = [];
             for (let i = 0; i < 3; i++) {
-                const pack = generateBoosterPack(setCards);
+                const pack = generateBoosterPack(setCards, setCode);
                 newCards.push(...pack);
             }
             setPityCards(newCards);
             setOpeningPity(false);
         }, 1000);
     };
+
 
     const handleClaim = () => {
         if (pityCards.length > 0) {

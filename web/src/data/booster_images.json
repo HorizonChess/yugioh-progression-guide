@@ -5,6 +5,8 @@
   "PSV": "https://ms.yugipedia.com//4/4c/PSV-BoosterEN.png",
   "LOD": "https://ms.yugipedia.com//4/47/LOD-BoosterEN.png",
   "DCR": "https://ms.yugipedia.com//6/68/DCR-BoosterEN.png",
+  "PGD": "https://ms.yugipedia.com//5/5b/PGD-BoosterNA.png",
+  "MFC": "https://ms.yugipedia.com//c/c9/MFC-BoosterNA.png",
   "LON": "https://ms.yugipedia.com//8/8e/LON-BoosterEN.jpg",
   "IOC": "https://ms.yugipedia.com//6/61/IOC-BoosterEN.png",
   "AST": "https://ms.yugipedia.com//b/b6/AST-BoosterEN.png",
@@ -100,5 +102,15 @@
   "DUSA": "https://ms.yugipedia.com//3/37/DUSA-BoosterEN.png",
   "MACR": "https://ms.yugipedia.com//a/a6/MACR-BoosterEN.png",
   "PEVO": "https://ms.yugipedia.com//1/16/PEVO-BoosterEN.png",
-  "BLLR": "https://ms.yugipedia.com//4/4a/BLLR-BoosterEN.png"
+  "BLLR": "https://ms.yugipedia.com//4/4a/BLLR-BoosterEN.png",
+  "DLG1": "https://ms.yugipedia.com//2/2f/DLG1-BoosterNA.png",
+  "DR04": "https://ms.yugipedia.com//f/f1/DR04-BoosterNA.png",
+  "BPW2": "https://ms.yugipedia.com//d/df/BPW2-BoosterNA.png",
+  "RP01": "https://ms.yugipedia.com//9/98/RP01-BoosterNA.png",
+  "CSOC": "https://ms.yugipedia.com//0/0e/CSOC-Booster-EN-1E.jpg",
+  "DL11": "https://ms.yugipedia.com//4/40/DL-PromoEN.jpg",
+  "LODT": "https://ms.yugipedia.com//4/46/LightofRuin.jpg",
+  "PRC1": "https://ms.yugipedia.com//8/8b/PRC1-PromoEN.png",
+  "WGRT": "https://ms.yugipedia.com//b/b7/WGRT-BoosterEU.png",
+  "ZTIN": "https://ms.yugipedia.com//d/db/ZTIN-PromoEN.png"
 }

@@ -39,6 +39,7 @@ interface ProgressionContextType {
     saves: SaveSlot[];
     activeSaveId: string | null;
     hasLoaded: boolean;
+    hasStarted: boolean;
 
     // Active Save Data (Convenience accessors for current UI)
     currentSetIndex: number;
@@ -50,6 +51,7 @@ interface ProgressionContextType {
     createSave: (name: string, startSetIndex?: number, packsPerRound?: number) => void;
     loadSave: (id: string) => void;
     deleteSave: (id: string) => void;
+    startSeries: () => void;
 
     // Game Actions (Apply to active save)
     addToCollection: (cards: Card[]) => void;
@@ -230,7 +232,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             advanceSet,
             claimReward,
             resetProgress,
-            startSeries: () => { } // Deprecated/No-op
+            startSeries: () => createSave("New Journey"),
+            hasStarted: !!activeSaveId
         }}>
             {children}
         </ProgressionContext.Provider>
