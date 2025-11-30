@@ -64,11 +64,16 @@ export default function PacksPage() {
     }, [targetSetIndex]);
 
     const handleOpenPacks = (count: number) => {
-        if (!setCards.length || count <= 0) return;
+        if (!setCards.length || count <= 0 || !currentSet) return;
 
         const newPacks: Card[][] = [];
+        // Get the set prefix (e.g., "LOB" from "LOB-EN001")
+        // We can use the set_code from the set object itself if available, or derive it.
+        // The API set object has 'set_code' which is usually the prefix.
+        const setPrefix = currentSet.set_code;
+
         for (let i = 0; i < count; i++) {
-            const pack = generateBoosterPack(setCards);
+            const pack = generateBoosterPack(setCards, setPrefix);
             newPacks.push(pack);
         }
 
@@ -302,7 +307,13 @@ export default function PacksPage() {
                                     // Find rarity for this set
                                     const setInfo = card.card_sets?.find(s => s.set_code.split('-')[0] === currentSet.set_code.split('-')[0])
                                         || card.card_sets?.[0];
-                                    const rarity = setInfo?.set_rarity_code || setInfo?.set_rarity || "C";
+
+                                    // Get full rarity name
+                                    let rarity = setInfo?.set_rarity || "Common";
+
+                                    // Map "Short Print" if needed, though API usually gives full name "Short Print"
+                                    // If it gives "SP", map it.
+                                    if (rarity === "SP") rarity = "Short Print";
 
                                     return (
                                         <PackCard
