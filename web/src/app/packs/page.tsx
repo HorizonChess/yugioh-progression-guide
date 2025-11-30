@@ -164,38 +164,40 @@ export default function PacksPage() {
             <div className="min-h-screen p-8 pb-32">
                 <GuideSprite />
                 <div className="max-w-7xl mx-auto">
-                    <div className="flex items-center justify-between mb-8 sticky top-0 z-50 bg-black/80 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+                    <StonePanel className="flex items-center justify-between mb-8 sticky top-4 z-50">
                         <div>
                             <h1 className="text-3xl font-black text-white mb-1">{currentSet.set_name}</h1>
-                            <p className="text-gray-400 text-sm">{setCards.length} Cards in Set</p>
+                            <p className="text-[#d4af37] text-sm font-bold">{setCards.length} Cards in Set</p>
                         </div>
-                        <button
+                        <ParchmentButton
                             onClick={() => setViewDetails(false)}
-                            className="px-6 py-3 bg-white/10 text-white font-bold rounded-lg hover:bg-white/20 transition-all flex items-center gap-2"
+                            className="flex items-center gap-2"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Back
-                        </button>
-                    </div>
+                        </ParchmentButton>
+                    </StonePanel>
 
-                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                        {setCards.map((card, idx) => (
-                            <div
-                                key={`${card.id}-${idx}`}
-                                className="relative group aspect-[2/3] cursor-pointer hover:scale-105 transition-transform duration-200"
-                                onClick={() => setSelectedCard(card)}
-                            >
-                                <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
-                                    <img
-                                        src={card.card_images[0].image_url}
-                                        alt={card.name}
-                                        className="w-full h-full object-cover"
-                                        loading="lazy"
-                                    />
+                    <StonePanel>
+                        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                            {setCards.map((card, idx) => (
+                                <div
+                                    key={`${card.id}-${idx}`}
+                                    className="relative group aspect-[2/3] cursor-pointer hover:scale-105 transition-transform duration-200"
+                                    onClick={() => setSelectedCard(card)}
+                                >
+                                    <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
+                                        <img
+                                            src={card.card_images[0].image_url}
+                                            alt={card.name}
+                                            className="w-full h-full object-cover"
+                                            loading="lazy"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    </StonePanel>
                 </div>
                 {selectedCard && (
                     <CardDetailModal
@@ -213,36 +215,35 @@ export default function PacksPage() {
             <div className="min-h-screen p-8 pb-32">
                 <GuideSprite />
                 <div className="max-w-7xl mx-auto">
-                    <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 sticky top-0 z-50 bg-black/80 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+                    <StonePanel className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 sticky top-4 z-50">
                         <div className="text-center md:text-left">
                             <h1 className="text-2xl md:text-3xl font-black text-white mb-1">{currentSet.set_name}</h1>
-                            <p className="text-gray-400 text-sm">Opened {allOpenedCards.length} Cards</p>
+                            <p className="text-[#d4af37] text-sm font-bold">Opened {allOpenedCards.length} Cards</p>
                         </div>
                         <div className="flex gap-4">
-                            <button
+                            <ParchmentButton
                                 onClick={handleDiscardAndExit}
-                                className="px-6 py-3 bg-red-500/10 text-red-500 font-bold rounded-lg hover:bg-red-500/20 transition-all border border-red-500/20"
+                                className="text-red-600 border-red-800 hover:bg-red-50"
                             >
                                 Discard & Exit
-                            </button>
-                            <button
+                            </ParchmentButton>
+                            <ParchmentButton
                                 onClick={() => {
                                     setIsOpening(false);
                                     setShowSummary(false);
                                     setAllOpenedCards([]);
                                 }}
-                                className="px-6 py-3 bg-white/10 text-white font-bold rounded-lg hover:bg-white/20 transition-all"
                             >
                                 Open More
-                            </button>
-                            <button
+                            </ParchmentButton>
+                            <ParchmentButton
                                 onClick={handleSaveAndContinue}
-                                className="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-500 transition-all shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:scale-105"
+                                className="text-green-900 border-green-800 hover:bg-green-50"
                             >
                                 Done & Save
-                            </button>
+                            </ParchmentButton>
                         </div>
-                    </div>
+                    </StonePanel>
 
                     <StonePanel title="Opened Cards Summary">
                         <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
@@ -266,13 +267,15 @@ export default function PacksPage() {
                         </div>
                     </StonePanel>
                 </div>
-                {selectedCard && (
-                    <CardDetailModal
-                        card={selectedCard}
-                        onClose={() => setSelectedCard(null)}
-                    />
-                )}
-            </div>
+                {
+                    selectedCard && (
+                        <CardDetailModal
+                            card={selectedCard}
+                            onClose={() => setSelectedCard(null)}
+                        />
+                    )
+                }
+            </div >
         );
     }
 
