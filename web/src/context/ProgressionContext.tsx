@@ -59,6 +59,7 @@ interface ProgressionContextType {
     advanceSet: () => void;
     claimReward: () => void;
     resetProgress: () => void; // Resets ACTIVE save
+    importCollection: (cardIds: number[], mode: 'add' | 'replace') => void;
 }
 
 const ProgressionContext = createContext<ProgressionContextType | undefined>(undefined);
@@ -208,6 +209,27 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const importCollection = (cardIds: number[], mode: 'add' | 'replace') => {
+        if (!activeSaveId) return;
+
+        setSaves(prev => prev.map(s => {
+            if (s.id === activeSaveId) {
+                let newCollection = mode === 'replace' ? {} : { ...s.collection };
+
+                cardIds.forEach(id => {
+                    newCollection[id] = (newCollection[id] || 0) + 1;
+                });
+
+                return {
+                    ...s,
+                    collection: newCollection,
+                    lastPlayed: Date.now()
+                };
+            }
+            return s;
+        }));
+    };
+
     // Derived State for Consumers
     const activeSave = saves.find(s => s.id === activeSaveId);
 
@@ -216,6 +238,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             saves,
             activeSaveId,
             hasLoaded,
+            hasStarted: !!activeSaveId,
 
             // Expose active save data directly for backward compatibility
             currentSetIndex: activeSave?.currentSetIndex ?? 0,
@@ -226,14 +249,14 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             createSave,
             loadSave,
             deleteSave,
+            startSeries: () => createSave("New Journey"),
 
             addToCollection,
             recordMatch,
             advanceSet,
             claimReward,
             resetProgress,
-            startSeries: () => createSave("New Journey"),
-            hasStarted: !!activeSaveId
+            importCollection
         }}>
             {children}
         </ProgressionContext.Provider>

@@ -8,9 +8,11 @@ import CardDetailModal from "@/components/CardDetailModal";
 import CollectionFilters, { FilterState } from "@/components/CollectionFilters";
 import TopBar from "@/components/TopBar";
 import SaveSlotList from "@/components/SaveSlotList";
+import { parseYDK } from "@/lib/ydk-parser";
+import { useRef } from "react";
 
 export default function CollectionPage() {
-    const { collection, activeSaveId, loadSave } = useProgression();
+    const { collection, activeSaveId, loadSave, importCollection } = useProgression();
     const [cards, setCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -24,6 +26,42 @@ export default function CollectionPage() {
         monsterType: "All",
         sort: "name_asc"
     });
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const text = await file.text();
+        const ids = parseYDK(text);
+
+        if (ids.length === 0) {
+            alert("No valid card IDs found in YDK file.");
+            return;
+        }
+
+        const mode = confirm("Click OK to ADD cards to your collection.\nClick Cancel to REPLACE your collection with these cards.")
+            ? 'add'
+            : 'replace';
+
+        // Double check for replace
+        if (mode === 'replace') {
+            if (!confirm("WARNING: This will DELETE your current collection and replace it with the YDK contents. Are you sure?")) {
+                return;
+            }
+        }
+
+        importCollection(ids, mode);
+        alert(`Successfully imported ${ids.length} cards!`);
+
+        // Reset input
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
 
     useEffect(() => {
         async function loadCollection() {
@@ -150,7 +188,21 @@ export default function CollectionPage() {
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center justify-between mb-8">
                         <h1 className="text-3xl font-bold text-white">My Collection</h1>
-                        {/* TopBar handles navigation, but we can keep a breadcrumb or specific action if needed */}
+                        <div className="flex gap-4">
+                            <input
+                                type="file"
+                                accept=".ydk"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                className="hidden"
+                            />
+                            <button
+                                onClick={handleImportClick}
+                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-2"
+                            >
+                                <span>📥</span> Import YDK
+                            </button>
+                        </div>
                     </div>
 
                     <CollectionFilters onFilterChange={setFilters} />
