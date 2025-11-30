@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Download Debugger</title>
+</head>
+<body style="padding: 50px; font-family: sans-serif;">
+    <h1>Download Debugger</h1>
+    <p>Please try the following links to help us isolate the issue.</p>
+
+    <div style="margin-bottom: 20px;">
+        <h3>Test 1: Static File (Same Origin)</h3>
+        <p>This links to a real file in the public folder.</p>
+        <a href="/test_file.ydk" download>Download Static YDK</a>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h3>Test 2: Data URI</h3>
+        <p>This uses a data URI directly in the href.</p>
+        <a href="data:text/plain;charset=utf-8,%23created%20by%20debug%0A%23main%0A12345678" download="data_uri_test.ydk">Download Data URI</a>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h3>Test 3: Blob URL (Simple)</h3>
+        <button id="blobBtn">Generate & Download Blob</button>
+        <script>
+            document.getElementById('blobBtn').onclick = function() {
+                const content = '#created by debug\n#main\n87654321';
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'blob_test.ydk';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 1000);
+            };
+        </script>
+    </div>
+</body>
+</html>
