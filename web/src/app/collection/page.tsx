@@ -2,14 +2,14 @@
 
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchCardsByIds, Card } from "@/lib/api";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import CardDetailModal from "@/components/CardDetailModal";
+import CardTooltip from "@/components/CardTooltip";
 import CollectionFilters, { FilterState } from "@/components/CollectionFilters";
 import TopBar from "@/components/TopBar";
 import { parseYDK } from "@/lib/ydk-parser";
-import { useRef } from "react";
 import ParchmentButton from "@/components/ParchmentButton";
 import GuideSprite from "@/components/GuideSprite";
 import StonePanel from "@/components/StonePanel";
@@ -19,6 +19,8 @@ export default function CollectionPage() {
     const [cards, setCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+    const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
+    const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 60;
 
@@ -291,7 +293,10 @@ export default function CollectionPage() {
     }
 
     return (
-        <div className="min-h-screen pb-32 flex flex-col">
+        <div
+            className="min-h-screen pb-32 flex flex-col"
+            onMouseMove={(e) => setCursorPosition({ x: e.clientX, y: e.clientY })}
+        >
             <GuideSprite />
 
             {/* Top Bar - Standard Navigation */}
@@ -349,23 +354,37 @@ export default function CollectionPage() {
                                     {displayedCards.map((card) => (
                                         <div
                                             key={card.id}
-                                            className="relative group aspect-[2/3] cursor-pointer hover:scale-105 transition-transform duration-200"
+                                            className="flex flex-col group cursor-pointer"
                                             onClick={() => setSelectedCard(card)}
+                                            onMouseEnter={() => setHoveredCard(card)}
+                                            onMouseLeave={() => setHoveredCard(null)}
                                         >
-                                            <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
-                                                <Image
-                                                    src={card.card_images[0].image_url}
-                                                    alt={card.name}
-                                                    fill
-                                                    sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
-                                                    className="object-cover"
-                                                    loading="lazy"
-                                                />
-                                                {/* Quantity Badge */}
-                                                <div className="absolute top-1 right-1 w-6 h-6 bg-black/80 rounded-full flex items-center justify-center border border-[#d4af37] shadow-md z-10">
-                                                    <span className="text-xs font-bold text-[#d4af37]">
-                                                        {collection[card.id]}
-                                                    </span>
+                                            <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
+                                                <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
+                                                    <Image
+                                                        src={card.card_images[0].image_url}
+                                                        alt={card.name}
+                                                        fill
+                                                        sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
+                                                        className="object-cover"
+                                                        loading="lazy"
+                                                    />
+                                                    {/* Quantity Badge */}
+                                                    <div className="absolute top-1 right-1 w-6 h-6 bg-black/80 rounded-full flex items-center justify-center border border-[#d4af37] shadow-md z-10">
+                                                        <span className="text-xs font-bold text-[#d4af37]">
+                                                            {collection[card.id]}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Card Info */}
+                                            <div className="text-center px-1">
+                                                <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
+                                                    {card.name}
+                                                </div>
+                                                <div className="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">
+                                                    {card.card_sets?.[0]?.set_rarity || "Common"}
                                                 </div>
                                             </div>
                                         </div>
@@ -398,14 +417,23 @@ export default function CollectionPage() {
                         )}
                     </StonePanel>
                 </div>
-
-                {selectedCard && (
-                    <CardDetailModal
-                        card={selectedCard}
-                        onClose={() => setSelectedCard(null)}
-                    />
-                )}
             </div>
+
+            {/* Modals & Tooltips */}
+            {selectedCard && (
+                <CardDetailModal
+                    card={selectedCard}
+                    onClose={() => setSelectedCard(null)}
+                />
+            )}
+
+            {hoveredCard && (
+                <CardTooltip
+                    card={hoveredCard}
+                    x={cursorPosition.x}
+                    y={cursorPosition.y}
+                />
+            )}
         </div>
     );
 }

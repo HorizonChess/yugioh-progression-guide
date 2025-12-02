@@ -139,19 +139,42 @@ export async function fetchCardsInSet(setName: string): Promise<Card[]> {
     }
 }
 
+// In-memory cache for card data
+const cardCache: Record<number, Card> = {};
+
 export async function fetchCardsByIds(ids: number[]): Promise<Card[]> {
     if (ids.length === 0) return [];
-    try {
-        // API allows comma separated IDs
-        const idString = ids.join(',');
-        const response = await fetch(`${BASE_URL}/cardinfo.php?id=${idString}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch cards by IDs');
+
+    // Deduplicate IDs
+    const uniqueIds = Array.from(new Set(ids));
+
+    // Identify missing IDs
+    const missingIds = uniqueIds.filter(id => !cardCache[id]);
+
+    // Fetch missing IDs
+    if (missingIds.length > 0) {
+        try {
+            // API allows comma separated IDs
+            const idString = missingIds.join(',');
+            const response = await fetch(`${BASE_URL}/cardinfo.php?id=${idString}`);
+            if (response.ok) {
+                const data = await response.json();
+                const fetchedCards = (data.data as Card[]).map(transformCardImages);
+
+                // Update cache
+                fetchedCards.forEach(card => {
+                    cardCache[card.id] = card;
+                });
+            } else {
+                console.error('Failed to fetch cards by IDs');
+            }
+        } catch (error) {
+            console.error('Error fetching cards by IDs:', error);
         }
-        const data = await response.json();
-        return (data.data as Card[]).map(transformCardImages);
-    } catch (error) {
-        console.error('Error fetching cards by IDs:', error);
-        return [];
     }
+
+    // Return cards from cache
+    return uniqueIds
+        .map(id => cardCache[id])
+        .filter(card => card !== undefined);
 }
