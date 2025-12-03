@@ -250,6 +250,7 @@ export default function PacksPage() {
                                                         sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
                                                         className="object-cover"
                                                         loading="lazy"
+                                                        quality={90}
                                                     />
                                                 </div>
                                             </div>
