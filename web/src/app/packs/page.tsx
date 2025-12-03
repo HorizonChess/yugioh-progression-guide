@@ -12,6 +12,8 @@ import StonePanel from "@/components/StonePanel";
 import ParchmentButton from "@/components/ParchmentButton";
 import PackCard from "@/components/PackCard";
 import { useSearchParams } from "next/navigation";
+import CardTooltip from "@/components/CardTooltip";
+import Image from "next/image";
 
 export default function PacksPage() {
     const { currentSetIndex, addToCollection } = useProgression();
@@ -38,6 +40,14 @@ export default function PacksPage() {
     // Card Detail State
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
     const [viewDetails, setViewDetails] = useState(false);
+
+    // Tooltip State
+    const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
+    const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        setCursorPosition({ x: e.clientX, y: e.clientY });
+    };
 
     // Determine which set to load
     const setParam = searchParams.get('set');
@@ -159,7 +169,47 @@ export default function PacksPage() {
     }
 
     // Pack Details View (Read-Only)
+    // Rarity Order Definition (Reversed: Common -> Secret Rare)
+    const rarityOrder = [
+        "Common",
+        "Rare",
+        "Super Rare",
+        "Ultra Rare",
+        "Secret Rare"
+    ];
+
+
+
     if (viewDetails) {
+        // Group cards by rarity
+        const cardsByRarity: Record<string, Card[]> = {};
+
+        setCards.forEach(card => {
+            // Find rarity for this set
+            const setInfo = card.card_sets?.find(s => s.set_code.split('-')[0] === currentSet.set_code.split('-')[0])
+                || card.card_sets?.[0];
+
+            let rarity = setInfo?.set_rarity || "Common";
+
+            // Merge Short Prints into Common
+            if (rarity === "Short Print" || rarity === "Super Short Print" || rarity === "SP") {
+                rarity = "Common";
+            }
+
+            if (!cardsByRarity[rarity]) {
+                cardsByRarity[rarity] = [];
+            }
+            cardsByRarity[rarity].push(card);
+        });
+
+        // Sort rarities based on defined order
+        const sortedRarities = Object.keys(cardsByRarity).sort((a, b) => {
+            const indexA = rarityOrder.indexOf(a);
+            const indexB = rarityOrder.indexOf(b);
+            // If not found in order, put at the end
+            return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+        });
+
         return (
             <div className="min-h-screen p-8 pb-32">
                 <GuideSprite />
@@ -178,31 +228,58 @@ export default function PacksPage() {
                         </ParchmentButton>
                     </StonePanel>
 
-                    <StonePanel>
-                        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                            {setCards.map((card, idx) => (
-                                <div
-                                    key={`${card.id}-${idx}`}
-                                    className="relative group aspect-[2/3] cursor-pointer hover:scale-105 transition-transform duration-200"
-                                    onClick={() => setSelectedCard(card)}
-                                >
-                                    <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
-                                        <img
-                                            src={card.card_images[0].image_url}
-                                            alt={card.name}
-                                            className="w-full h-full object-cover"
-                                            loading="lazy"
-                                        />
-                                    </div>
+                    <div className="space-y-8">
+                        {sortedRarities.map(rarity => (
+                            <StonePanel key={rarity} title={rarity}>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                                    {cardsByRarity[rarity].map((card, idx) => (
+                                        <div
+                                            key={`${card.id}-${idx}`}
+                                            className="flex flex-col group cursor-pointer"
+                                            onClick={() => setSelectedCard(card)}
+                                            onMouseEnter={() => setHoveredCard(card)}
+                                            onMouseLeave={() => setHoveredCard(null)}
+                                            onMouseMove={handleMouseMove}
+                                        >
+                                            <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
+                                                <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
+                                                    <Image
+                                                        src={card.card_images[0].image_url}
+                                                        alt={card.name}
+                                                        fill
+                                                        sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
+                                                        className="object-cover"
+                                                        loading="lazy"
+                                                    />
+                                                </div>
+                                            </div>
+                                            {/* Name below card */}
+                                            <div className="text-center px-1">
+                                                <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
+                                                    {card.name}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                    </StonePanel>
+                            </StonePanel>
+                        ))}
+                    </div>
                 </div>
+
                 {selectedCard && (
                     <CardDetailModal
                         card={selectedCard}
                         onClose={() => setSelectedCard(null)}
+                    />
+                )}
+
+                {/* Tooltip Portal */}
+                {hoveredCard && (
+                    <CardTooltip
+                        card={hoveredCard}
+                        x={cursorPosition.x}
+                        y={cursorPosition.y}
                     />
                 )}
             </div>
