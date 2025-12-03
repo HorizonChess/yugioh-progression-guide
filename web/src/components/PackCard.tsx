@@ -5,13 +5,19 @@ interface PackCardProps {
     isFlipped: boolean;
     onClick: () => void;
     rarity: string;
+    onMouseEnter?: () => void;
+    onMouseLeave?: () => void;
+    onMouseMove?: (e: React.MouseEvent) => void;
 }
 
-export default function PackCard({ card, isFlipped, onClick, rarity }: PackCardProps) {
+export default function PackCard({ card, isFlipped, onClick, rarity, onMouseEnter, onMouseLeave, onMouseMove }: PackCardProps) {
     return (
         <div
             onClick={onClick}
-            className="flex flex-col items-center justify-center cursor-pointer group"
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+            onMouseMove={onMouseMove}
+            className="flex flex-col items-center justify-center cursor-pointer group mb-8"
             style={{
                 // Grid Cell Sizing
                 // We reserve 19% width for the grid column
@@ -31,7 +37,7 @@ export default function PackCard({ card, isFlipped, onClick, rarity }: PackCardP
                     alt="Sizer"
                     className="opacity-0 pointer-events-none"
                     style={{
-                        maxHeight: '30vh', // Limit height to fit 2 rows with breathing room
+                        maxHeight: '26vh', // Increased to 26vh as a middle ground
                         width: 'auto',     // Maintain aspect ratio
                         maxWidth: '100%',  // Don't overflow the 19% parent width
                         display: 'block',  // Remove inline spacing

@@ -29,7 +29,10 @@ const SPRITES = [
     }
 ];
 
+import { useProgression } from "@/context/ProgressionContext";
+
 export default function GuideSprite() {
+    const { isGuideVisible } = useProgression();
     const [spriteIndex, setSpriteIndex] = useState(0);
     const [visible, setVisible] = useState(false);
     const [isTalking, setIsTalking] = useState(false);
@@ -48,7 +51,7 @@ export default function GuideSprite() {
         setIsTalking(true);
     };
 
-    if (!visible) return null;
+    if (!visible || !isGuideVisible) return null;
 
     const currentSprite = SPRITES[spriteIndex];
 

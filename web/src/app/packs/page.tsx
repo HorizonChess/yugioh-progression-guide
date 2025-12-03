@@ -14,6 +14,7 @@ import PackCard from "@/components/PackCard";
 import { useSearchParams } from "next/navigation";
 import CardTooltip from "@/components/CardTooltip";
 import Image from "next/image";
+import { RARITY_ORDER, getCardRarity, sortCardsByRarity } from "@/lib/utils";
 
 export default function PacksPage() {
     const { currentSetIndex, addToCollection } = useProgression();
@@ -169,32 +170,12 @@ export default function PacksPage() {
     }
 
     // Pack Details View (Read-Only)
-    // Rarity Order Definition (Reversed: Common -> Secret Rare)
-    const rarityOrder = [
-        "Common",
-        "Rare",
-        "Super Rare",
-        "Ultra Rare",
-        "Secret Rare"
-    ];
-
-
-
     if (viewDetails) {
         // Group cards by rarity
         const cardsByRarity: Record<string, Card[]> = {};
 
         setCards.forEach(card => {
-            // Find rarity for this set
-            const setInfo = card.card_sets?.find(s => s.set_code.split('-')[0] === currentSet.set_code.split('-')[0])
-                || card.card_sets?.[0];
-
-            let rarity = setInfo?.set_rarity || "Common";
-
-            // Merge Short Prints into Common
-            if (rarity === "Short Print" || rarity === "Super Short Print" || rarity === "SP") {
-                rarity = "Common";
-            }
+            const rarity = getCardRarity(card, currentSet.set_code.split('-')[0]);
 
             if (!cardsByRarity[rarity]) {
                 cardsByRarity[rarity] = [];
@@ -204,8 +185,8 @@ export default function PacksPage() {
 
         // Sort rarities based on defined order
         const sortedRarities = Object.keys(cardsByRarity).sort((a, b) => {
-            const indexA = rarityOrder.indexOf(a);
-            const indexB = rarityOrder.indexOf(b);
+            const indexA = RARITY_ORDER.indexOf(a);
+            const indexB = RARITY_ORDER.indexOf(b);
             // If not found in order, put at the end
             return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
         });
@@ -289,6 +270,29 @@ export default function PacksPage() {
 
     // Summary View
     if (showSummary) {
+        // Group cards by rarity
+        const cardsByRarity: Record<string, Card[]> = {};
+
+        // First sort all cards to ensure alphabetical order within rarities
+        const sortedAllCards = sortCardsByRarity(allOpenedCards, currentSet.set_code.split('-')[0]);
+
+        sortedAllCards.forEach(card => {
+            const rarity = getCardRarity(card, currentSet.set_code.split('-')[0]);
+
+            if (!cardsByRarity[rarity]) {
+                cardsByRarity[rarity] = [];
+            }
+            cardsByRarity[rarity].push(card);
+        });
+
+        // Sort rarities based on defined order
+        const sortedRarities = Object.keys(cardsByRarity).sort((a, b) => {
+            const indexA = RARITY_ORDER.indexOf(a);
+            const indexB = RARITY_ORDER.indexOf(b);
+            // If not found in order, put at the end
+            return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+        });
+
         return (
             <div className="min-h-screen p-8 pb-32">
                 <GuideSprite />
@@ -299,12 +303,12 @@ export default function PacksPage() {
                             <p className="text-[#d4af37] text-sm font-bold">Opened {allOpenedCards.length} Cards</p>
                         </div>
                         <div className="flex gap-4">
-                            <ParchmentButton
+                            <button
                                 onClick={handleDiscardAndExit}
-                                className="text-red-600 border-red-800 hover:bg-red-50"
+                                className="px-6 py-3 text-base text-red-400 hover:text-red-300 font-bold transition-colors bg-black/40 rounded-lg border border-red-900/50 hover:bg-black/60"
                             >
-                                Discard & Exit
-                            </ParchmentButton>
+                                Back to Campaign
+                            </button>
                             <ParchmentButton
                                 onClick={() => {
                                     setIsOpening(false);
@@ -323,37 +327,60 @@ export default function PacksPage() {
                         </div>
                     </StonePanel>
 
-                    <StonePanel title="Opened Cards Summary">
-                        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                            {allOpenedCards.map((card, idx) => (
-                                <div
-                                    key={`${card.id}-${idx}`}
-                                    className="relative group aspect-[2/3] animate-in fade-in zoom-in duration-300 cursor-pointer"
-                                    style={{ animationDelay: `${Math.min(idx * 30, 1000)}ms` }}
-                                    onClick={() => setSelectedCard(card)}
-                                >
-                                    <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
-                                        <img
-                                            src={card.card_images[0].image_url}
-                                            alt={card.name}
-                                            className="w-full h-full object-cover"
-                                            loading="lazy"
-                                        />
-                                    </div>
+                    <div className="space-y-8">
+                        {sortedRarities.map(rarity => (
+                            <StonePanel key={rarity} title={rarity}>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                                    {cardsByRarity[rarity].map((card, idx) => (
+                                        <div
+                                            key={`${card.id}-${idx}`}
+                                            className="flex flex-col group cursor-pointer"
+                                            onClick={() => setSelectedCard(card)}
+                                            onMouseEnter={() => setHoveredCard(card)}
+                                            onMouseLeave={() => setHoveredCard(null)}
+                                            onMouseMove={handleMouseMove}
+                                        >
+                                            <div
+                                                className="relative aspect-[2/3] mb-2 animate-in fade-in zoom-in duration-300"
+                                                style={{ animationDelay: `${Math.min(idx * 30, 1000)}ms` }}
+                                            >
+                                                <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
+                                                    <img
+                                                        src={card.card_images[0].image_url}
+                                                        alt={card.name}
+                                                        className="w-full h-full object-cover"
+                                                        loading="lazy"
+                                                    />
+                                                </div>
+                                            </div>
+                                            {/* Name below card */}
+                                            <div className="text-center px-1">
+                                                <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
+                                                    {card.name}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                    </StonePanel>
+                            </StonePanel>
+                        ))}
+                    </div>
                 </div>
-                {
-                    selectedCard && (
-                        <CardDetailModal
-                            card={selectedCard}
-                            onClose={() => setSelectedCard(null)}
-                        />
-                    )
-                }
-            </div >
+                {selectedCard && (
+                    <CardDetailModal
+                        card={selectedCard}
+                        onClose={() => setSelectedCard(null)}
+                    />
+                )}
+                {/* Tooltip Portal */}
+                {hoveredCard && (
+                    <CardTooltip
+                        card={hoveredCard}
+                        x={cursorPosition.x}
+                        y={cursorPosition.y}
+                    />
+                )}
+            </div>
         );
     }
 
@@ -368,17 +395,37 @@ export default function PacksPage() {
                 {/* Main Container - Fits Screen */}
                 <div className="w-full max-w-[95vw] h-full max-h-[95vh] flex flex-col">
 
-                    {/* Header Info */}
-                    <div className="mb-2 text-center">
-                        <h2 className="text-3xl font-black text-white drop-shadow-md">{currentSet.set_name}</h2>
-                        <p className="text-[#d4af37] font-bold text-lg">Pack {currentPackIndex + 1} of {packsToOpen.length}</p>
+                    {/* Header Info & Controls */}
+                    <div className="mb-2 flex items-end justify-between px-4 relative z-20">
+                        {/* Left Controls */}
+                        <div className="flex gap-2 w-1/3">
+                            <button
+                                onClick={handleDiscardAndExit}
+                                className="px-6 py-3 text-base text-red-400 hover:text-red-300 font-bold transition-colors bg-black/40 rounded-lg border border-red-900/50 hover:bg-black/60"
+                            >
+                                Back to Campaign
+                            </button>
+                            <ParchmentButton
+                                onClick={handleOpenAll}
+                                className="origin-left"
+                            >
+                                Open All
+                            </ParchmentButton>
+                        </div>
+
+                        {/* Center Title */}
+                        <div className="text-center w-1/3">
+                            <h2 className="text-3xl font-black text-white drop-shadow-md leading-none">{currentSet.set_name}</h2>
+                            <p className="text-[#d4af37] font-bold text-lg leading-none mt-1">Pack {currentPackIndex + 1} of {packsToOpen.length}</p>
+                        </div>
+
+                        {/* Right Spacer (for balance) */}
+                        <div className="w-1/3"></div>
                     </div>
 
                     {/* Stone Panel Container - Cards Only */}
-                    {/* Constrained width and centered to match "Ideal" layout */}
-                    {/* Stone Panel Container & Controls */}
-                    {/* Centered (mx-auto), constrained width (max-w-5xl) */}
-                    <div className="flex-1 flex flex-col items-center justify-center w-full max-w-5xl mx-auto min-h-0 mb-4">
+                    {/* Centered (mx-auto), constrained width (max-w-7xl) to allow desktop scaling */}
+                    <div className="flex-1 flex flex-col items-center justify-center w-full max-w-7xl mx-auto min-h-0 mb-4">
                         <StonePanel className="w-full flex-1 flex flex-col relative px-6 py-2 shadow-2xl">
                             {/* Cards Container - Flex for better fitting */}
                             {/* content-evenly distributes space equally between rows and borders */}
@@ -403,6 +450,13 @@ export default function PacksPage() {
                                             isFlipped={isFlipped}
                                             onClick={() => handleCardClick(idx, card)}
                                             rarity={rarity}
+                                            onMouseEnter={() => {
+                                                if (isFlipped) {
+                                                    setHoveredCard(card);
+                                                }
+                                            }}
+                                            onMouseLeave={() => setHoveredCard(null)}
+                                            onMouseMove={handleMouseMove}
                                         />
                                     );
                                 })}
@@ -411,22 +465,11 @@ export default function PacksPage() {
 
                         {/* Controls - Below Stone Panel */}
                         <div className="flex justify-center items-center gap-4 pt-4">
-                            <button
-                                onClick={handleDiscardAndExit}
-                                className="px-4 py-2 text-sm text-red-400 hover:text-red-300 font-bold transition-colors"
-                            >
-                                Discard
-                            </button>
-
                             {!isPackFullyOpened && (
                                 <ParchmentButton onClick={handleFlipAll}>
                                     Flip All
                                 </ParchmentButton>
                             )}
-
-                            <ParchmentButton onClick={handleOpenAll}>
-                                Open All
-                            </ParchmentButton>
 
                             <button
                                 onClick={handleNextPack}
@@ -447,10 +490,18 @@ export default function PacksPage() {
                             onClose={() => setSelectedCard(null)}
                         />
                     )}
+
+                    {/* Tooltip Portal */}
+                    {hoveredCard && (
+                        <CardTooltip
+                            card={hoveredCard}
+                            x={cursorPosition.x}
+                            y={cursorPosition.y}
+                        />
+                    )}
                 </div>
             </div>
         );
-
     }
 
     // Store View (Initial State)

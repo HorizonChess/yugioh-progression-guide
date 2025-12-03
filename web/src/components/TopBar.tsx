@@ -11,7 +11,10 @@ interface TopBarProps {
     children?: React.ReactNode;
 }
 
+import { useProgression } from "@/context/ProgressionContext";
+
 export default function TopBar({ title, subtitle, showBack, onBack, children }: TopBarProps) {
+    const { isGuideVisible, toggleGuide } = useProgression();
     const [duelistName, setDuelistName] = useState("Duelist");
 
     useEffect(() => {
@@ -27,6 +30,22 @@ export default function TopBar({ title, subtitle, showBack, onBack, children }: 
                     </button>
                 )}
 
+                {/* Guide Toggle - Pixel Art Head */}
+                <button
+                    onClick={toggleGuide}
+                    className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transition-all duration-200 ${isGuideVisible
+                        ? 'border-[var(--primary)] shadow-[0_0_10px_var(--primary)] bg-[var(--primary)]/20'
+                        : 'border-gray-600 opacity-50 hover:opacity-100 hover:border-gray-400'
+                        }`}
+                    title={isGuideVisible ? "Hide Guide" : "Show Guide"}
+                >
+                    <img
+                        src="/sprites/yugi_neutral_v2_transparent.png?v=4"
+                        alt="Toggle Guide"
+                        className="w-full h-full object-cover object-top scale-150 translate-y-1"
+                    />
+                </button>
+
                 {title ? (
                     <div>
                         <h1 className="text-xl font-bold text-white leading-none">{title}</h1>
@@ -34,9 +53,6 @@ export default function TopBar({ title, subtitle, showBack, onBack, children }: 
                     </div>
                 ) : (
                     <Link href="/menu" className="group flex items-center gap-4 hover:opacity-80 transition-opacity">
-                        <div className="w-10 h-10 bg-gray-800 rounded-full border-2 border-[var(--primary)] flex items-center justify-center overflow-hidden group-hover:shadow-[0_0_10px_var(--primary)] transition-shadow">
-                            <div className="w-full h-full bg-[var(--primary)]/20"></div>
-                        </div>
                         <div>
                             <h2 className="text-[var(--primary)] font-bold text-lg tracking-wider uppercase leading-none">{duelistName}</h2>
                             <p className="text-[10px] text-gray-500 font-mono">ID: 8492-001</p>

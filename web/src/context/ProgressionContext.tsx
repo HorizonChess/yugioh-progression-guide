@@ -60,6 +60,10 @@ interface ProgressionContextType {
     claimReward: () => void;
     resetProgress: () => void; // Resets ACTIVE save
     importCollection: (cardIds: number[], mode: 'add' | 'replace') => void;
+
+    // Guide
+    isGuideVisible: boolean;
+    toggleGuide: () => void;
 }
 
 const ProgressionContext = createContext<ProgressionContextType | undefined>(undefined);
@@ -233,6 +237,10 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     // Derived State for Consumers
     const activeSave = saves.find(s => s.id === activeSaveId);
 
+    // Guide Sprite State
+    const [isGuideVisible, setIsGuideVisible] = useState(true);
+    const toggleGuide = () => setIsGuideVisible(prev => !prev);
+
     return (
         <ProgressionContext.Provider value={{
             saves,
@@ -256,7 +264,11 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             advanceSet,
             claimReward,
             resetProgress,
-            importCollection
+            importCollection,
+
+            // Guide
+            isGuideVisible,
+            toggleGuide
         }}>
             {children}
         </ProgressionContext.Provider>
