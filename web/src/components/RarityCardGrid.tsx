@@ -1,0 +1,63 @@
+import React from 'react';
+import Image from 'next/image';
+import StonePanel from './StonePanel';
+import { Card } from '@/lib/api';
+
+interface RarityCardGridProps {
+    cardsByRarity: Record<string, Card[]>;
+    sortedRarities: string[];
+    onCardClick: (card: Card) => void;
+    onHover: (card: Card) => void;
+    onLeave: () => void;
+    onMove: (e: React.MouseEvent) => void;
+}
+
+export default function RarityCardGrid({
+    cardsByRarity,
+    sortedRarities,
+    onCardClick,
+    onHover,
+    onLeave,
+    onMove
+}: RarityCardGridProps) {
+    return (
+        <div className="space-y-8">
+            {sortedRarities.map(rarity => (
+                <StonePanel key={rarity} title={rarity}>
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
+                        {cardsByRarity[rarity].map((card, idx) => (
+                            <div
+                                key={`${card.id}-${idx}`}
+                                className="flex flex-col group cursor-pointer"
+                                onClick={() => onCardClick(card)}
+                                onMouseEnter={() => onHover(card)}
+                                onMouseLeave={onLeave}
+                                onMouseMove={onMove}
+                            >
+                                <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
+                                    <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
+                                        <Image
+                                            src={card.card_images[0].image_url}
+                                            alt={card.name}
+                                            fill
+                                            sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
+                                            className="object-cover"
+                                            loading="lazy"
+                                            quality={90}
+                                        />
+                                    </div>
+                                </div>
+                                {/* Name below card */}
+                                <div className="text-center px-1">
+                                    <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
+                                        {card.name}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </StonePanel>
+            ))}
+        </div>
+    );
+}

@@ -13,8 +13,8 @@ import ParchmentButton from "@/components/ParchmentButton";
 import PackCard from "@/components/PackCard";
 import { useSearchParams } from "next/navigation";
 import CardTooltip from "@/components/CardTooltip";
-import Image from "next/image";
 import { RARITY_ORDER, getCardRarity, sortCardsByRarity } from "@/lib/utils";
+import RarityCardGrid from "@/components/RarityCardGrid";
 
 export default function PacksPage() {
     const { currentSetIndex, addToCollection } = useProgression();
@@ -78,13 +78,10 @@ export default function PacksPage() {
         if (!setCards.length || count <= 0 || !currentSet) return;
 
         const newPacks: Card[][] = [];
-        // Get the set prefix (e.g., "LOB" from "LOB-EN001")
-        // We can use the set_code from the set object itself if available, or derive it.
-        // The API set object has 'set_code' which is usually the prefix.
         const setPrefix = currentSet.set_code;
 
         for (let i = 0; i < count; i++) {
-            const pack = generateBoosterPack(setCards, setPrefix);
+            const pack = generateBoosterPack(setCards, currentSet);
             newPacks.push(pack);
         }
 
@@ -150,6 +147,30 @@ export default function PacksPage() {
 
     const isPackFullyOpened = packsToOpen[currentPackIndex] && flippedCards.size === packsToOpen[currentPackIndex].length;
 
+    // Helper to process cards for grid display
+    const getProcessedCards = (cards: Card[]) => {
+        if (!currentSet) return { cardsByRarity: {}, sortedRarities: [] };
+
+        const cardsByRarity: Record<string, Card[]> = {};
+        const sortedAllCards = sortCardsByRarity(cards, currentSet.set_code.split('-')[0]);
+
+        sortedAllCards.forEach(card => {
+            const rarity = getCardRarity(card, currentSet.set_code.split('-')[0]);
+            if (!cardsByRarity[rarity]) {
+                cardsByRarity[rarity] = [];
+            }
+            cardsByRarity[rarity].push(card);
+        });
+
+        const sortedRarities = Object.keys(cardsByRarity).sort((a, b) => {
+            const indexA = RARITY_ORDER.indexOf(a);
+            const indexB = RARITY_ORDER.indexOf(b);
+            return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+        });
+
+        return { cardsByRarity, sortedRarities };
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -169,31 +190,12 @@ export default function PacksPage() {
         );
     }
 
-    // Pack Details View (Read-Only)
-    if (viewDetails) {
-        // Group cards by rarity
-        const cardsByRarity: Record<string, Card[]> = {};
-
-        setCards.forEach(card => {
-            const rarity = getCardRarity(card, currentSet.set_code.split('-')[0]);
-
-            if (!cardsByRarity[rarity]) {
-                cardsByRarity[rarity] = [];
-            }
-            cardsByRarity[rarity].push(card);
-        });
-
-        // Sort rarities based on defined order
-        const sortedRarities = Object.keys(cardsByRarity).sort((a, b) => {
-            const indexA = RARITY_ORDER.indexOf(a);
-            const indexB = RARITY_ORDER.indexOf(b);
-            // If not found in order, put at the end
-            return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
-        });
-
-        return (
-            <div className="min-h-screen p-8 pb-32">
-                <GuideSprite />
+    // Render Content based on state
+    const renderContent = () => {
+        // 1. Detail View (Read-Only)
+        if (viewDetails) {
+            const { cardsByRarity, sortedRarities } = getProcessedCards(setCards);
+            return (
                 <div className="max-w-7xl mx-auto">
                     <StonePanel className="flex items-center justify-between mb-8 sticky top-4 z-50">
                         <div>
@@ -209,93 +211,22 @@ export default function PacksPage() {
                         </ParchmentButton>
                     </StonePanel>
 
-                    <div className="space-y-8">
-                        {sortedRarities.map(rarity => (
-                            <StonePanel key={rarity} title={rarity}>
-                                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                                    {cardsByRarity[rarity].map((card, idx) => (
-                                        <div
-                                            key={`${card.id}-${idx}`}
-                                            className="flex flex-col group cursor-pointer"
-                                            onClick={() => setSelectedCard(card)}
-                                            onMouseEnter={() => setHoveredCard(card)}
-                                            onMouseLeave={() => setHoveredCard(null)}
-                                            onMouseMove={handleMouseMove}
-                                        >
-                                            <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
-                                                <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
-                                                    <Image
-                                                        src={card.card_images[0].image_url}
-                                                        alt={card.name}
-                                                        fill
-                                                        sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
-                                                        className="object-cover"
-                                                        loading="lazy"
-                                                        quality={90}
-                                                    />
-                                                </div>
-                                            </div>
-                                            {/* Name below card */}
-                                            <div className="text-center px-1">
-                                                <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
-                                                    {card.name}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </StonePanel>
-                        ))}
-                    </div>
+                    <RarityCardGrid
+                        cardsByRarity={cardsByRarity}
+                        sortedRarities={sortedRarities}
+                        onCardClick={setSelectedCard}
+                        onHover={setHoveredCard}
+                        onLeave={() => setHoveredCard(null)}
+                        onMove={handleMouseMove}
+                    />
                 </div>
+            );
+        }
 
-                {selectedCard && (
-                    <CardDetailModal
-                        card={selectedCard}
-                        onClose={() => setSelectedCard(null)}
-                    />
-                )}
-
-                {/* Tooltip Portal */}
-                {hoveredCard && (
-                    <CardTooltip
-                        card={hoveredCard}
-                        x={cursorPosition.x}
-                        y={cursorPosition.y}
-                    />
-                )}
-            </div>
-        );
-    }
-
-    // Summary View
-    if (showSummary) {
-        // Group cards by rarity
-        const cardsByRarity: Record<string, Card[]> = {};
-
-        // First sort all cards to ensure alphabetical order within rarities
-        const sortedAllCards = sortCardsByRarity(allOpenedCards, currentSet.set_code.split('-')[0]);
-
-        sortedAllCards.forEach(card => {
-            const rarity = getCardRarity(card, currentSet.set_code.split('-')[0]);
-
-            if (!cardsByRarity[rarity]) {
-                cardsByRarity[rarity] = [];
-            }
-            cardsByRarity[rarity].push(card);
-        });
-
-        // Sort rarities based on defined order
-        const sortedRarities = Object.keys(cardsByRarity).sort((a, b) => {
-            const indexA = RARITY_ORDER.indexOf(a);
-            const indexB = RARITY_ORDER.indexOf(b);
-            // If not found in order, put at the end
-            return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
-        });
-
-        return (
-            <div className="min-h-screen p-8 pb-32">
-                <GuideSprite />
+        // 2. Summary View
+        if (showSummary) {
+            const { cardsByRarity, sortedRarities } = getProcessedCards(allOpenedCards);
+            return (
                 <div className="max-w-7xl mx-auto">
                     <StonePanel className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 sticky top-4 z-50">
                         <div className="text-center md:text-left">
@@ -327,189 +258,113 @@ export default function PacksPage() {
                         </div>
                     </StonePanel>
 
-                    <div className="space-y-8">
-                        {sortedRarities.map(rarity => (
-                            <StonePanel key={rarity} title={rarity}>
-                                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                                    {cardsByRarity[rarity].map((card, idx) => (
-                                        <div
-                                            key={`${card.id}-${idx}`}
-                                            className="flex flex-col group cursor-pointer"
-                                            onClick={() => setSelectedCard(card)}
-                                            onMouseEnter={() => setHoveredCard(card)}
-                                            onMouseLeave={() => setHoveredCard(null)}
-                                            onMouseMove={handleMouseMove}
-                                        >
-                                            <div
-                                                className="relative aspect-[2/3] mb-2 animate-in fade-in zoom-in duration-300"
-                                                style={{ animationDelay: `${Math.min(idx * 30, 1000)}ms` }}
-                                            >
-                                                <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
-                                                    <img
-                                                        src={card.card_images[0].image_url}
-                                                        alt={card.name}
-                                                        className="w-full h-full object-cover"
-                                                        loading="lazy"
-                                                    />
-                                                </div>
-                                            </div>
-                                            {/* Name below card */}
-                                            <div className="text-center px-1">
-                                                <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
-                                                    {card.name}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                    <RarityCardGrid
+                        cardsByRarity={cardsByRarity}
+                        sortedRarities={sortedRarities}
+                        onCardClick={setSelectedCard}
+                        onHover={setHoveredCard}
+                        onLeave={() => setHoveredCard(null)}
+                        onMove={handleMouseMove}
+                    />
+                </div>
+            );
+        }
+
+        // 3. Pack Opening View
+        if (isOpening) {
+            const currentPack = packsToOpen[currentPackIndex];
+            return (
+                <div className="h-screen w-full p-4 flex flex-col items-center justify-center overflow-hidden">
+                    {/* Main Container - Fits Screen */}
+                    <div className="w-full max-w-[95vw] h-full max-h-[95vh] flex flex-col">
+
+                        {/* Header Info & Controls */}
+                        <div className="mb-2 flex items-end justify-between px-4 relative z-20">
+                            {/* Left Controls */}
+                            <div className="flex gap-2 w-1/3">
+                                <button
+                                    onClick={handleDiscardAndExit}
+                                    className="px-6 py-3 text-base text-red-400 hover:text-red-300 font-bold transition-colors bg-black/40 rounded-lg border border-red-900/50 hover:bg-black/60"
+                                >
+                                    Back to Campaign
+                                </button>
+                                <ParchmentButton
+                                    onClick={handleOpenAll}
+                                    className="origin-left"
+                                >
+                                    Open All
+                                </ParchmentButton>
+                            </div>
+
+                            {/* Center Title */}
+                            <div className="text-center w-1/3">
+                                <h2 className="text-3xl font-black text-white drop-shadow-md leading-none">{currentSet.set_name}</h2>
+                                <p className="text-[#d4af37] font-bold text-lg leading-none mt-1">Pack {currentPackIndex + 1} of {packsToOpen.length}</p>
+                            </div>
+
+                            {/* Right Spacer (for balance) */}
+                            <div className="w-1/3"></div>
+                        </div>
+
+                        {/* Stone Panel Container - Cards Only */}
+                        <div className="flex-1 flex flex-col items-center justify-center w-full max-w-7xl mx-auto min-h-0 mb-4">
+                            <StonePanel className="w-full flex-1 flex flex-col relative px-6 py-2 shadow-2xl">
+                                <div className="flex flex-wrap items-center justify-center content-evenly w-full h-full gap-2">
+                                    {currentPack.map((card, idx) => {
+                                        const isFlipped = flippedCards.has(idx);
+                                        const setInfo = card.card_sets?.find(s => s.set_code.split('-')[0] === currentSet.set_code.split('-')[0])
+                                            || card.card_sets?.[0];
+                                        let rarity = setInfo?.set_rarity || "Common";
+                                        if (rarity === "SP") rarity = "Short Print";
+
+                                        return (
+                                            <PackCard
+                                                key={`${card.id}-${idx}`}
+                                                card={card}
+                                                isFlipped={isFlipped}
+                                                onClick={() => handleCardClick(idx, card)}
+                                                rarity={rarity}
+                                                onMouseEnter={() => {
+                                                    if (isFlipped) {
+                                                        setHoveredCard(card);
+                                                    }
+                                                }}
+                                                onMouseLeave={() => setHoveredCard(null)}
+                                                onMouseMove={handleMouseMove}
+                                            />
+                                        );
+                                    })}
                                 </div>
                             </StonePanel>
-                        ))}
-                    </div>
-                </div>
-                {selectedCard && (
-                    <CardDetailModal
-                        card={selectedCard}
-                        onClose={() => setSelectedCard(null)}
-                    />
-                )}
-                {/* Tooltip Portal */}
-                {hoveredCard && (
-                    <CardTooltip
-                        card={hoveredCard}
-                        x={cursorPosition.x}
-                        y={cursorPosition.y}
-                    />
-                )}
-            </div>
-        );
-    }
 
-    // Pack Opening View
-    if (isOpening) {
-        const currentPack = packsToOpen[currentPackIndex];
+                            {/* Controls - Below Stone Panel */}
+                            <div className="flex justify-center items-center gap-4 pt-4">
+                                {!isPackFullyOpened && (
+                                    <ParchmentButton onClick={handleFlipAll}>
+                                        Flip All
+                                    </ParchmentButton>
+                                )}
 
-        return (
-            <div className="h-screen w-full p-4 flex flex-col items-center justify-center overflow-hidden">
-                <GuideSprite />
-
-                {/* Main Container - Fits Screen */}
-                <div className="w-full max-w-[95vw] h-full max-h-[95vh] flex flex-col">
-
-                    {/* Header Info & Controls */}
-                    <div className="mb-2 flex items-end justify-between px-4 relative z-20">
-                        {/* Left Controls */}
-                        <div className="flex gap-2 w-1/3">
-                            <button
-                                onClick={handleDiscardAndExit}
-                                className="px-6 py-3 text-base text-red-400 hover:text-red-300 font-bold transition-colors bg-black/40 rounded-lg border border-red-900/50 hover:bg-black/60"
-                            >
-                                Back to Campaign
-                            </button>
-                            <ParchmentButton
-                                onClick={handleOpenAll}
-                                className="origin-left"
-                            >
-                                Open All
-                            </ParchmentButton>
-                        </div>
-
-                        {/* Center Title */}
-                        <div className="text-center w-1/3">
-                            <h2 className="text-3xl font-black text-white drop-shadow-md leading-none">{currentSet.set_name}</h2>
-                            <p className="text-[#d4af37] font-bold text-lg leading-none mt-1">Pack {currentPackIndex + 1} of {packsToOpen.length}</p>
-                        </div>
-
-                        {/* Right Spacer (for balance) */}
-                        <div className="w-1/3"></div>
-                    </div>
-
-                    {/* Stone Panel Container - Cards Only */}
-                    {/* Centered (mx-auto), constrained width (max-w-7xl) to allow desktop scaling */}
-                    <div className="flex-1 flex flex-col items-center justify-center w-full max-w-7xl mx-auto min-h-0 mb-4">
-                        <StonePanel className="w-full flex-1 flex flex-col relative px-6 py-2 shadow-2xl">
-                            {/* Cards Container - Flex for better fitting */}
-                            {/* content-evenly distributes space equally between rows and borders */}
-                            <div className="flex flex-wrap items-center justify-center content-evenly w-full h-full gap-2">
-                                {currentPack.map((card, idx) => {
-                                    const isFlipped = flippedCards.has(idx);
-                                    // Find rarity for this set
-                                    const setInfo = card.card_sets?.find(s => s.set_code.split('-')[0] === currentSet.set_code.split('-')[0])
-                                        || card.card_sets?.[0];
-
-                                    // Get full rarity name
-                                    let rarity = setInfo?.set_rarity || "Common";
-
-                                    // Map "Short Print" if needed, though API usually gives full name "Short Print"
-                                    // If it gives "SP", map it.
-                                    if (rarity === "SP") rarity = "Short Print";
-
-                                    return (
-                                        <PackCard
-                                            key={`${card.id}-${idx}`}
-                                            card={card}
-                                            isFlipped={isFlipped}
-                                            onClick={() => handleCardClick(idx, card)}
-                                            rarity={rarity}
-                                            onMouseEnter={() => {
-                                                if (isFlipped) {
-                                                    setHoveredCard(card);
-                                                }
-                                            }}
-                                            onMouseLeave={() => setHoveredCard(null)}
-                                            onMouseMove={handleMouseMove}
-                                        />
-                                    );
-                                })}
+                                <button
+                                    onClick={handleNextPack}
+                                    disabled={!isPackFullyOpened}
+                                    className={`px-8 py-3 font-black rounded-xl transition-all uppercase tracking-wider ${isPackFullyOpened
+                                        ? 'bg-[var(--primary)] text-black hover:bg-[#f5c542] shadow-[0_4px_0_#b8860b] active:shadow-none active:translate-y-[4px] border border-[#b8860b]'
+                                        : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
+                                        }`}
+                                >
+                                    {currentPackIndex < packsToOpen.length - 1 ? 'Next Pack' : 'Finish'}
+                                </button>
                             </div>
-                        </StonePanel>
-
-                        {/* Controls - Below Stone Panel */}
-                        <div className="flex justify-center items-center gap-4 pt-4">
-                            {!isPackFullyOpened && (
-                                <ParchmentButton onClick={handleFlipAll}>
-                                    Flip All
-                                </ParchmentButton>
-                            )}
-
-                            <button
-                                onClick={handleNextPack}
-                                disabled={!isPackFullyOpened}
-                                className={`px-8 py-3 font-black rounded-xl transition-all uppercase tracking-wider ${isPackFullyOpened
-                                    ? 'bg-[var(--primary)] text-black hover:bg-[#f5c542] shadow-[0_4px_0_#b8860b] active:shadow-none active:translate-y-[4px] border border-[#b8860b]'
-                                    : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
-                                    }`}
-                            >
-                                {currentPackIndex < packsToOpen.length - 1 ? 'Next Pack' : 'Finish'}
-                            </button>
                         </div>
                     </div>
-
-                    {selectedCard && (
-                        <CardDetailModal
-                            card={selectedCard}
-                            onClose={() => setSelectedCard(null)}
-                        />
-                    )}
-
-                    {/* Tooltip Portal */}
-                    {hoveredCard && (
-                        <CardTooltip
-                            card={hoveredCard}
-                            x={cursorPosition.x}
-                            y={cursorPosition.y}
-                        />
-                    )}
                 </div>
-            </div>
-        );
-    }
+            );
+        }
 
-    // Store View (Initial State)
-    return (
-        <div className="min-h-screen p-8 flex items-center justify-center">
-            <GuideSprite />
-            <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-
+        // 4. Store View (Default)
+        return (
+            <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center mx-auto mt-12">
                 {/* Pack Art Display */}
                 <div
                     className="relative group perspective-1000 cursor-pointer"
@@ -591,6 +446,30 @@ export default function PacksPage() {
                     </div>
                 </div>
             </div>
-        </div >
+        );
+    };
+
+    return (
+        <div className="min-h-screen p-8 pb-32">
+            {!isOpening && <GuideSprite />}
+            {renderContent()}
+
+            {selectedCard && (
+                <CardDetailModal
+                    card={selectedCard}
+                    onClose={() => setSelectedCard(null)}
+                />
+            )}
+
+            {/* Tooltip Portal */}
+            {hoveredCard && (
+                <CardTooltip
+                    card={hoveredCard}
+                    x={cursorPosition.x}
+                    y={cursorPosition.y}
+                />
+            )}
+        </div>
     );
 }
+
