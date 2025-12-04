@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Card } from '@/lib/api';
+import { Card, PulledCard } from '@/lib/api';
 
 interface MatchResult {
     winner: 'player' | 'opponent';
@@ -23,7 +23,7 @@ export interface SaveSlot {
 
     // Game State
     currentSetIndex: number;
-    collection: Record<number, number>;
+    collection: Record<string, number>; // Key: `${id}_${set}_${rarity}`
     matchHistory: MatchResult[];
     pendingReward: RewardState | null;
 
@@ -43,7 +43,7 @@ interface ProgressionContextType {
 
     // Active Save Data (Convenience accessors for current UI)
     currentSetIndex: number;
-    collection: Record<number, number>;
+    collection: Record<string, number>;
     matchHistory: MatchResult[];
     pendingReward: RewardState | null;
 
@@ -54,7 +54,7 @@ interface ProgressionContextType {
     startSeries: () => void;
 
     // Game Actions (Apply to active save)
-    addToCollection: (cards: Card[]) => void;
+    addToCollection: (cards: PulledCard[]) => void;
     recordMatch: (result: MatchResult) => void;
     advanceSet: () => void;
     claimReward: () => void;
@@ -91,13 +91,26 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
                     const legacy = localStorage.getItem(LEGACY_KEY);
                     if (legacy) {
                         const parsedLegacy = JSON.parse(legacy);
+
+                        // Migrate legacy collection (number keys) to string keys
+                        const legacyCollection = parsedLegacy.collection || {};
+                        const migratedCollection: Record<string, number> = {};
+
+                        Object.entries(legacyCollection).forEach(([id, count]) => {
+                            // Legacy data has no set/rarity info, so we use a placeholder
+                            // We'll use "Unknown" set and "Common" rarity as fallback
+                            // Format: ID_SET_RARITY
+                            const key = `${id}_Unknown_Common`;
+                            migratedCollection[key] = count as number;
+                        });
+
                         const legacySave: SaveSlot = {
                             id: 'legacy-1',
                             name: 'Legacy Run',
                             createdAt: Date.now(),
                             lastPlayed: Date.now(),
                             currentSetIndex: parsedLegacy.currentSetIndex || 0,
-                            collection: parsedLegacy.collection || {},
+                            collection: migratedCollection,
                             matchHistory: parsedLegacy.matchHistory || [],
                             pendingReward: parsedLegacy.pendingReward || null,
                             settings: { startSetIndex: 0, packsPerRound: 24 }
@@ -165,11 +178,14 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
 
     // --- Game Actions ---
 
-    const addToCollection = (cards: Card[]) => {
+    const addToCollection = (cards: PulledCard[]) => {
         updateActiveSave(save => {
             const newCollection = { ...save.collection };
             cards.forEach(card => {
-                newCollection[card.id] = (newCollection[card.id] || 0) + 1;
+                // Key: ID_SET_RARITY
+                // Sanitize set code and rarity to avoid separator issues (though unlikely with _)
+                const key = `${card.id}_${card.pulled_set_code}_${card.pulled_rarity}`;
+                newCollection[key] = (newCollection[key] || 0) + 1;
             });
             return { ...save, collection: newCollection };
         });
@@ -216,22 +232,33 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     const importCollection = (cardIds: number[], mode: 'add' | 'replace') => {
         if (!activeSaveId) return;
 
-        setSaves(prev => prev.map(s => {
-            if (s.id === activeSaveId) {
-                let newCollection = mode === 'replace' ? {} : { ...s.collection };
+        setSaves(prev => {
+            const updatedSaves = prev.map(s => {
+                if (s.id === activeSaveId) {
+                    let newCollection = mode === 'replace' ? {} : { ...s.collection };
 
-                cardIds.forEach(id => {
-                    newCollection[id] = (newCollection[id] || 0) + 1;
-                });
+                    cardIds.forEach(id => {
+                        // Imported cards have no set/rarity info
+                        const key = `${id}_Unknown_Common`;
+                        newCollection[key] = (newCollection[key] || 0) + 1;
+                    });
 
-                return {
-                    ...s,
-                    collection: newCollection,
-                    lastPlayed: Date.now()
-                };
+                    return {
+                        ...s,
+                        collection: newCollection,
+                        lastPlayed: Date.now()
+                    };
+                }
+                return s;
+            });
+
+            // Force save immediately
+            if (hasLoaded) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ saves: updatedSaves, activeSaveId }));
             }
-            return s;
-        }));
+
+            return updatedSaves;
+        });
     };
 
     // Derived State for Consumers

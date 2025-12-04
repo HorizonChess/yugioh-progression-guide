@@ -1,7 +1,7 @@
 "use client";
 
 import { useProgression } from "@/context/ProgressionContext";
-import { fetchAllSets, fetchCardsInSet, Card, CardSet } from "@/lib/api";
+import { fetchAllSets, fetchCardsInSet, Card, CardSet, PulledCard } from "@/lib/api";
 import { generateBoosterPack } from "@/lib/pack-logic";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -29,10 +29,10 @@ export default function PacksPage() {
     const [loading, setLoading] = useState(true);
 
     // New Pack Logic State
-    const [packsToOpen, setPacksToOpen] = useState<Card[][]>([]);
+    const [packsToOpen, setPacksToOpen] = useState<PulledCard[][]>([]);
     const [currentPackIndex, setCurrentPackIndex] = useState(0);
     const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set()); // Set of indices in current pack
-    const [allOpenedCards, setAllOpenedCards] = useState<Card[]>([]);
+    const [allOpenedCards, setAllOpenedCards] = useState<PulledCard[]>([]);
     const [showSummary, setShowSummary] = useState(false);
 
     // Custom Quantity State
@@ -77,7 +77,7 @@ export default function PacksPage() {
     const handleOpenPacks = (count: number) => {
         if (!setCards.length || count <= 0 || !currentSet) return;
 
-        const newPacks: Card[][] = [];
+        const newPacks: PulledCard[][] = [];
         const setPrefix = currentSet.set_code;
 
         for (let i = 0; i < count; i++) {

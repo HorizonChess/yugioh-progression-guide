@@ -43,6 +43,11 @@ export interface Card {
     }[];
 }
 
+export interface PulledCard extends Card {
+    pulled_rarity: string;
+    pulled_set_code: string;
+}
+
 // Filter out sets that are too new (Link era started around 2017 with Code of the Duelist)
 // We want to stop before Link monsters.
 // "Code of the Duelist" (COTD) was released Aug 4, 2017.

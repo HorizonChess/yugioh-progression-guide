@@ -48,7 +48,12 @@ const SUBTYPES = [
 const ATTRIBUTES = ["All", "DARK", "LIGHT", "EARTH", "WATER", "FIRE", "WIND", "DIVINE"];
 const LEVELS = ["All", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"];
 const SCALES = ["All", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"];
-const RARITIES = ["All", "Common", "Rare", "Super Rare", "Ultra Rare", "Secret Rare", "Ultimate Rare", "Ghost Rare", "Starfoil Rare", "Mosaic Rare", "Shatterfoil Rare", "Gold Rare"];
+const RARITIES = [
+    "All", "Common", "Rare", "Super Rare", "Ultra Rare", "Secret Rare", "Ultimate Rare", "Ghost Rare",
+    "Starfoil Rare", "Mosaic Rare", "Shatterfoil Rare", "Gold Rare", "Platinum Rare",
+    "Starlight Rare", "Prismatic Secret Rare", "Collector's Rare", "Pharaoh's Rare",
+    "Platinum Secret Rare", "10000 Secret Rare", "Millennium Rare"
+];
 
 const SORT_OPTIONS = [
     { label: "Name (A-Z)", value: "name_asc" },

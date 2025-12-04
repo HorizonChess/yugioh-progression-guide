@@ -147,9 +147,17 @@ export default function CollectionPage() {
             }
 
             setLoading(true);
-            const ids = Object.keys(collection).map(Number);
-            if (ids.length > 0) {
-                const fetchedCards = await fetchCardsByIds(ids);
+            // Collection keys are now strings: ID_SET_RARITY
+            // We need to extract unique IDs to fetch card data
+            const uniqueIds = new Set<number>();
+            Object.keys(collection).forEach(key => {
+                const [idStr] = key.split('_');
+                const id = parseInt(idStr);
+                if (!isNaN(id)) uniqueIds.add(id);
+            });
+
+            if (uniqueIds.size > 0) {
+                const fetchedCards = await fetchCardsByIds(Array.from(uniqueIds));
                 setCards(fetchedCards);
             } else {
                 setCards([]);
@@ -162,7 +170,20 @@ export default function CollectionPage() {
     // Filter & Sort Logic
     // Filtering Logic
     const filteredCards = useMemo(() => {
-        return cards.filter(card => {
+        // We need to filter based on the COLLECTION ENTRIES, not just the base cards.
+        // Each entry in 'collection' is a specific variant we own.
+
+        const collectionEntries = Object.entries(collection).map(([key, count]) => {
+            const [idStr, setCode, rarity] = key.split('_');
+            const id = parseInt(idStr);
+            const card = cards.find(c => c.id === id);
+            return { key, count, id, setCode, rarity, card };
+        }).filter(entry => entry.card); // Filter out if card data missing
+
+        return collectionEntries.filter(entry => {
+            const { card, setCode, rarity } = entry;
+            if (!card) return false;
+
             // Search
             if (filters.search) {
                 const searchLower = filters.search.toLowerCase();
@@ -173,14 +194,30 @@ export default function CollectionPage() {
 
             // Set
             if (filters.set !== "All") {
-                const inSet = card.card_sets?.some(s => s.set_name === filters.set);
-                if (!inSet) return false;
+                // Check if the PULLED set matches (or if unknown, check card sets)
+                if (setCode && setCode !== "Unknown") {
+                    // We need to match set NAME, but we have CODE.
+                    // Ideally we'd have set name in key, but code is safer.
+                    // We can look up the set name from the card data using the code.
+                    const setInfo = card.card_sets?.find(s => s.set_code === setCode);
+                    if (setInfo?.set_name !== filters.set) return false;
+                } else {
+                    // Fallback for legacy/imported: check if card belongs to set at all
+                    const inSet = card.card_sets?.some(s => s.set_name === filters.set);
+                    if (!inSet) return false;
+                }
             }
 
             // Rarity
             if (filters.rarity !== "All") {
-                const hasRarity = card.card_sets?.some(s => s.set_rarity === filters.rarity);
-                if (!hasRarity) return false;
+                // Check the PULLED rarity
+                if (rarity && rarity !== "Unknown") {
+                    if (rarity !== filters.rarity) return false;
+                } else {
+                    // Fallback
+                    const hasRarity = card.card_sets?.some(s => s.set_rarity === filters.rarity);
+                    if (!hasRarity) return false;
+                }
             }
 
             // Category (Monster, Spell, Trap)
@@ -257,22 +294,24 @@ export default function CollectionPage() {
 
             return true;
         }).sort((a, b) => {
+            const cardA = a.card!;
+            const cardB = b.card!;
             switch (filters.sort) {
-                case "name_asc": return a.name.localeCompare(b.name);
-                case "name_desc": return b.name.localeCompare(a.name);
-                case "atk_desc": return (b.atk || 0) - (a.atk || 0);
-                case "def_desc": return (b.def || 0) - (a.def || 0);
-                case "level_desc": return (b.level || 0) - (a.level || 0);
-                case "newest": return b.id - a.id;
-                case "oldest": return a.id - b.id;
+                case "name_asc": return cardA.name.localeCompare(cardB.name);
+                case "name_desc": return cardB.name.localeCompare(cardA.name);
+                case "atk_desc": return (cardB.atk || 0) - (cardA.atk || 0);
+                case "def_desc": return (cardB.def || 0) - (cardA.def || 0);
+                case "level_desc": return (cardB.level || 0) - (cardA.level || 0);
+                case "newest": return cardB.id - cardA.id;
+                case "oldest": return cardA.id - cardB.id;
                 default: return 0;
             }
         });
-    }, [cards, filters]);
+    }, [cards, collection, filters]);
 
     // Pagination
     const totalPages = Math.ceil(filteredCards.length / ITEMS_PER_PAGE);
-    const displayedCards = filteredCards.slice(
+    const displayedEntries = filteredCards.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
         currentPage * ITEMS_PER_PAGE
     );
@@ -324,6 +363,16 @@ export default function CollectionPage() {
                         <ParchmentButton onClick={handleExportClick}>
                             Export YDK
                         </ParchmentButton>
+                        <ParchmentButton
+                            onClick={() => {
+                                if (confirm("WARNING: This will PERMANENTLY DELETE your entire collection. This action cannot be undone. Are you sure?")) {
+                                    importCollection([], 'replace');
+                                }
+                            }}
+                            className="text-red-800 hover:text-red-600 border-red-800/50"
+                        >
+                            Delete Collection
+                        </ParchmentButton>
                     </div>
                 </div>
             </div>
@@ -351,44 +400,55 @@ export default function CollectionPage() {
                         ) : (
                             <>
                                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-9 gap-2 md:gap-4">
-                                    {displayedCards.map((card) => (
-                                        <div
-                                            key={card.id}
-                                            className="flex flex-col group cursor-pointer"
-                                            onClick={() => setSelectedCard(card)}
-                                            onMouseEnter={() => setHoveredCard(card)}
-                                            onMouseLeave={() => setHoveredCard(null)}
-                                        >
-                                            <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
-                                                <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
-                                                    <Image
-                                                        src={card.card_images[0].image_url}
-                                                        alt={card.name}
-                                                        fill
-                                                        sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
-                                                        className="object-cover"
-                                                        loading="lazy"
-                                                    />
-                                                    {/* Quantity Badge */}
-                                                    <div className="absolute top-1 right-1 w-6 h-6 bg-black/80 rounded-full flex items-center justify-center border border-[#d4af37] shadow-md z-10">
-                                                        <span className="text-xs font-bold text-[#d4af37]">
-                                                            {collection[card.id]}
-                                                        </span>
+                                    {displayedEntries.map((entry) => {
+                                        const { card, count, rarity } = entry;
+                                        if (!card) return null;
+
+                                        return (
+                                            <div
+                                                key={entry.key}
+                                                className="flex flex-col group cursor-pointer"
+                                                onClick={() => setSelectedCard(card)}
+                                                onMouseEnter={() => setHoveredCard(card)}
+                                                onMouseLeave={() => setHoveredCard(null)}
+                                            >
+                                                <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
+                                                    <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
+                                                        <Image
+                                                            src={card.card_images[0].image_url}
+                                                            alt={card.name}
+                                                            fill
+                                                            sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
+                                                            className="object-cover"
+                                                            loading="lazy"
+                                                        />
+                                                        {/* Quantity Badge */}
+                                                        <div className="absolute top-1 right-1 w-6 h-6 bg-black/80 rounded-full flex items-center justify-center border border-[#d4af37] shadow-md z-10">
+                                                            <span className="text-xs font-bold text-[#d4af37]">
+                                                                {count}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Card Info */}
+                                                <div className="text-center px-1">
+                                                    <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
+                                                        {card.name}
+                                                    </div>
+                                                    <div className="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">
+                                                        {rarity && rarity !== "Unknown"
+                                                            ? rarity
+                                                            : (filters.rarity !== "All" && card.card_sets?.some(s => s.set_rarity === filters.rarity)
+                                                                ? filters.rarity
+                                                                : (card.card_sets?.[0]?.set_rarity || "Common")
+                                                            )
+                                                        }
                                                     </div>
                                                 </div>
                                             </div>
-                                            
-                                            {/* Card Info */}
-                                            <div className="text-center px-1">
-                                                <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
-                                                    {card.name}
-                                                </div>
-                                                <div className="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">
-                                                    {card.card_sets?.[0]?.set_rarity || "Common"}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
 
                                 {/* Pagination */}
