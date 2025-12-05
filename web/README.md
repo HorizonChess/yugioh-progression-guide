@@ -111,6 +111,10 @@ We use a suite of custom scripts to maintain assets and data integrity:
     -   **Pagination**: Client-side pagination for performance with large collections.
     -   **Layout**: Responsive grid that adapts to screen size (up to 9 columns on large screens).
     -   **Hover Details**: Hovering over a card displays a high-resolution tooltip with card effects and stats.
+-   **`/deck-builder`**: DuelingBook-style Deck Constructor.
+    -   **Unified Deck View**: Single view managing Main (60), Extra (15), and Side (15) decks with drag-and-drop support.
+    -   **Advanced Search**: Granular filtering (Name, Desc, Race, Attribute, Stats) matching the DuelingBook aesthetic.
+    -   **Deck Management**: Save/Load/Delete functionality persisted via `ProgressionContext`.
 
 ### `src/context`
 -   **`ProgressionContext`**: Global state manager.
@@ -134,7 +138,7 @@ We use a suite of custom scripts to maintain assets and data integrity:
 
 -   **[✓] Loser's Circle**: ~~Implement the "Pity Pack" opening flow for defeated players~~ (Completed)
 -   **[ ] Winner's Circle**: Implement the Reward Wheel (Spin animation, prize logic).
--   **[ ] Deck Builder**: Basic in-app deck construction using collected cards.
+-   **[✓] Deck Builder**: Integrated DuelingBook-style deck constructor with Drag-and-Drop, card details on hover and basic filtering.
 -   **[ ] Mobile Optimization**: Improve touch targets and layout for phone users.
 -   **[ ] Box Opening Mode**: Simulate opening full boxes with guaranteed distribution (4 Supers, 2 Ultras per LOB box, etc.).
 
