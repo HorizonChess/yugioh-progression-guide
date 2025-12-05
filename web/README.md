@@ -128,6 +128,7 @@ We use a suite of custom scripts to maintain assets and data integrity:
 -   **[✓] Inline Documentation**: Added extensive comments linking code to pack_opening_rules.md
 -   **[✓] Type Safety**: Fixed rewards page type errors (CardSet vs string)
 -   **[✓] Suspense Boundaries**: Resolved Next.js static generation issues with useSearchParams
+-   **[✓] Custom Hook Refactor**: Extracted card tooltip logic into reusable `useCardTooltip` hook ([src/hooks/useCardTooltip.ts](src/hooks/useCardTooltip.ts))
 
 ## Future Roadmap
 

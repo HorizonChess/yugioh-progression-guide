@@ -8,9 +8,10 @@ interface PackCardProps {
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
     onMouseMove?: (e: React.MouseEvent) => void;
+    width?: string;
 }
 
-export default function PackCard({ card, isFlipped, onClick, rarity, onMouseEnter, onMouseLeave, onMouseMove }: PackCardProps) {
+export default function PackCard({ card, isFlipped, onClick, rarity, onMouseEnter, onMouseLeave, onMouseMove, width = '19%' }: PackCardProps) {
     return (
         <div
             onClick={onClick}
@@ -20,9 +21,9 @@ export default function PackCard({ card, isFlipped, onClick, rarity, onMouseEnte
             className="flex flex-col items-center justify-center cursor-pointer group mb-8"
             style={{
                 // Grid Cell Sizing
-                // We reserve 19% width for the grid column
-                flexBasis: '19%',
-                maxWidth: '19%',
+                // We reserve 19% width for the grid column (default) or custom width
+                flexBasis: width,
+                maxWidth: width,
                 // We don't set fixed height here, we let the content drive it up to a limit
                 position: 'relative',
                 zIndex: 1,

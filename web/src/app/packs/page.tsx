@@ -15,6 +15,7 @@ import { useSearchParams } from "next/navigation";
 import CardTooltip from "@/components/CardTooltip";
 import { RARITY_ORDER, getCardRarity, sortCardsByRarity } from "@/lib/utils";
 import RarityCardGrid from "@/components/RarityCardGrid";
+import { useCardTooltip } from "@/hooks/useCardTooltip";
 
 function PacksPageContent() {
     const { currentSetIndex, addToCollection } = useProgression();
@@ -42,13 +43,8 @@ function PacksPageContent() {
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
     const [viewDetails, setViewDetails] = useState(false);
 
-    // Tooltip State
-    const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
-    const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        setCursorPosition({ x: e.clientX, y: e.clientY });
-    };
+    // Tooltip State (using custom hook)
+    const { hoveredCard, cursorPosition, handleMouseMove, setHoveredCard } = useCardTooltip();
 
     // Determine which set to load
     const setParam = searchParams.get('set');
@@ -306,6 +302,10 @@ function PacksPageContent() {
         // 3. Pack Opening View
         if (isOpening) {
             const currentPack = packsToOpen[currentPackIndex];
+            // If pack has > 10 cards (e.g. 12 cards in reprint sets), use 15% width (fits 6 per row)
+            // Otherwise use 19% width (fits 5 per row)
+            const cardWidth = currentPack.length > 10 ? '15%' : '19%';
+
             return (
                 <div className="h-screen w-full p-4 flex flex-col items-center justify-center overflow-hidden">
                     {/* Main Container - Fits Screen */}
@@ -364,6 +364,7 @@ function PacksPageContent() {
                                                 }}
                                                 onMouseLeave={() => setHoveredCard(null)}
                                                 onMouseMove={handleMouseMove}
+                                                width={cardWidth}
                                             />
                                         );
                                     })}

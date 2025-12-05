@@ -13,14 +13,14 @@ import { parseYDK } from "@/lib/ydk-parser";
 import ParchmentButton from "@/components/ParchmentButton";
 import GuideSprite from "@/components/GuideSprite";
 import StonePanel from "@/components/StonePanel";
+import { useCardTooltip } from "@/hooks/useCardTooltip";
 
 export default function CollectionPage() {
     const { collection, activeSaveId, loadSave, importCollection } = useProgression();
     const [cards, setCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-    const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
-    const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+    const { hoveredCard, cursorPosition, handleMouseMove, setHoveredCard } = useCardTooltip();
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 60;
 
@@ -338,7 +338,7 @@ export default function CollectionPage() {
     return (
         <div
             className="min-h-screen pb-32 flex flex-col"
-            onMouseMove={(e) => setCursorPosition({ x: e.clientX, y: e.clientY })}
+            onMouseMove={handleMouseMove}
         >
             <GuideSprite />
 
