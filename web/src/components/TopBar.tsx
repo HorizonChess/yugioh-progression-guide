@@ -69,6 +69,7 @@ export default function TopBar({ title, subtitle, showBack, onBack, children }: 
                         <div className="hidden md:flex gap-4 text-xs font-bold tracking-widest text-gray-500">
                             <Link href="/map" className="hover:text-white transition-colors">CAMPAIGN</Link>
                             <Link href="/collection" className="hover:text-white transition-colors">COLLECTION</Link>
+                            <Link href="/deck-builder" className="hover:text-white transition-colors">DECK BUILDER</Link>
                             <Link href="/menu" className="hover:text-white transition-colors">MENU</Link>
                         </div>
                         <div className="text-right">

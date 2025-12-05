@@ -14,6 +14,15 @@ export interface RewardState {
     claimed: boolean;
 }
 
+export interface SavedDeck {
+    id: string;
+    name: string;
+    mainDeck: number[];
+    extraDeck: number[];
+    sideDeck: number[];
+    createdAt: number;
+}
+
 // The core data for a single run
 export interface SaveSlot {
     id: string;
@@ -32,6 +41,7 @@ export interface SaveSlot {
         startSetIndex: number;
         packsPerRound: number;
     };
+    savedDecks: SavedDeck[];
 }
 
 interface ProgressionContextType {
@@ -46,6 +56,7 @@ interface ProgressionContextType {
     collection: Record<string, number>;
     matchHistory: MatchResult[];
     pendingReward: RewardState | null;
+    savedDecks: SavedDeck[];
 
     // Actions
     createSave: (name: string, startSetIndex?: number, packsPerRound?: number) => void;
@@ -60,6 +71,10 @@ interface ProgressionContextType {
     claimReward: () => void;
     resetProgress: () => void; // Resets ACTIVE save
     importCollection: (cardIds: number[], mode: 'add' | 'replace') => void;
+
+    // Deck Management
+    saveDeck: (deck: SavedDeck) => void;
+    deleteDeck: (deckId: string) => void;
 
     // Guide
     isGuideVisible: boolean;
@@ -98,8 +113,6 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
 
                         Object.entries(legacyCollection).forEach(([id, count]) => {
                             // Legacy data has no set/rarity info, so we use a placeholder
-                            // We'll use "Unknown" set and "Common" rarity as fallback
-                            // Format: ID_SET_RARITY
                             const key = `${id}_Unknown_Common`;
                             migratedCollection[key] = count as number;
                         });
@@ -113,7 +126,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
                             collection: migratedCollection,
                             matchHistory: parsedLegacy.matchHistory || [],
                             pendingReward: parsedLegacy.pendingReward || null,
-                            settings: { startSetIndex: 0, packsPerRound: 24 }
+                            settings: { startSetIndex: 0, packsPerRound: 24 },
+                            savedDecks: []
                         };
                         setSaves([legacySave]);
                         setActiveSaveId(legacySave.id);
@@ -140,7 +154,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         if (!activeSaveId) return;
         setSaves(prev => prev.map(save =>
             save.id === activeSaveId
-                ? { ...updater(save), lastPlayed: Date.now() }
+                ? { ...updater(save), savedDecks: save.savedDecks || [], lastPlayed: Date.now() }
                 : save
         ));
     };
@@ -157,7 +171,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             collection: {},
             matchHistory: [],
             pendingReward: null,
-            settings: { startSetIndex, packsPerRound }
+            settings: { startSetIndex, packsPerRound },
+            savedDecks: []
         };
         setSaves(prev => [...prev, newSave]);
         setActiveSaveId(newSave.id);
@@ -183,7 +198,6 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             const newCollection = { ...save.collection };
             cards.forEach(card => {
                 // Key: ID_SET_RARITY
-                // Sanitize set code and rarity to avoid separator issues (though unlikely with _)
                 const key = `${card.id}_${card.pulled_set_code}_${card.pulled_rarity}`;
                 newCollection[key] = (newCollection[key] || 0) + 1;
             });
@@ -224,7 +238,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
                 currentSetIndex: save.settings.startSetIndex,
                 collection: {},
                 matchHistory: [],
-                pendingReward: null
+                pendingReward: null,
+                savedDecks: []
             }));
         }
     };
@@ -261,6 +276,27 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         });
     };
 
+    // --- Deck Management ---
+    const saveDeck = (deck: SavedDeck) => {
+        updateActiveSave(save => {
+            const existingIndex = (save.savedDecks || []).findIndex(d => d.id === deck.id);
+            let newDecks = [...(save.savedDecks || [])];
+            if (existingIndex >= 0) {
+                newDecks[existingIndex] = deck;
+            } else {
+                newDecks.push(deck);
+            }
+            return { ...save, savedDecks: newDecks };
+        });
+    };
+
+    const deleteDeck = (deckId: string) => {
+        updateActiveSave(save => ({
+            ...save,
+            savedDecks: (save.savedDecks || []).filter(d => d.id !== deckId)
+        }));
+    };
+
     // Derived State for Consumers
     const activeSave = saves.find(s => s.id === activeSaveId);
 
@@ -279,6 +315,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             currentSetIndex: activeSave?.currentSetIndex ?? 0,
             collection: activeSave?.collection ?? {},
             matchHistory: activeSave?.matchHistory ?? [],
+            savedDecks: activeSave?.savedDecks ?? [],
             pendingReward: activeSave?.pendingReward ?? null,
 
             createSave,
@@ -292,6 +329,9 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             claimReward,
             resetProgress,
             importCollection,
+
+            saveDeck,
+            deleteDeck,
 
             // Guide
             isGuideVisible,

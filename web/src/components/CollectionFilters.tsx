@@ -24,6 +24,7 @@ export interface FilterState {
 interface CollectionFiltersProps {
     onFilterChange: (filters: FilterState) => void;
     className?: string;
+    compact?: boolean;
 }
 
 const CATEGORIES = ["All", "Monster", "Spell", "Trap"];
@@ -65,7 +66,7 @@ const SORT_OPTIONS = [
     { label: "Oldest (ID Low-High)", value: "oldest" },
 ];
 
-export default function CollectionFilters({ onFilterChange, className = "" }: CollectionFiltersProps) {
+export default function CollectionFilters({ onFilterChange, className = "", compact = false }: CollectionFiltersProps) {
     const [filters, setFilters] = useState<FilterState>({
         search: "",
         set: "All",
