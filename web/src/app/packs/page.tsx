@@ -3,7 +3,7 @@
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets, fetchCardsInSet, Card, CardSet, PulledCard } from "@/lib/api";
 import { generateBoosterPack } from "@/lib/pack-logic";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import GuideSprite from "@/components/GuideSprite";
 import CardDetailModal from "@/components/CardDetailModal";
@@ -16,7 +16,7 @@ import CardTooltip from "@/components/CardTooltip";
 import { RARITY_ORDER, getCardRarity, sortCardsByRarity } from "@/lib/utils";
 import RarityCardGrid from "@/components/RarityCardGrid";
 
-export default function PacksPage() {
+function PacksPageContent() {
     const { currentSetIndex, addToCollection } = useProgression();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -470,6 +470,18 @@ export default function PacksPage() {
                 />
             )}
         </div>
+    );
+}
+
+export default function PacksPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-xl animate-pulse">Loading...</div>
+            </div>
+        }>
+            <PacksPageContent />
+        </Suspense>
     );
 }
 
