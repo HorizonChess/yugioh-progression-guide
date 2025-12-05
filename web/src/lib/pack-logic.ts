@@ -1,6 +1,16 @@
 import { Card, CardSet, PulledCard } from './api';
 
-// Booster Pack Logic
+/**
+ * Booster Pack Logic
+ *
+ * This module implements pack opening simulation based on documented rarity ratios.
+ * See: src/data/pack_opening_rules.md for detailed ratio documentation.
+ *
+ * Key concepts:
+ * - "Hat" method: We use LCM of ratios to create a probability distribution
+ * - Era-based configs: Different eras have different rarity ratios
+ * - Short prints are treated as their declared rarity (no special ratio)
+ */
 
 export interface PackResult {
     cards: PulledCard[];
@@ -9,26 +19,38 @@ export interface PackResult {
 // Rarity Definitions
 type Rarity = 'Common' | 'Rare' | 'Super Rare' | 'Ultra Rare' | 'Secret Rare' | 'Ultimate Rare' | 'Ghost Rare' | 'Starlight Rare' | 'Short Print';
 
-// Era Definitions
+// Rarity hierarchy for fallback logic (most rare to least rare)
+const RARITY_HIERARCHY: readonly string[] = [
+    'Starlight Rare', 'Ghost Rare', 'Secret Rare', 'Ultimate Rare',
+    'Ultra Rare', 'Super Rare', 'Rare', 'Common'
+] as const;
+
+/**
+ * Era Definitions for Core Sets
+ * See: pack_opening_rules.md "Pack Ratios Per Set" -> "Core Sets"
+ */
 enum Era {
-    PreSoulOfTheDuelist, // LOB -> AST
-    SoulOfTheDuelistToCyberdark, // SOD -> CDIP
-    StrikeOfNeosToForceOfTheBreaker, // STON -> FOTB
-    TacticalEvolutionToAbsolutePowerforce, // TAEV -> ABPF
-    ShiningDarknessToDimensionOfChaos, // TSHD -> DOCS
-    BreakersOfShadowToDarkNeostorm, // BOSH -> DANE
-    RisingRampageToIgnitionAssault, // RIRA -> IGAS
-    EternityCodeToPresent, // ETCO -> Present
+    PreSoulOfTheDuelist,                  // LOB -> AST: Super 1:6, Ultra 1:12, Secret 1:31
+    SoulOfTheDuelistToCyberdark,          // SOD -> CDIP: Super 1:6, Ultra 1:24, Ultimate 1:12
+    StrikeOfNeosToForceOfTheBreaker,      // STON -> FOTB: Added Secret 1:31 back
+    TacticalEvolutionToAbsolutePowerforce, // TAEV -> ABPF: First Ghost Rares (1:288)
+    ShiningDarknessToDimensionOfChaos,    // TSHD -> DOCS: Improved Secret/Ultimate to 1:23
+    BreakersOfShadowToDarkNeostorm,       // BOSH -> DANE: Guaranteed foil, no Ghost
+    RisingRampageToIgnitionAssault,       // RIRA -> IGAS: Added Starlight 1:576
+    EternityCodeToPresent,                // ETCO+: Rares discontinued, 8 commons
 }
 
-// Pack Type Definitions
+/**
+ * Pack Type Definitions
+ * See: pack_opening_rules.md for each pack type's rules
+ */
 enum PackType {
-    Core,
-    Tournament, // TP, CP, TU, AP, OTS
-    Duelist,
-    Reprint, // Dark Beginning, Dark Revelation, Retro Pack
-    PremiumGold,
-    Other // Fallback
+    Core,        // Main booster sets: 9 cards (7 commons, 1 rare, 1 foil slot)
+    Tournament,  // TP, CP, TU, AP, OTS: 3 cards (2 commons, 1 variable)
+    Duelist,     // Duelist Packs: 5 cards (3 commons, 1 rare, 1 foil slot)
+    Reprint,     // Dark Beginning/Revelation: 12 cards; Retro Pack: 9 cards
+    PremiumGold, // 5 cards (2 Gold Secrets, 3 Gold Rares with card range rules)
+    Other        // Fallback for unknown pack types
 }
 
 // Configuration for an Era/Pack Type
@@ -85,6 +107,7 @@ function determinePackType(set: CardSet): PackType {
 }
 
 // --- Core Pack Logic ---
+// See: pack_opening_rules.md "Core Sets" section
 
 function generateCorePack(setCards: Card[], setInfo: CardSet): PulledCard[] {
     const era = determineCoreEra(setInfo);
@@ -119,8 +142,14 @@ function determineCoreEra(set: CardSet): Era {
     return Era.EternityCodeToPresent;
 }
 
+/**
+ * Returns pack configuration for each core set era.
+ * Ratios sourced from pack_opening_rules.md "Core Sets" section.
+ */
 function getCoreEraConfig(era: Era): PackConfig {
     switch (era) {
+        // Pre Soul of the Duelist (LOB -> AST)
+        // Ratios: Super 1:6, Ultra 1:12, Secret 1:31
         case Era.PreSoulOfTheDuelist:
             return {
                 cardsPerPack: 9,
@@ -131,6 +160,10 @@ function getCoreEraConfig(era: Era): PackConfig {
                 ratios: { 'Super Rare': 6, 'Ultra Rare': 12, 'Secret Rare': 31 },
                 ultimateCanBeUpgrade: false
             };
+
+        // Soul of the Duelist through Cyberdark Impact (SOD -> CDIP)
+        // Ultimate chance is 2x Ultra chance (per Ruxin34)
+        // Ratios: Super 1:6, Ultra 1:24, Ultimate 1:12
         case Era.SoulOfTheDuelistToCyberdark:
             return {
                 cardsPerPack: 9,
@@ -141,6 +174,10 @@ function getCoreEraConfig(era: Era): PackConfig {
                 ratios: { 'Super Rare': 6, 'Ultra Rare': 24, 'Ultimate Rare': 12 },
                 ultimateCanBeUpgrade: true
             };
+
+        // Strike of Neos and Force of the Breaker (STON -> FOTB)
+        // Same as previous + Secret Rares added back
+        // Ratios: Super 1:6, Ultra 1:24, Secret 1:31, Ultimate 1:12
         case Era.StrikeOfNeosToForceOfTheBreaker:
             return {
                 cardsPerPack: 9,
@@ -151,6 +188,10 @@ function getCoreEraConfig(era: Era): PackConfig {
                 ratios: { 'Super Rare': 6, 'Ultra Rare': 24, 'Secret Rare': 31, 'Ultimate Rare': 12 },
                 ultimateCanBeUpgrade: true
             };
+
+        // Tactical Evolution through Absolute Powerforce (TAEV -> ABPF)
+        // First sets with Ghost Rares (1:288 per Konami blog)
+        // Ratios: Super 1:5, Ultra 1:12, Secret 1:31, Ultimate 1:31, Ghost 1:288
         case Era.TacticalEvolutionToAbsolutePowerforce:
             return {
                 cardsPerPack: 9,
@@ -161,6 +202,10 @@ function getCoreEraConfig(era: Era): PackConfig {
                 ratios: { 'Super Rare': 5, 'Ultra Rare': 12, 'Secret Rare': 31, 'Ultimate Rare': 31, 'Ghost Rare': 288 },
                 ultimateCanBeUpgrade: true
             };
+
+        // Shining Darkness through Dimension of Chaos (TSHD -> DOCS)
+        // Improved Secret/Ultimate odds to 1-2 per box
+        // Ratios: Super 1:5, Ultra 1:12, Secret 1:23, Ultimate 1:23, Ghost 1:288
         case Era.ShiningDarknessToDimensionOfChaos:
             return {
                 cardsPerPack: 9,
@@ -171,6 +216,10 @@ function getCoreEraConfig(era: Era): PackConfig {
                 ratios: { 'Super Rare': 5, 'Ultra Rare': 12, 'Secret Rare': 23, 'Ultimate Rare': 23, 'Ghost Rare': 288 },
                 ultimateCanBeUpgrade: true
             };
+
+        // Breakers of Shadow through Dark Neostorm (BOSH -> DANE)
+        // Major change: 9th card guaranteed foil (Super/Ultra/Secret). Ghost removed.
+        // Ratios: Ultra 1:6, Secret 1:12 (Super is fallback)
         case Era.BreakersOfShadowToDarkNeostorm:
             return {
                 cardsPerPack: 9,
@@ -178,9 +227,13 @@ function getCoreEraConfig(era: Era): PackConfig {
                 guaranteedRare: true,
                 foilSlot: true,
                 foilIsGuaranteed: true,
-                ratios: { 'Ultra Rare': 6, 'Secret Rare': 12 }, // Super is fallback
+                ratios: { 'Ultra Rare': 6, 'Secret Rare': 12 },
                 ultimateCanBeUpgrade: false
             };
+
+        // Rising Rampage through Ignition Assault (RIRA -> IGAS)
+        // Added Starlight Rares (1:576)
+        // Ratios: Ultra 1:6, Secret 1:12, Starlight 1:576
         case Era.RisingRampageToIgnitionAssault:
             return {
                 cardsPerPack: 9,
@@ -191,16 +244,21 @@ function getCoreEraConfig(era: Era): PackConfig {
                 ratios: { 'Ultra Rare': 6, 'Secret Rare': 12, 'Starlight Rare': 576 },
                 ultimateCanBeUpgrade: false
             };
+
+        // Eternity Code to Present (ETCO+)
+        // Rares discontinued - packs have 8 commons + 1 foil
+        // Ratios: Ultra 1:6, Secret 1:12, Starlight 1:576
         case Era.EternityCodeToPresent:
             return {
                 cardsPerPack: 9,
-                guaranteedCommons: 8, // Rares discontinued
+                guaranteedCommons: 8,
                 guaranteedRare: false,
                 foilSlot: true,
                 foilIsGuaranteed: true,
                 ratios: { 'Ultra Rare': 6, 'Secret Rare': 12, 'Starlight Rare': 576 },
                 ultimateCanBeUpgrade: false
             };
+
         default:
             return {
                 cardsPerPack: 9,
@@ -215,49 +273,59 @@ function getCoreEraConfig(era: Era): PackConfig {
 }
 
 // --- Tournament Pack Logic ---
+// See: pack_opening_rules.md "Tournament Pack Rewards" section
+// All tournament packs: 3 cards (2 commons, 1 variable third card)
 
 function generateTournamentPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
     const name = setInfo.set_name.toLowerCase();
     let config: PackConfig;
 
     if (name.includes('tournament pack')) {
+        // Tournament Packs: Third card can be common
+        // Ratios: Rare 1:3, Super 1:18, Ultra 1:108
         config = {
             cardsPerPack: 3,
             guaranteedCommons: 2,
             guaranteedRare: false,
             foilSlot: true,
-            foilIsGuaranteed: false, // Can be common
+            foilIsGuaranteed: false,
             ratios: { 'Rare': 3, 'Super Rare': 18, 'Ultra Rare': 108 },
             ultimateCanBeUpgrade: false
         };
     } else if (name.includes('champion pack')) {
+        // Champion Packs: No commons for third card, fallback is Rare
+        // Ratios: Super 1:12, Ultra 1:48
         config = {
             cardsPerPack: 3,
             guaranteedCommons: 2,
-            guaranteedRare: false, // If not foil, it's Rare
+            guaranteedRare: false,
             foilSlot: true,
-            foilIsGuaranteed: true, // "If it was not one of the possible foils it would be a rare" -> effectively guaranteed "non-common"
-            ratios: { 'Super Rare': 12, 'Ultra Rare': 48 }, // Fallback is Rare
+            foilIsGuaranteed: true,
+            ratios: { 'Super Rare': 12, 'Ultra Rare': 48 },
             ultimateCanBeUpgrade: false
         };
     } else if (name.includes('turbo pack')) {
+        // Turbo Packs: Added Ultimate Rares
+        // Ratios: Super 1:12, Ultra 1:32, Ultimate 1:32
         config = {
             cardsPerPack: 3,
             guaranteedCommons: 2,
             guaranteedRare: false,
             foilSlot: true,
-            foilIsGuaranteed: true, // Fallback Rare
+            foilIsGuaranteed: true,
             ratios: { 'Super Rare': 12, 'Ultra Rare': 32, 'Ultimate Rare': 32 },
             ultimateCanBeUpgrade: false
         };
-    } else { // Astral and OTS
+    } else {
+        // Astral and OTS Packs: No rares exist, fallback is Super
+        // Ratios: Ultimate 1:20 (per Ruxin34 pack openings)
         config = {
             cardsPerPack: 3,
             guaranteedCommons: 2,
             guaranteedRare: false,
             foilSlot: true,
-            foilIsGuaranteed: true, // Fallback Super (No Rares)
-            ratios: { 'Ultimate Rare': 20 }, // Fallback Super
+            foilIsGuaranteed: true,
+            ratios: { 'Ultimate Rare': 20 },
             ultimateCanBeUpgrade: false
         };
     }
@@ -266,12 +334,16 @@ function generateTournamentPack(setCards: Card[], setInfo: CardSet): PulledCard[
 }
 
 // --- Duelist Pack Logic ---
+// See: pack_opening_rules.md "Duelist Packs" section
+// All duelist packs: 5 cards (3 commons, 1 rare, 1 foil slot)
 
 function generateDuelistPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
     const name = setInfo.set_name.toLowerCase();
     let config: PackConfig;
 
     if (name.includes('kaiba')) {
+        // Duelist Pack Kaiba: Only duelist pack with Ultimate Rares
+        // Ratios from official product list: Super 1:5, Ultra 1:15, Ultimate 1:24
         config = {
             cardsPerPack: 5,
             guaranteedCommons: 3,
@@ -282,7 +354,8 @@ function generateDuelistPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
             ultimateCanBeUpgrade: false
         };
     } else if (name.includes('jaden') || name.includes('jesse') || name.includes('zane') || name.includes('aster') || name.includes('chazz') || name.includes('syrus')) {
-        // Jaden 1 to Jesse Anderson era
+        // Jaden Yuki 1 through Jesse Anderson era
+        // Ratios: Super 1:6, Ultra 1:24
         config = {
             cardsPerPack: 5,
             guaranteedCommons: 3,
@@ -293,7 +366,8 @@ function generateDuelistPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
             ultimateCanBeUpgrade: false
         };
     } else {
-        // Yusei onwards / Default
+        // Yusei onwards and remaining duelist packs
+        // Ratios: Super 1:5, Ultra 1:15
         config = {
             cardsPerPack: 5,
             guaranteedCommons: 3,
@@ -309,12 +383,17 @@ function generateDuelistPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
 }
 
 // --- Reprint Pack Logic ---
+// See: pack_opening_rules.md "Reprint Packs" section
+// Dark Beginning/Revelation/Legends: 12 cards (10 commons, 1 rare, 1 foil)
+// Retro Pack: 9 cards (7 commons, 1 rare, 1 foil)
 
 function generateReprintPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
     const name = setInfo.set_name.toLowerCase();
     let config: PackConfig;
 
     if (name.includes('dark revelation volume 4')) {
+        // Dark Revelation 4: Secret rare ratio defaulted to 1:31 (TAEV era)
+        // Ratios: Super 1:4, Ultra 1:8, Secret 1:31
         config = {
             cardsPerPack: 12,
             guaranteedCommons: 10,
@@ -325,6 +404,8 @@ function generateReprintPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
             ultimateCanBeUpgrade: false
         };
     } else if (name.includes('dark legends')) {
+        // Dark Legends: No secrets (Gorz is promo, not pullable)
+        // Ratios: Super 1:5, Ultra 1:12
         config = {
             cardsPerPack: 12,
             guaranteedCommons: 10,
@@ -335,6 +416,9 @@ function generateReprintPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
             ultimateCanBeUpgrade: false
         };
     } else if (name.includes('retro pack')) {
+        // Retro Pack 1 & 2: 9 cards (like core sets)
+        // Secret ratio from core sets at their time
+        // Ratios: Super 1:5, Ultra 1:12, Secret 1:31
         config = {
             cardsPerPack: 9,
             guaranteedCommons: 7,
@@ -346,6 +430,7 @@ function generateReprintPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
         };
     } else {
         // Dark Beginning 1-2, Dark Revelation 1-3
+        // Ratios: Super 1:6, Ultra 1:12
         config = {
             cardsPerPack: 12,
             guaranteedCommons: 10,
@@ -361,25 +446,101 @@ function generateReprintPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
 }
 
 // --- Premium Gold Logic ---
+// See: pack_opening_rules.md "Premium Gold Packs" section
+// All Premium Gold: 5 cards (2 Gold Secrets, 3 Gold Rares)
+// Each variant has specific card number ranges for gold rares
+
+/**
+ * Extracts the card number from a set code (e.g., "PGLD-EN033" -> 33)
+ */
+function getCardNumber(card: Card, setPrefix: string): number | null {
+    if (!card.card_sets) return null;
+    const setEntry = card.card_sets.find(s => s.set_code.startsWith(setPrefix));
+    if (!setEntry) return null;
+
+    // Extract number from set_code like "PGLD-EN033" -> 33
+    const match = setEntry.set_code.match(/(\d+)$/);
+    return match ? parseInt(match[1], 10) : null;
+}
+
+/**
+ * Filters cards by card number range
+ */
+function filterByCardNumberRange(cards: Card[], setPrefix: string, min: number, max: number): Card[] {
+    return cards.filter(c => {
+        const num = getCardNumber(c, setPrefix);
+        return num !== null && num >= min && num <= max;
+    });
+}
 
 function generatePremiumGoldPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
-    const goldSecrets = setCards.filter(c => isRarity(c, 'Gold Secret Rare', setInfo.set_code));
-    const goldRares = setCards.filter(c => isRarity(c, 'Gold Rare', setInfo.set_code));
+    const name = setInfo.set_name.toLowerCase();
+    const setPrefix = setInfo.set_code;
+
+    const goldSecrets = setCards.filter(c => isRarity(c, 'Gold Secret Rare', setPrefix));
+    const allGoldRares = setCards.filter(c => isRarity(c, 'Gold Rare', setPrefix));
 
     const pack: PulledCard[] = [];
 
-    // 2 Gold Secrets
+    // 2 Gold Secrets (same for all variants)
     for (let i = 0; i < 2; i++) {
         if (goldSecrets.length > 0) {
-            pack.push(toPulledCard(getRandomCard(goldSecrets), 'Gold Secret Rare', setInfo.set_code));
+            pack.push(toPulledCard(getRandomCard(goldSecrets), 'Gold Secret Rare', setPrefix));
         }
     }
 
-    // 3 Gold Rares
-    for (let i = 0; i < 3; i++) {
-        if (goldRares.length > 0) {
-            pack.push(toPulledCard(getRandomCard(goldRares), 'Gold Rare', setInfo.set_code));
+    // 3 Gold Rares with variant-specific card number ranges
+    if (name.includes('return of the bling')) {
+        // Premium Gold: Return of the Bling
+        // 1 gold rare from cards 70-91, 2 gold rares from cards 22-69
+        const pool1 = filterByCardNumberRange(allGoldRares, setPrefix, 70, 91);
+        const pool2 = filterByCardNumberRange(allGoldRares, setPrefix, 22, 69);
+
+        if (pool1.length > 0) {
+            pack.push(toPulledCard(getRandomCard(pool1), 'Gold Rare', setPrefix));
+        } else if (allGoldRares.length > 0) {
+            pack.push(toPulledCard(getRandomCard(allGoldRares), 'Gold Rare', setPrefix));
         }
+
+        for (let i = 0; i < 2; i++) {
+            if (pool2.length > 0) {
+                pack.push(toPulledCard(getRandomCard(pool2), 'Gold Rare', setPrefix));
+            } else if (allGoldRares.length > 0) {
+                pack.push(toPulledCard(getRandomCard(allGoldRares), 'Gold Rare', setPrefix));
+            }
+        }
+    } else if (name.includes('infinite gold')) {
+        // Premium Gold: Infinite Gold
+        // 3 Gold Rares (no specific ranges)
+        for (let i = 0; i < 3; i++) {
+            if (allGoldRares.length > 0) {
+                pack.push(toPulledCard(getRandomCard(allGoldRares), 'Gold Rare', setPrefix));
+            }
+        }
+    } else {
+        // Original Premium Gold
+        // 1 gold rare from cards 33-50, 2 gold rares from cards 51-90
+        const pool1 = filterByCardNumberRange(allGoldRares, setPrefix, 33, 50);
+        const pool2 = filterByCardNumberRange(allGoldRares, setPrefix, 51, 90);
+
+        if (pool1.length > 0) {
+            pack.push(toPulledCard(getRandomCard(pool1), 'Gold Rare', setPrefix));
+        } else if (allGoldRares.length > 0) {
+            pack.push(toPulledCard(getRandomCard(allGoldRares), 'Gold Rare', setPrefix));
+        }
+
+        for (let i = 0; i < 2; i++) {
+            if (pool2.length > 0) {
+                pack.push(toPulledCard(getRandomCard(pool2), 'Gold Rare', setPrefix));
+            } else if (allGoldRares.length > 0) {
+                pack.push(toPulledCard(getRandomCard(allGoldRares), 'Gold Rare', setPrefix));
+            }
+        }
+    }
+
+    // Validate pack size
+    if (pack.length < 5) {
+        console.warn(`Premium Gold pack incomplete: expected 5, got ${pack.length} for ${setInfo.set_name}`);
     }
 
     return pack;
@@ -387,6 +548,7 @@ function generatePremiumGoldPack(setCards: Card[], setInfo: CardSet): PulledCard
 
 
 // --- Generic Generator ---
+// Builds packs based on configuration, handling guaranteed slots and foil rolls
 
 function generatePackFromConfig(setCards: Card[], setInfo: CardSet, config: PackConfig, fallbackFoilRarity: string = 'Common'): PulledCard[] {
     const pack: PulledCard[] = [];
@@ -400,7 +562,6 @@ function generatePackFromConfig(setCards: Card[], setInfo: CardSet, config: Pack
     for (let i = 0; i < config.guaranteedCommons; i++) {
         if (commons.length > 0) {
             const card = getRandomCard(commons);
-            // Check if Short Print or Common
             const rarity = isRarity(card, 'Short Print', setPrefix) ? 'Short Print' : 'Common';
             pack.push(toPulledCard(card, rarity, setPrefix));
         }
@@ -411,7 +572,7 @@ function generatePackFromConfig(setCards: Card[], setInfo: CardSet, config: Pack
         if (rares.length > 0) {
             pack.push(toPulledCard(getRandomCard(rares), 'Rare', setPrefix));
         } else if (commons.length > 0) {
-            // Fallback
+            // Fallback to common if no rares available
             const card = getRandomCard(commons);
             const rarity = isRarity(card, 'Short Print', setPrefix) ? 'Short Print' : 'Common';
             pack.push(toPulledCard(card, rarity, setPrefix));
@@ -433,6 +594,17 @@ function generatePackFromConfig(setCards: Card[], setInfo: CardSet, config: Pack
         }
     }
 
+    // 4. Validate pack size and fill if needed
+    if (pack.length < config.cardsPerPack) {
+        console.warn(`Pack underflow for ${setInfo.set_name}: expected ${config.cardsPerPack}, got ${pack.length}. Filling with commons.`);
+        // Fill remaining slots with commons as emergency fallback
+        while (pack.length < config.cardsPerPack && commons.length > 0) {
+            const card = getRandomCard(commons);
+            const rarity = isRarity(card, 'Short Print', setPrefix) ? 'Short Print' : 'Common';
+            pack.push(toPulledCard(card, rarity, setPrefix));
+        }
+    }
+
     return pack;
 }
 
@@ -441,6 +613,35 @@ interface FoilResult {
     rarity: string;
 }
 
+/**
+ * Tries to find a card of the given rarity, or falls back through the rarity hierarchy.
+ * This prevents jumping straight to common when a rolled rarity has no cards.
+ */
+function tryGetCardWithFallback(setCards: Card[], setPrefix: string, startRarity: string): FoilResult | null {
+    const startIndex = RARITY_HIERARCHY.indexOf(startRarity);
+    if (startIndex === -1) {
+        // Unknown rarity, try it directly
+        const pool = setCards.filter(c => isRarity(c, startRarity, setPrefix));
+        if (pool.length > 0) return { card: getRandomCard(pool), rarity: startRarity };
+        return null;
+    }
+
+    // Try each rarity from the starting point down to Common
+    for (let i = startIndex; i < RARITY_HIERARCHY.length; i++) {
+        const rarity = RARITY_HIERARCHY[i];
+        const pool = setCards.filter(c => isRarity(c, rarity, setPrefix));
+        if (pool.length > 0) {
+            return { card: getRandomCard(pool), rarity };
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Rolls the foil slot using the "hat" method (LCM-based probability distribution).
+ * See: pack_opening_rules.md "How We Use Ratios to Generate Pack Pulls"
+ */
 function rollFoilSlot(setCards: Card[], setInfo: CardSet, config: PackConfig, fallbackRarity: string): FoilResult | null {
     const setPrefix = setInfo.set_code;
 
@@ -451,12 +652,12 @@ function rollFoilSlot(setCards: Card[], setInfo: CardSet, config: PackConfig, fa
 
     const hatSize = lcmArray(denoms);
 
-    // Roll
-    const roll = Math.floor(Math.random() * hatSize) + 1; // 1 to hatSize
+    // Roll a number from 1 to hatSize
+    const roll = Math.floor(Math.random() * hatSize) + 1;
 
     let currentThreshold = 0;
 
-    // Sort rarities by "rarity" (scarcity) - usually highest denominator first (lowest prob)
+    // Sort rarities by scarcity (highest ratio denominator = rarest = check first)
     const sortedRarities = (Object.keys(ratios) as Rarity[]).sort((a, b) => (ratios[b] || 0) - (ratios[a] || 0));
 
     for (const rarity of sortedRarities) {
@@ -466,32 +667,27 @@ function rollFoilSlot(setCards: Card[], setInfo: CardSet, config: PackConfig, fa
         if (roll <= currentThreshold + slots) {
             // Hit this rarity!
 
-            // Handle "Ultimate can be upgrade" logic
+            // Handle "Ultimate can be upgrade" logic (SOD-ABPF eras)
             if (rarity === 'Ultimate Rare' && config.ultimateCanBeUpgrade) {
                 const ultimates = setCards.filter(c => isRarity(c, 'Ultimate Rare', setPrefix));
                 if (ultimates.length > 0) return { card: getRandomCard(ultimates), rarity: 'Ultimate Rare' };
             }
 
-            const pool = setCards.filter(c => isRarity(c, rarity, setPrefix));
-            if (pool.length > 0) return { card: getRandomCard(pool), rarity };
+            // Try to get a card of this rarity, falling back through hierarchy if needed
+            const result = tryGetCardWithFallback(setCards, setPrefix, rarity);
+            if (result) return result;
         }
         currentThreshold += slots;
     }
 
-    // If we are here, we didn't roll a specific foil from the hat.
-    // If foil is guaranteed, we return the fallback rarity.
+    // Didn't hit any specific foil from the hat
+    // If foil is guaranteed (BOSH+ era), use fallback rarity with hierarchy fallback
     if (config.foilIsGuaranteed) {
-        const fallbackPool = setCards.filter(c => isRarity(c, fallbackRarity, setPrefix));
-        if (fallbackPool.length > 0) return { card: getRandomCard(fallbackPool), rarity: fallbackRarity };
-
-        // If fallback fails (e.g. no Rares in OTS pack), try Super
-        if (fallbackRarity === 'Rare') {
-            const superPool = setCards.filter(c => isRarity(c, 'Super Rare', setPrefix));
-            if (superPool.length > 0) return { card: getRandomCard(superPool), rarity: 'Super Rare' };
-        }
+        const result = tryGetCardWithFallback(setCards, setPrefix, fallbackRarity);
+        if (result) return result;
     }
 
-    return null; // Common (handled by caller)
+    return null; // No foil pulled (pre-BOSH behavior - caller adds common)
 }
 
 

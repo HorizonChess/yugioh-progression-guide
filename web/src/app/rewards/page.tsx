@@ -1,7 +1,7 @@
 "use client";
 
 import { useProgression } from "@/context/ProgressionContext";
-import { fetchAllSets, fetchCardsInSet, Card } from "@/lib/api";
+import { fetchAllSets, fetchCardsInSet, Card, CardSet, PulledCard } from "@/lib/api";
 import { generateBoosterPack } from "@/lib/pack-logic";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -21,10 +21,10 @@ export default function RewardsPage() {
     const router = useRouter();
     const [spinning, setSpinning] = useState(false);
     const [prize, setPrize] = useState<string | null>(null);
-    const [pityCards, setPityCards] = useState<Card[]>([]);
+    const [pityCards, setPityCards] = useState<PulledCard[]>([]);
     const [openingPity, setOpeningPity] = useState(false);
     const [setCards, setSetCards] = useState<Card[]>([]);
-    const [setCode, setSetCode] = useState<string>("");
+    const [currentSet, setCurrentSet] = useState<CardSet | null>(null);
 
     useEffect(() => {
         if (!pendingReward || pendingReward.claimed) {
@@ -48,7 +48,7 @@ export default function RewardsPage() {
             if (set) {
                 const cards = await fetchCardsInSet(set.set_name);
                 setSetCards(cards);
-                setSetCode(set.set_code);
+                setCurrentSet(set);
             }
         }
         loadSet();
@@ -64,12 +64,12 @@ export default function RewardsPage() {
     };
 
     const handleOpenPity = () => {
-        if (!setCards.length) return;
+        if (!setCards.length || !currentSet) return;
         setOpeningPity(true);
         setTimeout(() => {
-            const newCards: Card[] = [];
+            const newCards: PulledCard[] = [];
             for (let i = 0; i < 3; i++) {
-                const pack = generateBoosterPack(setCards, setCode);
+                const pack = generateBoosterPack(setCards, currentSet);
                 newCards.push(...pack);
             }
             setPityCards(newCards);
