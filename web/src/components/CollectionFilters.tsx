@@ -276,7 +276,7 @@ export default function CollectionFilters({ onFilterChange, className = "" }: Co
 }
 
 function FilterGroup({ label, children }: { label: string, children: React.ReactNode }) {
-    const [isOpen, setIsOpen] = useState(true);
+    const [isOpen, setIsOpen] = useState(false);
 
     return (
         <div className="border-b border-white/10 pb-2 last:border-0">

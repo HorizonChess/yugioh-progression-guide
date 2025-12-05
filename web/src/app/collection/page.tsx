@@ -277,18 +277,22 @@ export default function CollectionPage() {
             }
 
             // ATK
-            if (filters.atkMin && card.atk !== undefined) {
+            if (filters.atkMin) {
+                if (card.atk === undefined) return false;
                 if (card.atk < parseInt(filters.atkMin)) return false;
             }
-            if (filters.atkMax && card.atk !== undefined) {
+            if (filters.atkMax) {
+                if (card.atk === undefined) return false;
                 if (card.atk > parseInt(filters.atkMax)) return false;
             }
 
             // DEF
-            if (filters.defMin && card.def !== undefined) {
+            if (filters.defMin) {
+                if (card.def === undefined) return false;
                 if (card.def < parseInt(filters.defMin)) return false;
             }
-            if (filters.defMax && card.def !== undefined) {
+            if (filters.defMax) {
+                if (card.def === undefined) return false;
                 if (card.def > parseInt(filters.defMax)) return false;
             }
 

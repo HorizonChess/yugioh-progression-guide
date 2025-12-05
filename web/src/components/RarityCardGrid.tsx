@@ -4,7 +4,7 @@ import StonePanel from './StonePanel';
 import { Card } from '@/lib/api';
 
 interface RarityCardGridProps {
-    cardsByRarity: Record<string, Card[]>;
+    cardsByRarity: Record<string, { card: Card; count?: number }[]>;
     sortedRarities: string[];
     onCardClick: (card: Card) => void;
     onHover: (card: Card) => void;
@@ -25,36 +25,47 @@ export default function RarityCardGrid({
             {sortedRarities.map(rarity => (
                 <StonePanel key={rarity} title={rarity}>
                     <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                        {cardsByRarity[rarity].map((card, idx) => (
-                            <div
-                                key={`${card.id}-${idx}`}
-                                className="flex flex-col group cursor-pointer"
-                                onClick={() => onCardClick(card)}
-                                onMouseEnter={() => onHover(card)}
-                                onMouseLeave={onLeave}
-                                onMouseMove={onMove}
-                            >
-                                <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
-                                    <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
-                                        <Image
-                                            src={card.card_images[0].image_url}
-                                            alt={card.name}
-                                            fill
-                                            sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
-                                            className="object-cover"
-                                            loading="lazy"
-                                            quality={90}
-                                        />
+                        {cardsByRarity[rarity].map((item, idx) => {
+                            const { card, count } = item;
+                            return (
+                                <div
+                                    key={`${card.id}-${idx}`}
+                                    className="flex flex-col group cursor-pointer"
+                                    onClick={() => onCardClick(card)}
+                                    onMouseEnter={() => onHover(card)}
+                                    onMouseLeave={onLeave}
+                                    onMouseMove={onMove}
+                                >
+                                    <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
+                                        <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
+                                            <Image
+                                                src={card.card_images[0].image_url}
+                                                alt={card.name}
+                                                fill
+                                                sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
+                                                className="object-cover"
+                                                loading="lazy"
+                                                quality={90}
+                                            />
+                                            {/* Quantity Badge */}
+                                            {count !== undefined && count > 1 && (
+                                                <div className="absolute top-1 right-1 w-6 h-6 bg-black/80 rounded-full flex items-center justify-center border border-[#d4af37] shadow-md z-10">
+                                                    <span className="text-xs font-bold text-[#d4af37]">
+                                                        {count}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Name below card */}
+                                    <div className="text-center px-1">
+                                        <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
+                                            {card.name}
+                                        </div>
                                     </div>
                                 </div>
-                                {/* Name below card */}
-                                <div className="text-center px-1">
-                                    <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
-                                        {card.name}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </StonePanel>
             ))}

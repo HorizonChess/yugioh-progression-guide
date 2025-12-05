@@ -151,15 +151,48 @@ function PacksPageContent() {
     const getProcessedCards = (cards: Card[]) => {
         if (!currentSet) return { cardsByRarity: {}, sortedRarities: [] };
 
-        const cardsByRarity: Record<string, Card[]> = {};
-        const sortedAllCards = sortCardsByRarity(cards, currentSet.set_code.split('-')[0]);
+        // 1. Group by ID to count duplicates
+        const countedCards = new Map<number, { card: Card, count: number }>();
+        cards.forEach(card => {
+            if (countedCards.has(card.id)) {
+                countedCards.get(card.id)!.count++;
+            } else {
+                countedCards.set(card.id, { card, count: 1 });
+            }
+        });
 
-        sortedAllCards.forEach(card => {
-            const rarity = getCardRarity(card, currentSet.set_code.split('-')[0]);
+        // 2. Group by Rarity
+        const cardsByRarity: Record<string, { card: Card, count: number }[]> = {};
+
+        // Convert Map values to array
+        const uniqueCardsWithCounts = Array.from(countedCards.values());
+
+        // Sort them relative to the set (we use the full card list to ensure consistent order if needed, or sort by name/id)
+        // For Summary, we might want alphabetical.
+        // The original code sorted by rarity first, then... wait.
+        // Original: sortedAllCards = sortCardsByRarity(cards, setPrefix)
+
+        // Let's sort the unique cards by rarity first, then name
+        uniqueCardsWithCounts.sort((a, b) => {
+            // Rarity sort
+            const rarityA = getCardRarity(a.card, currentSet.set_code.split('-')[0]);
+            const rarityB = getCardRarity(b.card, currentSet.set_code.split('-')[0]);
+
+            const indexA = RARITY_ORDER.indexOf(rarityA);
+            const indexB = RARITY_ORDER.indexOf(rarityB);
+            const rDiff = (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+            if (rDiff !== 0) return rDiff;
+
+            // Name sort
+            return a.card.name.localeCompare(b.card.name);
+        });
+
+        uniqueCardsWithCounts.forEach(item => {
+            const rarity = getCardRarity(item.card, currentSet.set_code.split('-')[0]);
             if (!cardsByRarity[rarity]) {
                 cardsByRarity[rarity] = [];
             }
-            cardsByRarity[rarity].push(card);
+            cardsByRarity[rarity].push(item);
         });
 
         const sortedRarities = Object.keys(cardsByRarity).sort((a, b) => {
