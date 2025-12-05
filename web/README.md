@@ -51,10 +51,32 @@ A reactive character helper (Yugi) implemented in `src/components/GuideSprite.ts
 
 ### Card Data
 -   **Source**: [YGOPRODeck API](https://db.ygoprodeck.com/api/v7/cardinfo.php).
--   **Filtering Logic** (`src/lib/api.ts`):
+-   **Filtering Logic** ([src/lib/api.ts](src/lib/api.ts)):
     -   **Era Cutoff**: Sets released before August 2017 (Pre-Link Era).
     -   **Inclusions**: Core Booster Sets and **Reprint Sets** (e.g., *Dark Beginnings*, *Mega Packs*) are included to allow players to catch up on older cards.
     -   **Exclusions**: Specific side products like Structure Decks, Starter Decks, Tins, and Duelist Packs are filtered out to maintain a "Progression" challenge.
+
+### Pack Opening Logic
+One of the most complex and carefully researched aspects of this application is the **pack opening simulation** ([src/lib/pack-logic.ts](src/lib/pack-logic.ts)).
+
+#### Implementation Highlights
+-   **Accurate Rarity Ratios**: We've extensively researched pack ratios from forum discussions, unboxing videos (shoutout to Ruxin34), and official sources to replicate authentic pull rates.
+-   **Era-Based Configurations**: 8+ distinct eras from *Legend of Blue Eyes White Dragon* (2002) to *Eternity Code* (2020+), each with historically accurate ratios.
+-   **"Hat" Method**: Uses LCM (Least Common Multiple) of ratios to create a fair probability distribution. For example, LOB with ratios 1:6 Super, 1:12 Ultra, 1:31 Secret creates a "hat" of 372 possibilities.
+-   **Premium Gold Card Ranges**: Implements variant-specific card number filtering for Premium Gold sets (original, Return of the Bling, Infinite Gold).
+-   **Smart Fallback Logic**: When a rolled rarity has no available cards, cascades through rarity hierarchy instead of defaulting to common.
+-   **Pack Validation**: Warns and auto-fills when sets have insufficient cards for expected pack composition.
+
+#### Supported Pack Types
+| Pack Type | Card Count | Examples |
+|-----------|------------|----------|
+| **Core Sets** | 9 cards | LOB, IOC, POTE (7-8 commons, 1 rare, 1 foil slot) |
+| **Tournament Packs** | 3 cards | TP, CP, TU, AP, OTS (2 commons, 1 variable) |
+| **Duelist Packs** | 5 cards | Jaden, Yusei, Kaiba (3 commons, 1 rare, 1 foil) |
+| **Reprint Packs** | 12 or 9 cards | Dark Beginning/Revelation (12), Retro Pack (9) |
+| **Premium Gold** | 5 cards | 2 Gold Secrets, 3 Gold Rares with card # ranges |
+
+**Full Documentation**: See [src/data/pack_opening_rules.md](src/data/pack_opening_rules.md) for complete ratio breakdowns and sources.
 
 ### Images
 -   **Hosting**: Images are hosted on **Cloudflare R2** to ensure fast delivery and avoid hotlinking.
@@ -96,12 +118,24 @@ We use a suite of custom scripts to maintain assets and data integrity:
     -   **Collection**: Tracks card ownership counts.
     -   **History**: Logs match results (Winner, Date, Set).
 
+## Recent Improvements
+
+### Pack Logic Validation & Enhancements (December 2024)
+-   **[✓] Pack Logic Audit**: Comprehensive validation of pack opening ratios against documented rules
+-   **[✓] Premium Gold Implementation**: Added card number range filtering for all Premium Gold variants
+-   **[✓] Smart Fallback System**: Improved foil slot logic to cascade through rarity hierarchy
+-   **[✓] Pack Validation**: Added underflow detection and auto-fill for incomplete packs
+-   **[✓] Inline Documentation**: Added extensive comments linking code to pack_opening_rules.md
+-   **[✓] Type Safety**: Fixed rewards page type errors (CardSet vs string)
+-   **[✓] Suspense Boundaries**: Resolved Next.js static generation issues with useSearchParams
+
 ## Future Roadmap
 
--   **[ ] Loser's Circle**: Implement the "Pity Pack" opening flow for defeated players.
+-   **[✓] Loser's Circle**: ~~Implement the "Pity Pack" opening flow for defeated players~~ (Completed)
 -   **[ ] Winner's Circle**: Implement the Reward Wheel (Spin animation, prize logic).
 -   **[ ] Deck Builder**: Basic in-app deck construction using collected cards.
 -   **[ ] Mobile Optimization**: Improve touch targets and layout for phone users.
+-   **[ ] Box Opening Mode**: Simulate opening full boxes with guaranteed distribution (4 Supers, 2 Ultras per LOB box, etc.).
 
 ## Development
 
