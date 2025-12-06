@@ -1,7 +1,6 @@
 "use client";
 
 import { Card } from "@/lib/api";
-import Image from "next/image";
 
 interface DeckSlotProps {
     card?: Card;
@@ -20,10 +19,18 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
     return (
         <div
             className={`
-                relative aspect-[2/3] bg-black/40 border border-gray-700/50 rounded 
-                hover:border-[var(--primary)] transition-colors cursor-pointer group
+                relative aspect-[59/86] transition-all box-border
+                border-[0.5px] border-[#0d1b2a]/30 
+                ${card
+                    ? "cursor-pointer hover:ring-2 hover:ring-[#ffff00] hover:z-10 group"
+                    : "bg-white/5"
+                }
                 ${className}
             `}
+            // Border simulates gap. Using background color for border blends it in.
+            // Using box-border means padding/border is included in width, so Aspect Ratio of 59/86 refers to the OUTER box.
+            // This is perfect for the grid.
+
             onClick={onClick}
             onDoubleClick={onDoubleClick}
             onContextMenu={onContextMenu}
@@ -35,20 +42,22 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
             onDragOver={onDragOver}
         >
             {card ? (
+                /* Use standard img tag to match PackCard.tsx behavior and ensure native rendering without Next.js resizing artifacts */
                 <>
-                    <Image
+                    <img
                         src={card.card_images[0].image_url}
                         alt={card.name}
-                        fill
-                        className="object-cover rounded"
-                        sizes="100px"
+                        className="w-full h-full object-fill rounded-[1px]"
+                    // object-fill ensures no truncation. 
+                    // Since container is aspect-[59/86] and image is 59x86, no distortion will occur.
                     />
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors" />
+                    {/* Hover Shine */}
+                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 pointer-events-none rounded-[1px]" />
                 </>
             ) : (
-                <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
-                    <span className="text-[10px] sm:text-xs font-mono text-gray-500">{index + 1}</span>
+                /* Empty Slot Zone */
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-[90%] h-[90%] border border-white/5 rounded-[1px]" />
                 </div>
             )}
         </div>
