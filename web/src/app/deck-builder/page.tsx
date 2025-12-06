@@ -75,9 +75,9 @@ export default function DeckBuilderPage() {
         return { monsters, spells, traps, total: mainDeck.length };
     }, [mainDeck]);
 
+    // --- Actions ---
     const handleSaveDeck = () => {
         if (!deckName.trim()) return alert("Please enter a deck name.");
-        // Deck Validation: Warn if < 40 but verify save desire
         if (mainDeck.length < 40) {
             if (!confirm("Main Deck is under 40 cards. Save anyway?")) return;
         }
@@ -114,6 +114,21 @@ export default function DeckBuilderPage() {
 
     const handleDeleteDeck = (id: string) => {
         if (confirm("Delete this deck?")) deleteDeck(id);
+    };
+
+    const handleClearDeck = () => {
+        if (confirm("Clear current deck?")) {
+            setMainDeck([]);
+            setExtraDeck([]);
+            setSideDeck([]);
+        }
+    }
+
+    // --- Persistent Hover Logic ---
+    const handleHover = (card: Card | null) => {
+        if (card) {
+            setHoveredCard(card);
+        }
     };
 
     // --- Drag and Drop Logic ---
@@ -224,30 +239,39 @@ export default function DeckBuilderPage() {
     return (
         <div className="flex flex-col h-screen bg-slate-900 text-slate-100 overflow-hidden font-mono">
             <TopBar />
-            <div className="flex flex-1 p-2 gap-2 overflow-hidden relative">
+            <div className="flex flex-1 p-2 gap-2 overflow-hidden relative min-h-0">
 
-                {/* Left: Card Info */}
-                <div className="flex-1 min-w-[300px] max-w-[350px] shrink-0 border-r border-[#8b7355]/50">
-                    <CardInfoPanel card={hoveredCard} />
-                </div>
+                {/* Left Column: Info + Controls */}
+                <div className="w-[260px] shrink-0 border-r border-[#8b7355]/50 flex flex-col gap-2 min-h-0">
+                    {/* Card Info - Fills available space */}
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                        <CardInfoPanel card={hoveredCard} />
+                    </div>
 
-                {/* Center: Deck View */}
-                <div className="flex-[2] flex flex-col gap-2 min-w-0">
-                    {/* Controls */}
-                    <div className="flex justify-between items-center bg-slate-800 p-1 rounded-lg border border-slate-700">
-                        <div className="flex gap-2 items-center flex-1">
+                    {/* Deck Controls - Content Sized */}
+                    <div className="h-auto shrink-0 bg-[#2d2d2d] border border-gray-600 rounded p-2 flex flex-col gap-2 text-xs">
+                        <div className="flex gap-1">
                             <input
                                 value={deckName}
                                 onChange={(e) => setDeckName(e.target.value)}
-                                className="bg-slate-900 border border-slate-600 rounded px-2 py-1 flex-1 max-w-xs text-amber-400 font-bold"
+                                className="bg-black/50 border border-gray-500 rounded px-2 py-1 flex-1 text-white font-bold"
                                 placeholder="Deck Name"
                             />
-                            <button onClick={handleSaveDeck} className="bg-green-600 hover:bg-green-500 px-3 py-1 rounded font-bold transition-colors border border-green-700 shadow text-xs">SAVE</button>
-                            <button onClick={() => setShowLoadModal(true)} className="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded font-bold transition-colors border border-blue-700 shadow text-xs">LOAD</button>
-                            <button onClick={() => { setMainDeck([]); setExtraDeck([]); setSideDeck([]); }} className="bg-red-600 hover:bg-red-500 px-3 py-1 rounded font-bold transition-colors border border-red-700 shadow text-xs">CLEAR</button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5 flex-1">
+                            <button onClick={handleSaveDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110">Save Deck</button>
+                            <button onClick={() => setShowLoadModal(true)} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110">Load Deck</button>
+                            <button onClick={handleClearDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110">Clear Deck</button>
+                            {/* Disabled features for layout match */}
+                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed">Export</button>
+                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed">Sort</button>
+                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed">Shuffle</button>
                         </div>
                     </div>
+                </div>
 
+                {/* Center: Deck View */}
+                <div className="flex-[2] flex flex-col gap-2 min-w-0 min-h-0">
                     {/* Deck Grid + Stats integrated */}
                     <div className="flex-1 overflow-hidden bg-slate-800/80 rounded border border-slate-600 shadow-inner p-1">
                         <DeckGrid
@@ -258,17 +282,17 @@ export default function DeckBuilderPage() {
                             onDrop={handleDrop}
                             onDragStart={handleDragStart}
                             onRightClick={handleRightClick}
-                            onHover={setHoveredCard}
+                            onHover={handleHover}
                         />
                     </div>
                 </div>
 
                 {/* Right: Search Panel */}
-                <div className="flex-1 min-w-[300px] max-w-[350px] shrink-0 flex flex-col bg-[#99cc00] rounded-lg border-4 border-[#666600] shadow-xl overflow-hidden">
+                <div className="w-[260px] shrink-0 flex flex-col bg-[#99cc00] rounded-lg border-4 border-[#666600] shadow-xl overflow-hidden min-h-0">
                     <CardSearchPanel
                         collectionCards={collectionCards}
                         onDragStart={handleSearchDragStart}
-                        onHover={setHoveredCard}
+                        onHover={handleHover}
                         onCardDoubleClick={handleDoubleClick}
                     />
                 </div>
