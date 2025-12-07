@@ -238,7 +238,7 @@ export default function DeckBuilderPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-slate-900 text-slate-100 overflow-hidden font-mono">
+        <div className="flex flex-col h-screen bg-slate-900 text-slate-100 overflow-hidden">
             <TopBar />
             <div className="flex flex-1 px-1 pt-1 pb-1 gap-1 overflow-hidden relative min-h-0">
 

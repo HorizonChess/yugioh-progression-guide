@@ -73,7 +73,7 @@ export default function TopBar({ title, subtitle, showBack, onBack, children }: 
                             <Link href="/menu" className="hover:text-white transition-colors">MENU</Link>
                         </div>
                         <div className="text-right">
-                            <h1 className="text-xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+                            <h1 className="text-xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pr-1">
                                 PROGRESSION
                             </h1>
                         </div>

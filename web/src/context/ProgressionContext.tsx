@@ -152,11 +152,15 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     // Helper to update active save
     const updateActiveSave = (updater: (save: SaveSlot) => SaveSlot) => {
         if (!activeSaveId) return;
-        setSaves(prev => prev.map(save =>
-            save.id === activeSaveId
-                ? { ...updater(save), savedDecks: save.savedDecks || [], lastPlayed: Date.now() }
-                : save
-        ));
+        setSaves(prev => prev.map(save => {
+            if (save.id !== activeSaveId) return save;
+            const updated = updater(save);
+            return {
+                ...updated,
+                savedDecks: updated.savedDecks || [],
+                lastPlayed: Date.now()
+            };
+        }));
     };
 
     // --- Save Management ---
