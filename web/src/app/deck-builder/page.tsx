@@ -243,14 +243,17 @@ export default function DeckBuilderPage() {
             <div className="flex flex-1 px-1 pt-1 pb-1 gap-1 overflow-hidden relative min-h-0">
 
                 {/* Left Column: Info + Controls */}
-                <div className="w-[300px] shrink-0 flex flex-col gap-1 min-h-0">
-                    {/* Card Info - Fills available space */}
-                    <div className="flex-1 min-h-0 overflow-hidden">
+                <div className="w-[300px] shrink-0 flex flex-col min-h-0 bg-[#1a120b] border-r-2 border-[#8b7355]">
+                    {/* Card Info - Content sized, grows from top */}
+                    <div className="shrink-0 overflow-hidden">
                         <CardInfoPanel card={hoveredCard} />
                     </div>
 
-                    {/* Deck Controls - Content Sized */}
-                    <div className="h-auto shrink-0 bg-[#2d2d2d] border border-gray-600 rounded p-2 flex flex-col gap-2 text-xs">
+                    {/* Spacer - fills gap between card info and controls */}
+                    <div className="flex-1" />
+
+                    {/* Deck Controls - Fixed at bottom */}
+                    <div className="shrink-0 bg-[#2d2d2d] border border-gray-600 rounded m-1 p-2 flex flex-col gap-2 text-xs">
                         <div className="flex gap-1">
                             <input
                                 value={deckName}
@@ -259,13 +262,13 @@ export default function DeckBuilderPage() {
                                 placeholder="Deck Name"
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-1.5 flex-1">
-                            <button onClick={handleSaveDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110">Save Deck</button>
-                            <button onClick={() => setShowLoadModal(true)} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110">Load Deck</button>
-                            <button onClick={handleClearDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110">Clear Deck</button>
-                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed">Export</button>
-                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed">Sort</button>
-                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed">Shuffle</button>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            <button onClick={handleSaveDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Save Deck</button>
+                            <button onClick={() => setShowLoadModal(true)} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Load Deck</button>
+                            <button onClick={handleClearDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Clear Deck</button>
+                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed py-1">Export</button>
+                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed py-1">Sort</button>
+                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed py-1">Shuffle</button>
                         </div>
                     </div>
                 </div>
