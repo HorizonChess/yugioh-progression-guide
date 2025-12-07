@@ -244,13 +244,10 @@ export default function DeckBuilderPage() {
 
                 {/* Left Column: Info + Controls */}
                 <div className="w-[300px] shrink-0 flex flex-col min-h-0 bg-[#1a120b] border-r-2 border-[#8b7355]">
-                    {/* Card Info - Content sized, grows from top */}
-                    <div className="shrink-0 overflow-hidden">
+                    {/* Card Info - Can shrink and scroll if needed */}
+                    <div className="flex-1 min-h-0 overflow-hidden">
                         <CardInfoPanel card={hoveredCard} />
                     </div>
-
-                    {/* Spacer - fills gap between card info and controls */}
-                    <div className="flex-1" />
 
                     {/* Deck Controls - Fixed at bottom */}
                     <div className="shrink-0 bg-[#2d2d2d] border border-gray-600 rounded m-1 p-2 flex flex-col gap-2 text-xs">

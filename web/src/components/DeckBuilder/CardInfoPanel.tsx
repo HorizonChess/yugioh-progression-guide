@@ -19,7 +19,7 @@ export default function CardInfoPanel({ card }: CardInfoPanelProps) {
     }
 
     return (
-        <div className="flex flex-col overflow-hidden gap-1 p-1">
+        <div className="flex flex-col h-full overflow-hidden gap-1 p-1">
             {/*
                Image Container:
                - Uses aspect ratio to size correctly without black bars
@@ -34,7 +34,7 @@ export default function CardInfoPanel({ card }: CardInfoPanelProps) {
             </div>
 
             {/* Description - fills remaining space */}
-            <div className="flex-1 bg-[#f0e6d2] text-black p-2 overflow-y-auto custom-scrollbar font-serif leading-tight text-sm shadow-inner min-h-[0] border-2 border-[#8b7355] rounded">
+            <div className="flex-1 bg-[#f0e6d2] text-black p-2 overflow-y-auto custom-scrollbar font-serif leading-tight text-base shadow-inner min-h-[0] border-2 border-[#8b7355] rounded">
                 <p className="font-bold border-b border-[#8b7355]/50 mb-1 pb-1">{card.name}</p>
                 {card.type.includes("Monster") && (
                     <div className="text-xs text-gray-700 mb-1 font-bold">
