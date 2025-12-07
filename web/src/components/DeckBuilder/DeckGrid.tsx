@@ -46,7 +46,7 @@ export default function DeckGrid({
                     onDrop={(e) => onDrop(e, zone, i)}
                     onDragOver={handleDragOver}
                     onContextMenu={(e) => card && onRightClick(e, card, zone, i)}
-                    className={`w-full ${!card ? "opacity-30" : ""}`}
+                    className={`w-full h-full ${!card ? "opacity-30" : ""}`}
                 />
             );
         }
@@ -85,7 +85,7 @@ export default function DeckGrid({
                     onDragOver={handleDragOver}
                     onDrop={(e) => onDrop(e, 'main', mainDeck.length)}
                 >
-                    <div className="grid grid-cols-10 grid-rows-6 gap-0 w-full">
+                    <div className="grid grid-cols-10 grid-rows-6 gap-0 w-full h-full">
                         {renderSlots(mainDeck, 'main', 60)}
                     </div>
                 </div>
@@ -114,7 +114,7 @@ export default function DeckGrid({
                         onDragOver={handleDragOver}
                         onDrop={(e) => onDrop(e, 'side', sideDeck.length)}
                     >
-                        <div className="grid grid-cols-5 grid-rows-3 gap-0 w-full">
+                        <div className="grid grid-cols-5 grid-rows-3 gap-0 w-full h-full">
                             {renderSlots(sideDeck, 'side', 15)}
                         </div>
                     </div>
@@ -125,7 +125,7 @@ export default function DeckGrid({
                         onDragOver={handleDragOver}
                         onDrop={(e) => onDrop(e, 'extra', extraDeck.length)}
                     >
-                        <div className="grid grid-cols-5 grid-rows-3 gap-0 w-full">
+                        <div className="grid grid-cols-5 grid-rows-3 gap-0 w-full h-full">
                             {renderSlots(extraDeck, 'extra', 15)}
                         </div>
                     </div>

@@ -6,7 +6,8 @@ import GuideSprite from "@/components/GuideSprite";
 import { useState, useEffect, useMemo } from "react";
 import { Card, fetchCardsByIds } from "@/lib/api";
 import CardInfoPanel from "@/components/DeckBuilder/CardInfoPanel";
-import DeckGrid from "@/components/DeckBuilder/DeckGrid";
+import MainDeckGrid from "@/components/DeckBuilder/MainDeckGrid";
+import SideExtraDeckGrid from "@/components/DeckBuilder/SideExtraDeckGrid";
 import CardSearchPanel from "@/components/DeckBuilder/CardSearchPanel";
 import { SavedDeck } from "@/context/ProgressionContext";
 
@@ -239,10 +240,10 @@ export default function DeckBuilderPage() {
     return (
         <div className="flex flex-col h-screen bg-slate-900 text-slate-100 overflow-hidden font-mono">
             <TopBar />
-            <div className="flex flex-1 p-2 gap-2 overflow-hidden relative min-h-0">
+            <div className="flex flex-1 px-1 pt-1 pb-1 gap-1 overflow-hidden relative min-h-0">
 
                 {/* Left Column: Info + Controls */}
-                <div className="w-[260px] shrink-0 border-r border-[#8b7355]/50 flex flex-col gap-2 min-h-0">
+                <div className="w-[300px] shrink-0 flex flex-col gap-1 min-h-0">
                     {/* Card Info - Fills available space */}
                     <div className="flex-1 min-h-0 overflow-hidden">
                         <CardInfoPanel card={hoveredCard} />
@@ -262,7 +263,6 @@ export default function DeckBuilderPage() {
                             <button onClick={handleSaveDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110">Save Deck</button>
                             <button onClick={() => setShowLoadModal(true)} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110">Load Deck</button>
                             <button onClick={handleClearDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110">Clear Deck</button>
-                            {/* Disabled features for layout match */}
                             <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed">Export</button>
                             <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed">Sort</button>
                             <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed">Shuffle</button>
@@ -270,25 +270,32 @@ export default function DeckBuilderPage() {
                     </div>
                 </div>
 
-                {/* Center: Deck View */}
-                <div className="flex-[2] flex flex-col gap-2 min-w-0 min-h-0">
-                    {/* Deck Grid + Stats integrated */}
-                    <div className="flex-1 overflow-hidden bg-slate-800/80 rounded border border-slate-600 shadow-inner p-1">
-                        <DeckGrid
-                            mainDeck={mainDeck}
-                            extraDeck={extraDeck}
-                            sideDeck={sideDeck}
-                            stats={stats}
-                            onDrop={handleDrop}
-                            onDragStart={handleDragStart}
-                            onRightClick={handleRightClick}
-                            onHover={handleHover}
-                        />
-                    </div>
+                {/* Center: Main Deck */}
+                <div className="flex-[3] min-w-0 min-h-0 bg-slate-800/50 rounded border border-slate-700 p-1">
+                    <MainDeckGrid
+                        mainDeck={mainDeck}
+                        stats={stats}
+                        onDrop={handleDrop}
+                        onDragStart={handleDragStart}
+                        onRightClick={handleRightClick}
+                        onHover={handleHover}
+                    />
+                </div>
+
+                {/* Side/Extra Decks */}
+                <div className="w-[200px] shrink-0 min-h-0 bg-slate-800/50 rounded border border-slate-700 p-1">
+                    <SideExtraDeckGrid
+                        sideDeck={sideDeck}
+                        extraDeck={extraDeck}
+                        onDrop={handleDrop}
+                        onDragStart={handleDragStart}
+                        onRightClick={handleRightClick}
+                        onHover={handleHover}
+                    />
                 </div>
 
                 {/* Right: Search Panel */}
-                <div className="w-[260px] shrink-0 flex flex-col bg-[#99cc00] rounded-lg border-4 border-[#666600] shadow-xl overflow-hidden min-h-0">
+                <div className="w-[280px] shrink-0 flex flex-col bg-[#99cc00] rounded-lg border-4 border-[#666600] shadow-xl overflow-hidden min-h-0">
                     <CardSearchPanel
                         collectionCards={collectionCards}
                         onDragStart={handleSearchDragStart}
