@@ -26,7 +26,7 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
         >
             <div
                 className={`
-                    relative aspect-[59/86] h-full max-w-full transition-all box-border
+                    relative aspect-[59/86] h-[96%] max-w-[96%] transition-all box-border
                     border-[0.5px] border-[#0d1b2a]/30
                     ${card
                         ? "cursor-pointer hover:ring-2 hover:ring-[#ffff00] hover:z-10 group"

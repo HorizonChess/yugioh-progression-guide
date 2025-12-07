@@ -283,7 +283,7 @@ export default function DeckBuilderPage() {
                 </div>
 
                 {/* Side/Extra Decks */}
-                <div className="w-[200px] shrink-0 min-h-0 bg-slate-800/50 rounded border border-slate-700 p-1">
+                <div className="w-[240px] shrink-0 min-h-0 bg-slate-800/50 rounded border border-slate-700 p-1">
                     <SideExtraDeckGrid
                         sideDeck={sideDeck}
                         extraDeck={extraDeck}
