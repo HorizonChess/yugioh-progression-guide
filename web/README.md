@@ -115,6 +115,8 @@ We use a suite of custom scripts to maintain assets and data integrity:
     -   **Unified Deck View**: Single view managing Main (60), Extra (15), and Side (15) decks with drag-and-drop support.
     -   **Advanced Search**: Granular filtering (Name, Desc, Race, Attribute, Stats) matching the DuelingBook aesthetic.
     -   **Deck Management**: Save/Load/Delete functionality persisted via `ProgressionContext`.
+    -   **Card Info Panel**: Left-side panel displaying full card image and scrollable description text for long card effects.
+    -   **Double-Click to Add**: Quickly add cards to deck by double-clicking in the search panel.
 
 ### `src/context`
 -   **`ProgressionContext`**: Global state manager.
@@ -124,7 +126,16 @@ We use a suite of custom scripts to maintain assets and data integrity:
 
 ## Recent Improvements
 
-### Pack Logic Validation & Enhancements (December 2024)
+### Deck Builder Polish (December 2025)
+-   **[✓] Card Info Panel Layout**: Removed black bars from card images, optimized space allocation
+-   **[✓] Fixed Button Panel**: Button controls stay fixed at bottom, don't shift with card content
+-   **[✓] Scrollable Descriptions**: Large card descriptions now scroll instead of pushing buttons off-screen
+-   **[✓] Save/Load Deck Fix**: Fixed critical bug where decks weren't persisting to localStorage
+-   **[✓] TopBar Consistency**: Fixed font styling differences between deck builder and other pages
+-   **[✓] Text Clipping Fix**: Resolved "PROGRESSION" text being truncated at screen edge
+-   **[✓] Lint Cleanup**: Fixed unused imports, `let` to `const`, added `rank` property to Card interface
+
+### Pack Logic Validation & Enhancements (December 2025)
 -   **[✓] Pack Logic Audit**: Comprehensive validation of pack opening ratios against documented rules
 -   **[✓] Premium Gold Implementation**: Added card number range filtering for all Premium Gold variants
 -   **[✓] Smart Fallback System**: Improved foil slot logic to cascade through rarity hierarchy

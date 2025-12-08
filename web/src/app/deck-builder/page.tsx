@@ -14,7 +14,7 @@ import { SavedDeck } from "@/context/ProgressionContext";
 export default function DeckBuilderPage() {
     const { collection, saveDeck, savedDecks, deleteDeck } = useProgression();
     const [allCards, setAllCards] = useState<Card[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [, setLoading] = useState(true);
     const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
 
     // Deck State

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Card, PulledCard } from '@/lib/api';
+import { PulledCard } from '@/lib/api';
 
 interface MatchResult {
     winner: 'player' | 'opponent';
@@ -254,7 +254,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         setSaves(prev => {
             const updatedSaves = prev.map(s => {
                 if (s.id === activeSaveId) {
-                    let newCollection = mode === 'replace' ? {} : { ...s.collection };
+                    const newCollection: Record<string, number> = mode === 'replace' ? {} : { ...s.collection };
 
                     cardIds.forEach(id => {
                         // Imported cards have no set/rarity info
@@ -284,7 +284,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     const saveDeck = (deck: SavedDeck) => {
         updateActiveSave(save => {
             const existingIndex = (save.savedDecks || []).findIndex(d => d.id === deck.id);
-            let newDecks = [...(save.savedDecks || [])];
+            const newDecks = [...(save.savedDecks || [])];
             if (existingIndex >= 0) {
                 newDecks[existingIndex] = deck;
             } else {

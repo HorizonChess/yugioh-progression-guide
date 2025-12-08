@@ -24,6 +24,7 @@ export interface Card {
     atk?: number;
     def?: number;
     level?: number;
+    rank?: number;
     attribute?: string;
     scale?: number;
     linkval?: number;

@@ -32,7 +32,7 @@ export default function CardSearchPanel({ collectionCards = [], onHover, onDragS
 
     // --- Filtering Logic ---
     const filteredCards = useMemo(() => {
-        let result = collectionCards.map(c => c.card).filter(card => {
+        const result = collectionCards.map(c => c.card).filter(card => {
             if (!card) return false;
 
             // Name
@@ -61,7 +61,7 @@ export default function CardSearchPanel({ collectionCards = [], onHover, onDragS
             if (attribute !== "All" && card.attribute !== attribute) return false;
 
             // Stats
-            const lvl = card.level ?? (card as any).rank ?? card.linkval;
+            const lvl = card.level ?? card.rank ?? card.linkval;
             if (levelMin && (lvl == null || lvl < parseInt(levelMin))) return false;
             if (levelMax && (lvl == null || lvl > parseInt(levelMax))) return false;
 

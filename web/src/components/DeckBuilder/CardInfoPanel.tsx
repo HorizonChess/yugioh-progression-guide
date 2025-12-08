@@ -1,7 +1,6 @@
 "use client";
 
 import { Card } from "@/lib/api";
-import Image from "next/image";
 
 interface CardInfoPanelProps {
     card: Card | null;
