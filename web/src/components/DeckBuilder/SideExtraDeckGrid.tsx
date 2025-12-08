@@ -56,7 +56,6 @@ export default function SideExtraDeckGrid({
                 <div
                     className="flex-1 bg-slate-900/50 border border-t-0 border-teal-900/50 rounded-b overflow-y-auto p-1"
                     onDragOver={handleDragOver}
-                    onDrop={(e) => onDrop(e, 'side', sideDeck.length)}
                 >
                     <div className="flex flex-wrap gap-0.5 content-start">
                         {renderCards(sideDeck, 'side')}
@@ -72,7 +71,6 @@ export default function SideExtraDeckGrid({
                 <div
                     className="flex-1 bg-slate-900/50 border border-t-0 border-purple-900/50 rounded-b overflow-y-auto p-1"
                     onDragOver={handleDragOver}
-                    onDrop={(e) => onDrop(e, 'extra', extraDeck.length)}
                 >
                     <div className="flex flex-wrap gap-0.5 content-start">
                         {renderCards(extraDeck, 'extra')}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card } from "@/lib/api";
 
 interface DeckSlotProps {
@@ -16,18 +17,42 @@ interface DeckSlotProps {
 }
 
 export default function DeckSlot({ card, index, onClick, onDoubleClick, onContextMenu, onHover, className = "", onDragStart, onDrop, onDragOver }: DeckSlotProps) {
+    const [isDragOver, setIsDragOver] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent container from handling
+        setIsDragOver(true);
+        if (onDragOver) onDragOver(e);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        if (onDrop) onDrop(e, index);
+    };
+
     // Outer container fills the grid cell and centers the card
     // Inner container maintains aspect ratio based on height
     return (
         <div
             className={`${className} flex items-center justify-center`}
-            onDrop={(e) => onDrop && onDrop(e, index)}
-            onDragOver={onDragOver}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
         >
             <div
                 className={`
                     relative aspect-[59/86] h-[96%] max-w-[96%] transition-all box-border
                     border-[0.5px] border-[#0d1b2a]/30
+                    ${isDragging ? 'opacity-0' : ''}
+                    ${isDragOver ? "ring-4 ring-blue-400 bg-blue-100/20 scale-105 z-20" : ""}
                     ${card
                         ? "cursor-pointer hover:ring-2 hover:ring-[#ffff00] hover:z-10 group"
                         : "bg-white/5"
@@ -39,7 +64,13 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
                 onMouseEnter={() => onHover && onHover(card || null)}
                 onMouseLeave={() => onHover && onHover(null)}
                 draggable={!!card}
-                onDragStart={(e) => card && onDragStart && onDragStart(e, card, index)}
+                onDragStart={(e) => {
+                    if (card && onDragStart) {
+                        setIsDragging(true);
+                        onDragStart(e, card, index);
+                    }
+                }}
+                onDragEnd={() => setIsDragging(false)}
             >
                 {card ? (
                     <>

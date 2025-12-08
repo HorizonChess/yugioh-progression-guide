@@ -143,6 +143,31 @@ export default function DeckBuilderPage() {
         const data = { cardId: card.id, from, index };
         e.dataTransfer.setData("application/json", JSON.stringify(data));
         e.dataTransfer.effectAllowed = "move";
+
+        // Create custom drag image - MUST be in DOM before setDragImage
+        const dragImg = document.createElement('img');
+        dragImg.src = card.card_images[0].image_url;
+        dragImg.style.width = '118px'; // 2x for visibility
+        dragImg.style.height = '172px';
+        dragImg.style.objectFit = 'fill';
+        dragImg.style.borderRadius = '4px';
+        dragImg.style.position = 'fixed'; // Use fixed positioning
+        dragImg.style.left = '-9999px';
+        dragImg.style.top = '-9999px';
+        dragImg.style.pointerEvents = 'none';
+        dragImg.style.opacity = '1'; // FULLY OPAQUE - no ghost!
+        dragImg.style.boxShadow = '0 8px 16px rgba(0,0,0,0.5)';
+        document.body.appendChild(dragImg);
+
+        // Center image on cursor
+        e.dataTransfer.setDragImage(dragImg, 59, 86);
+
+        // Clean up after browser captures it
+        requestAnimationFrame(() => {
+            if (dragImg.parentNode) {
+                document.body.removeChild(dragImg);
+            }
+        });
     };
 
     const handleDrop = (e: React.DragEvent, to: 'main' | 'extra' | 'side', index: number) => {
@@ -151,6 +176,19 @@ export default function DeckBuilderPage() {
             const data = JSON.parse(e.dataTransfer.getData("application/json"));
             const card = allCards.find(c => c.id === data.cardId);
             if (!card) return;
+
+            // Validate card type for Extra Deck
+            const isExtraCard = card.type.includes("Fusion") ||
+                                card.type.includes("Synchro") ||
+                                card.type.includes("XYZ") ||
+                                card.type.includes("Link");
+
+            if (to === 'extra' && !isExtraCard) {
+                return alert("Only Extra Deck monsters can go in Extra Deck");
+            }
+            if (to === 'main' && isExtraCard && data.from !== 'main') {
+                return alert("Extra Deck monsters cannot go in Main Deck");
+            }
 
             const getDeck = (zone: string) => {
                 if (zone === 'side') return sideDeck;

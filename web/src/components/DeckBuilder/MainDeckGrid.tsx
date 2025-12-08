@@ -69,7 +69,6 @@ export default function MainDeckGrid({
             <div
                 className="flex-1 aspect-[590/516] bg-[url('/bg/fabric_pattern.png')] bg-repeat shadow-inner border border-[#6b5b45] rounded overflow-hidden"
                 onDragOver={handleDragOver}
-                onDrop={(e) => onDrop(e, 'main', mainDeck.length)}
             >
                 <div className="grid grid-cols-10 grid-rows-6 gap-0 w-full h-full">
                     {renderSlots(mainDeck, 60)}
