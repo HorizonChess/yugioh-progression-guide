@@ -35,6 +35,7 @@ export default function SideExtraDeckGrid({
                 <DeckSlot
                     index={i}
                     card={card}
+                    dragContext="deck"
                     onHover={onHover}
                     onDragStart={(e) => onDragStart(e, card!, zone, i)}
                     onDrop={(e) => onDrop(e, zone, i)}

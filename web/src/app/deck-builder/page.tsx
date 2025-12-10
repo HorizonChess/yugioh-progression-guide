@@ -58,7 +58,7 @@ export default function DeckBuilderPage() {
         return allCards.map(card => ({
             card,
             count: counts.get(card.id) || 0
-        })).filter(entry => entry.count > 0);
+        }));
     }, [allCards, collection, mainDeck, extraDeck, sideDeck]);
 
     // --- Stats Calculation ---
@@ -144,23 +144,33 @@ export default function DeckBuilderPage() {
         e.dataTransfer.setData("application/json", JSON.stringify(data));
         e.dataTransfer.effectAllowed = "move";
 
-        // Create custom drag image - MUST be in DOM before setDragImage
+        // Create custom drag image with smaller, more precise dimensions
         const dragImg = document.createElement('img');
         dragImg.src = card.card_images[0].image_url;
-        dragImg.style.width = '118px'; // 2x for visibility
-        dragImg.style.height = '172px';
+
+        // Smaller size for better visual clarity
+        const width = 105;
+        const height = 153;
+        dragImg.style.width = `${width}px`;
+        dragImg.style.height = `${height}px`;
         dragImg.style.objectFit = 'fill';
         dragImg.style.borderRadius = '4px';
-        dragImg.style.position = 'fixed'; // Use fixed positioning
+
+        // Enhanced positioning and styling
+        dragImg.style.position = 'fixed';
         dragImg.style.left = '-9999px';
         dragImg.style.top = '-9999px';
         dragImg.style.pointerEvents = 'none';
-        dragImg.style.opacity = '1'; // FULLY OPAQUE - no ghost!
-        dragImg.style.boxShadow = '0 8px 16px rgba(0,0,0,0.5)';
+
+        // Multiple opacity techniques to ensure full visibility
+        dragImg.style.opacity = '1';
+        dragImg.style.filter = 'brightness(1) drop-shadow(0 6px 12px rgba(0,0,0,0.6))';
+        dragImg.style.imageRendering = 'crisp-edges';
+
         document.body.appendChild(dragImg);
 
         // Center image on cursor
-        e.dataTransfer.setDragImage(dragImg, 59, 86);
+        e.dataTransfer.setDragImage(dragImg, width / 2, height / 2);
 
         // Clean up after browser captures it
         requestAnimationFrame(() => {

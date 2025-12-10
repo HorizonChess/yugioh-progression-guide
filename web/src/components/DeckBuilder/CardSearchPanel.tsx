@@ -207,6 +207,8 @@ export default function CardSearchPanel({ collectionCards = [], onHover, onDragS
                                 <DeckSlot
                                     index={i}
                                     card={card}
+                                    isUnavailable={count === 0}
+                                    dragContext="search"
                                     onHover={onHover}
                                     onDragStart={(e) => onDragStart(e, card, 'search')}
                                     onDoubleClick={() => onCardDoubleClick && onCardDoubleClick(card)}

@@ -14,9 +14,11 @@ interface DeckSlotProps {
     onDragStart?: (e: React.DragEvent, card: Card, index: number) => void;
     onDrop?: (e: React.DragEvent, index: number) => void;
     onDragOver?: (e: React.DragEvent) => void;
+    isUnavailable?: boolean;
+    dragContext?: 'search' | 'deck';
 }
 
-export default function DeckSlot({ card, index, onClick, onDoubleClick, onContextMenu, onHover, className = "", onDragStart, onDrop, onDragOver }: DeckSlotProps) {
+export default function DeckSlot({ card, index, onClick, onDoubleClick, onContextMenu, onHover, className = "", onDragStart, onDrop, onDragOver, isUnavailable, dragContext }: DeckSlotProps) {
     const [isDragOver, setIsDragOver] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
@@ -51,11 +53,13 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
                 className={`
                     relative aspect-[59/86] h-[96%] max-w-[96%] transition-all box-border
                     border-[0.5px] border-[#0d1b2a]/30
-                    ${isDragging ? 'opacity-0' : ''}
+                    ${isDragging && dragContext === 'deck' ? 'opacity-0' : ''}
                     ${isDragOver ? "ring-4 ring-blue-400 bg-blue-100/20 scale-105 z-20" : ""}
-                    ${card
-                        ? "cursor-pointer hover:ring-2 hover:ring-[#ffff00] hover:z-10 group"
-                        : "bg-white/5"
+                    ${isUnavailable
+                        ? "grayscale opacity-50 cursor-not-allowed"
+                        : card
+                            ? "cursor-pointer hover:ring-2 hover:ring-[#ffff00] hover:z-10 group"
+                            : "bg-white/5"
                     }
                 `}
                 onClick={onClick}
@@ -63,7 +67,7 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
                 onContextMenu={onContextMenu}
                 onMouseEnter={() => onHover && onHover(card || null)}
                 onMouseLeave={() => onHover && onHover(null)}
-                draggable={!!card}
+                draggable={!!card && !isUnavailable}
                 onDragStart={(e) => {
                     if (card && onDragStart) {
                         setIsDragging(true);
