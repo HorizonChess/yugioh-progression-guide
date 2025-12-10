@@ -8,10 +8,12 @@ interface CardSearchPanelProps {
     collectionCards: { card: Card; count: number }[];
     onHover: (card: Card | null) => void;
     onDragStart: (e: React.DragEvent, card: Card, from: 'search') => void;
+    onDrag: (e: React.DragEvent) => void;
+    onDragEnd: (e: React.DragEvent) => void;
     onCardDoubleClick?: (card: Card) => void;
 }
 
-export default function CardSearchPanel({ collectionCards = [], onHover, onDragStart, onCardDoubleClick }: CardSearchPanelProps) {
+export default function CardSearchPanel({ collectionCards = [], onHover, onDragStart, onDrag, onDragEnd, onCardDoubleClick }: CardSearchPanelProps) {
     // --- Filters State ---
     const [name, setName] = useState("");
     const [desc, setDesc] = useState("");
@@ -211,6 +213,8 @@ export default function CardSearchPanel({ collectionCards = [], onHover, onDragS
                                     dragContext="search"
                                     onHover={onHover}
                                     onDragStart={(e) => onDragStart(e, card, 'search')}
+                                    onDrag={onDrag}
+                                    onDragEnd={onDragEnd}
                                     onDoubleClick={() => onCardDoubleClick && onCardDoubleClick(card)}
                                 />
                                 <div className="absolute bottom-0 right-0 bg-black/80 text-white text-[10px] px-1 rounded-tl pointer-events-none font-mono">

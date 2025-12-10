@@ -8,6 +8,8 @@ interface SideExtraDeckGridProps {
     extraDeck: Card[];
     onHover: (card: Card | null) => void;
     onDragStart: (e: React.DragEvent, card: Card, from: 'extra' | 'side', index: number) => void;
+    onDrag: (e: React.DragEvent) => void;
+    onDragEnd: (e: React.DragEvent) => void;
     onDrop: (e: React.DragEvent, to: 'extra' | 'side', index: number) => void;
     onRightClick: (e: React.MouseEvent, card: Card, from: 'extra' | 'side', index: number) => void;
 }
@@ -17,6 +19,8 @@ export default function SideExtraDeckGrid({
     extraDeck = [],
     onHover,
     onDragStart,
+    onDrag,
+    onDragEnd,
     onDrop,
     onRightClick
 }: SideExtraDeckGridProps) {
@@ -38,6 +42,8 @@ export default function SideExtraDeckGrid({
                     dragContext="deck"
                     onHover={onHover}
                     onDragStart={(e) => onDragStart(e, card!, zone, i)}
+                    onDrag={onDrag}
+                    onDragEnd={onDragEnd}
                     onDrop={(e) => onDrop(e, zone, i)}
                     onDragOver={handleDragOver}
                     onContextMenu={(e) => card && onRightClick(e, card, zone, i)}

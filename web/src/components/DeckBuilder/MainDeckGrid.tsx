@@ -8,6 +8,8 @@ interface MainDeckGridProps {
     stats: { monsters: number; spells: number; traps: number; total: number };
     onHover: (card: Card | null) => void;
     onDragStart: (e: React.DragEvent, card: Card, from: 'main', index: number) => void;
+    onDrag: (e: React.DragEvent) => void;
+    onDragEnd: (e: React.DragEvent) => void;
     onDrop: (e: React.DragEvent, to: 'main', index: number) => void;
     onRightClick: (e: React.MouseEvent, card: Card, from: 'main', index: number) => void;
 }
@@ -17,6 +19,8 @@ export default function MainDeckGrid({
     stats,
     onHover,
     onDragStart,
+    onDrag,
+    onDragEnd,
     onDrop,
     onRightClick
 }: MainDeckGridProps) {
@@ -38,6 +42,8 @@ export default function MainDeckGrid({
                     dragContext="deck"
                     onHover={onHover}
                     onDragStart={(e) => onDragStart(e, card!, 'main', i)}
+                    onDrag={onDrag}
+                    onDragEnd={onDragEnd}
                     onDrop={(e) => onDrop(e, 'main', i)}
                     onDragOver={handleDragOver}
                     onContextMenu={(e) => card && onRightClick(e, card, 'main', i)}

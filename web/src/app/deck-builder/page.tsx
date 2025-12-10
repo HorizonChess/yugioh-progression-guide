@@ -25,6 +25,13 @@ export default function DeckBuilderPage() {
     const [deckName, setDeckName] = useState("New Deck");
     const [showLoadModal, setShowLoadModal] = useState(false);
 
+    // Drag Preview State
+    const [dragPreview, setDragPreview] = useState<{
+        card: Card;
+        x: number;
+        y: number;
+    } | null>(null);
+
     useEffect(() => {
         async function loadCollection() {
             setLoading(true);
@@ -43,6 +50,20 @@ export default function DeckBuilderPage() {
         }
         loadCollection();
     }, [collection]);
+
+    // Firefox fallback: use document dragover for cursor tracking
+    useEffect(() => {
+        const handleDocumentDragOver = (e: DragEvent) => {
+            if (dragPreview) {
+                setDragPreview(prev =>
+                    prev ? { ...prev, x: e.clientX, y: e.clientY } : null
+                );
+            }
+        };
+
+        document.addEventListener('dragover', handleDocumentDragOver);
+        return () => document.removeEventListener('dragover', handleDocumentDragOver);
+    }, [dragPreview]);
 
     const collectionCards = useMemo(() => {
         const counts = new Map<number, number>();
@@ -144,40 +165,31 @@ export default function DeckBuilderPage() {
         e.dataTransfer.setData("application/json", JSON.stringify(data));
         e.dataTransfer.effectAllowed = "move";
 
-        // Create custom drag image with smaller, more precise dimensions
-        const dragImg = document.createElement('img');
-        dragImg.src = card.card_images[0].image_url;
+        // Hide default ghost image
+        const emptyImg = new Image();
+        emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        e.dataTransfer.setDragImage(emptyImg, 0, 0);
 
-        // Smaller size for better visual clarity
-        const width = 105;
-        const height = 153;
-        dragImg.style.width = `${width}px`;
-        dragImg.style.height = `${height}px`;
-        dragImg.style.objectFit = 'fill';
-        dragImg.style.borderRadius = '4px';
-
-        // Enhanced positioning and styling
-        dragImg.style.position = 'fixed';
-        dragImg.style.left = '-9999px';
-        dragImg.style.top = '-9999px';
-        dragImg.style.pointerEvents = 'none';
-
-        // Multiple opacity techniques to ensure full visibility
-        dragImg.style.opacity = '1';
-        dragImg.style.filter = 'brightness(1) drop-shadow(0 6px 12px rgba(0,0,0,0.6))';
-        dragImg.style.imageRendering = 'crisp-edges';
-
-        document.body.appendChild(dragImg);
-
-        // Center image on cursor
-        e.dataTransfer.setDragImage(dragImg, width / 2, height / 2);
-
-        // Clean up after browser captures it
-        requestAnimationFrame(() => {
-            if (dragImg.parentNode) {
-                document.body.removeChild(dragImg);
-            }
+        // Show custom floating preview
+        setDragPreview({
+            card,
+            x: e.clientX,
+            y: e.clientY
         });
+    };
+
+    const handleDrag = (e: React.DragEvent) => {
+        // Firefox doesn't provide coordinates in drag event
+        // Fall back to dragover handler for Firefox
+        if (e.clientX === 0 && e.clientY === 0) return;
+
+        setDragPreview(prev =>
+            prev ? { ...prev, x: e.clientX, y: e.clientY } : null
+        );
+    };
+
+    const handleDragEnd = () => {
+        setDragPreview(null);
     };
 
     const handleDrop = (e: React.DragEvent, to: 'main' | 'extra' | 'side', index: number) => {
@@ -325,6 +337,8 @@ export default function DeckBuilderPage() {
                         stats={stats}
                         onDrop={handleDrop}
                         onDragStart={handleDragStart}
+                        onDrag={handleDrag}
+                        onDragEnd={handleDragEnd}
                         onRightClick={handleRightClick}
                         onHover={handleHover}
                     />
@@ -337,6 +351,8 @@ export default function DeckBuilderPage() {
                         extraDeck={extraDeck}
                         onDrop={handleDrop}
                         onDragStart={handleDragStart}
+                        onDrag={handleDrag}
+                        onDragEnd={handleDragEnd}
                         onRightClick={handleRightClick}
                         onHover={handleHover}
                     />
@@ -347,6 +363,8 @@ export default function DeckBuilderPage() {
                     <CardSearchPanel
                         collectionCards={collectionCards}
                         onDragStart={handleSearchDragStart}
+                        onDrag={handleDrag}
+                        onDragEnd={handleDragEnd}
                         onHover={handleHover}
                         onCardDoubleClick={handleDoubleClick}
                     />
@@ -390,6 +408,33 @@ export default function DeckBuilderPage() {
                         </div>
                         <button onClick={() => setShowLoadModal(false)} className="mt-4 w-full bg-slate-700 hover:bg-slate-600 py-2 rounded font-bold border border-slate-500">CANCEL</button>
                     </div>
+                </div>
+            )}
+
+            {/* Floating Drag Preview */}
+            {dragPreview && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        left: dragPreview.x - 52.5, // Center card on cursor (105px / 2)
+                        top: dragPreview.y - 76.5,  // Center card on cursor (153px / 2)
+                        width: '105px',
+                        height: '153px',
+                        pointerEvents: 'none',
+                        zIndex: 9999,
+                        transform: 'translate(0, 0)', // Force GPU acceleration
+                    }}
+                    className="opacity-100 transition-none"
+                >
+                    <img
+                        src={dragPreview.card.card_images[0].image_url}
+                        alt={dragPreview.card.name}
+                        className="w-full h-full object-fill rounded-[4px]"
+                        style={{
+                            filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))',
+                            imageRendering: 'crisp-edges'
+                        }}
+                    />
                 </div>
             )}
 

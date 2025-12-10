@@ -14,11 +14,13 @@ interface DeckSlotProps {
     onDragStart?: (e: React.DragEvent, card: Card, index: number) => void;
     onDrop?: (e: React.DragEvent, index: number) => void;
     onDragOver?: (e: React.DragEvent) => void;
+    onDrag?: (e: React.DragEvent) => void;
+    onDragEnd?: (e: React.DragEvent) => void;
     isUnavailable?: boolean;
     dragContext?: 'search' | 'deck';
 }
 
-export default function DeckSlot({ card, index, onClick, onDoubleClick, onContextMenu, onHover, className = "", onDragStart, onDrop, onDragOver, isUnavailable, dragContext }: DeckSlotProps) {
+export default function DeckSlot({ card, index, onClick, onDoubleClick, onContextMenu, onHover, className = "", onDragStart, onDrop, onDragOver, onDrag, onDragEnd, isUnavailable, dragContext }: DeckSlotProps) {
     const [isDragOver, setIsDragOver] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
@@ -74,7 +76,11 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
                         onDragStart(e, card, index);
                     }
                 }}
-                onDragEnd={() => setIsDragging(false)}
+                onDrag={(e) => onDrag && onDrag(e)}
+                onDragEnd={(e) => {
+                    setIsDragging(false);
+                    onDragEnd && onDragEnd(e);
+                }}
             >
                 {card ? (
                     <>
