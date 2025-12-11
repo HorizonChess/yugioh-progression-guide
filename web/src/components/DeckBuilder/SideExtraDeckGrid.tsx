@@ -30,27 +30,32 @@ export default function SideExtraDeckGrid({
         e.dataTransfer.dropEffect = "move";
     };
 
-    const renderCards = (cards: Card[], zone: 'extra' | 'side') => {
-        return cards.map((card, i) => (
-            <div
-                key={`${zone}-${i}`}
-                className="aspect-[59/86] w-[calc(25%-1.5px)]"
-            >
-                <DeckSlot
-                    index={i}
-                    card={card}
-                    dragContext="deck"
-                    onHover={onHover}
-                    onDragStart={(e) => onDragStart(e, card!, zone, i)}
-                    onDrag={onDrag}
-                    onDragEnd={onDragEnd}
-                    onDrop={(e) => onDrop(e, zone, i)}
-                    onDragOver={handleDragOver}
-                    onContextMenu={(e) => card && onRightClick(e, card, zone, i)}
-                    className="w-full h-full"
-                />
-            </div>
-        ));
+    const renderSlots = (cards: Card[], zone: 'extra' | 'side', totalSlots: number) => {
+        const slots = [];
+        for (let i = 0; i < totalSlots; i++) {
+            const card = cards[i];
+            slots.push(
+                <div
+                    key={`${zone}-${i}`}
+                    className="aspect-[59/86] w-[calc(25%-1.5px)]"
+                >
+                    <DeckSlot
+                        index={i}
+                        card={card}
+                        dragContext="deck"
+                        onHover={onHover}
+                        onDragStart={(e) => onDragStart(e, card!, zone, i)}
+                        onDrag={onDrag}
+                        onDragEnd={onDragEnd}
+                        onDrop={(e) => onDrop(e, zone, i)}
+                        onDragOver={handleDragOver}
+                        onContextMenu={(e) => card && onRightClick(e, card, zone, i)}
+                        className={`w-full h-full ${!card ? "opacity-30" : ""}`}
+                    />
+                </div>
+            );
+        }
+        return slots;
     };
 
     return (
@@ -60,12 +65,9 @@ export default function SideExtraDeckGrid({
                 <div className="bg-teal-800/80 rounded-t border border-teal-600 px-2 py-0.5 shrink-0">
                     <span className="text-teal-100 font-bold text-[10px] tracking-widest">SIDE DECK ({sideDeck.length}/15)</span>
                 </div>
-                <div
-                    className="flex-1 bg-slate-900/50 border border-t-0 border-teal-900/50 rounded-b overflow-y-auto p-1"
-                    onDragOver={handleDragOver}
-                >
+                <div className="flex-1 bg-slate-900/50 border border-t-0 border-teal-900/50 rounded-b overflow-y-auto p-1">
                     <div className="flex flex-wrap gap-0.5 content-start">
-                        {renderCards(sideDeck, 'side')}
+                        {renderSlots(sideDeck, 'side', 15)}
                     </div>
                 </div>
             </div>
@@ -75,12 +77,9 @@ export default function SideExtraDeckGrid({
                 <div className="bg-purple-900/80 rounded-t border border-purple-700 px-2 py-0.5 shrink-0">
                     <span className="text-purple-100 font-bold text-[10px] tracking-widest">EXTRA DECK ({extraDeck.length}/15)</span>
                 </div>
-                <div
-                    className="flex-1 bg-slate-900/50 border border-t-0 border-purple-900/50 rounded-b overflow-y-auto p-1"
-                    onDragOver={handleDragOver}
-                >
+                <div className="flex-1 bg-slate-900/50 border border-t-0 border-purple-900/50 rounded-b overflow-y-auto p-1">
                     <div className="flex flex-wrap gap-0.5 content-start">
-                        {renderCards(extraDeck, 'extra')}
+                        {renderSlots(extraDeck, 'extra', 15)}
                     </div>
                 </div>
             </div>
