@@ -3,7 +3,7 @@
 import { useProgression } from "@/context/ProgressionContext";
 import TopBar from "@/components/TopBar";
 import GuideSprite from "@/components/GuideSprite";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, fetchCardsByIds } from "@/lib/api";
 import CardInfoPanel from "@/components/DeckBuilder/CardInfoPanel";
 import MainDeckGrid from "@/components/DeckBuilder/MainDeckGrid";
@@ -26,11 +26,44 @@ export default function DeckBuilderPage() {
     const [showLoadModal, setShowLoadModal] = useState(false);
 
     // Drag Preview State
-    const [dragPreview, setDragPreview] = useState<{
-        card: Card;
-        x: number;
-        y: number;
-    } | null>(null);
+    // Minimal state - only controls show/hide
+    const [draggedCard, setDraggedCard] = useState<Card | null>(null);
+
+    // Ref for position updates without re-renders
+    const dragPreviewRef = useRef<{
+        element: HTMLDivElement | null;
+        position: { x: number; y: number };
+        rafId: number | null;
+    }>({
+        element: null,
+        position: { x: 0, y: 0 },
+        rafId: null
+    });
+
+    // Update preview position via direct DOM manipulation
+    const updateDragPreviewPosition = (x: number, y: number) => {
+        const ref = dragPreviewRef.current;
+
+        // Cancel pending animation frame
+        if (ref.rafId !== null) {
+            cancelAnimationFrame(ref.rafId);
+        }
+
+        // Schedule update on next frame
+        ref.rafId = requestAnimationFrame(() => {
+            if (ref.element) {
+                // Center card on cursor
+                const offsetX = x - 52.5;
+                const offsetY = y - 76.5;
+
+                // GPU-accelerated positioning
+                ref.element.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
+            }
+
+            ref.position = { x, y };
+            ref.rafId = null;
+        });
+    };
 
     useEffect(() => {
         async function loadCollection() {
@@ -54,16 +87,20 @@ export default function DeckBuilderPage() {
     // Firefox fallback: use document dragover for cursor tracking
     useEffect(() => {
         const handleDocumentDragOver = (e: DragEvent) => {
-            if (dragPreview) {
-                setDragPreview(prev =>
-                    prev ? { ...prev, x: e.clientX, y: e.clientY } : null
-                );
+            if (draggedCard) {
+                updateDragPreviewPosition(e.clientX, e.clientY);
             }
         };
 
         document.addEventListener('dragover', handleDocumentDragOver);
-        return () => document.removeEventListener('dragover', handleDocumentDragOver);
-    }, [dragPreview]);
+        return () => {
+            document.removeEventListener('dragover', handleDocumentDragOver);
+            // Clean up pending animation frame
+            if (dragPreviewRef.current.rafId !== null) {
+                cancelAnimationFrame(dragPreviewRef.current.rafId);
+            }
+        };
+    }, [draggedCard]);
 
     const collectionCards = useMemo(() => {
         const counts = new Map<number, number>();
@@ -170,12 +207,11 @@ export default function DeckBuilderPage() {
         emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         e.dataTransfer.setDragImage(emptyImg, 0, 0);
 
-        // Show custom floating preview
-        setDragPreview({
-            card,
-            x: e.clientX,
-            y: e.clientY
-        });
+        // Set position in ref BEFORE mounting component (prevents flicker)
+        dragPreviewRef.current.position = { x: e.clientX, y: e.clientY };
+
+        // Show custom preview (state triggers mount, will use position from ref)
+        setDraggedCard(card);
     };
 
     const handleDrag = (e: React.DragEvent) => {
@@ -183,13 +219,21 @@ export default function DeckBuilderPage() {
         // Fall back to dragover handler for Firefox
         if (e.clientX === 0 && e.clientY === 0) return;
 
-        setDragPreview(prev =>
-            prev ? { ...prev, x: e.clientX, y: e.clientY } : null
-        );
+        updateDragPreviewPosition(e.clientX, e.clientY);
     };
 
     const handleDragEnd = () => {
-        setDragPreview(null);
+        // Hide preview (triggers unmount)
+        setDraggedCard(null);
+
+        // Cancel pending animation frame
+        if (dragPreviewRef.current.rafId !== null) {
+            cancelAnimationFrame(dragPreviewRef.current.rafId);
+            dragPreviewRef.current.rafId = null;
+        }
+
+        // Reset position for next drag
+        dragPreviewRef.current.position = { x: 0, y: 0 };
     };
 
     const handleDrop = (e: React.DragEvent, to: 'main' | 'extra' | 'side', index: number) => {
@@ -412,23 +456,28 @@ export default function DeckBuilderPage() {
             )}
 
             {/* Floating Drag Preview */}
-            {dragPreview && (
+            {draggedCard && (
                 <div
+                    ref={(el) => {
+                        dragPreviewRef.current.element = el;
+                    }}
                     style={{
                         position: 'fixed',
-                        left: dragPreview.x - 52.5, // Center card on cursor (105px / 2)
-                        top: dragPreview.y - 76.5,  // Center card on cursor (153px / 2)
+                        left: 0,
+                        top: 0,
                         width: '105px',
                         height: '153px',
                         pointerEvents: 'none',
                         zIndex: 9999,
-                        transform: 'translate(0, 0)', // Force GPU acceleration
+                        // Apply initial transform from ref (prevents flicker at top-left)
+                        transform: `translate3d(${dragPreviewRef.current.position.x - 52.5}px, ${dragPreviewRef.current.position.y - 76.5}px, 0)`,
+                        willChange: 'transform',
                     }}
                     className="opacity-100 transition-none"
                 >
                     <img
-                        src={dragPreview.card.card_images[0].image_url}
-                        alt={dragPreview.card.name}
+                        src={draggedCard.card_images[0].image_url}
+                        alt={draggedCard.name}
                         className="w-full h-full object-fill rounded-[4px]"
                         style={{
                             filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))',
