@@ -40,6 +40,9 @@ export default function DeckBuilderPage() {
         rafId: null
     });
 
+    // Ref for preloaded empty drag image (prevents ghost image on first drag)
+    const emptyDragImageRef = useRef<HTMLImageElement | null>(null);
+
     // Update preview position via direct DOM manipulation
     const updateDragPreviewPosition = (x: number, y: number) => {
         const ref = dragPreviewRef.current;
@@ -64,6 +67,13 @@ export default function DeckBuilderPage() {
             ref.rafId = null;
         });
     };
+
+    // Preload empty drag image to prevent ghost on first drag
+    useEffect(() => {
+        const img = new Image();
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        emptyDragImageRef.current = img;
+    }, []);
 
     useEffect(() => {
         async function loadCollection() {
@@ -202,10 +212,10 @@ export default function DeckBuilderPage() {
         e.dataTransfer.setData("application/json", JSON.stringify(data));
         e.dataTransfer.effectAllowed = "move";
 
-        // Hide default ghost image
-        const emptyImg = new Image();
-        emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        e.dataTransfer.setDragImage(emptyImg, 0, 0);
+        // Use preloaded empty drag image
+        if (emptyDragImageRef.current) {
+            e.dataTransfer.setDragImage(emptyDragImageRef.current, 0, 0);
+        }
 
         // Set position in ref BEFORE mounting component (prevents flicker)
         dragPreviewRef.current.position = { x: e.clientX, y: e.clientY };
@@ -300,7 +310,14 @@ export default function DeckBuilderPage() {
             setDeck(to, newTarget);
 
         } catch (err) {
-            console.error("Drop failed", err);
+            console.error("Drop failed:", err);
+        } finally {
+            // ALWAYS cleanup drag state, even if drop fails
+            setDraggedCard(null);
+            if (dragPreviewRef.current.rafId !== null) {
+                cancelAnimationFrame(dragPreviewRef.current.rafId);
+                dragPreviewRef.current.rafId = null;
+            }
         }
     };
 

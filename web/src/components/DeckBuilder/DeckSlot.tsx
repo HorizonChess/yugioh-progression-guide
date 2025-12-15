@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/lib/api";
 
 interface DeckSlotProps {
@@ -24,6 +24,14 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
     const [isDragOver, setIsDragOver] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
+    // Defensive cleanup: reset drag states when card changes or component unmounts
+    useEffect(() => {
+        return () => {
+            setIsDragging(false);
+            setIsDragOver(false);
+        };
+    }, [card?.id]); // Reset when card changes (using optional chaining for undefined)
+
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation(); // Prevent container from handling
@@ -39,7 +47,11 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragOver(false);
-        if (onDrop) onDrop(e, index);
+        try {
+            if (onDrop) onDrop(e, index);
+        } catch (err) {
+            console.error("DeckSlot drop error:", err);
+        }
     };
 
     // Outer container fills the grid cell and centers the card

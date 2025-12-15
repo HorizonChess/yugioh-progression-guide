@@ -145,6 +145,17 @@ We use a suite of custom scripts to maintain assets and data integrity:
 -   **[✓] Suspense Boundaries**: Resolved Next.js static generation issues with useSearchParams
 -   **[✓] Custom Hook Refactor**: Extracted card tooltip logic into reusable `useCardTooltip` hook ([src/hooks/useCardTooltip.ts](src/hooks/useCardTooltip.ts))
 
+### Drag and Drop Optimization & Testing (December 2025)
+-   **[✓] Performance Optimization**: Refactored drag preview to use `useRef` + `requestAnimationFrame` + CSS `translate3d()` for GPU-accelerated rendering (eliminates re-renders on mouse move)
+-   **[✓] Ghost Image Fix**: Preloaded empty drag image to prevent native browser ghost appearing on first few drags after page reload
+-   **[✓] State Management**: Added defensive cleanup via `useEffect` in DeckSlot component to prevent stuck "midair" cards
+-   **[✓] Error Handling**: Wrapped drop handlers in try-catch-finally blocks ensuring drag state always resets
+-   **[✓] Testing Infrastructure**: Implemented Jest + React Testing Library with full Next.js support
+    -   Created 15 automated tests covering DeckSlot state management, grid rendering, and integration
+    -   All tests passing with proper mocking of context, API, and components
+    -   Added npm scripts: `npm test`, `npm test:watch`, `npm test:coverage`
+-   **[✓] Build Verification**: Confirmed all changes compile successfully with TypeScript and Next.js build
+
 ## Future Roadmap
 
 -   **[✓] Loser's Circle**: ~~Implement the "Pity Pack" opening flow for defeated players~~ (Completed)
