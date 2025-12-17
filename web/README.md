@@ -97,6 +97,61 @@ We use a suite of custom scripts to maintain assets and data integrity:
 
 ## Architecture Overview
 
+### Layout Scaling: ScaleWrapper
+
+For pages that require fixed proportions across different screen sizes, use the `ScaleWrapper` component. This ensures layouts designed on a 1920px-wide desktop maintain exact horizontal proportions on any screen.
+
+#### When to use ScaleWrapper:
+- **Use it for:** Pages with precise layouts where element positions matter (deck builder, campaign map)
+- **Don't use it for:** Simple scrollable pages, forms, or content that should naturally reflow
+
+#### Currently using ScaleWrapper:
+- `/deck-builder` - DuelingBook-style deck constructor
+- `/map` - Campaign timeline with fixed button positions
+
+#### How it works:
+1. **Width-based scaling:** `scale = viewportWidth / 1920`
+2. **Adaptive height:** `designHeight = viewportHeight / scale`
+3. **Result:** Content always fills viewport exactly, no margins, no clipping
+
+The math ensures that on ANY screen:
+- Scaled width = viewport width (fills exactly)
+- Scaled height = viewport height (fills exactly)
+
+#### Requirements for content inside ScaleWrapper:
+
+| Do | Don't |
+|----|-------|
+| `h-full` | `h-screen` or `min-h-screen` |
+| `absolute` positioning | `fixed` positioning |
+| Flexbox with `flex-1` | Hardcoded pixel heights |
+| `w-full` on containers | Viewport units (`vw`, `vh`) |
+
+**Why no `fixed` positioning?** CSS `transform` creates a new containing block, so `fixed` elements inside are positioned relative to the transformed container, not the viewport. Use `absolute` instead - it achieves the same effect.
+
+#### Example usage:
+```tsx
+import ScaleWrapper from "@/components/ScaleWrapper";
+
+export default function MyPage() {
+    return (
+        // Use backgroundColor="transparent" to show global background
+        <ScaleWrapper backgroundColor="transparent">
+            <div className="h-full w-full relative">
+                {/* Use absolute instead of fixed */}
+                <div className="absolute top-4 left-4">...</div>
+                <div className="absolute bottom-4 right-4">...</div>
+            </div>
+        </ScaleWrapper>
+    );
+}
+```
+
+#### Props:
+- `backgroundColor` (optional): Background color of outer container. Default: `#0f172a`. Use `"transparent"` to show global app background.
+
+**Full technical documentation**: See [Fixed_app_scale_progress.md](Fixed_app_scale_progress.md) for the complete 14-attempt development history and mathematical rationale.
+
 ### `src/app` (Routes)
 -   **`/menu`**: Save slot management.
 -   **`/map`**: Timeline visualization of unlocked sets.

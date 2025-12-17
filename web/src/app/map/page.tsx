@@ -8,6 +8,7 @@ import GuideSprite from "@/components/GuideSprite";
 import TopBar from "@/components/TopBar";
 import ChainConnector from "@/components/ChainConnector";
 import GoldButton from "@/components/GoldButton";
+import ScaleWrapper from "@/components/ScaleWrapper";
 
 export default function MapPage() {
     const { currentSetIndex, matchHistory, hasLoaded } = useProgression();
@@ -50,14 +51,17 @@ export default function MapPage() {
 
     if (!hasLoaded || loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-black text-white">
-                <div className="text-2xl font-bold animate-pulse text-[var(--primary)]">LOADING TIMELINE...</div>
-            </div>
+            <ScaleWrapper backgroundColor="transparent">
+                <div className="h-full w-full flex items-center justify-center bg-black text-white">
+                    <div className="text-2xl font-bold animate-pulse text-[var(--primary)]">LOADING TIMELINE...</div>
+                </div>
+            </ScaleWrapper>
         );
     }
 
     return (
-        <main className="min-h-screen text-white relative overflow-hidden font-sans selection:bg-[var(--primary)] selection:text-black">
+        <ScaleWrapper backgroundColor="transparent">
+        <main className="h-full w-full text-white relative overflow-hidden font-sans selection:bg-[var(--primary)] selection:text-black">
 
             {/* Top Bar */}
             <div className="relative z-40">
@@ -65,14 +69,14 @@ export default function MapPage() {
             </div>
 
             {/* Prepare Your Deck Button - Top Center (Floating) */}
-            <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-10 duration-700">
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-10 duration-700">
                 <GoldButton width="w-72" height="h-16" textSize="text-sm">
                     Prepare Your Deck
                 </GoldButton>
             </div>
 
             {/* Main Content Area - Vertically Centered */}
-            <div className="fixed inset-0 z-10 flex flex-col items-center justify-center pointer-events-none pb-20">
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none pb-20">
                 <div className="w-full flex flex-col items-center gap-10 pointer-events-auto">
 
                     {/* Timeline Section */}
@@ -157,8 +161,8 @@ export default function MapPage() {
                 </div>
             </div>
 
-            {/* Action Buttons - Fixed above Stats */}
-            <div className="fixed bottom-40 left-0 right-0 z-30 flex justify-center gap-6 pointer-events-auto">
+            {/* Action Buttons - Above Stats */}
+            <div className="absolute bottom-40 left-0 right-0 z-30 flex justify-center gap-6 pointer-events-auto">
                 <GoldButton href={`/packs?set=${currentSetIndex}`} width="w-64" height="h-16" textSize="text-lg">
                     OPEN PACKS
                 </GoldButton>
@@ -167,8 +171,8 @@ export default function MapPage() {
                 </GoldButton>
             </div>
 
-            {/* Bottom HUD - Floating Stats & Bonus Button */}
-            <div className="fixed bottom-4 left-0 right-0 z-30 pointer-events-none">
+            {/* Bottom HUD - Stats & Bonus Button */}
+            <div className="absolute bottom-4 left-0 right-0 z-30 pointer-events-none">
                 {/* Centered Stats Box */}
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex justify-center pointer-events-auto animate-in slide-in-from-bottom-10 duration-700">
                     <div className="relative w-[300px] h-[120px] bg-[url('/ui/stats_panel_cropped.png')] bg-[length:100%_100%] bg-center bg-no-repeat">
@@ -191,8 +195,9 @@ export default function MapPage() {
                 </div>
             </div>
 
-            {/* Character Sprite - Fixed Bottom Left */}
+            {/* Character Sprite - Bottom Left */}
             <GuideSprite />
         </main>
+        </ScaleWrapper>
     );
 }
