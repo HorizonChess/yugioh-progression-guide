@@ -3,7 +3,9 @@
 import { useProgression } from "@/context/ProgressionContext";
 import TopBar from "@/components/TopBar";
 import GuideSprite from "@/components/GuideSprite";
+import ScaleWrapper from "@/components/ScaleWrapper";
 import { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Card, fetchCardsByIds } from "@/lib/api";
 import CardInfoPanel from "@/components/DeckBuilder/CardInfoPanel";
 import MainDeckGrid from "@/components/DeckBuilder/MainDeckGrid";
@@ -359,8 +361,10 @@ export default function DeckBuilderPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-slate-900 text-slate-100 overflow-hidden">
-            <TopBar />
+        <>
+        <ScaleWrapper backgroundColor="#0f172a">
+            <div className="flex flex-col h-full w-full bg-slate-900 text-slate-100 overflow-hidden">
+                    <TopBar />
             <div className="flex flex-1 px-1 pt-1 pb-1 gap-1 overflow-hidden relative min-h-0">
 
                 {/* Left Column: Info + Controls */}
@@ -472,38 +476,44 @@ export default function DeckBuilderPage() {
                 </div>
             )}
 
-            {/* Floating Drag Preview */}
-            {draggedCard && (
-                <div
-                    ref={(el) => {
-                        dragPreviewRef.current.element = el;
-                    }}
-                    style={{
-                        position: 'fixed',
-                        left: 0,
-                        top: 0,
-                        width: '105px',
-                        height: '153px',
-                        pointerEvents: 'none',
-                        zIndex: 9999,
-                        // Apply initial transform from ref (prevents flicker at top-left)
-                        transform: `translate3d(${dragPreviewRef.current.position.x - 52.5}px, ${dragPreviewRef.current.position.y - 76.5}px, 0)`,
-                        willChange: 'transform',
-                    }}
-                    className="opacity-100 transition-none"
-                >
-                    <img
-                        src={draggedCard.card_images[0].image_url}
-                        alt={draggedCard.name}
-                        className="w-full h-full object-fill rounded-[4px]"
-                        style={{
-                            filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))',
-                            imageRendering: 'crisp-edges'
-                        }}
-                    />
-                </div>
-            )}
+            </div> {/* End of h-full content div */}
+        </ScaleWrapper>
 
-        </div>
+        {/* Floating Drag Preview - Rendered via Portal OUTSIDE ScaleWrapper
+            This fixes the offset issue caused by CSS transform creating a new containing block
+            for position:fixed elements. By portaling to document.body, the preview uses
+            actual viewport coordinates instead of the scaled container coordinates. */}
+        {draggedCard && typeof document !== 'undefined' && createPortal(
+            <div
+                ref={(el) => {
+                    dragPreviewRef.current.element = el;
+                }}
+                style={{
+                    position: 'fixed',
+                    left: 0,
+                    top: 0,
+                    width: '105px',
+                    height: '153px',
+                    pointerEvents: 'none',
+                    zIndex: 9999,
+                    // Apply initial transform from ref (prevents flicker at top-left)
+                    transform: `translate3d(${dragPreviewRef.current.position.x - 52.5}px, ${dragPreviewRef.current.position.y - 76.5}px, 0)`,
+                    willChange: 'transform',
+                }}
+                className="opacity-100 transition-none"
+            >
+                <img
+                    src={draggedCard.card_images[0].image_url}
+                    alt={draggedCard.name}
+                    className="w-full h-full object-fill rounded-[4px]"
+                    style={{
+                        filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))',
+                        imageRendering: 'crisp-edges'
+                    }}
+                />
+            </div>,
+            document.body
+        )}
+        </>
     );
 }
