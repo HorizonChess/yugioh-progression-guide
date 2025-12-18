@@ -211,6 +211,16 @@ export default function MyPage() {
     -   Added npm scripts: `npm test`, `npm test:watch`, `npm test:coverage`
 -   **[✓] Build Verification**: Confirmed all changes compile successfully with TypeScript and Next.js build
 
+### Deck Builder Import/Export & Usability (December 2025)
+-   **[✓] YDK Import**: Import decks from `.ydk` files (EDOPro/DuelingBook format) with proper main/extra/side separation
+-   **[✓] YDK Export**: Export current deck to `.ydk` file with File System Access API support and fallback
+-   **[✓] Cross-Grid Drag**: Fixed drag-and-drop between main/extra/side grids - cards can now be moved freely between zones
+-   **[✓] Drag-to-Remove**: Drag a card outside any grid to remove it from the deck
+-   **[✓] Deck Loading Fix**: Fixed bug where loading saved decks showed empty grids - now fetches missing card data automatically
+-   **[✓] Sort Function**: New Sort button organizes cards by type (Monsters → Spells → Traps), alphabetically within each category
+-   **[✓] Map Integration**: "Prepare Your Deck" button on campaign map now navigates to deck builder
+-   **[✓] Alternate Artworks**: Migration script ([migrate_missing_artworks.js](scripts/migrate_missing_artworks.js)) to upload alternate card artworks to Cloudflare R2
+
 ## Future Roadmap
 
 -   **[✓] Loser's Circle**: ~~Implement the "Pity Pack" opening flow for defeated players~~ (Completed)
