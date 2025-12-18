@@ -70,7 +70,7 @@ export default function MapPage() {
 
             {/* Prepare Your Deck Button - Top Center (Floating) */}
             <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-10 duration-700">
-                <GoldButton width="w-72" height="h-16" textSize="text-sm">
+                <GoldButton href="/deck-builder" width="w-72" height="h-16" textSize="text-sm">
                     Prepare Your Deck
                 </GoldButton>
             </div>

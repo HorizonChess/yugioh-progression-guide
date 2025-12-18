@@ -45,6 +45,13 @@ export default function DeckBuilderPage() {
     // Ref for preloaded empty drag image (prevents ghost image on first drag)
     const emptyDragImageRef = useRef<HTMLImageElement | null>(null);
 
+    // Ref for YDK file import
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Ref for tracking drag source (for drag-to-remove)
+    const dragSourceRef = useRef<{ from: 'search' | 'main' | 'extra' | 'side', index: number, cardId: number } | null>(null);
+    const dropOccurredRef = useRef(false);
+
     // Update preview position via direct DOM manipulation
     const updateDragPreviewPosition = (x: number, y: number) => {
         const ref = dragPreviewRef.current;
@@ -172,10 +179,26 @@ export default function DeckBuilderPage() {
         alert("Deck Saved!");
     };
 
-    const handleLoadDeck = (deck: SavedDeck) => {
+    const handleLoadDeck = async (deck: SavedDeck) => {
         if (!deck) return;
         setDeckName(deck.name);
-        const getCards = (ids: number[]) => ids.map(id => allCards.find(c => c.id === id)).filter(Boolean) as Card[];
+
+        // Get all unique IDs from the deck
+        const allDeckIds = [...new Set([...deck.mainDeck, ...deck.extraDeck, ...deck.sideDeck])];
+
+        // Find which IDs are not in allCards
+        const missingIds = allDeckIds.filter(id => !allCards.find(c => c.id === id));
+
+        // Fetch missing cards and combine with existing
+        let cardsToUse = allCards;
+        if (missingIds.length > 0) {
+            const fetchedCards = await fetchCardsByIds(missingIds);
+            cardsToUse = [...allCards, ...fetchedCards];
+            // Update allCards state so future operations work
+            setAllCards(cardsToUse);
+        }
+
+        const getCards = (ids: number[]) => ids.map(id => cardsToUse.find(c => c.id === id)).filter(Boolean) as Card[];
         setMainDeck(getCards(deck.mainDeck));
         setExtraDeck(getCards(deck.extraDeck));
         setSideDeck(getCards(deck.sideDeck));
@@ -195,6 +218,119 @@ export default function DeckBuilderPage() {
         }
     }
 
+    // --- YDK Import/Export ---
+
+    // Helper to parse YDK with sections
+    const parseYDKWithSections = (content: string): { main: number[], extra: number[], side: number[] } => {
+        const lines = content.split(/\r?\n/);
+        const result = { main: [] as number[], extra: [] as number[], side: [] as number[] };
+        let currentSection: 'main' | 'extra' | 'side' = 'main';
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed === '#main') { currentSection = 'main'; continue; }
+            if (trimmed === '#extra') { currentSection = 'extra'; continue; }
+            if (trimmed === '!side') { currentSection = 'side'; continue; }
+            if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('!')) continue;
+
+            const id = parseInt(trimmed, 10);
+            if (!isNaN(id)) result[currentSection].push(id);
+        }
+        return result;
+    };
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const text = await file.text();
+        const { main, extra, side } = parseYDKWithSections(text);
+
+        if (main.length === 0 && extra.length === 0 && side.length === 0) {
+            alert("No valid card IDs found in YDK file.");
+            return;
+        }
+
+        // Confirm before replacing current deck
+        if (mainDeck.length > 0 || extraDeck.length > 0 || sideDeck.length > 0) {
+            if (!confirm("This will replace your current deck. Continue?")) return;
+        }
+
+        // Fetch card data and populate decks
+        const allIds = [...new Set([...main, ...extra, ...side])];
+        const fetchedCards = await fetchCardsByIds(allIds);
+
+        // Update allCards with fetched cards so drag/drop works
+        const newAllCards = [...allCards];
+        fetchedCards.forEach(card => {
+            if (!newAllCards.find(c => c.id === card.id)) {
+                newAllCards.push(card);
+            }
+        });
+        setAllCards(newAllCards);
+
+        const getCards = (ids: number[]) =>
+            ids.map(id => fetchedCards.find(c => c.id === id)).filter(Boolean) as Card[];
+
+        setMainDeck(getCards(main));
+        setExtraDeck(getCards(extra));
+        setSideDeck(getCards(side));
+
+        alert(`Imported deck: ${main.length} main, ${extra.length} extra, ${side.length} side`);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleExportClick = async () => {
+        if (mainDeck.length === 0 && extraDeck.length === 0 && sideDeck.length === 0) {
+            alert("Deck is empty. Nothing to export.");
+            return;
+        }
+
+        // Generate YDK content with proper sections
+        const lines = ['#created by Progression Series Guide', '#main'];
+        mainDeck.forEach(card => lines.push(card.id.toString()));
+        lines.push('#extra');
+        extraDeck.forEach(card => lines.push(card.id.toString()));
+        lines.push('!side');
+        sideDeck.forEach(card => lines.push(card.id.toString()));
+
+        const content = lines.join('\n');
+        const contentWithBOM = '\uFEFF' + content;
+        const blob = new Blob([contentWithBOM], { type: 'text/plain;charset=utf-8' });
+
+        // Use File System Access API if available
+        if ('showSaveFilePicker' in window) {
+            try {
+                const handle = await (window as any).showSaveFilePicker({
+                    suggestedName: `${deckName}.ydk`,
+                    types: [{ description: 'YDK File', accept: { 'text/plain': ['.ydk'] } }],
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                return;
+            } catch (err) {
+                if ((err as Error).name === 'AbortError') return;
+            }
+        }
+
+        // Fallback: blob URL download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${deckName}.ydk`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 1000);
+    };
+
     // --- Persistent Hover Logic ---
     const handleHover = (card: Card | null) => {
         if (card) {
@@ -213,6 +349,10 @@ export default function DeckBuilderPage() {
         const data = { cardId: card.id, from, index };
         e.dataTransfer.setData("application/json", JSON.stringify(data));
         e.dataTransfer.effectAllowed = "move";
+
+        // Track drag source for drag-to-remove
+        dragSourceRef.current = { from, index: index ?? -1, cardId: card.id };
+        dropOccurredRef.current = false;
 
         // Use preloaded empty drag image
         if (emptyDragImageRef.current) {
@@ -235,6 +375,30 @@ export default function DeckBuilderPage() {
     };
 
     const handleDragEnd = () => {
+        // Drag-to-remove: if no valid drop occurred and card came from a deck, remove it
+        if (!dropOccurredRef.current && dragSourceRef.current) {
+            const { from, index } = dragSourceRef.current;
+            if (from !== 'search' && index >= 0) {
+                if (from === 'main') {
+                    const newDeck = [...mainDeck];
+                    newDeck.splice(index, 1);
+                    setMainDeck(newDeck);
+                } else if (from === 'extra') {
+                    const newDeck = [...extraDeck];
+                    newDeck.splice(index, 1);
+                    setExtraDeck(newDeck);
+                } else if (from === 'side') {
+                    const newDeck = [...sideDeck];
+                    newDeck.splice(index, 1);
+                    setSideDeck(newDeck);
+                }
+            }
+        }
+
+        // Reset drag tracking
+        dragSourceRef.current = null;
+        dropOccurredRef.current = false;
+
         // Hide preview (triggers unmount)
         setDraggedCard(null);
 
@@ -248,11 +412,21 @@ export default function DeckBuilderPage() {
         dragPreviewRef.current.position = { x: 0, y: 0 };
     };
 
+    // Helper to find card by ID - searches allCards and current decks
+    const findCardById = (cardId: number): Card | undefined => {
+        return allCards.find(c => c.id === cardId)
+            || mainDeck.find(c => c.id === cardId)
+            || extraDeck.find(c => c.id === cardId)
+            || sideDeck.find(c => c.id === cardId);
+    };
+
     const handleDrop = (e: React.DragEvent, to: 'main' | 'extra' | 'side', index: number) => {
         e.preventDefault();
+        // Mark that a valid drop occurred (prevents drag-to-remove)
+        dropOccurredRef.current = true;
         try {
             const data = JSON.parse(e.dataTransfer.getData("application/json"));
-            const card = allCards.find(c => c.id === data.cardId);
+            const card = findCardById(data.cardId);
             if (!card) return;
 
             // Validate card type for Extra Deck
@@ -388,8 +562,8 @@ export default function DeckBuilderPage() {
                             <button onClick={handleSaveDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Save Deck</button>
                             <button onClick={() => setShowLoadModal(true)} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Load Deck</button>
                             <button onClick={handleClearDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Clear Deck</button>
-                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed py-1">Export</button>
-                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed py-1">Sort</button>
+                            <button onClick={handleExportClick} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Export</button>
+                            <button onClick={handleImportClick} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Import</button>
                             <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed py-1">Shuffle</button>
                         </div>
                     </div>
@@ -438,6 +612,15 @@ export default function DeckBuilderPage() {
             </div>
 
             <GuideSprite />
+
+            {/* Hidden file input for YDK import */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".ydk"
+                className="hidden"
+            />
 
             {/* Load Modal */}
             {showLoadModal && (

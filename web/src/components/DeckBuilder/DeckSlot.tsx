@@ -23,9 +23,11 @@ interface DeckSlotProps {
 export default function DeckSlot({ card, index, onClick, onDoubleClick, onContextMenu, onHover, className = "", onDragStart, onDrop, onDragOver, onDrag, onDragEnd, isUnavailable, dragContext }: DeckSlotProps) {
     const [isDragOver, setIsDragOver] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [imageError, setImageError] = useState(false);
 
     // Defensive cleanup: reset drag states when card changes or component unmounts
     useEffect(() => {
+        setImageError(false); // Reset image error when card changes
         return () => {
             setIsDragging(false);
             setIsDragOver(false);
