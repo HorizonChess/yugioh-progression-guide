@@ -218,6 +218,33 @@ export default function DeckBuilderPage() {
         }
     }
 
+    // Sort function: Monsters → Spells → Traps, alphabetically within each category
+    const handleSortDeck = () => {
+        const sortCards = (cards: Card[]) => {
+            return [...cards].sort((a, b) => {
+                // Determine category: 0 = Monster, 1 = Spell, 2 = Trap
+                const getCategory = (card: Card) => {
+                    if (card.type.includes("Spell")) return 1;
+                    if (card.type.includes("Trap")) return 2;
+                    return 0; // Monster (includes all monster types)
+                };
+
+                const catA = getCategory(a);
+                const catB = getCategory(b);
+
+                // Sort by category first
+                if (catA !== catB) return catA - catB;
+
+                // Then alphabetically by name
+                return a.name.localeCompare(b.name);
+            });
+        };
+
+        setMainDeck(sortCards(mainDeck));
+        setExtraDeck(sortCards(extraDeck));
+        setSideDeck(sortCards(sideDeck));
+    };
+
     // --- YDK Import/Export ---
 
     // Helper to parse YDK with sections
@@ -562,9 +589,9 @@ export default function DeckBuilderPage() {
                             <button onClick={handleSaveDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Save Deck</button>
                             <button onClick={() => setShowLoadModal(true)} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Load Deck</button>
                             <button onClick={handleClearDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Clear Deck</button>
-                            <button onClick={handleExportClick} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Export</button>
+                            <button onClick={handleSortDeck} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Sort</button>
                             <button onClick={handleImportClick} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Import</button>
-                            <button disabled className="bg-gradient-to-b from-gray-300 to-gray-400 text-gray-600 border border-gray-600 rounded shadow font-bold opacity-50 cursor-not-allowed py-1">Shuffle</button>
+                            <button onClick={handleExportClick} className="bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1">Export</button>
                         </div>
                     </div>
                 </div>
