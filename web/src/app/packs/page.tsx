@@ -373,8 +373,8 @@ function PacksPageContent() {
                             </div>
                         )}
                         {/* Hint Overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-xl backdrop-blur-[2px]">
-                            <span className="text-white font-bold uppercase tracking-widest border-2 border-white px-4 py-2 rounded-lg">View Details</span>
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-white font-bold uppercase tracking-widest border-2 border-white px-4 py-2 rounded-lg bg-black/60 shadow-lg">View Details</span>
                         </div>
                     </div>
                 </div>
