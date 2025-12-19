@@ -1,0 +1,5 @@
+# Ignore accidentally created Windows device filename
+nul
+
+# Local Claude settings
+.claude/settings.local.json
