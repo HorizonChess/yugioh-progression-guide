@@ -7,9 +7,9 @@ import Link from "next/link";
 import Image from "next/image";
 import CardDetailModal from "@/components/CardDetailModal";
 import CardTooltip from "@/components/CardTooltip";
-import CollectionFilters, { FilterState } from "@/components/CollectionFilters";
+import CollectionFilters, { FilterState } from "@/components/Collection/CollectionFilters";
 import TopBar from "@/components/TopBar";
-import { parseYDK } from "@/lib/ydk-parser";
+import { parseYDK, generateYDKFromCollection, downloadYDK } from "@/lib/ydk-parser";
 import ParchmentButton from "@/components/ParchmentButton";
 import GuideSprite from "@/components/GuideSprite";
 import StonePanel from "@/components/StonePanel";
@@ -78,65 +78,8 @@ export default function CollectionPage() {
     };
 
     const handleExportClick = async () => {
-        // Generate YDK content
-        const lines = ['#created by Progression Series Guide', '#main'];
-
-        Object.entries(collection).forEach(([idStr, count]) => {
-            const id = parseInt(idStr);
-            for (let i = 0; i < count; i++) {
-                lines.push(id.toString());
-            }
-        });
-
-        lines.push('#extra', '!side');
-        const content = lines.join('\n');
-
-        // Add BOM for Windows compatibility
-        const contentWithBOM = '\uFEFF' + content;
-        const blob = new Blob([contentWithBOM], { type: 'text/plain;charset=utf-8' });
-
-        // Strategy 1: File System Access API (Force "Save As")
-        // This bypasses the browser's download manager which is renaming files to UUIDs
-        if ('showSaveFilePicker' in window) {
-            try {
-                const handle = await (window as any).showSaveFilePicker({
-                    suggestedName: 'collection.ydk',
-                    types: [{
-                        description: 'YDK File',
-                        accept: { 'text/plain': ['.ydk'] },
-                    }],
-                });
-                const writable = await handle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-                setLoading(false);
-                return;
-            } catch (err) {
-                // Ignore AbortError (user cancelled)
-                if ((err as Error).name !== 'AbortError') {
-                    console.error('SaveFilePicker failed:', err);
-                } else {
-                    setLoading(false);
-                    return;
-                }
-            }
-        }
-
-        // Strategy 2: Standard Blob URL Download (Fallback)
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'collection.ydk';
-
-        document.body.appendChild(a);
-        a.click();
-
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 1000);
-
-        setLoading(false);
+        const content = generateYDKFromCollection(collection);
+        await downloadYDK('collection.ydk', content);
     };
 
     useEffect(() => {

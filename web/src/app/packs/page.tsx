@@ -10,11 +10,12 @@ import CardDetailModal from "@/components/CardDetailModal";
 import QuantitySelector from "@/components/QuantitySelector";
 import StonePanel from "@/components/StonePanel";
 import ParchmentButton from "@/components/ParchmentButton";
-import PackCard from "@/components/PackCard";
+import PackCard from "@/components/PackOpener/PackCard";
 import { useSearchParams } from "next/navigation";
 import CardTooltip from "@/components/CardTooltip";
-import { RARITY_ORDER, getCardRarity, sortCardsByRarity } from "@/lib/utils";
-import RarityCardGrid from "@/components/RarityCardGrid";
+import { getCardRarity } from "@/lib/utils";
+import RarityCardGrid from "@/components/PackOpener/RarityCardGrid";
+import { processCardsForRarityGrid } from "@/lib/card-utils";
 import { useCardTooltip } from "@/hooks/useCardTooltip";
 
 function PacksPageContent() {
@@ -146,58 +147,7 @@ function PacksPageContent() {
     // Helper to process cards for grid display
     const getProcessedCards = (cards: Card[]) => {
         if (!currentSet) return { cardsByRarity: {}, sortedRarities: [] };
-
-        // 1. Group by ID to count duplicates
-        const countedCards = new Map<number, { card: Card, count: number }>();
-        cards.forEach(card => {
-            if (countedCards.has(card.id)) {
-                countedCards.get(card.id)!.count++;
-            } else {
-                countedCards.set(card.id, { card, count: 1 });
-            }
-        });
-
-        // 2. Group by Rarity
-        const cardsByRarity: Record<string, { card: Card, count: number }[]> = {};
-
-        // Convert Map values to array
-        const uniqueCardsWithCounts = Array.from(countedCards.values());
-
-        // Sort them relative to the set (we use the full card list to ensure consistent order if needed, or sort by name/id)
-        // For Summary, we might want alphabetical.
-        // The original code sorted by rarity first, then... wait.
-        // Original: sortedAllCards = sortCardsByRarity(cards, setPrefix)
-
-        // Let's sort the unique cards by rarity first, then name
-        uniqueCardsWithCounts.sort((a, b) => {
-            // Rarity sort
-            const rarityA = getCardRarity(a.card, currentSet.set_code.split('-')[0]);
-            const rarityB = getCardRarity(b.card, currentSet.set_code.split('-')[0]);
-
-            const indexA = RARITY_ORDER.indexOf(rarityA);
-            const indexB = RARITY_ORDER.indexOf(rarityB);
-            const rDiff = (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
-            if (rDiff !== 0) return rDiff;
-
-            // Name sort
-            return a.card.name.localeCompare(b.card.name);
-        });
-
-        uniqueCardsWithCounts.forEach(item => {
-            const rarity = getCardRarity(item.card, currentSet.set_code.split('-')[0]);
-            if (!cardsByRarity[rarity]) {
-                cardsByRarity[rarity] = [];
-            }
-            cardsByRarity[rarity].push(item);
-        });
-
-        const sortedRarities = Object.keys(cardsByRarity).sort((a, b) => {
-            const indexA = RARITY_ORDER.indexOf(a);
-            const indexB = RARITY_ORDER.indexOf(b);
-            return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
-        });
-
-        return { cardsByRarity, sortedRarities };
+        return processCardsForRarityGrid(cards, currentSet.set_code);
     };
 
     if (loading) {

@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import StonePanel from './StonePanel';
+import StonePanel from '../StonePanel';
 import { Card } from '@/lib/api';
 
 interface RarityCardGridProps {
