@@ -1,28 +1,67 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/lib/api';
 
 export interface CardTooltipState {
     hoveredCard: Card | null;
-    cursorPosition: { x: number; y: number };
+    tooltipPosition: { x: number; y: number };
 }
 
 export interface CardTooltipHandlers {
-    handleMouseMove: (e: React.MouseEvent) => void;
-    setHoveredCard: (card: Card | null) => void;
+    onHover: (card: Card, e: React.MouseEvent) => void;
+    onLeave: () => void;
 }
 
 export function useCardTooltip(): CardTooltipState & CardTooltipHandlers {
     const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
-    const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const handleMouseMove = (e: React.MouseEvent) => {
-        setCursorPosition({ x: e.clientX, y: e.clientY });
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, []);
+
+    const onHover = (card: Card, e: React.MouseEvent) => {
+        // Clear any existing timeout (e.g. if moving quickly between cards)
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const centerX = window.innerWidth / 2;
+        const isRightSide = rect.left > centerX;
+
+        const x = isRightSide ? rect.left : rect.right;
+        const y = rect.top;
+
+        // Preload image immediately
+        if (card.card_images?.[0]?.image_url_small) {
+            const img = new Image();
+            img.src = card.card_images[0].image_url_small;
+        }
+
+        // Set 200ms delay before showing tooltip
+        timeoutRef.current = setTimeout(() => {
+            setTooltipPosition({ x, y });
+            setHoveredCard(card);
+        }, 200);
+    };
+
+    const onLeave = () => {
+        // Cancel the pending tooltip show if we leave before 200ms
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+        setHoveredCard(null);
     };
 
     return {
         hoveredCard,
-        cursorPosition,
-        handleMouseMove,
-        setHoveredCard,
+        tooltipPosition,
+        onHover,
+        onLeave,
     };
 }

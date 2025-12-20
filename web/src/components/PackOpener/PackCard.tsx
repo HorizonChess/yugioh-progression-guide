@@ -5,19 +5,17 @@ interface PackCardProps {
     isFlipped: boolean;
     onClick: () => void;
     rarity: string;
-    onMouseEnter?: () => void;
+    onMouseEnter?: (e: React.MouseEvent) => void;
     onMouseLeave?: () => void;
-    onMouseMove?: (e: React.MouseEvent) => void;
     width?: string;
 }
 
-export default function PackCard({ card, isFlipped, onClick, rarity, onMouseEnter, onMouseLeave, onMouseMove, width = '19%' }: PackCardProps) {
+export default function PackCard({ card, isFlipped, onClick, rarity, onMouseEnter, onMouseLeave, width = '19%' }: PackCardProps) {
     return (
         <div
             onClick={onClick}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
-            onMouseMove={onMouseMove}
             className="flex flex-col items-center justify-center cursor-pointer group mb-8"
             style={{
                 // Grid Cell Sizing

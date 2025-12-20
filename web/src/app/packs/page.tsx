@@ -45,7 +45,7 @@ function PacksPageContent() {
     const [viewDetails, setViewDetails] = useState(false);
 
     // Tooltip State (using custom hook)
-    const { hoveredCard, cursorPosition, handleMouseMove, setHoveredCard } = useCardTooltip();
+    const { hoveredCard, tooltipPosition, onHover, onLeave } = useCardTooltip();
 
     // Determine which set to load
     const setParam = searchParams.get('set');
@@ -194,9 +194,8 @@ function PacksPageContent() {
                         cardsByRarity={cardsByRarity}
                         sortedRarities={sortedRarities}
                         onCardClick={setSelectedCard}
-                        onHover={setHoveredCard}
-                        onLeave={() => setHoveredCard(null)}
-                        onMove={handleMouseMove}
+                        onHover={onHover}
+                        onLeave={onLeave}
                     />
                 </div>
             );
@@ -241,9 +240,8 @@ function PacksPageContent() {
                         cardsByRarity={cardsByRarity}
                         sortedRarities={sortedRarities}
                         onCardClick={setSelectedCard}
-                        onHover={setHoveredCard}
-                        onLeave={() => setHoveredCard(null)}
-                        onMove={handleMouseMove}
+                        onHover={onHover}
+                        onLeave={onLeave}
                     />
                 </div>
             );
@@ -307,13 +305,12 @@ function PacksPageContent() {
                                                 isFlipped={isFlipped}
                                                 onClick={() => handleCardClick(idx, card)}
                                                 rarity={rarity}
-                                                onMouseEnter={() => {
+                                                onMouseEnter={(e) => {
                                                     if (isFlipped) {
-                                                        setHoveredCard(card);
+                                                        onHover(card, e);
                                                     }
                                                 }}
-                                                onMouseLeave={() => setHoveredCard(null)}
-                                                onMouseMove={handleMouseMove}
+                                                onMouseLeave={onLeave}
                                                 width={cardWidth}
                                             />
                                         );
@@ -449,8 +446,8 @@ function PacksPageContent() {
             {hoveredCard && (
                 <CardTooltip
                     card={hoveredCard}
-                    x={cursorPosition.x}
-                    y={cursorPosition.y}
+                    x={tooltipPosition.x}
+                    y={tooltipPosition.y}
                 />
             )}
         </div>

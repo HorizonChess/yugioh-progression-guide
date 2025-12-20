@@ -20,7 +20,7 @@ export default function CollectionPage() {
     const [cards, setCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-    const { hoveredCard, cursorPosition, handleMouseMove, setHoveredCard } = useCardTooltip();
+    const { hoveredCard, tooltipPosition, onHover, onLeave } = useCardTooltip();
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 60;
 
@@ -281,7 +281,6 @@ export default function CollectionPage() {
     return (
         <div
             className="min-h-screen pb-32 flex flex-col"
-            onMouseMove={handleMouseMove}
         >
             <GuideSprite />
 
@@ -356,8 +355,8 @@ export default function CollectionPage() {
                                                 key={entry.key}
                                                 className="flex flex-col group cursor-pointer"
                                                 onClick={() => setSelectedCard(card)}
-                                                onMouseEnter={() => setHoveredCard(card)}
-                                                onMouseLeave={() => setHoveredCard(null)}
+                                                onMouseEnter={(e) => onHover(card, e)}
+                                                onMouseLeave={onLeave}
                                             >
                                                 <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
                                                     <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
@@ -437,8 +436,8 @@ export default function CollectionPage() {
             {hoveredCard && (
                 <CardTooltip
                     card={hoveredCard}
-                    x={cursorPosition.x}
-                    y={cursorPosition.y}
+                    x={tooltipPosition.x}
+                    y={tooltipPosition.y}
                 />
             )}
         </div>

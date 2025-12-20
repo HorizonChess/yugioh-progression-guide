@@ -7,9 +7,8 @@ interface RarityCardGridProps {
     cardsByRarity: Record<string, { card: Card; count?: number }[]>;
     sortedRarities: string[];
     onCardClick: (card: Card) => void;
-    onHover: (card: Card) => void;
+    onHover: (card: Card, e: React.MouseEvent) => void;
     onLeave: () => void;
-    onMove: (e: React.MouseEvent) => void;
 }
 
 export default function RarityCardGrid({
@@ -18,7 +17,6 @@ export default function RarityCardGrid({
     onCardClick,
     onHover,
     onLeave,
-    onMove
 }: RarityCardGridProps) {
     return (
         <div className="space-y-8">
@@ -32,9 +30,8 @@ export default function RarityCardGrid({
                                     key={`${card.id}-${idx}`}
                                     className="flex flex-col group cursor-pointer"
                                     onClick={() => onCardClick(card)}
-                                    onMouseEnter={() => onHover(card)}
+                                    onMouseEnter={(e) => onHover(card, e)}
                                     onMouseLeave={onLeave}
-                                    onMouseMove={onMove}
                                 >
                                     <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
                                         <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
