@@ -39,13 +39,13 @@ export default function RarityCardGrid({
                                     <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
                                         <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
                                             <Image
-                                                src={card.card_images[0].image_url}
+                                                src={card.card_images[0].image_url_small}
                                                 alt={card.name}
                                                 fill
                                                 sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
                                                 className="object-cover"
+                                                style={{ transform: 'translateZ(0)' }}
                                                 loading="lazy"
-                                                quality={90}
                                             />
                                             {/* Quantity Badge */}
                                             {count !== undefined && count > 1 && (

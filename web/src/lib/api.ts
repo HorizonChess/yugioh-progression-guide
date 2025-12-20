@@ -125,8 +125,8 @@ function transformCardImages(card: Card): Card {
         card_images: card.card_images.map(img => ({
             ...img,
             image_url: `${IMAGE_HOST}/cards/${img.id}.jpg`,
-            image_url_small: `${IMAGE_HOST}/cards/${img.id}.jpg`, // We only uploaded high-res, use it for small too or handle resizing later
-            image_url_cropped: `${IMAGE_HOST}/cards/${img.id}.jpg`, // Same for cropped for now
+            image_url_small: img.id === 102380 ? `${IMAGE_HOST}/cards/${img.id}_lg.jpg` : `${IMAGE_HOST}/cards/${img.id}_md.jpg`,
+            image_url_cropped: `${IMAGE_HOST}/cards/${img.id}_sm.jpg`,
         }))
     };
 }

@@ -99,7 +99,7 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
                 {card ? (
                     <>
                         <img
-                            src={card.card_images[0].image_url}
+                            src={card.card_images[0].image_url_cropped}
                             alt={card.name}
                             className="w-full h-full object-fill rounded-[1px]"
                         />

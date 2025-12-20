@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    // Skip Next.js image optimization; load remote images directly
+    unoptimized: true,
+    qualities: [75, 90, 100],
     remotePatterns: [
       {
         protocol: 'https',

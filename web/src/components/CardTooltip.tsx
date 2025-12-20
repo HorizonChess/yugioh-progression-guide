@@ -57,7 +57,7 @@ export default function CardTooltip({ card, x, y }: CardTooltipProps) {
             <div className="w-[180px] shrink-0">
                 <div className="relative aspect-[2/3] rounded-lg overflow-hidden shadow-lg border border-white/20">
                     <Image
-                        src={card.card_images[0].image_url}
+                        src={card.card_images[0].image_url_small}
                         alt={card.name}
                         fill
                         className="object-cover"

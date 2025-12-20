@@ -64,7 +64,7 @@ export default function PackCard({ card, isFlipped, onClick, rarity, onMouseEnte
                             src={card.card_images[0].image_url}
                             alt={card.name}
                             className="w-full h-full object-cover"
-                            style={{ imageRendering: 'auto' }}
+                            style={{ transform: 'translateZ(0)' }}
                         />
                     </div>
                 </div>
