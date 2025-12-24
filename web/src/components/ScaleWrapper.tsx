@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, ReactNode } from "react";
+import { useLayoutDesignerContext } from "@/context/LayoutDesignerContext";
 
 // Design width - the reference width for scaling (1080p monitor)
 const DESIGN_WIDTH = 1920;
@@ -30,6 +31,7 @@ interface ScaleWrapperProps {
  * since it needs to reference the container, not the viewport.
  */
 export default function ScaleWrapper({ children, backgroundColor = '#0f172a' }: ScaleWrapperProps) {
+    const { setScaleFactor } = useLayoutDesignerContext();
     const [zoom, setZoom] = useState(1);
     const [designHeight, setDesignHeight] = useState(911); // Initial value, will be recalculated
 
@@ -47,17 +49,20 @@ export default function ScaleWrapper({ children, backgroundColor = '#0f172a' }: 
 
             setZoom(scale);
             setDesignHeight(adaptiveHeight);
+            setScaleFactor(scale); // Report scale to designer context
         }
 
         updateZoom();
         window.addEventListener('resize', updateZoom);
         return () => window.removeEventListener('resize', updateZoom);
-    }, []);
+    }, [setScaleFactor]);
 
     return (
         // Outer container - takes full viewport, clips overflow
         // Using 100% instead of 100vw to avoid scrollbar width issues on Windows
         <div
+            data-scale-wrapper="true"
+            data-scale={zoom}
             style={{
                 width: '100%',
                 height: '100vh',
@@ -70,6 +75,7 @@ export default function ScaleWrapper({ children, backgroundColor = '#0f172a' }: 
         >
             {/* Inner container - fixed width, adaptive height, scaled with transform */}
             <div
+                data-scaled-container="true"
                 style={{
                     width: DESIGN_WIDTH,
                     height: designHeight,

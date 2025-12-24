@@ -17,11 +17,14 @@ import { getCardRarity } from "@/lib/utils";
 import RarityCardGrid from "@/components/PackOpener/RarityCardGrid";
 import { processCardsForRarityGrid } from "@/lib/card-utils";
 import { useCardTooltip } from "@/hooks/useCardTooltip";
+import TopBar from "@/components/TopBar";
+import { useLayoutDesigner } from "@/hooks/useLayoutDesigner";
 
 function PacksPageContent() {
     const { currentSetIndex, addToCollection } = useProgression();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { DesignerOverlay, containerRef } = useLayoutDesigner();
 
     const [currentSet, setCurrentSet] = useState<CardSet | null>(null);
     const [setCards, setSetCards] = useState<Card[]>([]);
@@ -348,6 +351,7 @@ function PacksPageContent() {
             <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center mx-auto mt-12">
                 {/* Pack Art Display */}
                 <div
+                    id="store-pack-art"
                     className="relative group perspective-1000 cursor-pointer"
                     onClick={() => setViewDetails(true)}
                 >
@@ -377,7 +381,7 @@ function PacksPageContent() {
                 </div>
 
                 {/* Store Controls */}
-                <div className="space-y-8">
+                <div id="store-controls-panel" className="space-y-8">
                     <div>
                         <div className="flex items-center justify-between mb-2">
                             <button
@@ -431,7 +435,11 @@ function PacksPageContent() {
     };
 
     return (
-        <div className="min-h-screen p-8 pb-32">
+        <div ref={containerRef} className="min-h-screen p-8 pb-32 pt-20">
+            <div className="fixed top-0 left-0 right-0 z-[100]">
+                <TopBar showBack onBack={() => router.push('/map')} />
+            </div>
+            <DesignerOverlay />
             {!isOpening && <GuideSprite />}
             {renderContent()}
 

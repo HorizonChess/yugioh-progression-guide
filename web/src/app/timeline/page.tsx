@@ -7,6 +7,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StonePanel from "@/components/StonePanel";
 import ParchmentButton from "@/components/ParchmentButton";
+import TopBar from "@/components/TopBar";
+import { useLayoutDesigner } from "@/hooks/useLayoutDesigner";
+import RecordMatch from "@/components/RecordMatch";
 
 export default function TimelinePage() {
     const { matchHistory, recordMatch, advanceSet, currentSetIndex } = useProgression();
@@ -15,6 +18,11 @@ export default function TimelinePage() {
     const [loading, setLoading] = useState(true);
     const [isRecording, setIsRecording] = useState(false);
     const [showAnimation, setShowAnimation] = useState<'victory' | 'defeat' | null>(null);
+
+    // Initialize Designer Hook
+    const { DesignerOverlay, containerRef } = useLayoutDesigner();
+
+    // ... (rest of useEffects)
 
     useEffect(() => {
         async function loadSets() {
@@ -73,77 +81,61 @@ export default function TimelinePage() {
     const currentSet = sets[currentSetIndex];
 
     return (
-        <div className="min-h-screen p-8">
-            <div className="max-w-4xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-3xl font-bold text-white">Progression Timeline</h1>
-                    <Link href="/map" className="text-[var(--primary)] hover:underline">
-                        Back to Map
-                    </Link>
-                </div>
+        <div className="min-h-screen flex flex-col" ref={containerRef}>
+            <div className="sticky top-0 z-[40]">
+                <TopBar showBack onBack={() => router.push('/map')} title="Progression Timeline" />
+            </div>
 
-                {/* Record Match Section */}
-                {currentSet && (
-                    <StonePanel title={`Current Match: ${currentSet.set_name}`} className="mb-12 border-l-4 border-[var(--primary)]">
-                        {!isRecording ? (
-                            <ParchmentButton
-                                onClick={() => setIsRecording(true)}
-                                className="w-full md:w-auto"
-                            >
-                                Record Match Result
-                            </ParchmentButton>
-                        ) : (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                                <p className="text-[#e6dcc3] font-bold drop-shadow-md">Who won the match?</p>
-                                <div className="flex gap-4">
-                                    <button
-                                        onClick={() => handleRecordMatch('player')}
-                                        className="flex-1 py-4 bg-green-900/80 border-2 border-green-500/50 rounded-xl hover:bg-green-800 transition-colors font-bold text-green-100 group relative overflow-hidden shadow-lg active:scale-95"
+            <DesignerOverlay />
+
+            <div className="flex-1 p-8">
+                <div className="max-w-4xl mx-auto">
+                    {/* Record Match Section */}
+                    {currentSet && (
+                        <div className="mb-12">
+                            {!isRecording ? (
+                                <StonePanel title={`Current Match: ${currentSet.set_name}`} className="border-l-4 border-[var(--primary)]">
+                                    <ParchmentButton
+                                        onClick={() => setIsRecording(true)}
+                                        className="w-full md:w-auto"
                                     >
-                                        <span className="relative z-10 drop-shadow-md">I Won (Victory)</span>
-                                        <div className="absolute inset-0 bg-green-500/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                                    </button>
-                                    <button
-                                        onClick={() => handleRecordMatch('opponent')}
-                                        className="flex-1 py-4 bg-red-900/80 border-2 border-red-500/50 rounded-xl hover:bg-red-800 transition-colors font-bold text-red-100 group relative overflow-hidden shadow-lg active:scale-95"
-                                    >
-                                        <span className="relative z-10 drop-shadow-md">Opponent Won (Defeat)</span>
-                                        <div className="absolute inset-0 bg-red-500/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                                    </button>
+                                        Record Match Result
+                                    </ParchmentButton>
+                                </StonePanel>
+                            ) : (
+                                <div className="animate-in fade-in zoom-in duration-300">
+                                    <RecordMatch
+                                        onRecord={handleRecordMatch}
+                                        onCancel={() => setIsRecording(false)}
+                                    />
                                 </div>
-                                <button
-                                    onClick={() => setIsRecording(false)}
-                                    className="text-sm text-[#d4af37] hover:text-[#f5c542] hover:underline font-bold"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        )}
-                    </StonePanel>
-                )}
-
-                {/* Timeline */}
-                <div className="relative border-l-2 border-white/10 ml-4 space-y-8 pb-12">
-                    {matchHistory.length === 0 ? (
-                        <div className="pl-8 text-gray-500 italic">No matches recorded yet.</div>
-                    ) : (
-                        matchHistory.slice().reverse().map((match, idx) => (
-                            <div key={idx} className="relative pl-8">
-                                {/* Timeline Dot */}
-                                <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-[var(--background)] ${match.winner === 'player' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-
-                                <div className="glass-panel p-4">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-bold text-lg">{match.packName}</h3>
-                                        <span className="text-xs text-gray-500">{new Date(match.date).toLocaleDateString()}</span>
-                                    </div>
-                                    <div className={`font-bold ${match.winner === 'player' ? 'text-green-400' : 'text-red-400'}`}>
-                                        {match.winner === 'player' ? 'VICTORY' : 'DEFEAT'}
-                                    </div>
-                                </div>
-                            </div>
-                        ))
+                            )}
+                        </div>
                     )}
+
+                    {/* Timeline */}
+                    <div className="relative border-l-2 border-white/10 ml-4 space-y-8 pb-12">
+                        {matchHistory.length === 0 ? (
+                            <div className="pl-8 text-gray-500 italic">No matches recorded yet.</div>
+                        ) : (
+                            matchHistory.slice().reverse().map((match, idx) => (
+                                <div key={idx} className="relative pl-8">
+                                    {/* Timeline Dot */}
+                                    <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-[var(--background)] ${match.winner === 'player' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+
+                                    <div className="glass-panel p-4">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h3 className="font-bold text-lg">{match.packName}</h3>
+                                            <span className="text-xs text-gray-500">{new Date(match.date).toLocaleDateString()}</span>
+                                        </div>
+                                        <div className={`font-bold ${match.winner === 'player' ? 'text-green-400' : 'text-red-400'}`}>
+                                            {match.winner === 'player' ? 'VICTORY' : 'DEFEAT'}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
