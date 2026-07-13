@@ -2,7 +2,8 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
-const publicDir = path.join(__dirname, 'public');
+// Script lives in web/scripts/images/, so public/ is two levels up.
+const publicDir = path.join(__dirname, '..', '..', 'public');
 const files = ['yugi_neutral_v2.png', 'yugi_happy_v2.png', 'yugi_sad_v2.png'];
 
 async function processImage(file) {

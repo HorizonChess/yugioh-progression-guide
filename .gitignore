@@ -3,3 +3,9 @@ nul
 
 # Local Claude settings
 .claude/settings.local.json
+
+# Backup / temp / scratch files (avoid re-committing clutter)
+*.bak
+temp_*
+*_old.*
+

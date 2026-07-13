@@ -1,8 +1,8 @@
 const sharp = require('sharp');
 const path = require('path');
 
-const inputPath = path.join(__dirname, '../public/ui/button_gold.png');
-const outputPath = path.join(__dirname, '../public/ui/button_gold_wide_v2.png');
+const inputPath = path.join(__dirname, '../../public/ui/button_gold.png');
+const outputPath = path.join(__dirname, '../../public/ui/button_gold_wide_v2.png');
 
 async function generateWideButton() {
     try {

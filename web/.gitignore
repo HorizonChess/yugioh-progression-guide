@@ -44,3 +44,17 @@ next-env.d.ts
 #null
 
 nul
+
+# Asset-pipeline script working files (regenerated on each run)
+scripts/**/temp_images/
+scripts/**/temp_optimize/
+scripts/**/optimize_progress.json
+scripts/**/optimize_errors.log
+scripts/**/*.log
+
+# Scratch/test artifacts from image scripts
+scripts/**/test_*.jpg
+scripts/**/test_*.png
+scripts/**/test_*.webp
+scripts/**/temp_*.jpg
+scripts/**/temp_*.png

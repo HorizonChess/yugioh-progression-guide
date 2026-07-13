@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const BASE_URL = 'https://db.ygoprodeck.com/api/v7';
-const OUTPUT_FILE = path.join(__dirname, '../src/data/booster_images.json');
+const OUTPUT_FILE = path.join(__dirname, '../../src/data/booster_images.json');
 
 const EXCLUDE_KEYWORDS = [
     "Structure Deck",

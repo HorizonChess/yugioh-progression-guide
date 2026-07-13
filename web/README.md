@@ -80,20 +80,30 @@ One of the most complex and carefully researched aspects of this application is 
 
 ### Images
 -   **Hosting**: Images are hosted on **Cloudflare R2** to ensure fast delivery and avoid hotlinking.
--   **Pack Art**: High-quality booster pack images are scraped from Yugipedia using `generate_image_map.js` to ensure they match the correct resolution and aspect ratio.
+-   **Pack Art**: High-quality booster pack images are scraped from Yugipedia using `scripts/images/generate_image_map.js` to ensure they match the correct resolution and aspect ratio.
 
 ## Asset Pipeline
 
 We use a suite of custom scripts to maintain assets and data integrity:
 
-### Python Tools
+### Python Tools (`tools/` at repo root)
 -   **`generate_buttons.py`**: Composites text onto blank button templates using `PIL`. Applies "engraved" text effects (inner shadow, highlight) for a 3D look.
 -   **`remove_bg.py`**: Removes solid background colors from sprite assets.
+-   **`crop_stats_panel.py`**: Crops images down to their non-transparent content bounds.
 
-### Node.js Scripts (`web/scripts/`)
+### Node.js Scripts
+
+**Image & data pipeline (`web/scripts/images/`)**
 -   **`generate_image_map.js`**: Fetches the list of sets, filters them, and then scrapes Yugipedia for the highest quality booster pack image, handling redirects and file format variations (.jpg/.png).
 -   **`migrate_images.js`**: Batch downloads card images and uploads them to Cloudflare R2.
+-   **`migrate_missing_artworks.js`**: Uploads alternate card artworks to Cloudflare R2.
+-   **`optimize_images.js`**: Generates and uploads multiple pre-optimized image sizes (sm/md/lg) to R2.
 -   **`check_missing_sets.js`**: Validates that all sets in the timeline have associated images and data.
+-   **`process_sprites.js`**: Removes solid backgrounds from Guide sprite PNGs in `public/`.
+
+**Button/UI asset generation (`web/scripts/buttons/`)**
+-   **`generate_wide_button.js`** / **`generate_wide_button_v3.js`**: Stretch button templates into wide variants.
+-   **`process_button_transparency.js`**: Applies transparency processing to button assets.
 
 ## Architecture Overview
 
@@ -219,7 +229,7 @@ export default function MyPage() {
 -   **[✓] Deck Loading Fix**: Fixed bug where loading saved decks showed empty grids - now fetches missing card data automatically
 -   **[✓] Sort Function**: New Sort button organizes cards by type (Monsters → Spells → Traps), alphabetically within each category
 -   **[✓] Map Integration**: "Prepare Your Deck" button on campaign map now navigates to deck builder
--   **[✓] Alternate Artworks**: Migration script ([migrate_missing_artworks.js](scripts/migrate_missing_artworks.js)) to upload alternate card artworks to Cloudflare R2
+-   **[✓] Alternate Artworks**: Migration script ([migrate_missing_artworks.js](scripts/images/migrate_missing_artworks.js)) to upload alternate card artworks to Cloudflare R2
 
 ## Future Roadmap
 

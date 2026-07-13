@@ -6,7 +6,7 @@ const { Upload } = require('@aws-sdk/lib-storage');
 
 // --- Configuration ---
 // Load from .env.local or environment variables
-require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env.local') });
 
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const ACCESS_KEY_ID = process.env.CLOUDFLARE_ACCESS_KEY_ID;

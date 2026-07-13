@@ -5,8 +5,8 @@ const path = require('path');
 // Since I can't access the artifact path directly in the script easily without knowing it, I'll assume I copy it first or the user provides it.
 // Wait, I can copy it using run_command first.
 
-const inputPath = path.join(__dirname, '../public/ui/temp_button_v5.png');
-const outputPath = path.join(__dirname, '../public/ui/button_gold_wide_v5.png');
+const inputPath = path.join(__dirname, '../../public/ui/temp_button_v5.png');
+const outputPath = path.join(__dirname, '../../public/ui/button_gold_wide_v5.png');
 
 async function processButton() {
     try {
