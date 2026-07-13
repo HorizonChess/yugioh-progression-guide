@@ -7,7 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import GuideSprite from "@/components/GuideSprite";
 import TopBar from "@/components/TopBar";
 import ChainConnector from "@/components/ChainConnector";
-import GoldButton from "@/components/GoldButton";
+import FrameButton from "@/components/FrameButton";
 
 export default function MapPage() {
     const { currentSetIndex, matchHistory, hasLoaded } = useProgression();
@@ -68,9 +68,9 @@ export default function MapPage() {
             <section className="relative flex flex-col items-center justify-center gap-[clamp(0.75rem,3vh,2rem)] py-[clamp(0.5rem,2vh,1.5rem)] min-h-0 min-w-0">
                 {/* Prepare Your Deck — top center of the timeline region */}
                 <div className="animate-in slide-in-from-top-10 duration-700">
-                    <GoldButton href="/deck-builder" width="w-[clamp(14rem,20vw,18rem)]" height="h-[clamp(2.75rem,6vh,4rem)]" textSize="text-sm">
+                    <FrameButton href="/deck-builder" className="w-[clamp(14rem,20vw,18rem)] h-[clamp(2.75rem,6vh,4rem)]">
                         Prepare Your Deck
-                    </GoldButton>
+                    </FrameButton>
                 </div>
 
                 {/* Timeline with scroll controls */}
@@ -160,44 +160,42 @@ export default function MapPage() {
 
             {/* Row 3: Bottom HUD — action buttons, stats panel, bonus button.
                 All sizes are vh-driven so the HUD compresses on short screens.
-
-                TODO: fix custom button elements stretch/position — GoldButton and the
-                stats panel are raster PNGs scaled to non-native aspect ratios, so the
-                ornate borders distort and the %-pinned text drifts when clamp() sizing
-                changes their proportions. Replace with SVG frames (Step 3 / FrameButton)
-                so vector borders stay crisp and text sits in flow, not on magic offsets. */}
+                Buttons use FrameButton (SVG 9-slice frame, no distortion); the stats
+                panel uses its true aspect ratio so it never stretches. */}
             <footer className="relative flex flex-col items-center gap-[clamp(0.5rem,2vh,1.5rem)] px-6 pb-[clamp(0.5rem,2vh,1.5rem)]">
                 {/* Action Buttons */}
                 <div className="flex flex-wrap justify-center gap-[clamp(1rem,2vw,1.5rem)]">
-                    <GoldButton href={`/packs?set=${currentSetIndex}`} width="w-[clamp(12rem,18vw,16rem)]" height="h-[clamp(2.75rem,6vh,4rem)]" textSize="text-lg">
+                    <FrameButton href={`/packs?set=${currentSetIndex}`} className="w-[clamp(12rem,18vw,16rem)] h-[clamp(2.75rem,6vh,4rem)]">
                         OPEN PACKS
-                    </GoldButton>
-                    <GoldButton href="/timeline" width="w-[clamp(12rem,18vw,16rem)]" height="h-[clamp(2.75rem,6vh,4rem)]" textSize="text-lg">
+                    </FrameButton>
+                    <FrameButton href="/timeline" className="w-[clamp(12rem,18vw,16rem)] h-[clamp(2.75rem,6vh,4rem)]">
                         RECORD MATCH
-                    </GoldButton>
+                    </FrameButton>
                 </div>
 
                 {/* Stats + Bonus row: stats centered, bonus button trailing on wide screens.
-                    Stats panel keeps its 300:120 (2.5) aspect; text pins are % so they
-                    track the panel at any size. */}
+                    Stats panel uses its TRUE 952:792 aspect (object-contain) so it never
+                    stretches; text pins are % over the green/red gem panels. */}
                 <div className="w-full flex flex-col lg:flex-row items-center lg:justify-center gap-[clamp(0.5rem,2vh,1.5rem)] relative">
-                    {/* Centered Stats Box — height-driven, width from 2.5 aspect */}
-                    <div className="relative h-[clamp(4.5rem,11vh,7.5rem)] aspect-[300/120] bg-[url('/ui/stats_panel_cropped.png')] bg-[length:100%_100%] bg-center bg-no-repeat animate-in slide-in-from-bottom-10 duration-700 lg:mx-auto">
-                        <div className="absolute top-1/2 -translate-y-1/2 left-[18.7%] -translate-x-1/2 flex flex-col items-center gap-0.5">
-                            <span className="text-[clamp(8px,1.1vh,10px)] text-win uppercase tracking-[0.2em] font-bold drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Wins</span>
-                            <span className="text-[clamp(1.1rem,2.6vh,1.5rem)] text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{wins}</span>
+                    {/* Centered Stats Box — height-driven, width from the panel's real aspect */}
+                    <div className="relative h-[clamp(6.5rem,16vh,12rem)] aspect-[952/792] bg-[url('/ui/stats_panel_cropped.png')] bg-contain bg-center bg-no-repeat animate-in slide-in-from-bottom-10 duration-700 lg:mx-auto">
+                        {/* Green gem ~ 30% x, ~46% y */}
+                        <div className="absolute top-[46%] left-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5">
+                            <span className="text-[clamp(8px,1.1vh,11px)] text-win uppercase tracking-[0.2em] font-bold drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Wins</span>
+                            <span className="text-[clamp(1.1rem,3vh,1.75rem)] text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{wins}</span>
                         </div>
-                        <div className="absolute top-1/2 -translate-y-1/2 right-[18.7%] translate-x-1/2 flex flex-col items-center gap-0.5">
-                            <span className="text-[clamp(8px,1.1vh,10px)] text-loss uppercase tracking-[0.2em] font-bold drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Losses</span>
-                            <span className="text-[clamp(1.1rem,2.6vh,1.5rem)] text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{losses}</span>
+                        {/* Red gem ~ 70% x, ~46% y */}
+                        <div className="absolute top-[46%] left-[70%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5">
+                            <span className="text-[clamp(8px,1.1vh,11px)] text-loss uppercase tracking-[0.2em] font-bold drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Losses</span>
+                            <span className="text-[clamp(1.1rem,3vh,1.75rem)] text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{losses}</span>
                         </div>
                     </div>
 
                     {/* Bonus Matches Button — trails on the right at wide widths */}
                     <div className="lg:absolute lg:right-12 lg:top-1/2 lg:-translate-y-1/2 animate-in slide-in-from-right-10 duration-700">
-                        <GoldButton width="w-[clamp(11rem,16vw,14rem)]" height="h-[clamp(2.5rem,5vh,3.5rem)]" textSize="text-sm">
+                        <FrameButton className="w-[clamp(11rem,16vw,14rem)] h-[clamp(2.5rem,5vh,3.5rem)]">
                             Bonus Matches
-                        </GoldButton>
+                        </FrameButton>
                     </div>
                 </div>
             </footer>
