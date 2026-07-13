@@ -3,26 +3,17 @@
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets, CardSet } from "@/lib/api";
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import StonePanel from "@/components/StonePanel";
-import ParchmentButton from "@/components/ParchmentButton";
-import TopBar from "@/components/TopBar";
-import { useLayoutDesigner } from "@/hooks/useLayoutDesigner";
 import RecordMatch from "@/components/RecordMatch";
+import TopBar from "@/components/TopBar";
+import GuideSprite from "@/components/GuideSprite";
 
 export default function TimelinePage() {
     const { matchHistory, recordMatch, advanceSet, currentSetIndex } = useProgression();
     const router = useRouter();
     const [sets, setSets] = useState<CardSet[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isRecording, setIsRecording] = useState(false);
     const [showAnimation, setShowAnimation] = useState<'victory' | 'defeat' | null>(null);
-
-    // Initialize Designer Hook
-    const { DesignerOverlay, containerRef } = useLayoutDesigner();
-
-    // ... (rest of useEffects)
 
     useEffect(() => {
         async function loadSets() {
@@ -32,6 +23,28 @@ export default function TimelinePage() {
         }
         loadSets();
     }, []);
+
+    // Calculate win rate and streak from match history
+    const wins = matchHistory.filter(m => m.winner === 'player').length;
+    const total = matchHistory.length;
+    const winRate = total > 0 ? `${Math.round((wins / total) * 100)}%` : '--';
+
+    // Calculate current streak
+    let streak = 0;
+    for (let i = matchHistory.length - 1; i >= 0; i--) {
+        const isWin = matchHistory[i].winner === 'player';
+        if (i === matchHistory.length - 1) {
+            streak = isWin ? 1 : -1;
+        } else {
+            const prevWin = matchHistory[i + 1].winner === 'player';
+            if (isWin === prevWin) {
+                streak += isWin ? 1 : -1;
+            } else {
+                break;
+            }
+        }
+    }
+    const streakDisplay = streak === 0 ? '--' : (streak > 0 ? `+${streak}` : `${streak}`);
 
     const handleRecordMatch = (winner: 'player' | 'opponent') => {
         const currentSet = sets[currentSetIndex];
@@ -55,7 +68,7 @@ export default function TimelinePage() {
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <div className="text-xl animate-pulse">Loading Timeline...</div>
+                <div className="text-xl animate-pulse">Loading...</div>
             </div>
         );
     }
@@ -81,63 +94,23 @@ export default function TimelinePage() {
     const currentSet = sets[currentSetIndex];
 
     return (
-        <div className="min-h-screen flex flex-col" ref={containerRef}>
+        <div className="min-h-screen flex flex-col">
             <div className="sticky top-0 z-[40]">
-                <TopBar showBack onBack={() => router.push('/map')} title="Progression Timeline" />
+                <TopBar showBack onBack={() => router.push('/map')} title="Record Match" />
             </div>
 
-            <DesignerOverlay />
+            {currentSet && (
+                <RecordMatch
+                    onRecord={handleRecordMatch}
+                    onCancel={() => router.push('/map')}
+                    mode="fullPage"
+                    winRate={winRate}
+                    streak={streakDisplay}
+                />
+            )}
 
-            <div className="flex-1 p-8">
-                <div className="max-w-4xl mx-auto">
-                    {/* Record Match Section */}
-                    {currentSet && (
-                        <div className="mb-12">
-                            {!isRecording ? (
-                                <StonePanel title={`Current Match: ${currentSet.set_name}`} className="border-l-4 border-[var(--primary)]">
-                                    <ParchmentButton
-                                        onClick={() => setIsRecording(true)}
-                                        className="w-full md:w-auto"
-                                    >
-                                        Record Match Result
-                                    </ParchmentButton>
-                                </StonePanel>
-                            ) : (
-                                <div className="animate-in fade-in zoom-in duration-300">
-                                    <RecordMatch
-                                        onRecord={handleRecordMatch}
-                                        onCancel={() => setIsRecording(false)}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Timeline */}
-                    <div className="relative border-l-2 border-white/10 ml-4 space-y-8 pb-12">
-                        {matchHistory.length === 0 ? (
-                            <div className="pl-8 text-gray-500 italic">No matches recorded yet.</div>
-                        ) : (
-                            matchHistory.slice().reverse().map((match, idx) => (
-                                <div key={idx} className="relative pl-8">
-                                    {/* Timeline Dot */}
-                                    <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-[var(--background)] ${match.winner === 'player' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-
-                                    <div className="glass-panel p-4">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h3 className="font-bold text-lg">{match.packName}</h3>
-                                            <span className="text-xs text-gray-500">{new Date(match.date).toLocaleDateString()}</span>
-                                        </div>
-                                        <div className={`font-bold ${match.winner === 'player' ? 'text-green-400' : 'text-red-400'}`}>
-                                            {match.winner === 'player' ? 'VICTORY' : 'DEFEAT'}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            </div>
+            {/* Character Sprite - Bottom Left */}
+            <GuideSprite />
         </div>
     );
 }

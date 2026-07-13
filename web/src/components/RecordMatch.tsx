@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { useLayoutDesignerContext } from '@/context/LayoutDesignerContext';
 
 interface RecordMatchProps {
     onRecord: (winner: 'player' | 'opponent') => void;
     onCancel: () => void;
+    mode?: 'modal' | 'fullPage';
+    opponentName?: string;
+    winRate?: string;
+    streak?: string;
 }
 
 // Layout Config - static positioning
@@ -31,20 +34,27 @@ function getStyle(key: keyof typeof LAYOUT) {
     };
 }
 
-export default function RecordMatch({ onRecord, onCancel }: RecordMatchProps) {
+export default function RecordMatch({
+    onRecord,
+    onCancel,
+    mode = 'fullPage',
+    opponentName = '',
+    winRate = '--',
+    streak = '--'
+}: RecordMatchProps) {
     const [hoveredSection, setHoveredSection] = useState<'victory' | 'defeat' | null>(null);
-    const { isDesignerMode } = useLayoutDesignerContext();
 
-    // Dynamic Data (Placeholder for now)
-    const opponentName = "RARE HUNTER";
-    const winRate = "33%";
-    const streak = "-1";
     // Harpie Lady
     const cardId = "76812113";
     const cardImageUrl = `${process.env.NEXT_PUBLIC_IMAGE_HOST}/cards/${cardId}.jpg`;
 
+    // Container classes based on mode
+    const containerClasses = mode === 'modal'
+        ? "fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pt-10"
+        : "flex-1 flex items-center justify-center bg-transparent p-4";
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 pt-10">
+        <div className={containerClasses}>
             {/*
                 Main Container
                 Aspect Ratio: 1376/768 ≈ 1.79
@@ -77,7 +87,7 @@ export default function RecordMatch({ onRecord, onCancel }: RecordMatchProps) {
                     <img
                         src={cardImageUrl}
                         alt="Opponent Card"
-                        className={`w-[92%] h-[92%] object-cover rounded shadow-lg opacity-90 transition-opacity ${!isDesignerMode && 'hover:opacity-100'}`}
+                        className="w-[92%] h-[92%] object-cover rounded shadow-lg opacity-90 transition-opacity hover:opacity-100"
                     />
                 </div>
 
@@ -94,7 +104,7 @@ export default function RecordMatch({ onRecord, onCancel }: RecordMatchProps) {
                 </div>
 
                 {/* Victory Tablet (Hover Glow) */}
-                <div style={{ ...getStyle('victoryTablet'), pointerEvents: isDesignerMode ? 'auto' : 'none' }}>
+                <div style={{ ...getStyle('victoryTablet'), pointerEvents: 'none' }}>
                     <div
                         className={`w-full h-full rounded-xl transition-all duration-300 ease-in-out
                             ${hoveredSection === 'victory'
@@ -104,7 +114,7 @@ export default function RecordMatch({ onRecord, onCancel }: RecordMatchProps) {
                 </div>
 
                 {/* Defeat Tablet (Hover Glow) */}
-                <div style={{ ...getStyle('defeatTablet'), pointerEvents: isDesignerMode ? 'auto' : 'none' }}>
+                <div style={{ ...getStyle('defeatTablet'), pointerEvents: 'none' }}>
                     <div
                         className={`w-full h-full rounded-xl transition-all duration-300 ease-in-out
                             ${hoveredSection === 'defeat'
@@ -117,11 +127,11 @@ export default function RecordMatch({ onRecord, onCancel }: RecordMatchProps) {
                 <div
                     style={{ ...getStyle('victoryButton'), zIndex: 20 }}
                     className="flex items-center justify-center group cursor-pointer"
-                    onMouseEnter={() => !isDesignerMode && setHoveredSection('victory')}
-                    onMouseLeave={() => !isDesignerMode && setHoveredSection(null)}
-                    onClick={() => !isDesignerMode && onRecord('player')}
+                    onMouseEnter={() => setHoveredSection('victory')}
+                    onMouseLeave={() => setHoveredSection(null)}
+                    onClick={() => onRecord('player')}
                 >
-                    <div className={`text-[#e6dcc3] font-black text-2xl tracking-[0.2em] uppercase transition-all duration-300 transform ${!isDesignerMode && 'group-hover:scale-105'} drop-shadow-lg ${hoveredSection === 'victory' ? 'text-yellow-200' : ''}`}>
+                    <div className={`text-[#e6dcc3] font-black text-2xl tracking-[0.2em] uppercase transition-all duration-300 transform group-hover:scale-105 drop-shadow-lg ${hoveredSection === 'victory' ? 'text-yellow-200' : ''}`}>
                         VICTORY
                     </div>
                 </div>
@@ -130,11 +140,11 @@ export default function RecordMatch({ onRecord, onCancel }: RecordMatchProps) {
                 <div
                     style={{ ...getStyle('defeatButton'), zIndex: 20 }}
                     className="flex items-center justify-center group cursor-pointer"
-                    onMouseEnter={() => !isDesignerMode && setHoveredSection('defeat')}
-                    onMouseLeave={() => !isDesignerMode && setHoveredSection(null)}
-                    onClick={() => !isDesignerMode && onRecord('opponent')}
+                    onMouseEnter={() => setHoveredSection('defeat')}
+                    onMouseLeave={() => setHoveredSection(null)}
+                    onClick={() => onRecord('opponent')}
                 >
-                    <div className={`text-[#e6dcc3] font-black text-2xl tracking-[0.2em] uppercase transition-all duration-300 transform ${!isDesignerMode && 'group-hover:scale-105'} drop-shadow-lg ${hoveredSection === 'defeat' ? 'text-red-200' : ''}`}>
+                    <div className={`text-[#e6dcc3] font-black text-2xl tracking-[0.2em] uppercase transition-all duration-300 transform group-hover:scale-105 drop-shadow-lg ${hoveredSection === 'defeat' ? 'text-red-200' : ''}`}>
                         DEFEAT
                     </div>
                 </div>
@@ -143,7 +153,7 @@ export default function RecordMatch({ onRecord, onCancel }: RecordMatchProps) {
                 <div
                     style={{ ...getStyle('backButton'), zIndex: 30 }}
                     className="flex items-center px-4 cursor-pointer"
-                    onClick={() => !isDesignerMode && onCancel()}
+                    onClick={() => onCancel()}
                 >
                     <div className="text-[#8b7355] hover:text-[#d4af37] font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-2">
                         <span>←</span> Back to Dashboard

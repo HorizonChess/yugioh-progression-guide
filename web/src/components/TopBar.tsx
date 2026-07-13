@@ -12,11 +12,9 @@ interface TopBarProps {
 }
 
 import { useProgression } from "@/context/ProgressionContext";
-import { useLayoutDesignerContext } from "@/context/LayoutDesignerContext";
 
 export default function TopBar({ title, subtitle, showBack, onBack, children }: TopBarProps) {
     const { isGuideVisible, toggleGuide } = useProgression();
-    const { isDesignerMode, toggleDesignerMode } = useLayoutDesignerContext();
     const [duelistName, setDuelistName] = useState("Duelist");
 
     useEffect(() => {
@@ -60,21 +58,6 @@ export default function TopBar({ title, subtitle, showBack, onBack, children }: 
                         alt="Toggle Guide"
                         className="w-full h-full object-cover object-top scale-150 translate-y-1"
                     />
-                </button>
-
-                {/* Designer Mode Toggle */}
-                <button
-                    onClick={(e) => { e.stopPropagation(); toggleDesignerMode(); }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className={`designer-ui relative w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isDesignerMode
-                        ? 'border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)] bg-blue-500/20 text-blue-400'
-                        : 'border-gray-600 opacity-50 hover:opacity-100 hover:border-gray-400 text-gray-400'
-                        }`}
-                    title={isDesignerMode ? "Exit Designer Mode" : "Enter Designer Mode"}
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
-                    </svg>
                 </button>
             </div>
 

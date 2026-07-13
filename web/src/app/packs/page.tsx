@@ -18,13 +18,11 @@ import RarityCardGrid from "@/components/PackOpener/RarityCardGrid";
 import { processCardsForRarityGrid } from "@/lib/card-utils";
 import { useCardTooltip } from "@/hooks/useCardTooltip";
 import TopBar from "@/components/TopBar";
-import { useLayoutDesigner } from "@/hooks/useLayoutDesigner";
 
 function PacksPageContent() {
     const { currentSetIndex, addToCollection } = useProgression();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { DesignerOverlay, containerRef } = useLayoutDesigner();
 
     const [currentSet, setCurrentSet] = useState<CardSet | null>(null);
     const [setCards, setSetCards] = useState<Card[]>([]);
@@ -435,11 +433,10 @@ function PacksPageContent() {
     };
 
     return (
-        <div ref={containerRef} className="min-h-screen p-8 pb-32 pt-20">
+        <div className="min-h-screen p-8 pb-32 pt-20">
             <div className="fixed top-0 left-0 right-0 z-[100]">
                 <TopBar showBack onBack={() => router.push('/map')} />
             </div>
-            <DesignerOverlay />
             {!isOpening && <GuideSprite />}
             {renderContent()}
 

@@ -14,7 +14,6 @@ import ParchmentButton from "@/components/ParchmentButton";
 import GuideSprite from "@/components/GuideSprite";
 import StonePanel from "@/components/StonePanel";
 import { useCardTooltip } from "@/hooks/useCardTooltip";
-import { useLayoutDesigner } from '@/hooks/useLayoutDesigner';
 
 export default function CollectionPage() {
     const { collection, activeSaveId, loadSave, importCollection } = useProgression();
@@ -22,7 +21,6 @@ export default function CollectionPage() {
     const [loading, setLoading] = useState(true);
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
     const { hoveredCard, tooltipPosition, onHover, onLeave } = useCardTooltip();
-    const { containerRef, isDesignerMode, DesignerOverlay } = useLayoutDesigner();
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 60;
 
@@ -282,10 +280,8 @@ export default function CollectionPage() {
 
     return (
         <div
-            ref={containerRef}
             className="min-h-screen pb-32 flex flex-col relative"
         >
-            <DesignerOverlay />
             <GuideSprite />
 
             {/* Top Bar - Standard Navigation */}

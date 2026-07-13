@@ -10,11 +10,8 @@ import ChainConnector from "@/components/ChainConnector";
 import GoldButton from "@/components/GoldButton";
 import ScaleWrapper from "@/components/ScaleWrapper";
 
-import { useLayoutDesigner } from "@/hooks/useLayoutDesigner";
-
 export default function MapPage() {
     const { currentSetIndex, matchHistory, hasLoaded } = useProgression();
-    const { DesignerOverlay, containerRef } = useLayoutDesigner();
     const [sets, setSets] = useState<CardSet[]>([]);
     const [loading, setLoading] = useState(true);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -64,9 +61,7 @@ export default function MapPage() {
 
     return (
         <ScaleWrapper backgroundColor="transparent">
-            <main ref={containerRef} className="h-full w-full text-white relative overflow-hidden font-sans selection:bg-[var(--primary)] selection:text-black">
-                <DesignerOverlay />
-
+            <main className="h-full w-full text-white relative overflow-hidden font-sans selection:bg-[var(--primary)] selection:text-black">
                 {/* Top Bar */}
                 <div className="relative z-40">
                     <TopBar />

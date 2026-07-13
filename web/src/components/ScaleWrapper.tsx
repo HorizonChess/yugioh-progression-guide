@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, ReactNode } from "react";
-import { useLayoutDesignerContext } from "@/context/LayoutDesignerContext";
 
 // Design width - the reference width for scaling (1080p monitor)
 const DESIGN_WIDTH = 1920;
@@ -31,7 +30,6 @@ interface ScaleWrapperProps {
  * since it needs to reference the container, not the viewport.
  */
 export default function ScaleWrapper({ children, backgroundColor = '#0f172a' }: ScaleWrapperProps) {
-    const { setScaleFactor } = useLayoutDesignerContext();
     const [zoom, setZoom] = useState(1);
     const [designHeight, setDesignHeight] = useState(911); // Initial value, will be recalculated
 
@@ -49,13 +47,12 @@ export default function ScaleWrapper({ children, backgroundColor = '#0f172a' }: 
 
             setZoom(scale);
             setDesignHeight(adaptiveHeight);
-            setScaleFactor(scale); // Report scale to designer context
         }
 
         updateZoom();
         window.addEventListener('resize', updateZoom);
         return () => window.removeEventListener('resize', updateZoom);
-    }, [setScaleFactor]);
+    }, []);
 
     return (
         // Outer container - takes full viewport, clips overflow
