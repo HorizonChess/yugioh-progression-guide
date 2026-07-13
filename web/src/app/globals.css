@@ -2,20 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * ============================================================
+ * DESIGN TOKENS — single source of truth for theme colors.
+ * Change a value here and it updates the whole app.
+ * These are mirrored in tailwind.config.js so you can use
+ * named utility classes (bg-primary, text-wood-border, etc.)
+ * with opacity modifiers (bg-wood-border/20). Prefer the
+ * Tailwind class over a raw #hex or var() in components.
+ * ============================================================
+ */
 :root {
   /* Core Colors */
   --background: #050505;
   --foreground: #e0e0e0;
 
-  /* Brand Colors */
+  /* Brand — Gold */
   --primary: #d4af37;
   /* Metallic Gold */
   --primary-hover: #f5c542;
+  --gold-dark: #b8860b;
+  /* Deep gold — used for pressed-button shadows/borders */
+
+  /* Brand — Secondary / Accent */
   --secondary: #4a148c;
   /* Deep Purple */
   --secondary-hover: #7c43bd;
   --accent: #d32f2f;
   /* Life Point Red */
+
+  /* Parchment / Wood — the "physical" module palette */
+  --parchment: #e6dcc3;
+  --parchment-light: #f0e6d2;
+  --wood-dark: #1a120b;
+  --wood: #2d2414;
+  --wood-light: #6b543a;
+  --wood-mid: #6b5b45;
+  --wood-border: #8b7355;
+  --ink: #2c1810;
+
+  /* Deck-builder — Lime/Olive search UI */
+  --lime: #99cc00;
+  --lime-bright: #b3e619;
+  --lime-pale: #dbea7b;
+  --olive: #666600;
+  --olive-mid: #999900;
+  --olive-bright: #cccc00;
+
+  /* Status — Win / Loss */
+  --win: #aaffaa;
+  --loss: #ffaaaa;
 
   /* UI Colors */
   --card-bg: #1a1a1a;
@@ -71,20 +107,20 @@ a:hover {
 }
 
 .stone-panel {
-  background-color: #2d2414;
+  background-color: var(--wood);
   background-image: url('/ui/stone_texture.jpg');
   background-size: cover;
   background-position: center;
 
   /* 3D Bevel Effect using Borders */
   border: 4px solid;
-  border-top-color: #6b543a;
+  border-top-color: var(--wood-light);
   /* Lighter Top */
-  border-left-color: #6b543a;
+  border-left-color: var(--wood-light);
   /* Lighter Left */
-  border-bottom-color: #1a120b;
+  border-bottom-color: var(--wood-dark);
   /* Darker Bottom */
-  border-right-color: #1a120b;
+  border-right-color: var(--wood-dark);
   /* Darker Right */
 
   border-radius: 2px;
@@ -101,18 +137,18 @@ a:hover {
 }
 
 .parchment-bg {
-  background-color: #e6dcc3;
+  background-color: var(--parchment);
   background-image: url('/ui/parchment.svg');
   background-size: cover;
-  border: 2px solid #8b7355;
+  border: 2px solid var(--wood-border);
   box-shadow: inset 0 0 10px rgba(139, 115, 85, 0.3);
-  color: #2c1810;
+  color: var(--ink);
   font-family: 'Times New Roman', serif;
 }
 
 .parchment-bg:focus {
   outline: none;
-  border-color: #d4af37;
+  border-color: var(--primary);
   box-shadow: inset 0 0 10px rgba(212, 175, 55, 0.3);
 }
 

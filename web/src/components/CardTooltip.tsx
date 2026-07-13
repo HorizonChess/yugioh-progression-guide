@@ -133,7 +133,7 @@ export default function CardTooltip({ card, x, y }: CardTooltipProps) {
 
                     {/* Row 2: Type / Race */}
                     <div className="flex items-center gap-2">
-                        <span className="text-base font-bold text-[#d4af37] drop-shadow-sm">
+                        <span className="text-base font-bold text-primary drop-shadow-sm">
                             {[card.race, card.type].filter(Boolean).join(" / ")}
                         </span>
                     </div>

@@ -55,7 +55,7 @@ export default function StartPage() {
 
                     <button
                         onClick={handleStart}
-                        className={`w-full py-4 border border-white/20 text-white font-bold text-xl rounded hover:bg-white/10 transition-all ${!hasStarted ? 'bg-[var(--primary)] text-black border-none hover:bg-[#f5c542]' : ''}`}
+                        className={`w-full py-4 border border-white/20 text-white font-bold text-xl rounded hover:bg-white/10 transition-all ${!hasStarted ? 'bg-primary text-black border-none hover:bg-primary-hover' : ''}`}
                     >
                         NEW GAME
                     </button>

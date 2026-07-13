@@ -109,9 +109,9 @@ export default function CardSearchPanel({ collectionCards = [], onHover, onDragS
     const cardCategories = ["All", "Monster", "Spell", "Trap", "Extra"];
 
     return (
-        <div className="flex flex-col h-full bg-[#99cc00] font-sans text-black">
+        <div className="flex flex-col h-full bg-lime font-sans text-black">
             {/* Header */}
-            <div className="bg-[#99cc00] p-1 flex items-center justify-between border-b border-[#666600]">
+            <div className="bg-lime p-1 flex items-center justify-between border-b border-olive">
                 <h2 className="text-2xl font-bold tracking-tighter">SEARCH</h2>
                 <div className="flex gap-1">
                     {/* Placeholder for camera icon */}
@@ -119,7 +119,7 @@ export default function CardSearchPanel({ collectionCards = [], onHover, onDragS
             </div>
 
             {/* Inputs Grid */}
-            <div className="p-2 flex flex-col gap-1 text-sm font-bold bg-[#b3e619]/50">
+            <div className="p-2 flex flex-col gap-1 text-sm font-bold bg-lime-bright/50">
                 {/* Name */}
                 <div className="flex items-center gap-2">
                     <label className="w-12 text-right">Name:</label>
@@ -188,7 +188,7 @@ export default function CardSearchPanel({ collectionCards = [], onHover, onDragS
                 </div>
 
                 {/* Navigation */}
-                <div className="flex items-center justify-between mt-2 bg-[#cccc00] p-1 rounded border border-[#999900]">
+                <div className="flex items-center justify-between mt-2 bg-olive-bright p-1 rounded border border-olive-mid">
                     <button onClick={handlePrev} className="w-8 h-8 bg-black text-white hover:bg-gray-800 disabled:opacity-50 clip-arrow-left">
                         ◄
                     </button>
@@ -200,7 +200,7 @@ export default function CardSearchPanel({ collectionCards = [], onHover, onDragS
             </div>
 
             {/* Results Grid */}
-            <div className="flex-1 overflow-y-auto p-1 bg-[#dbea7b]">
+            <div className="flex-1 overflow-y-auto p-1 bg-lime-pale">
                 <div className="grid grid-cols-4 gap-1">
                     {currentCards.map((card, i) => {
                         const count = collectionCards.find(c => c.card.id === card.id)?.count || 0;

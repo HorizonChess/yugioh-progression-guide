@@ -180,7 +180,7 @@ function PacksPageContent() {
                     <StonePanel className="flex items-center justify-between mb-8 sticky top-4 z-50">
                         <div>
                             <h1 className="text-3xl font-black text-white mb-1">{currentSet.set_name}</h1>
-                            <p className="text-[#d4af37] text-sm font-bold">{setCards.length} Cards in Set</p>
+                            <p className="text-primary text-sm font-bold">{setCards.length} Cards in Set</p>
                         </div>
                         <ParchmentButton
                             onClick={() => setViewDetails(false)}
@@ -210,7 +210,7 @@ function PacksPageContent() {
                     <StonePanel className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 sticky top-4 z-50">
                         <div className="text-center md:text-left">
                             <h1 className="text-2xl md:text-3xl font-black text-white mb-1">{currentSet.set_name}</h1>
-                            <p className="text-[#d4af37] text-sm font-bold">Opened {allOpenedCards.length} Cards</p>
+                            <p className="text-primary text-sm font-bold">Opened {allOpenedCards.length} Cards</p>
                         </div>
                         <div className="flex gap-4">
                             <button
@@ -281,7 +281,7 @@ function PacksPageContent() {
                             {/* Center Title */}
                             <div className="text-center w-1/3">
                                 <h2 className="text-3xl font-black text-white drop-shadow-md leading-none">{currentSet.set_name}</h2>
-                                <p className="text-[#d4af37] font-bold text-lg leading-none mt-1">Pack {currentPackIndex + 1} of {packsToOpen.length}</p>
+                                <p className="text-primary font-bold text-lg leading-none mt-1">Pack {currentPackIndex + 1} of {packsToOpen.length}</p>
                             </div>
 
                             {/* Right Spacer (for balance) */}
@@ -331,7 +331,7 @@ function PacksPageContent() {
                                     onClick={handleNextPack}
                                     disabled={!isPackFullyOpened}
                                     className={`px-8 py-3 font-black rounded-xl transition-all uppercase tracking-wider ${isPackFullyOpened
-                                        ? 'bg-[var(--primary)] text-black hover:bg-[#f5c542] shadow-[0_4px_0_#b8860b] active:shadow-none active:translate-y-[4px] border border-[#b8860b]'
+                                        ? 'bg-primary text-black hover:bg-primary-hover shadow-[0_4px_0_theme(colors.gold-dark)] active:shadow-none active:translate-y-[4px] border border-gold-dark'
                                         : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
                                         }`}
                                 >
@@ -413,7 +413,7 @@ function PacksPageContent() {
                         </div>
                     ) : (
                         <div className="p-6 stone-panel">
-                            <h3 className="text-sm font-bold uppercase tracking-widest text-[#d4af37] mb-4 drop-shadow-md">Select Quantity</h3>
+                            <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4 drop-shadow-md">Select Quantity</h3>
 
                             <QuantitySelector
                                 quantity={customQuantity}

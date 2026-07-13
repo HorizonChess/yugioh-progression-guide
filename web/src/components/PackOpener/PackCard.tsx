@@ -72,7 +72,7 @@ export default function PackCard({ card, isFlipped, onClick, rarity, onMouseEnte
                     <p className="text-white font-bold text-xs leading-tight line-clamp-1 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] px-1 truncate antialiased">
                         {card.name}
                     </p>
-                    <p className="text-[#d4af37] text-[10px] font-bold uppercase tracking-wider mt-0.5 drop-shadow-md antialiased">
+                    <p className="text-primary text-[10px] font-bold uppercase tracking-wider mt-0.5 drop-shadow-md antialiased">
                         {rarity}
                     </p>
                 </div>

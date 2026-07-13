@@ -258,11 +258,11 @@ export default function CollectionFilters({ onFilterChange, className = "", comp
 
                     {/* Sort */}
                     <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-white/10">
-                        <label className="text-xs font-bold text-[#d4af37] uppercase drop-shadow-sm">Sort By</label>
+                        <label className="text-xs font-bold text-primary uppercase drop-shadow-sm">Sort By</label>
                         <select
                             value={filters.sort}
                             onChange={(e) => handleChange('sort', e.target.value)}
-                            className="parchment-bg border-2 border-[#8b7355] rounded-xl px-4 py-2 text-[#2c1810] font-bold font-serif focus:outline-none focus:border-[#d4af37] shadow-inner transition-all opacity-90 focus:opacity-100 appearance-none cursor-pointer w-full"
+                            className="parchment-bg border-2 border-wood-border rounded-xl px-4 py-2 text-ink font-bold font-serif focus:outline-none focus:border-primary shadow-inner transition-all opacity-90 focus:opacity-100 appearance-none cursor-pointer w-full"
                         >
                             {SORT_OPTIONS.map(option => (
                                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -285,9 +285,9 @@ function FilterGroup({ label, children }: { label: string, children: React.React
                 onClick={() => setIsOpen(!isOpen)}
                 className="flex items-center justify-between w-full text-left py-1 hover:bg-white/5 rounded px-1 transition-colors"
             >
-                <span className="text-xs font-bold text-[#d4af37] uppercase drop-shadow-sm">{label}</span>
+                <span className="text-xs font-bold text-primary uppercase drop-shadow-sm">{label}</span>
                 <svg
-                    className={`w-4 h-4 text-[#d4af37] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 text-primary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -314,13 +314,13 @@ function FilterSelect({ value, onChange, options, disabled = false }: {
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 disabled={disabled}
-                className="parchment-bg border-2 border-[#8b7355] rounded-xl px-3 py-1.5 pr-8 text-[#2c1810] font-bold font-serif focus:outline-none focus:border-[#d4af37] shadow-inner transition-all opacity-90 focus:opacity-100 appearance-none cursor-pointer w-full text-xs truncate"
+                className="parchment-bg border-2 border-wood-border rounded-xl px-3 py-1.5 pr-8 text-ink font-bold font-serif focus:outline-none focus:border-primary shadow-inner transition-all opacity-90 focus:opacity-100 appearance-none cursor-pointer w-full text-xs truncate"
             >
                 {options.map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
                 ))}
             </select>
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#2c1810]">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-ink">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </div>
         </div>

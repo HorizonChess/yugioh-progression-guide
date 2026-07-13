@@ -28,22 +28,22 @@ export default function QuantitySelector({ quantity, setQuantity, onOpen }: Quan
                         min="1"
                         value={quantity}
                         onChange={handleInputChange}
-                        className="w-full h-full pl-4 pr-12 parchment-bg border-2 border-[#8b7355] rounded-xl text-[#2c1810] font-bold text-xl font-serif focus:outline-none focus:border-[#d4af37] shadow-inner transition-all opacity-70 focus:opacity-100 placeholder-[#8b7355]/50"
+                        className="w-full h-full pl-4 pr-12 parchment-bg border-2 border-wood-border rounded-xl text-ink font-bold text-xl font-serif focus:outline-none focus:border-primary shadow-inner transition-all opacity-70 focus:opacity-100 placeholder-wood-border/50"
                         style={{ MozAppearance: 'textfield' }}
                     />
 
                     {/* Custom Arrows Container */}
-                    <div className="absolute right-2 top-2 bottom-2 w-8 flex flex-col gap-0.5 bg-[#8b7355]/10 rounded-lg overflow-hidden border border-[#8b7355]/20">
+                    <div className="absolute right-2 top-2 bottom-2 w-8 flex flex-col gap-0.5 bg-wood-border/10 rounded-lg overflow-hidden border border-wood-border/20">
                         <button
                             onClick={handleIncrement}
-                            className="flex-1 hover:bg-[#8b7355]/20 text-[#2c1810] flex items-center justify-center transition-colors active:bg-[#8b7355]/40"
+                            className="flex-1 hover:bg-wood-border/20 text-ink flex items-center justify-center transition-colors active:bg-wood-border/40"
                         >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" /></svg>
                         </button>
-                        <div className="h-[1px] bg-[#8b7355]/20 w-full"></div>
+                        <div className="h-[1px] bg-wood-border/20 w-full"></div>
                         <button
                             onClick={handleDecrement}
-                            className="flex-1 hover:bg-[#8b7355]/20 text-[#2c1810] flex items-center justify-center transition-colors active:bg-[#8b7355]/40"
+                            className="flex-1 hover:bg-wood-border/20 text-ink flex items-center justify-center transition-colors active:bg-wood-border/40"
                         >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
                         </button>
@@ -62,7 +62,7 @@ export default function QuantitySelector({ quantity, setQuantity, onOpen }: Quan
                 {/* Open Button - Distinct Style */}
                 <button
                     onClick={onOpen}
-                    className="px-8 h-full bg-[var(--primary)] text-black font-black rounded-xl hover:bg-[#f5c542] shadow-[0_4px_0_#b8860b] active:shadow-none active:translate-y-[4px] transition-all border border-[#b8860b] uppercase tracking-wider text-lg"
+                    className="px-8 h-full bg-primary text-black font-black rounded-xl hover:bg-primary-hover shadow-[0_4px_0_theme(colors.gold-dark)] active:shadow-none active:translate-y-[4px] transition-all border border-gold-dark uppercase tracking-wider text-lg"
                 >
                     Open
                 </button>
@@ -76,8 +76,8 @@ export default function QuantitySelector({ quantity, setQuantity, onOpen }: Quan
                         onClick={() => setQuantity(val)}
                         className={`py-3 rounded-xl font-bold transition-all text-sm shadow-md border-b-4 active:border-b-0 active:translate-y-[4px] parchment-bg
                             ${quantity === val
-                                ? 'ring-2 ring-white shadow-[0_0_15px_rgba(255,255,255,0.6)] scale-105 border-[#8b7355]'
-                                : 'hover:brightness-95 border-[#8b7355]'
+                                ? 'ring-2 ring-white shadow-[0_0_15px_rgba(255,255,255,0.6)] scale-105 border-wood-border'
+                                : 'hover:brightness-95 border-wood-border'
                             }`}
                     >
                         {val}

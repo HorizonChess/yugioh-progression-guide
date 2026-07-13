@@ -10,7 +10,7 @@ export default function StonePanel({ children, className = "", title }: StonePan
     return (
         <div className={`stone-panel p-6 ${className}`}>
             {title && (
-                <h3 className="text-sm font-bold uppercase tracking-widest text-[#d4af37] mb-4 drop-shadow-md">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4 drop-shadow-md">
                     {title}
                 </h3>
             )}

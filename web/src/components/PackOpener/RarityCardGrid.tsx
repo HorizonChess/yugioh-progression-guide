@@ -46,8 +46,8 @@ export default function RarityCardGrid({
                                             />
                                             {/* Quantity Badge */}
                                             {count !== undefined && count > 1 && (
-                                                <div className="absolute top-1 right-1 w-6 h-6 bg-black/80 rounded-full flex items-center justify-center border border-[#d4af37] shadow-md z-10">
-                                                    <span className="text-xs font-bold text-[#d4af37]">
+                                                <div className="absolute top-1 right-1 w-6 h-6 bg-black/80 rounded-full flex items-center justify-center border border-primary shadow-md z-10">
+                                                    <span className="text-xs font-bold text-primary">
                                                         {count}
                                                     </span>
                                                 </div>
@@ -56,7 +56,7 @@ export default function RarityCardGrid({
                                     </div>
                                     {/* Name below card */}
                                     <div className="text-center px-1">
-                                        <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
+                                        <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-primary transition-colors">
                                             {card.name}
                                         </div>
                                     </div>

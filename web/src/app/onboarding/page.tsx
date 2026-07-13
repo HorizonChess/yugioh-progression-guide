@@ -52,7 +52,7 @@ export default function OnboardingPage() {
                     <button
                         onClick={handleStart}
                         disabled={!name.trim()}
-                        className="w-full py-4 bg-[var(--primary)] text-black font-black text-xl rounded-xl hover:bg-[#f5c542] transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(212,175,55,0.3)]"
+                        className="w-full py-4 bg-primary text-black font-black text-xl rounded-xl hover:bg-primary-hover transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(212,175,55,0.3)]"
                     >
                         START JOURNEY
                     </button>

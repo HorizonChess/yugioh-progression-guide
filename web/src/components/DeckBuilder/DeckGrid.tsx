@@ -81,7 +81,7 @@ export default function DeckGrid({
 
                 {/* Main Deck 10x6 with GAP-0 */}
                 <div
-                    className="flex-1 bg-[url('/bg/fabric_pattern.png')] bg-repeat shadow-inner border border-[#6b5b45] rounded overflow-hidden"
+                    className="flex-1 bg-[url('/bg/fabric_pattern.png')] bg-repeat shadow-inner border border-wood-mid rounded overflow-hidden"
                     onDragOver={handleDragOver}
                     onDrop={(e) => onDrop(e, 'main', mainDeck.length)}
                 >

@@ -273,7 +273,7 @@ export default function CollectionPage() {
     if (loading && Object.keys(collection).length > 0) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <div className="text-xl animate-pulse text-[#d4af37]">Loading Collection...</div>
+                <div className="text-xl animate-pulse text-primary">Loading Collection...</div>
             </div>
         );
     }
@@ -288,7 +288,7 @@ export default function CollectionPage() {
             <TopBar />
 
             {/* Collection Sub-Header */}
-            <div className="bg-[#1a120b] border-b-2 border-[#8b7355] p-4 shadow-md relative z-40">
+            <div className="bg-wood-dark border-b-2 border-wood-border p-4 shadow-md relative z-40">
                 <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-white leading-none">My Collection</h1>
@@ -338,7 +338,7 @@ export default function CollectionPage() {
                                 <p className="text-gray-500">Open some packs to start building your collection!</p>
                                 <Link
                                     href="/map"
-                                    className="inline-block mt-6 px-8 py-3 bg-[var(--primary)] text-black font-bold rounded-lg hover:bg-[#f5c542] transition-colors"
+                                    className="inline-block mt-6 px-8 py-3 bg-primary text-black font-bold rounded-lg hover:bg-primary-hover transition-colors"
                                 >
                                     Go to Map
                                 </Link>
@@ -369,8 +369,8 @@ export default function CollectionPage() {
                                                             loading="lazy"
                                                         />
                                                         {/* Quantity Badge */}
-                                                        <div className="absolute top-1 right-1 w-6 h-6 bg-black/80 rounded-full flex items-center justify-center border border-[#d4af37] shadow-md z-10">
-                                                            <span className="text-xs font-bold text-[#d4af37]">
+                                                        <div className="absolute top-1 right-1 w-6 h-6 bg-black/80 rounded-full flex items-center justify-center border border-primary shadow-md z-10">
+                                                            <span className="text-xs font-bold text-primary">
                                                                 {count}
                                                             </span>
                                                         </div>
@@ -379,7 +379,7 @@ export default function CollectionPage() {
 
                                                 {/* Card Info */}
                                                 <div className="text-center px-1">
-                                                    <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-[#d4af37] transition-colors">
+                                                    <div className="text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8 group-hover:text-primary transition-colors">
                                                         {card.name}
                                                     </div>
                                                     <div className="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">
@@ -407,7 +407,7 @@ export default function CollectionPage() {
                                         >
                                             Prev
                                         </button>
-                                        <span className="px-4 py-2 text-[#d4af37] font-bold">
+                                        <span className="px-4 py-2 text-primary font-bold">
                                             Page {currentPage} of {totalPages}
                                         </span>
                                         <button
