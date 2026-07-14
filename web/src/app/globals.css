@@ -340,3 +340,118 @@ button {
   @apply px-4 py-2 bg-white/10 rounded hover:bg-white/20
     disabled:opacity-50 disabled:cursor-not-allowed;
 }
+
+/* ============================================================
+ * PACK OPENING (/packs) — buttons on the reveal screen.
+ * ============================================================ */
+
+/* "Back to Campaign" — subtle red danger-exit */
+.pack-exit-btn {
+  @apply px-6 py-3 text-base text-red-400 hover:text-red-300 font-bold transition-colors
+    bg-black/40 rounded-lg border border-red-900/50 hover:bg-black/60;
+}
+
+/* Next Pack / Finish — gold 3D press button (enabled state) */
+.pack-next-btn {
+  @apply px-8 py-3 font-black rounded-xl transition-all uppercase tracking-wider
+    bg-primary text-black hover:bg-primary-hover border border-gold-dark
+    active:shadow-none active:translate-y-[4px];
+  box-shadow: 0 4px 0 var(--gold-dark);
+}
+
+.pack-next-btn--disabled {
+  @apply px-8 py-3 font-black rounded-xl uppercase tracking-wider
+    bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700;
+}
+
+/* --- The 5-4 reveal grid ---------------------------------------------------
+ * A 10-column x 2-row grid. Each card spans 2 columns, so the top row holds 5
+ * (cols 1-2,3-4,5-6,7-8,9-10). The bottom row of 4 starts at column 2 — a
+ * half-card offset — so each bottom card nestles under a GAP in the top row
+ * (the staggered look). One `gap` value drives ALL spacing, identical at every
+ * viewport; `1fr` columns/rows share leftover space evenly by construction —
+ * no per-card margins, no magic numbers. Reprint packs (>10 cards) fall back to
+ * an aligned auto-flow grid via .pack-grid--wide.
+ */
+.pack-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  /* minmax(0,1fr) lets the two rows DIVIDE the container height instead of
+     growing to card content (which caused overflow). Requires the grid to have
+     a definite height — it fills the flex panel via flex:1 + min-height:0. */
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.5rem, 1.5vh, 1.25rem);
+  width: 100%;
+  flex: 1 1 0;
+  min-height: 0;
+  justify-items: center;
+  align-items: stretch;
+}
+
+/* Top row: 5 cards, each spanning 2 cols, pinned to row 1 */
+.pack-grid__cell--top {
+  grid-row: 1;
+  grid-column: span 2;
+  min-height: 0;
+  height: 100%;
+}
+
+/* Bottom row: 4 cards, each span 2. The FIRST bottom card starts at column 2
+   (half-card offset) so the row of 4 nestles under the gaps of the 5 above. */
+.pack-grid__cell--bottom {
+  grid-row: 2;
+  grid-column: span 2;
+  min-height: 0;
+  height: 100%;
+}
+
+.pack-grid__cell--bottom-start {
+  grid-column: 2 / span 2;
+}
+
+/* Wide (reprint) packs: simple even auto-flow, both rows aligned (no offset) */
+.pack-grid--wide {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.pack-grid--wide .pack-grid__cell--top,
+.pack-grid--wide .pack-grid__cell--bottom,
+.pack-grid--wide .pack-grid__cell--bottom-start {
+  grid-column: auto;
+}
+
+/* --- A card within a cell --- */
+.pack-card {
+  @apply flex flex-col items-center justify-end cursor-pointer;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* The flip box: fills the cell above the label; sizer sets aspect ratio */
+.pack-card__box {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Invisible sizer — native card image at its true ratio, capped by the cell */
+.pack-card__sizer {
+  max-height: 100%;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  opacity: 0;
+  pointer-events: none;
+  display: block;
+}
+
+.pack-card__label {
+  @apply text-center transition-opacity duration-300 pointer-events-none;
+  width: 140%;
+  flex: 0 0 auto;
+  padding-top: 0.25rem;
+}
