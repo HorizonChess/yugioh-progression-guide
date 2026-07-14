@@ -291,3 +291,22 @@ button {
   font-family: var(--font-techno);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
+
+/* ============================================================
+ * RECORD MATCH (/timeline) — the VICTORY/DEFEAT flourish.
+ * Gradient-filled text; victory = gold, defeat = red.
+ * ============================================================ */
+.record-outcome {
+  @apply text-6xl md:text-8xl font-black uppercase tracking-tighter mb-4
+    text-transparent bg-clip-text;
+}
+
+.record-outcome--victory {
+  @apply bg-gradient-to-b from-yellow-300 to-yellow-600;
+  filter: drop-shadow(0 0 30px rgba(234, 179, 8, 0.5));
+}
+
+.record-outcome--defeat {
+  @apply bg-gradient-to-b from-red-500 to-red-900;
+  filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.5));
+}
