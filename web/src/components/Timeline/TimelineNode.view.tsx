@@ -69,9 +69,9 @@ export default function TimelineNode({
                     <h3 className={`timeline-node__name ${current ? "timeline-node__name--current" : "timeline-node__name--other"}`}>
                         {set.set_name}
                     </h3>
-                    {!current && (
-                        <span className="timeline-node__date">{set.tcg_date}</span>
-                    )}
+                    <span className={`timeline-node__date ${current ? "timeline-node__date--current" : "timeline-node__date--other"}`}>
+                        {set.tcg_date}
+                    </span>
                 </div>
             </div>
         </div>

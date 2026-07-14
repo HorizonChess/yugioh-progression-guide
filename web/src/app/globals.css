@@ -241,7 +241,7 @@ button {
    the enlarged current pack. */
 .timeline-carousel {
   @apply w-full overflow-x-auto hide-scrollbar flex items-center px-[50vw] relative z-10
-    pt-[clamp(1rem,3vh,2.5rem)] pb-[clamp(3rem,9vh,6rem)];
+    pt-[clamp(1rem,3vh,2.5rem)] pb-[clamp(4.5rem,12vh,8rem)];
 }
 
 /* A carousel entry: the chain connector + the pack tile, laid out in a row.
@@ -334,7 +334,15 @@ button {
 }
 
 .timeline-node__date {
-  @apply text-xs text-gray-600 font-mono tracking-widest;
+  @apply text-xs font-mono tracking-widest;
+}
+
+.timeline-node__date--current {
+  @apply text-gray-300 drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)];
+}
+
+.timeline-node__date--other {
+  @apply text-gray-600;
 }
 
 /* WON / LOST stamp over a played pack */
