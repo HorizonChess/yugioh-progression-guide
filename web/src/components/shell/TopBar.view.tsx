@@ -38,7 +38,7 @@ export default function TopBar({ title, subtitle, showBack, onBack, children }: 
                 ) : (
                     <Link href="/menu" className="group flex items-center gap-4 hover:opacity-80 transition-opacity">
                         <div>
-                            <h2 className="text-[var(--primary)] font-bold text-lg tracking-wider uppercase leading-none">{duelistName}</h2>
+                            <h2 className="text-primary font-bold text-lg tracking-wider uppercase leading-none">{duelistName}</h2>
                             <p className="text-[10px] text-gray-500 font-mono">ID: 8492-001</p>
                         </div>
                     </Link>
@@ -48,7 +48,7 @@ export default function TopBar({ title, subtitle, showBack, onBack, children }: 
                 <button
                     onClick={toggleGuide}
                     className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transition-all duration-200 ${isGuideVisible
-                        ? 'border-[var(--primary)] shadow-[0_0_10px_var(--primary)] bg-[var(--primary)]/20'
+                        ? 'border-primary shadow-[0_0_10px_var(--primary)] bg-primary/20'
                         : 'border-gray-600 opacity-50 hover:opacity-100 hover:border-gray-400'
                         }`}
                     title={isGuideVisible ? "Hide Guide" : "Show Guide"}
@@ -67,10 +67,10 @@ export default function TopBar({ title, subtitle, showBack, onBack, children }: 
                 {!children && (
                     <>
                         <div className="hidden md:flex gap-4 text-xs font-bold tracking-widest text-gray-500">
-                            <Link href="/map" className="hover:text-white transition-colors">CAMPAIGN</Link>
-                            <Link href="/collection" className="hover:text-white transition-colors">COLLECTION</Link>
-                            <Link href="/deck-builder" className="hover:text-white transition-colors">DECK BUILDER</Link>
-                            <Link href="/menu" className="hover:text-white transition-colors">MENU</Link>
+                            <Link href="/map" className="topbar-nav-link">CAMPAIGN</Link>
+                            <Link href="/collection" className="topbar-nav-link">COLLECTION</Link>
+                            <Link href="/deck-builder" className="topbar-nav-link">DECK BUILDER</Link>
+                            <Link href="/menu" className="topbar-nav-link">MENU</Link>
                         </div>
                         <div className="text-right">
                             <h1 className="text-xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pr-1">

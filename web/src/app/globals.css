@@ -24,6 +24,11 @@
   --gold-dark: #b8860b;
   /* Deep gold — used for pressed-button shadows/borders */
 
+  /* Gold-stone gradient — the FrameButton fill (light → base → dark) */
+  --gold-stone-light: #f6dd94;
+  --gold-stone: #d8b871;
+  --gold-stone-dark: #b59748;
+
   /* Brand — Secondary / Accent */
   --secondary: #4a148c;
   /* Deep Purple */
@@ -53,9 +58,17 @@
   --win: #aaffaa;
   --loss: #ffaaaa;
 
-  /* UI Colors */
+  /* UI Colors — neutral surface scale (dark → light) */
+  --surface-deep: #111111;
+  /* Deepest inset (e.g. card-description well) */
   --card-bg: #1a1a1a;
-  --border: #333333;
+  /* Default modal/panel surface */
+  --surface-raised: #2d2d2d;
+  /* Raised control panel (e.g. deck controls) */
+  --divider: #333333;
+  /* Neutral hairline divider / subtle border */
+  --slate-outline: #0d1b2a;
+  /* Dark slate hairline outline on deck cards */
   --glass-bg: rgba(20, 20, 20, 0.7);
   --glass-border: rgba(255, 255, 255, 0.1);
 
@@ -187,6 +200,43 @@ button {
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Retro gold-on-wood scrollbar for the app's scrollable regions (long card
+   lists, info/description panels). Apply to the ELEMENT that scrolls, not the
+   document — so on paged content the scrollbar sits inside the content area
+   (e.g. beneath the TopBar), never shifting the persistent nav. `scrollbar-
+   gutter: stable` reserves the track's width even when idle, so appearing/
+   disappearing scroll never nudges the layout. */
+.custom-scrollbar {
+  scrollbar-gutter: stable;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) var(--wood-dark);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--wood-dark);
+  border-radius: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--primary-hover), var(--primary) 55%, var(--gold-dark));
+  border: 2px solid var(--wood-dark);
+  border-radius: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(var(--primary-hover), var(--primary));
+}
+
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: var(--wood-dark);
 }
 
 /* 3D Transform Utilities */
@@ -546,8 +596,8 @@ button {
 .menu-grid-bg {
   @apply absolute inset-0 opacity-20;
   background-image:
-    linear-gradient(to right, #1a1a1a 1px, transparent 1px),
-    linear-gradient(to bottom, #1a1a1a 1px, transparent 1px);
+    linear-gradient(to right, var(--card-bg) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--card-bg) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
@@ -564,4 +614,25 @@ button {
 
 .menu-item--disabled {
   @apply border-gray-700;
+}
+
+/* ============================================================
+ * SHELL — the persistent TopBar chrome.
+ * ============================================================ */
+
+/* A top-bar nav link (CAMPAIGN / COLLECTION / …); brightens on hover */
+.topbar-nav-link {
+  @apply hover:text-white transition-colors;
+}
+
+/* ============================================================
+ * DECK BUILDER (/deck-builder) — control-panel widgets.
+ * NOTE: layout is slated for a mobile rebuild; these are
+ * styling-only classes, not structural layout.
+ * ============================================================ */
+
+/* One of the 6 metal action buttons in the deck controls grid */
+.deck-control-btn {
+  @apply bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600
+    rounded shadow font-bold hover:brightness-110 py-1;
 }

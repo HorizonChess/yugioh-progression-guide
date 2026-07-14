@@ -68,13 +68,13 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
             <div
                 className={`
                     relative aspect-[59/86] h-[96%] max-w-[96%] transition-all box-border
-                    border-[0.5px] border-[#0d1b2a]/30
+                    border-[0.5px] border-slate-outline/30
                     ${isDragging && dragContext === 'deck' ? 'opacity-0' : ''}
                     ${isDragOver ? "ring-4 ring-blue-400 bg-blue-100/20 scale-105 z-20" : ""}
                     ${isUnavailable
                         ? "grayscale opacity-50 cursor-not-allowed"
                         : card
-                            ? "cursor-pointer hover:ring-2 hover:ring-[#ffff00] hover:z-10 group"
+                            ? "cursor-pointer hover:ring-2 hover:ring-yellow-400 hover:z-10 group"
                             : "bg-white/5"
                     }
                 `}

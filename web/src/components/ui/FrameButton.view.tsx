@@ -47,8 +47,8 @@ export default function FrameButton({
         boxSizing: "border-box" as const,
         outline: "none",
         // Stone fill under everything (border-box => reaches under the frame).
-        backgroundColor: "#d8b871",
-        backgroundImage: "radial-gradient(circle at 50% 42%, #f6dd94 0%, #d8b871 60%, #b59748 100%)",
+        backgroundColor: "var(--gold-stone)",
+        backgroundImage: "radial-gradient(circle at 50% 42%, var(--gold-stone-light) 0%, var(--gold-stone) 60%, var(--gold-stone-dark) 100%)",
         backgroundClip: "border-box" as const,
         // GPU layer so hover scale never re-rasterizes / re-tiles the frame.
         willChange: "transform" as const,

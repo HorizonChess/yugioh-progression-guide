@@ -28,7 +28,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
             <div
-                className="relative w-full max-w-4xl bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-200"
+                className="relative w-full max-w-4xl bg-card-bg border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-200"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Close Button */}
@@ -49,7 +49,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                 </div>
 
                 {/* Right: Details */}
-                <div className="w-full md:w-1/2 p-8 flex flex-col overflow-y-auto max-h-[60vh] md:max-h-auto">
+                <div className="w-full md:w-1/2 p-8 flex flex-col overflow-y-auto max-h-[60vh] md:max-h-none">
                     <div className="mb-6">
                         <h2 className="text-3xl font-bold text-white mb-2">{card.name}</h2>
                         <div className="flex flex-wrap gap-2 text-sm font-bold uppercase tracking-wider">
@@ -93,7 +93,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                     {/* Description */}
                     <div className="flex-1">
                         <h3 className="text-sm font-bold text-gray-400 uppercase mb-2">Description</h3>
-                        <div className="p-4 bg-[#111] rounded-lg border border-white/10 text-gray-300 leading-relaxed font-serif text-sm md:text-base">
+                        <div className="p-4 bg-surface-deep rounded-lg border border-white/10 text-gray-300 leading-relaxed font-serif text-sm md:text-base">
                             {card.desc}
                         </div>
                     </div>

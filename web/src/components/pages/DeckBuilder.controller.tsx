@@ -227,12 +227,32 @@ export default function DeckBuilder() {
         await downloadYDK(`${deckName}.ydk`, content);
     };
 
-    // --- Persistent Hover Logic ---
+    // --- Persistent Hover Logic (with hover-intent) ---
+    // The info panel is "sticky": it holds the last card so you can drag the
+    // mouse over to scroll its description. To reach it you cross other cards,
+    // which would otherwise swap the panel out from under you. Hover-intent
+    // fixes that: only commit a card after the pointer RESTS on it briefly.
+    // Passing over a card in transit enters+leaves faster than the delay, so
+    // its pending update is cancelled and the panel keeps the last real hover.
+    const HOVER_INTENT_MS = 30;
+    const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     const handleHover = (card: Card | null) => {
+        // Any new enter/leave cancels a still-pending commit.
+        if (hoverTimer.current) {
+            clearTimeout(hoverTimer.current);
+            hoverTimer.current = null;
+        }
+        // On leave (card === null) we cancel but keep the panel sticky.
         if (card) {
-            setHoveredCard(card);
+            hoverTimer.current = setTimeout(() => setHoveredCard(card), HOVER_INTENT_MS);
         }
     };
+
+    // Don't leave a pending timer running after unmount.
+    useEffect(() => () => {
+        if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    }, []);
 
     // --- Drag and Drop Logic ---
 
@@ -397,7 +417,7 @@ export default function DeckBuilder() {
             <div className="flex flex-1 px-1 pt-1 pb-1 gap-1 overflow-hidden relative min-h-0">
 
                 {/* Left Column: Info + Controls */}
-                <div className="w-[300px] shrink-0 flex flex-col min-h-0 bg-[#1a120b] border-r-2 border-[#8b7355]">
+                <div className="w-[300px] shrink-0 flex flex-col min-h-0 bg-wood-dark border-r-2 border-wood-border">
                     {/* Card Info - Can shrink and scroll if needed */}
                     <div className="flex-1 min-h-0 overflow-hidden">
                         <CardInfoPanel card={hoveredCard} />
@@ -444,7 +464,7 @@ export default function DeckBuilder() {
                 </div>
 
                 {/* Right: Search Panel */}
-                <div className="w-[280px] shrink-0 flex flex-col bg-[#99cc00] rounded-lg border-4 border-[#666600] shadow-xl overflow-hidden min-h-0">
+                <div className="w-[280px] shrink-0 flex flex-col bg-lime rounded-lg border-4 border-olive shadow-xl overflow-hidden min-h-0">
                     <CardSearchPanel
                         collectionCards={collectionCards}
                         onDragStart={handleSearchDragStart}

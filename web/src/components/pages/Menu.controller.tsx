@@ -22,12 +22,12 @@ export default function Menu() {
     ];
 
     return (
-        <main className="min-h-screen bg-black text-white flex flex-col relative overflow-hidden font-mono">
+        <main className="min-h-screen bg-black text-white grid grid-rows-[auto_1fr] relative overflow-hidden font-mono">
             <div className="menu-grid-bg" />
 
             <TopBar />
 
-            <div className="flex-1 relative z-10 flex items-center justify-center p-8">
+            <div className="relative z-10 flex items-center justify-center p-8">
                 <div className="flex gap-12 w-full max-w-6xl items-center">
                     {/* Left: menu, or the save-slot list once Campaign is chosen */}
                     <div className="flex-1 space-y-4">

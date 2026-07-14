@@ -276,16 +276,21 @@ function PacksShell({
     withSprite?: boolean;
 }) {
     const router = useRouter();
+    // Shell is ALWAYS a grid-rows-[auto_1fr] with a bare TopBar as the first
+    // (auto) row — same idiom as every other page, so the nav sits identically.
+    // `fixed` only changes the CONTENT row: a viewport-locked centered board
+    // for pack-opening, vs a scrollable padded page for summary/details.
     return (
-        <div className={fixed ? "h-screen overflow-hidden grid grid-rows-[auto_1fr]" : "min-h-screen"}>
-            <div className={fixed ? "" : "fixed top-0 left-0 right-0 z-[100]"}>
-                <TopBar showBack onBack={() => router.push("/map")} />
-            </div>
+        <div className="h-screen overflow-hidden grid grid-rows-[auto_1fr]">
+            <TopBar showBack onBack={() => router.push("/map")} />
             {withSprite && <GuideSprite />}
             {fixed ? (
+                // Pack-opening board: viewport-locked, centered, never scrolls.
                 <div className="min-h-0 min-w-0 flex items-center justify-center p-4">{children}</div>
             ) : (
-                <div className="p-8 pb-32 pt-20">{children}</div>
+                // Summary / details: a potentially long card list — scroll INSIDE
+                // this row (retro scrollbar under the nav), not the document.
+                <div className="min-h-0 overflow-y-auto custom-scrollbar p-8 pb-16">{children}</div>
             )}
         </div>
     );

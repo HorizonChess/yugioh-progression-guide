@@ -260,7 +260,7 @@ export default function Collection() {
     }
 
     return (
-        <div className="min-h-screen pb-32 flex flex-col relative">
+        <div className="h-screen overflow-hidden grid grid-rows-[auto_auto_1fr] relative">
             <GuideSprite />
 
             <TopBar />
@@ -291,8 +291,10 @@ export default function Collection() {
                 </div>
             </div>
 
-            <div className="flex-1 p-4 md:p-8 overflow-hidden">
-                <div className="max-w-[1920px] mx-auto h-full flex flex-col lg:flex-row gap-6 items-start">
+            {/* Scroll happens HERE (not the document), so the retro scrollbar
+                sits inside the content area beneath the nav and never shifts it */}
+            <div className="min-h-0 p-4 md:p-8 overflow-y-auto custom-scrollbar">
+                <div className="max-w-[1920px] mx-auto flex flex-col lg:flex-row gap-6 items-start">
                     <div className="w-full lg:w-auto sticky top-4 z-30">
                         <CollectionFilters onFilterChange={setFilters} />
                     </div>

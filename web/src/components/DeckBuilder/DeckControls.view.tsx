@@ -19,10 +19,9 @@ export default function DeckControls({
     onImport,
     onExport
 }: DeckControlsProps) {
-    const buttonClass = "bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600 rounded shadow font-bold hover:brightness-110 py-1";
-
     return (
-        <div className="shrink-0 bg-[#2d2d2d] border border-gray-600 rounded m-1 p-2 flex flex-col gap-2 text-xs">
+        // Raised control panel: deck-name field + 2-col grid of action buttons
+        <div className="shrink-0 bg-surface-raised border border-gray-600 rounded m-1 p-2 flex flex-col gap-2 text-xs">
             <div className="flex gap-1">
                 <input
                     value={deckName}
@@ -32,12 +31,12 @@ export default function DeckControls({
                 />
             </div>
             <div className="grid grid-cols-2 gap-1.5">
-                <button onClick={onSave} className={buttonClass}>Save Deck</button>
-                <button onClick={onLoad} className={buttonClass}>Load Deck</button>
-                <button onClick={onClear} className={buttonClass}>Clear Deck</button>
-                <button onClick={onSort} className={buttonClass}>Sort</button>
-                <button onClick={onImport} className={buttonClass}>Import</button>
-                <button onClick={onExport} className={buttonClass}>Export</button>
+                <button onClick={onSave} className="deck-control-btn">Save Deck</button>
+                <button onClick={onLoad} className="deck-control-btn">Load Deck</button>
+                <button onClick={onClear} className="deck-control-btn">Clear Deck</button>
+                <button onClick={onSort} className="deck-control-btn">Sort</button>
+                <button onClick={onImport} className="deck-control-btn">Import</button>
+                <button onClick={onExport} className="deck-control-btn">Export</button>
             </div>
         </div>
     );

@@ -36,8 +36,12 @@ const tokens = {
     win: "#aaffaa",
     loss: "#ffaaaa",
 
-    // Surfaces
+    // Surfaces — neutral scale (dark → light)
+    "surface-deep": "#111111",
     "card-bg": "#1a1a1a",
+    "surface-raised": "#2d2d2d",
+    divider: "#333333",
+    "slate-outline": "#0d1b2a",
 };
 
 module.exports = {
