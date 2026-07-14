@@ -213,3 +213,81 @@ button {
 .rotate-x-12 {
   transform: rotateX(12deg);
 }
+
+/* ============================================================
+ * TIMELINE (/map) — component classes.
+ * Long/repeated Tailwind moved out of map/page.tsx so the JSX
+ * scans as semantic elements. Fluid clamp() sizing that a
+ * caller tunes (tile height, panel size) stays inline at the
+ * call site; these classes hold the fixed look + states.
+ * ============================================================ */
+
+/* Round gold scroll arrows flanking the carousel */
+.timeline-scroll-btn {
+  @apply absolute top-1/2 -translate-y-1/2 z-20 w-12 h-12 sm:w-16 sm:h-16 rounded-full
+    bg-black/50 border-2 border-primary text-primary flex items-center justify-center
+    transition-all hover:bg-primary hover:text-black hover:scale-110;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.timeline-scroll-btn__icon {
+  @apply w-8 h-8 sm:w-10 sm:h-10;
+}
+
+/* One pack tile: current is scaled up + gold-ringed, others dimmed/greyed */
+.timeline-node {
+  @apply relative flex-shrink-0 flex flex-col items-center gap-[clamp(0.5rem,1.5vh,1.5rem)]
+    transition-all duration-500 z-10;
+}
+
+.timeline-node--current {
+  @apply scale-125 z-20;
+}
+
+.timeline-node--other {
+  @apply scale-90 opacity-60 grayscale hover:opacity-100 hover:scale-95 hover:grayscale-0;
+}
+
+/* Pack art frame — height-driven, aspect derives the width */
+.timeline-node__art {
+  @apply relative block h-[clamp(11rem,26vh,20rem)] aspect-[2/3] rounded-xl overflow-hidden
+    shadow-2xl transition-all duration-300 bg-black;
+}
+
+.timeline-node__art--current {
+  @apply ring-4 ring-primary;
+  box-shadow: 0 0 50px rgba(212, 175, 55, 0.5);
+}
+
+.timeline-node__art--other {
+  @apply hover:ring-2 hover:ring-gray-500;
+}
+
+/* WON / LOST stamp over a played pack */
+.timeline-stamp {
+  @apply text-2xl font-black uppercase -rotate-12 border-4 px-4 py-2 rounded-xl shadow-xl;
+}
+
+.timeline-stamp--won {
+  @apply text-win border-win bg-green-900/50;
+}
+
+.timeline-stamp--lost {
+  @apply text-loss border-loss bg-red-900/50;
+}
+
+/* Scoreboard gem labels/values pinned over the stats panel PNG */
+.stats-gem {
+  @apply absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5;
+}
+
+.stats-gem__label {
+  @apply text-[clamp(8px,1.1vh,11px)] uppercase tracking-[0.2em] font-bold drop-shadow-md;
+  font-family: var(--font-techno);
+}
+
+.stats-gem__value {
+  @apply text-[clamp(1.1rem,3vh,1.75rem)] text-white;
+  font-family: var(--font-techno);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
