@@ -82,11 +82,9 @@ export default function Timeline() {
                 <div className="w-full min-w-0 relative">
                     <TimelineControls onScroll={scroll} />
 
-                    {/* Horizontal scroll area — px-[50vw] lets any tile center */}
-                    <div
-                        ref={scrollContainerRef}
-                        className="w-full overflow-x-auto hide-scrollbar flex items-center px-[50vw] py-[clamp(1rem,3vh,2.5rem)] relative z-10"
-                    >
+                    {/* Horizontal scroll rail (px-[50vw] centers any tile; bottom
+                        padding reserves room for the absolute captions) */}
+                    <div ref={scrollContainerRef} className="timeline-carousel">
                         {sets.map((set, idx) => (
                             <TimelineNode
                                 key={`${set.set_code}-${idx}`}

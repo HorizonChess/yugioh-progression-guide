@@ -234,10 +234,39 @@ button {
   @apply w-8 h-8 sm:w-10 sm:h-10;
 }
 
-/* One pack tile: current is scaled up + gold-ringed, others dimmed/greyed */
+/* The horizontal scroll rail holding every tile. Only scrolls on X; px-[50vw]
+   lets any tile center. Because overflow-x:auto forces overflow-y to clip, the
+   bottom padding RESERVES room for each tile's absolutely-positioned caption
+   (which doesn't add to content height) so names never get clipped — sized for
+   the enlarged current pack. */
+.timeline-carousel {
+  @apply w-full overflow-x-auto hide-scrollbar flex items-center px-[50vw] relative z-10
+    pt-[clamp(1rem,3vh,2.5rem)] pb-[clamp(3rem,9vh,6rem)];
+}
+
+/* A carousel entry: the chain connector + the pack tile, laid out in a row.
+   items-center centers the connector on the TILE, and because the tile's
+   laid-out height is exactly the art height (the caption is absolute, see
+   below), the connector lands on the art's midline — not floating below it. */
+.timeline-link {
+  @apply flex items-center;
+}
+
+/* The connector overlaps into the adjacent tiles' gap via negative margin.
+   It lives OUTSIDE the scaled .timeline-node so the current tile's scale-125
+   never distorts or resizes the chain. */
+.timeline-link__connector {
+  @apply flex-shrink-0 -mx-4 z-0;
+}
+
+/* One pack tile: current is scaled up + gold-ringed, others dimmed/greyed.
+   position:relative anchors the absolute caption; the tile's own height is
+   just the art, which keeps the connector aligned to the art center.
+   --art-h is the single source of truth for pack-art height, shared by the art
+   frame and the caption's placement (see .timeline-node__caption). */
 .timeline-node {
-  @apply relative flex-shrink-0 flex flex-col items-center gap-[clamp(0.5rem,1.5vh,1.5rem)]
-    transition-all duration-500 z-10;
+  --art-h: clamp(11rem, 26vh, 20rem);
+  @apply relative flex-shrink-0 transition-all duration-500 z-10;
 }
 
 .timeline-node--current {
@@ -248,10 +277,11 @@ button {
   @apply scale-90 opacity-60 grayscale hover:opacity-100 hover:scale-95 hover:grayscale-0;
 }
 
-/* Pack art frame — height-driven, aspect derives the width */
+/* Pack art frame — height-driven (--art-h), aspect derives the width */
 .timeline-node__art {
-  @apply relative block h-[clamp(11rem,26vh,20rem)] aspect-[2/3] rounded-xl overflow-hidden
+  @apply relative block aspect-[2/3] rounded-xl overflow-hidden
     shadow-2xl transition-all duration-300 bg-black;
+  height: var(--art-h);
 }
 
 .timeline-node__art--current {
@@ -261,6 +291,50 @@ button {
 
 .timeline-node__art--other {
   @apply hover:ring-2 hover:ring-gray-500;
+}
+
+/* Fills the art frame, letterboxing the pack image */
+.timeline-node__art-inner {
+  @apply w-full h-full flex items-center justify-center overflow-hidden;
+}
+
+.timeline-node__img {
+  @apply w-full h-full object-contain transform hover:scale-110 transition-transform duration-700;
+}
+
+.timeline-node__art-fallback {
+  @apply w-full h-full bg-gray-800 flex items-center justify-center text-xs text-gray-500;
+}
+
+/* Dark WON/LOST overlay covering a played pack's art */
+.timeline-node__stamp-overlay {
+  @apply absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px];
+}
+
+/* Name + date, anchored just below the art. It's absolute (→ excluded from the
+   tile's height so it can't push the connector off the art center), placed a
+   small relational gap below the art bottom. The scroller reserves matching
+   room below the art (see .timeline-carousel) so this never clips — even for
+   the enlarged current pack. Scales with the node, as intended. */
+.timeline-node__caption {
+  @apply absolute left-1/2 -translate-x-1/2 text-center w-max max-w-[min(12rem,40vw)];
+  top: calc(var(--art-h) + var(--art-h) * 0.04);
+}
+
+.timeline-node__name {
+  @apply font-bold text-sm mb-1 truncate;
+}
+
+.timeline-node__name--current {
+  @apply text-white text-[clamp(1rem,2.2vh,1.25rem)] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)];
+}
+
+.timeline-node__name--other {
+  @apply text-gray-500;
+}
+
+.timeline-node__date {
+  @apply text-xs text-gray-600 font-mono tracking-widest;
 }
 
 /* WON / LOST stamp over a played pack */
