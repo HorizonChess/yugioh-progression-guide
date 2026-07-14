@@ -17,13 +17,13 @@ jest.mock('@/lib/api', () => ({
 }));
 
 // Mock TopBar and GuideSprite components
-jest.mock('@/components/TopBar', () => {
+jest.mock('@/components/shell/TopBar.view', () => {
     return function MockTopBar() {
         return <div data-testid="top-bar">TopBar</div>;
     };
 });
 
-jest.mock('@/components/GuideSprite', () => {
+jest.mock('@/components/shell/GuideSprite.view', () => {
     return function MockGuideSprite() {
         return <div data-testid="guide-sprite">GuideSprite</div>;
     };

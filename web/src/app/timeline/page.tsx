@@ -1,1 +1,1 @@
-export { default } from "@/components/pages/RecordMatchPage";
+export { default } from "@/components/pages/RecordMatchPage.controller";

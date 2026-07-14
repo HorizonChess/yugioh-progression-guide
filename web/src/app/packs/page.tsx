@@ -5,19 +5,19 @@ import { fetchAllSets, fetchCardsInSet, Card, CardSet, PulledCard } from "@/lib/
 import { generateBoosterPack } from "@/lib/pack-logic";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import GuideSprite from "@/components/GuideSprite";
-import CardDetailModal from "@/components/CardDetailModal";
-import QuantitySelector from "@/components/QuantitySelector";
-import StonePanel from "@/components/StonePanel";
-import ParchmentButton from "@/components/ParchmentButton";
-import PackCard from "@/components/PackOpener/PackCard";
+import GuideSprite from "@/components/shell/GuideSprite.view";
+import CardDetailModal from "@/components/card/CardDetailModal.view";
+import QuantitySelector from "@/components/ui/QuantitySelector.view";
+import StonePanel from "@/components/ui/StonePanel.view";
+import ParchmentButton from "@/components/ui/ParchmentButton.view";
+import PackCard from "@/components/PackOpener/PackCard.view";
 import { useSearchParams } from "next/navigation";
-import CardTooltip from "@/components/CardTooltip";
+import CardTooltip from "@/components/card/CardTooltip.view";
 import { getCardRarity } from "@/lib/utils";
-import RarityCardGrid from "@/components/PackOpener/RarityCardGrid";
+import RarityCardGrid from "@/components/PackOpener/RarityCardGrid.view";
 import { processCardsForRarityGrid } from "@/lib/card-utils";
 import { useCardTooltip } from "@/hooks/useCardTooltip";
-import TopBar from "@/components/TopBar";
+import TopBar from "@/components/shell/TopBar.view";
 
 function PacksPageContent() {
     const { currentSetIndex, addToCollection } = useProgression();

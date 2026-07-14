@@ -3,12 +3,12 @@
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets, CardSet } from "@/lib/api";
 import { useEffect, useState, useRef } from "react";
-import GuideSprite from "@/components/GuideSprite";
-import TopBar from "@/components/TopBar";
-import FrameButton from "@/components/FrameButton";
-import TimelineControls from "@/components/Timeline/TimelineControls";
-import TimelineNode from "@/components/Timeline/TimelineNode";
-import StatsPanel from "@/components/Timeline/StatsPanel";
+import GuideSprite from "@/components/shell/GuideSprite.view";
+import TopBar from "@/components/shell/TopBar.view";
+import FrameButton from "@/components/ui/FrameButton.view";
+import TimelineControls from "@/components/Timeline/TimelineControls.view";
+import TimelineNode from "@/components/Timeline/TimelineNode.view";
+import StatsPanel from "@/components/Timeline/StatsPanel.view";
 
 /**
  * The progression TIMELINE (route: /map). A horizontal carousel of booster

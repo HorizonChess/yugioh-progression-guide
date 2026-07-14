@@ -310,3 +310,33 @@ button {
   @apply bg-gradient-to-b from-red-500 to-red-900;
   filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.5));
 }
+
+/* ============================================================
+ * COLLECTION (/collection) — card tile + pagination.
+ * ============================================================ */
+
+/* Rounded art frame that holds the card image + count badge */
+.collection-card__frame {
+  @apply absolute inset-0 bg-card-bg rounded-lg shadow-lg overflow-hidden
+    border border-white/10 group-hover:border-primary/50 transition-colors;
+}
+
+.collection-card__badge {
+  @apply absolute top-1 right-1 w-6 h-6 bg-black/80 rounded-full flex items-center
+    justify-center border border-primary shadow-md z-10;
+}
+
+.collection-card__name {
+  @apply text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8
+    group-hover:text-primary transition-colors;
+}
+
+.collection-card__rarity {
+  @apply text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider mt-0.5;
+}
+
+/* Shared prev/next pager button (collection + anywhere paged) */
+.pager-btn {
+  @apply px-4 py-2 bg-white/10 rounded hover:bg-white/20
+    disabled:opacity-50 disabled:cursor-not-allowed;
+}

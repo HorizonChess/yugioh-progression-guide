@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import SaveSlotList from "@/components/SaveSlotList";
-import TopBar from "@/components/TopBar";
+import SaveSlotList from "@/components/shell/SaveSlotList.view";
+import TopBar from "@/components/shell/TopBar.view";
 
 export default function MenuPage() {
     const [duelistName, setDuelistName] = useState("");

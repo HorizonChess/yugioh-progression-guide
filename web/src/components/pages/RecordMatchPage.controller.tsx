@@ -4,9 +4,9 @@ import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets, CardSet } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import RecordMatch from "@/components/RecordMatch";
-import TopBar from "@/components/TopBar";
-import GuideSprite from "@/components/GuideSprite";
+import RecordMatch from "@/components/RecordMatch/RecordMatch.view";
+import TopBar from "@/components/shell/TopBar.view";
+import GuideSprite from "@/components/shell/GuideSprite.view";
 
 /**
  * The Record Match screen (route: /timeline — the folder name is historical

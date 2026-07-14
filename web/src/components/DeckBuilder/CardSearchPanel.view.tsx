@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Card } from "@/lib/api";
-import DeckSlot from "./DeckSlot";
+import DeckSlot from "./DeckSlot.view";
 
 interface CardSearchPanelProps {
     collectionCards: { card: Card; count: number }[];

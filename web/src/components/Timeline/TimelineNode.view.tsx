@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CardSet } from "@/lib/api";
-import ChainConnector from "@/components/ChainConnector";
+import ChainConnector from "@/components/Timeline/ChainConnector.view";
 
 type Match = { winner: "player" | "opponent" } | undefined;
 

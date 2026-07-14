@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
-import StonePanel from "../StonePanel";
-import ParchmentInput from "../ParchmentInput";
+import StonePanel from "@/components/ui/StonePanel.view";
+import ParchmentInput from "@/components/ui/ParchmentInput.view";
 import { fetchAllSets, CardSet } from "@/lib/api";
 
 export interface FilterState {

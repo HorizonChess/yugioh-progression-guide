@@ -1,1 +1,1 @@
-export { default } from "@/components/pages/Timeline";
+export { default } from "@/components/pages/Timeline.controller";
