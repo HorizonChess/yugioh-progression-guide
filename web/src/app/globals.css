@@ -301,13 +301,16 @@ html::-webkit-scrollbar-corner,
   @apply w-8 h-8 sm:w-10 sm:h-10;
 }
 
-/* The horizontal scroll rail holding every tile. Only scrolls on X; px-[50vw]
-   lets any tile center. Because overflow-x:auto forces overflow-y to clip, the
-   bottom padding RESERVES room for each tile's absolutely-positioned caption
-   (which doesn't add to content height) so names never get clipped — sized for
-   the enlarged current pack. */
+/* The horizontal scroll rail holding every tile. Scrolls on X only — we pin
+   overflow-y:hidden because overflow-x:auto otherwise computes the Y axis to
+   `auto` (NOT clip), and the scale-125 current tile + reserved caption padding
+   overflow by a few px, which would silently become vertically scrollable
+   (.hide-scrollbar hides the bar's look but does NOT stop Y scrolling).
+   px-[50vw] lets any tile center. The bottom padding RESERVES room for each
+   tile's absolutely-positioned caption (which doesn't add to content height) so
+   names never get clipped — sized for the enlarged current pack. */
 .timeline-carousel {
-  @apply w-full overflow-x-auto hide-scrollbar flex items-center px-[50vw] relative z-10
+  @apply w-full overflow-x-auto overflow-y-hidden hide-scrollbar flex items-center px-[50vw] relative z-10
     pt-[clamp(1rem,3vh,2.5rem)] pb-[clamp(4.5rem,12vh,8rem)];
 }
 
