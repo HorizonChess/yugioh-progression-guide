@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import FrameButton from '@/components/ui/FrameButton.view';
+import { WheelRim, WheelHub } from '@/components/RecordMatch/WheelDecor.view';
 import { WHEEL_PRIZES, WheelPrize } from '@/lib/rewards';
 
 interface WinnersWheelProps {
@@ -33,12 +34,15 @@ export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelPr
     const [rotation, setRotation] = useState(0);
     const [result, setResult] = useState<WheelPrize | null>(null);
 
-    // Alternating gold/dark wedges via a conic-gradient — themed off --primary.
+    // Alternating GOLD-LEAF / dark-STONE wedges via a conic-gradient. Both fills
+    // derive from --primary (see --wheel-wedge-* tokens) so a token swap re-themes
+    // the whole face. Hard stops at each slice keep crisp wedge edges; a separate
+    // radial overlay (CSS) adds the domed sheen so it isn't a flat pie.
     const wheelBackground = useMemo(() => {
         const stops = WHEEL_PRIZES.map((_, i) => {
             const from = i * SLICE;
             const to = (i + 1) * SLICE;
-            const color = i % 2 === 0 ? 'var(--primary)' : 'var(--wood)';
+            const color = i % 2 === 0 ? 'var(--wheel-wedge-light)' : 'var(--wheel-wedge-dark)';
             return `${color} ${from}deg ${to}deg`;
         }).join(', ');
         return `conic-gradient(from -${SLICE / 2}deg, ${stops})`;
@@ -66,6 +70,14 @@ export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelPr
         }, SPIN_MS);
     };
 
+    // Shared spin transform — applied to EVERY layer that turns with the wheel
+    // (wedges, rim/studs, labels) so they rotate as one body. Only the hub + the
+    // fixed pointer stay still.
+    const spinStyle: React.CSSProperties = {
+        transform: `rotate(${rotation}deg)`,
+        transition: spinning ? `transform ${SPIN_MS}ms cubic-bezier(0.16, 1, 0.3, 1)` : 'none',
+    };
+
     return (
         <div className="wheel-content">
             <div className="text-center">
@@ -83,27 +95,22 @@ export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelPr
                 A left-side label is horizontal, so the winning prize is always upright
                 and readable at rest. */}
             <div className="wheel">
-                <div className="wheel__pointer" aria-hidden />
-
-                {/* Colored wedges — spin */}
+                {/* Colored wedges — spin. `wheel__disc` carries the conic wedges;
+                    `wheel__sheen` is a static domed highlight so the disc reads as a
+                    convex carved face, not a flat pie. */}
                 <div
                     className="wheel__disc"
-                    style={{
-                        background: wheelBackground,
-                        transform: `rotate(${rotation}deg)`,
-                        transition: spinning ? `transform ${SPIN_MS}ms cubic-bezier(0.16, 1, 0.3, 1)` : 'none',
-                    }}
+                    style={{ background: wheelBackground, ...spinStyle }}
                 />
 
+                {/* Rim + studs — SPIN WITH the wheel (they're the wheel's body, not a
+                    static frame; a still rim would look like a picture frame). */}
+                <div className="wheel__rim" aria-hidden style={spinStyle}>
+                    <WheelRim segments={WHEEL_PRIZES.length} />
+                </div>
+
                 {/* Label layer — spins WITH the disc so labels track their wedges */}
-                <div
-                    className="wheel__labels"
-                    aria-hidden
-                    style={{
-                        transform: `rotate(${rotation}deg)`,
-                        transition: spinning ? `transform ${SPIN_MS}ms cubic-bezier(0.16, 1, 0.3, 1)` : 'none',
-                    }}
-                >
+                <div className="wheel__labels" aria-hidden style={spinStyle}>
                     {WHEEL_PRIZES.map((prize, i) => {
                         // Wedge i's mid-angle, 0deg = top, clockwise. The label strip is
                         // anchored at the hub and rotated by (i*SLICE - 90) to lie along
@@ -120,7 +127,12 @@ export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelPr
                             >
                                 <span
                                     className="wheel__label"
-                                    style={{ color: i % 2 === 0 ? 'var(--ink)' : '#ffffff' }}
+                                    style={{
+                                        // Contrast that re-themes with --primary: dark ink
+                                        // on the light (metal) wedges, bright gold-white on
+                                        // the dark (stone) wedges.
+                                        color: i % 2 === 0 ? 'var(--wheel-wedge-dark)' : 'var(--wheel-gold-bright)',
+                                    }}
                                 >
                                     {prize.short}
                                 </span>
@@ -129,7 +141,15 @@ export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelPr
                     })}
                 </div>
 
-                <div className="wheel__hub" aria-hidden />
+                {/* Static domed sheen over the spinning wedges (does not rotate) */}
+                <div className="wheel__sheen" aria-hidden />
+
+                {/* Static furniture: Eye-of-Horus hub + the fixed ankh pointer. Does
+                    NOT spin — the wheel turns beneath it and a wedge lands at the
+                    pointer. */}
+                <div className="wheel__decor-layer" aria-hidden>
+                    <WheelHub />
+                </div>
             </div>
             </div>
 
