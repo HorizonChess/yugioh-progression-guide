@@ -55,12 +55,16 @@ export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelPr
         const index = Math.floor(Math.random() * WHEEL_PRIZES.length);
         const prize = WHEEL_PRIZES[index];
 
-        // Land the chosen slice under the LEFT pointer (9 o'clock). In the top-
-        // clockwise frame the left is 270deg, so rotate wedge i's center (at
-        // i*SLICE) to 270. A left-side label is horizontal → the winning prize is
-        // upright and readable at rest. Extra whole turns give the spin.
+        // Land the chosen wedge under the LEFT pointer (9 o'clock). In the top-
+        // clockwise frame the left is 270deg, so rotating wedge i's CENTER (at
+        // i*SLICE) to 270 would park the pointer dead-center. Instead we add a
+        // random JITTER within the wedge so it stops NATURALLY — off-centre, some
+        // spins near a boundary — which creates real "did it land on it?" tension.
+        // Bound the jitter to ±38% of the slice so the pointer always stays clearly
+        // INSIDE the winning wedge (never on a divider), keeping the result honest.
+        const jitter = (Math.random() - 0.5) * 2 * (SLICE * 0.38);
         const turns = 5;
-        const target = turns * 360 + (270 - index * SLICE);
+        const target = turns * 360 + (270 - index * SLICE) + jitter;
         setRotation(prev => prev + target);
 
         window.setTimeout(() => {
@@ -73,9 +77,16 @@ export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelPr
     // Shared spin transform — applied to EVERY layer that turns with the wheel
     // (wedges, rim/studs, labels) so they rotate as one body. Only the hub + the
     // fixed pointer stay still.
+    //
+    // `willChange:transform` + `translateZ(0)` pin these layers onto their OWN
+    // compositor layer PERMANENTLY (during AND after the spin). Without it the
+    // browser rasterizes cheaply while animating, then re-rasterizes crisply the
+    // instant the transition ends — a visible "sharpen"/pop that breaks the
+    // spinning-wheel illusion. A stable GPU layer renders identically throughout.
     const spinStyle: React.CSSProperties = {
-        transform: `rotate(${rotation}deg)`,
+        transform: `translateZ(0) rotate(${rotation}deg)`,
         transition: spinning ? `transform ${SPIN_MS}ms cubic-bezier(0.16, 1, 0.3, 1)` : 'none',
+        willChange: 'transform',
     };
 
     return (

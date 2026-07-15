@@ -628,9 +628,15 @@ html::-webkit-scrollbar-corner,
  * The gold RIM, studs, hub and pointer are now a STATIC SVG overlay
  * (.wheel__decor-layer / WheelDecor), so the disc itself is just the wedges +
  * their dividing grooves + a soft inset for depth. Labels live in a separate
- * static layer above it, so the spin stays clean and text never tumbles. */
+ * static layer above it, so the spin stays clean and text never tumbles.
+ *
+ * INSET a hair inside the rim's inner groove (rim inner edge ≈ 45.4% of radius,
+ * i.e. ~4.6cqmin of slack per side) so the wedge EDGES and their dark dividers
+ * terminate UNDER the gold band instead of protruding past it as spokes. The rim
+ * then cleanly caps every wedge line at the wheel's edge. */
 .wheel__disc {
-  @apply absolute inset-0 rounded-full;
+  @apply absolute rounded-full;
+  inset: 4.6cqmin;
   /* Thin dark grooves between wedges via a second conic layer of hairlines,
      drawn UNDER the wedge gradient's hard stops for a carved-segment look. */
   box-shadow: inset 0 0 6cqmin rgba(0, 0, 0, 0.55), inset 0 0 0 1cqmin rgba(0, 0, 0, 0.35);
@@ -697,10 +703,11 @@ html::-webkit-scrollbar-corner,
 .wheel__label {
   @apply w-full text-left font-black uppercase whitespace-nowrap leading-none;
   /* Symmetric inline padding keeps text off BOTH the eye-hub (inner) and the
-     studded rim (outer). Kept modest so the LONGEST short-labels ("SNATCH STEAL",
-     "3 TOURN. PACKS") still fit the strip without clipping. The 180deg turn keeps
-     position because the padding is symmetric. */
-  padding-inline: 9cqmin;
+     studded rim (outer). Balanced at 7.5cqmin (9 clipped "3 TOURN. PACKS"; 6 hugged
+     the rim too tightly) — the smaller hub + thinner rim give the long short-labels
+     ("SNATCH STEAL", "3 TOURN. PACKS") room without crowding the bezel. Symmetric so
+     the 180deg turn keeps position. */
+  padding-inline: 7.5cqmin;
   font-size: 3.6cqmin;
   letter-spacing: -0.02em;
   font-family: var(--font-techno);

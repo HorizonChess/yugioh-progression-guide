@@ -44,7 +44,7 @@ function GoldDefs({ idPrefix }: { idPrefix: string }) {
 export function WheelRim({ segments }: { segments: number }) {
     const cx = 50;
     const cy = 50;
-    const studRadius = 44.5;
+    const studRadius = 45.6;
     const slice = 360 / segments;
     const studs = Array.from({ length: segments }, (_, i) => {
         // Boundary i sits at the start of wedge i (wedges drawn from -slice/2,
@@ -57,15 +57,21 @@ export function WheelRim({ segments }: { segments: number }) {
         <svg className="wheel__rim-svg" viewBox="0 0 100 100" aria-hidden xmlns="http://www.w3.org/2000/svg">
             <GoldDefs idPrefix="rim" />
 
-            {/* Engraved gold RIM: beveled band — dark outer edge, gold body, dark
-                inner groove — plus a top-left highlight arc for carved-metal sheen. */}
-            <circle cx={cx} cy={cy} r={48.5} fill="none" stroke="var(--wheel-gold-shadow)" strokeWidth={3} />
-            <circle cx={cx} cy={cy} r={46.5} fill="none" stroke="url(#rim-gold)" strokeWidth={5} />
-            <circle cx={cx} cy={cy} r={44} fill="none" stroke="var(--wheel-gold-deep)" strokeWidth={1.4} />
+            {/* Engraved gold RIM: a THINNER beveled band — dark outer edge, gold
+                body, dark inner groove — hugging the wheel's edge so it eats less
+                of the face (the wedges/labels get more room). A single top-left
+                highlight arc gives the carved-metal sheen. */}
+            <circle cx={cx} cy={cy} r={48.8} fill="none" stroke="var(--wheel-gold-shadow)" strokeWidth={2} />
+            <circle cx={cx} cy={cy} r={47.2} fill="none" stroke="url(#rim-gold)" strokeWidth={3.4} />
+            <circle cx={cx} cy={cy} r={45.4} fill="none" stroke="var(--wheel-gold-deep)" strokeWidth={1.1} />
+            {/* ONE highlight arc only. The dash (34) must be shorter than the
+                circumference (2π·47.2 ≈ 297) AND the gap (400) longer than it, so
+                the pattern can't repeat — otherwise a second bright arc appears on
+                the opposite bezel (the old 34/120 pattern showed two stripes). */}
             <circle
-                cx={cx} cy={cy} r={46.5} fill="none"
-                stroke="var(--wheel-gold-bright)" strokeWidth={1} strokeOpacity={0.7}
-                strokeDasharray="34 120" strokeDashoffset={80} strokeLinecap="round"
+                cx={cx} cy={cy} r={47.2} fill="none"
+                stroke="var(--wheel-gold-bright)" strokeWidth={0.9} strokeOpacity={0.7}
+                strokeDasharray="34 400" strokeDashoffset={80} strokeLinecap="round"
             />
 
             {/* Boundary STUD BOSSES — a rivet at each wedge divide */}
@@ -103,10 +109,10 @@ export function WheelHub() {
                 (cx,cy): its 0..100 local artwork is translated by -50,-50 AFTER
                 scaling, so the drawing's own centre lands exactly on the hub centre
                 (no left lean). */}
-            <circle cx={cx} cy={cy} r={9.5} fill="url(#hub-boss)" />
-            <circle cx={cx} cy={cy} r={9.5} fill="none" stroke="url(#hub-gold)" strokeWidth={1.6} />
-            <circle cx={cx} cy={cy} r={8} fill="none" stroke="#000" strokeOpacity={0.4} strokeWidth={0.5} />
-            <g transform={`translate(${cx} ${cy}) scale(0.15) translate(-50 -50)`}>
+            <circle cx={cx} cy={cy} r={7.6} fill="url(#hub-boss)" />
+            <circle cx={cx} cy={cy} r={7.6} fill="none" stroke="url(#hub-gold)" strokeWidth={1.3} />
+            <circle cx={cx} cy={cy} r={6.4} fill="none" stroke="#000" strokeOpacity={0.4} strokeWidth={0.5} />
+            <g transform={`translate(${cx} ${cy}) scale(0.12) translate(-50 -50)`}>
                 <g fill="none" stroke="var(--wheel-gold-bright)" strokeWidth={5.5} strokeLinecap="round" strokeLinejoin="round">
                     {/* Eye artwork centered in its own 0..100 box (centroid ≈ 50,50):
                         upper lid (filled), pupil, teardrop, curl, brow. */}
