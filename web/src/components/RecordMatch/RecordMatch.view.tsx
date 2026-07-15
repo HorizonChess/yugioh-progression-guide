@@ -73,10 +73,10 @@ export default function RecordMatch({
                 {/* Opponent Label & Name */}
                 <div style={getStyle('opponentName')} className="flex flex-col justify-center px-4">
                     <div className="flex flex-col">
-                        <span className="text-[#8b7355] font-bold uppercase tracking-wider text-sm mb-1 opacity-90">
+                        <span className="text-wood-border font-bold uppercase tracking-wider text-sm mb-1 opacity-90">
                             Opponent:
                         </span>
-                        <span className="text-[#d4af37] text-3xl font-black uppercase tracking-tighter drop-shadow-md truncate">
+                        <span className="text-primary text-3xl font-black uppercase tracking-tighter drop-shadow-md truncate">
                             {opponentName}
                         </span>
                     </div>
@@ -94,12 +94,12 @@ export default function RecordMatch({
                 {/* Stats Footer - Win Rate & Streak */}
                 <div style={getStyle('statsBox')} className="flex items-center justify-around">
                     <div className="text-center w-1/3 pt-1">
-                        <div className="text-xs text-[#8b7355] font-bold uppercase tracking-wider mb-0.5 opacity-80">Win Rate</div>
-                        <div className="text-[#e6dcc3] text-3xl font-bold tracking-widest drop-shadow-md leading-none">{winRate}</div>
+                        <div className="text-xs text-wood-border font-bold uppercase tracking-wider mb-0.5 opacity-80">Win Rate</div>
+                        <div className="text-parchment text-3xl font-bold tracking-widest drop-shadow-md leading-none">{winRate}</div>
                     </div>
                     <div className="text-center w-1/3 pt-1">
-                        <div className="text-xs text-[#8b7355] font-bold uppercase tracking-wider mb-0.5 opacity-80">Streak</div>
-                        <div className="text-[#e6dcc3] text-3xl font-bold tracking-widest drop-shadow-md leading-none">{streak}</div>
+                        <div className="text-xs text-wood-border font-bold uppercase tracking-wider mb-0.5 opacity-80">Streak</div>
+                        <div className="text-parchment text-3xl font-bold tracking-widest drop-shadow-md leading-none">{streak}</div>
                     </div>
                 </div>
 
@@ -131,7 +131,7 @@ export default function RecordMatch({
                     onMouseLeave={() => setHoveredSection(null)}
                     onClick={() => onRecord('player')}
                 >
-                    <div className={`text-[#e6dcc3] font-black text-2xl tracking-[0.2em] uppercase transition-all duration-300 transform group-hover:scale-105 drop-shadow-lg ${hoveredSection === 'victory' ? 'text-yellow-200' : ''}`}>
+                    <div className={`text-parchment font-black text-2xl tracking-[0.2em] uppercase transition-all duration-300 transform group-hover:scale-105 drop-shadow-lg ${hoveredSection === 'victory' ? 'text-yellow-200' : ''}`}>
                         VICTORY
                     </div>
                 </div>
@@ -144,7 +144,7 @@ export default function RecordMatch({
                     onMouseLeave={() => setHoveredSection(null)}
                     onClick={() => onRecord('opponent')}
                 >
-                    <div className={`text-[#e6dcc3] font-black text-2xl tracking-[0.2em] uppercase transition-all duration-300 transform group-hover:scale-105 drop-shadow-lg ${hoveredSection === 'defeat' ? 'text-red-200' : ''}`}>
+                    <div className={`text-parchment font-black text-2xl tracking-[0.2em] uppercase transition-all duration-300 transform group-hover:scale-105 drop-shadow-lg ${hoveredSection === 'defeat' ? 'text-red-200' : ''}`}>
                         DEFEAT
                     </div>
                 </div>
@@ -155,7 +155,7 @@ export default function RecordMatch({
                     className="flex items-center px-4 cursor-pointer"
                     onClick={() => onCancel()}
                 >
-                    <div className="text-[#8b7355] hover:text-[#d4af37] font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-2">
+                    <div className="text-wood-border hover:text-primary font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-2">
                         <span>←</span> Back to Dashboard
                     </div>
                 </div>
