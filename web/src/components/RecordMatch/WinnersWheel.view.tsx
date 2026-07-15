@@ -15,12 +15,18 @@ const SPIN_MS = 3600;              // wheel-settle duration
 const SLICE = 360 / WHEEL_PRIZES.length;
 
 /**
- * WinnersWheel — the "you won, spin for a prize" modal (win path only).
+ * WinnersWheel — the "you won, spin for a prize" CONTENT (win path only).
  *
- * Presentational: an actual 6-segment wheel (conic-gradient slices + a fixed
- * pointer) that spins to a random prize, reveals it, then hands claiming back to
- * the parent via onClaim. Built from tokens + FrameButton so it matches the app
- * and re-themes with --primary. Prize list is the shared WHEEL_PRIZES.
+ * The WHEEL CONTENT of the win moment: heading → spinning wheel → spin/claim.
+ * It is rendered INSIDE the shared, always-mounted `.win-panel` (see
+ * RecordMatchPage.controller) — it curtains IN where the record board vortexed
+ * OUT, without the panel box moving. So this is just the inner stack; the panel,
+ * centering, and glass surface live in the controller.
+ *
+ * Presentational: an actual segmented wheel that spins to a random prize, reveals
+ * it, then hands claiming back to the parent via onClaim. Built from tokens +
+ * FrameButton so it matches the app and re-themes with --primary. Prize list is
+ * the shared WHEEL_PRIZES.
  */
 export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelProps) {
     const [spinning, setSpinning] = useState(false);
@@ -61,12 +67,15 @@ export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelPr
     };
 
     return (
-        <div className="wheel-modal">
+        <div className="wheel-content">
             <div className="text-center">
                 <span className="record-eyebrow">Victory Reward</span>
-                <h2 className="text-xl md:text-2xl font-black text-white leading-none mt-0.5">Winner&apos;s Wheel</h2>
+                <h2 className="text-2xl md:text-3xl font-black text-white leading-none mt-1">Winner&apos;s Wheel</h2>
             </div>
 
+            {/* The wheel row — a flex cell that gives the (height-driven, square)
+                wheel a definite box to size against so it stays perfectly circular. */}
+            <div className="wheel-row">
             {/* The wheel — a real spinning wheel under a FIXED LEFT pointer. Wedges
                 and labels spin together by `rotation`, so the won prize lands at the
                 pointer (9 o'clock). Labels lie ALONG their wedge like a row, so the
@@ -122,14 +131,21 @@ export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelPr
 
                 <div className="wheel__hub" aria-hidden />
             </div>
+            </div>
 
-            {/* Spin, or reveal + claim */}
-            {result ? (
-                <div className="text-center animate-in zoom-in duration-300 flex flex-col items-center gap-3">
-                    <div>
-                        <div className="text-[0.65rem] uppercase tracking-[0.3em] text-primary/80 mb-0.5">You won</div>
-                        <div className="text-lg md:text-xl font-black text-primary leading-tight">{result.label}</div>
-                    </div>
+            {/* Footer — a CONSTANT-height slot so the 1fr wheel row never resizes
+                when the result appears (otherwise the wheel visibly jumps smaller
+                the instant the spin ends). The "You won / prize" line is ALWAYS in
+                the layout; before the reveal it's just visibility:hidden (space
+                reserved). The button below keeps the same box and only swaps its
+                label/handler Spin → Claim. */}
+            <div className="wheel-footer">
+                <div className={`wheel-prize ${result ? 'is-revealed' : ''}`} aria-hidden={!result}>
+                    <div className="wheel-prize__kicker">You won</div>
+                    <div className="wheel-prize__name">{result ? result.label : ' '}</div>
+                </div>
+
+                {result ? (
                     <FrameButton
                         onClick={() => onClaim(result)}
                         className="w-48 h-12"
@@ -138,17 +154,17 @@ export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelPr
                     >
                         Claim Prize
                     </FrameButton>
-                </div>
-            ) : (
-                <FrameButton
-                    onClick={handleSpin}
-                    className="w-48 h-12"
-                    textClassName="tracking-[0.15em]"
-                    aria-label="Spin the wheel"
-                >
-                    {spinning ? 'Spinning…' : 'Spin the Wheel'}
-                </FrameButton>
-            )}
+                ) : (
+                    <FrameButton
+                        onClick={handleSpin}
+                        className="w-48 h-12"
+                        textClassName="tracking-[0.15em]"
+                        aria-label="Spin the wheel"
+                    >
+                        {spinning ? 'Spinning…' : 'Spin the Wheel'}
+                    </FrameButton>
+                )}
+            </div>
         </div>
     );
 }

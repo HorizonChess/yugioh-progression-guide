@@ -463,14 +463,45 @@ html::-webkit-scrollbar-corner,
   filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.5));
 }
 
-/* --- The record-match module (the board itself) ---------------------------
+/* --- The win moment: ONE persistent panel ---------------------------------
+ * The record board and the Winner's Wheel are two ACTS on ONE stage. `.win-panel`
+ * is the always-mounted glass shell (it never unmounts across the swap); its
+ * `__stage` body cell holds both acts absolutely-stacked so only the CONTENTS
+ * cross-fade/vortex while the box stays put (see RecordMatchPage.controller).
+ * Sized to hold the taller of the two acts comfortably — no jump between states.
+ */
+.win-panel {
+  /* Bounded by the parent flex cell (viewport − nav − padding); fills up to a
+     comfortable cap so both acts fit without the box resizing. min-h keeps it
+     from collapsing to the shorter act. */
+  @apply glass-panel relative w-full max-w-md flex flex-col;
+  height: min(100%, 40rem);
+  min-height: min(100%, 32rem);
+  padding: clamp(1.25rem, 3.5vh, 2rem);
+}
+
+/* The body cell both acts share. Position context for the absolutely-stacked
+   acts; each act fills it, so swapping content never nudges the panel. */
+.win-panel__stage {
+  @apply relative flex-1 min-h-0;
+}
+
+/* One act (board OR wheel). Absolutely fills the stage; its child stack fills
+   the width (items-stretch, NOT items-center — centering here would collapse a
+   child to content width) and centers vertically. Both acts occupy the exact
+   same box and cross-fade in place. */
+.win-panel__act {
+  @apply absolute inset-0 flex flex-col items-stretch justify-center;
+}
+
+/* --- The record-match board content (act 1) -------------------------------
  * A centered stack: heading → stone scoreboard → VICTORY/DEFEAT → back link.
  * Rows are content-sized; ONE relative gap drives all vertical spacing, so it
  * reflows at any width with no fixed-canvas scaling (avoid-magic-numbers-layout).
  */
 .record-board {
-  @apply w-full max-w-2xl flex flex-col items-center;
-  gap: clamp(1.5rem, 4vh, 2.75rem);
+  @apply w-full flex flex-col items-center;
+  gap: clamp(1.25rem, 3.5vh, 2.25rem);
 }
 
 /* Small gold kicker above the opponent heading */
@@ -542,32 +573,40 @@ html::-webkit-scrollbar-corner,
     transition-colors flex items-center gap-2;
 }
 
-/* --- Winner's Wheel modal (win path) --------------------------------------
- * The reward spinner shown in place of the record board after a win. A stacked
- * glass module: heading → spinning wheel → spin/claim. All gold accents come
- * from --primary so a token swap re-themes the whole thing.
+/* --- Winner's Wheel content (act 2) ---------------------------------------
+ * The reward spinner shown in place of the record board after a win — rendered
+ * inside the shared `.win-panel` (glass + size live there, NOT here). A stacked
+ * module: heading → spinning wheel → spin/claim. All gold accents come from
+ * --primary so a token swap re-themes the whole thing.
  */
-.wheel-modal {
-  /* A HEIGHT-BOUNDED grid: heading (auto) / wheel (1fr) / reveal (auto). The
-   * modal fills its cell (h-full, bounded by the parent flex cell = viewport −
-   * nav − padding) and never grows past it. Heading + reveal rows stay COMPACT
-   * (small type below) so they can't eat the height — the 1fr wheel row keeps
-   * most of it. */
-  @apply glass-panel w-full max-w-sm h-full grid justify-items-center px-6 py-6;
+.wheel-content {
+  /* A HEIGHT-BOUNDED grid that fills its act: heading (auto) / wheel (1fr) /
+   * reveal (auto). Heading + reveal rows stay COMPACT so they can't eat the
+   * height — the 1fr wheel row keeps most of it. */
+  @apply w-full h-full grid justify-items-center;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: clamp(0.75rem, 2.5vh, 1.5rem);
 }
 
-/* The wheel fills the modal WIDTH (so it stays big/dominant) but is CLAMPED by
- * its 1fr row's height so it can never overflow the modal:
- *  - width: 100%        → width-driven size (the normal, dominant case)
- *  - aspect-ratio: 1    → height follows width to stay circular
- *  - max-height: 100%   → clamps to the row height on short screens (shrinks the
- *                          whole circle, no clip). The SMALLER bound wins.
+/* The wheel ROW cell — a flex box that centers the (square) wheel. It fills the
+ * 1fr track, giving the wheel a DEFINITE height to size against. Needed because
+ * the wheel is a size container (see below), which contributes ZERO intrinsic
+ * width; sizing it from this cell's definite HEIGHT (not intrinsic width) is what
+ * keeps it perfectly circular instead of collapsing to an ellipse. */
+.wheel-row {
+  @apply w-full h-full min-h-0 flex items-center justify-center;
+}
+
+/* The wheel is a PERFECT square, HEIGHT-DRIVEN so size containment can't collapse
+ * it to an ellipse:
+ *  - height: 100%     → definite size from the .wheel-row cell (the 1fr track)
+ *  - aspect-ratio: 1  → width follows height → always circular
+ *  - max-width: 100%  → on a narrow panel, clamp to the cell width and let height
+ *                        follow via aspect-ratio (shrinks the whole circle, no clip)
  * It's a size container, so the entire wheel (rim, labels, font, hub, pointer)
  * scales in cqmin as ONE unit — shrink it and the text scales with it. */
 .wheel {
-  @apply relative w-full max-h-full self-center;
+  @apply relative h-full max-w-full;
   aspect-ratio: 1;
   container-type: size;
 }
@@ -638,6 +677,38 @@ html::-webkit-scrollbar-corner,
   background: radial-gradient(circle at 50% 40%, var(--gold-stone-light), var(--gold-stone-dark));
   border: 1.2cqmin solid var(--gold-dark);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+/* Footer — the CONSTANT-height bottom slot of .wheel-content. Its height never
+ * changes between spin and reveal, so the 1fr wheel row above never resizes (the
+ * wheel doesn't jump smaller when the prize appears). The prize line is always in
+ * the layout; only its visibility toggles. */
+.wheel-footer {
+  @apply w-full flex flex-col items-center gap-2;
+}
+
+/* Prize reveal line — ALWAYS occupies its space (height reserved); before the
+ * result lands it's just invisible, so appearing = a visibility/opacity toggle,
+ * not a layout insertion. */
+.wheel-prize {
+  @apply text-center leading-tight opacity-0 transition-opacity duration-300;
+  visibility: hidden;
+}
+
+.wheel-prize.is-revealed {
+  @apply opacity-100;
+  visibility: visible;
+}
+
+.wheel-prize__kicker {
+  @apply text-[0.65rem] uppercase tracking-[0.3em] text-primary/80 mb-0.5;
+  font-family: var(--font-techno);
+}
+
+.wheel-prize__name {
+  /* min-height reserves the tallest single-line name so the slot never grows */
+  @apply text-lg md:text-xl font-black text-primary;
+  min-height: 1.5em;
 }
 
 /* ============================================================

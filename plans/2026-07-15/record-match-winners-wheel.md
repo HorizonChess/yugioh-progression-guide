@@ -96,3 +96,26 @@ Orchestrate in `RecordMatchPage.controller.tsx`:
 5. **Token sanity:** temporarily change `--primary` — the wheel + VICTORY frame update app-wide (proves no re-hardcoded hex). Revert.
 6. **Regression:** `/rewards` still works standalone (it shares `WHEEL_PRIZES` now); win rate + streak math on the record screen still correct against `matchHistory`.
 7. Lint only the touched files stay clean; don't chase the 70 pre-existing.
+
+---
+
+## Post-commit touch-ups (agreed 2026-07-15, after the barebones commit `4373c09`)
+
+The feature shipped functional but visually barebones (esp. the wheel). Before further polish, restructure the win moment as a **true in-place modal** — this is the next work item.
+
+### 1. One persistent modal panel (not a phase re-render)
+- **Current state (to change):** `RecordMatchPage.controller.tsx` swaps between two *separate* top-level elements via `<AnimatePresence mode="wait">` — the `<RecordMatch>` board (phase `"board"`) and the `<WinnersWheel>` (phase `"wheel"`). That's a full unmount/remount of one surface for the other, not a transition *inside* a container.
+- **Wanted:** a **single modal panel** that stays mounted for the whole record→win moment. The **wheel's glass container (`.wheel-modal`) is the good candidate** to promote into that shared panel — size it so BOTH states fit comfortably inside the same box:
+  - **Before recording:** the record-match content (opponent heading, Win Rate/Streak scoreboard, VICTORY/DEFEAT buttons, back link) sits inside the panel.
+  - **After a win:** the Winner's Wheel (heading, wheel, spin/claim) sits inside the *same* panel.
+  - The panel should be sized to hold the larger of the two comfortably (no jump/resize between states — pick dimensions that fit both, or animate the box size smoothly if needed).
+
+### 2. Vortex = an in/out transition WITHIN the box (not a re-render)
+- The vortex is a **content swap inside the persistent panel**: the record-match content animates *out* (vortex/collapse inward) and the wheel content animates *in* (curtains), while the **panel box itself stays put** (it does not unmount, re-mount, or route away).
+- Implementation direction: keep the panel as the always-mounted shell; put the two *inner* content blocks under `AnimatePresence` so only the **contents** cross-fade/vortex, not the container. The box is the stable stage; the acts change on it.
+- Loss path is unaffected (still defeat flourish → `/rewards` pity); only the win moment uses the in-place modal.
+
+### 3. Notes / open questions for the polish pass
+- The wheel visuals remain a rough prototype — labels/rim/spin feel are placeholder-grade; revisit after the modal restructure.
+- Keep the correct-by-construction sizing (grid rows + `cqmin`, no magic px) and the token/`@apply` conventions when reshaping the panel.
+- Recheck reduced-motion + mid-spin refresh after the restructure.
