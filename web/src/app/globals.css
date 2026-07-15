@@ -634,12 +634,17 @@ html::-webkit-scrollbar-corner,
 }
 
 /* ============================================================
- * SHELL — the persistent TopBar chrome.
+ * SHELL — the persistent AppNav chrome.
  * ============================================================ */
 
 /* A top-bar nav link (CAMPAIGN / COLLECTION / …); brightens on hover */
 .topbar-nav-link {
   @apply hover:text-white transition-colors;
+}
+
+/* The link for the route we're currently on — pinned bright (gold), not grey. */
+.topbar-nav-link--active {
+  @apply text-primary;
 }
 
 /* ============================================================

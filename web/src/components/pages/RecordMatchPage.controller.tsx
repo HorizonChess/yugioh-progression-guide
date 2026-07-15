@@ -5,7 +5,6 @@ import { fetchAllSets, CardSet } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import RecordMatch from "@/components/RecordMatch/RecordMatch.view";
-import TopBar from "@/components/shell/TopBar.view";
 import GuideSprite from "@/components/shell/GuideSprite.view";
 
 /**
@@ -66,7 +65,7 @@ export default function RecordMatchPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="h-full flex items-center justify-center">
                 <div className="text-xl animate-pulse">Loading...</div>
             </div>
         );
@@ -88,11 +87,7 @@ export default function RecordMatchPage() {
     const currentSet = sets[currentSetIndex];
 
     return (
-        <div className="min-h-screen flex flex-col">
-            <div className="sticky top-0 z-[40]">
-                <TopBar showBack onBack={() => router.push("/map")} title="Record Match" />
-            </div>
-
+        <div className="h-full flex flex-col">
             {currentSet && (
                 <RecordMatch
                     onRecord={handleRecordMatch}

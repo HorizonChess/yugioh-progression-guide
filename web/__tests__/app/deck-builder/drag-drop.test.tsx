@@ -16,13 +16,8 @@ jest.mock('@/lib/api', () => ({
     fetchCardsByIds: jest.fn().mockResolvedValue([]),
 }));
 
-// Mock TopBar and GuideSprite components
-jest.mock('@/components/shell/TopBar.view', () => {
-    return function MockTopBar() {
-        return <div data-testid="top-bar">TopBar</div>;
-    };
-});
-
+// Mock GuideSprite. (The nav — AppNav — is rendered by the root layout, not by
+// the DeckBuilder page under test, so there's nothing to mock for it here.)
 jest.mock('@/components/shell/GuideSprite.view', () => {
     return function MockGuideSprite() {
         return <div data-testid="guide-sprite">GuideSprite</div>;

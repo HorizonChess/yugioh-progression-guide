@@ -15,7 +15,6 @@ import StoreView from "@/components/PackOpener/StoreView.view";
 import PackOpeningView from "@/components/PackOpener/PackOpeningView.view";
 import { processCardsForRarityGrid } from "@/lib/card-utils";
 import { useCardTooltip } from "@/hooks/useCardTooltip";
-import TopBar from "@/components/shell/TopBar.view";
 
 /**
  * The PACKS screen (route: /packs). Controller for four states:
@@ -24,8 +23,9 @@ import TopBar from "@/components/shell/TopBar.view";
  *  - summary    : all opened cards by rarity — scrolls normally (can be 100+ cards)
  *  - details    : the whole set's card list — scrolls normally
  *
- * The store + opening states render inside a fixed h-screen shell (below the
- * TopBar) so they never scroll; summary + details use a scrollable shell.
+ * The store + opening states render inside a fixed shell (filling the content
+ * row below the persistent nav) so they never scroll; summary + details use a
+ * scrollable shell.
  */
 function PacksPageContent() {
     const { currentSetIndex, addToCollection } = useProgression();
@@ -138,7 +138,7 @@ function PacksPageContent() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="h-full flex items-center justify-center">
                 <div className="text-xl animate-pulse">Loading Set Data...</div>
             </div>
         );
@@ -146,7 +146,7 @@ function PacksPageContent() {
 
     if (!currentSet) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center">
+            <div className="h-full flex flex-col items-center justify-center">
                 <h1 className="text-2xl font-bold mb-4">No Active Set</h1>
                 <button onClick={() => router.push("/")} className="text-primary hover:underline">
                     Return Home
@@ -261,10 +261,11 @@ function PacksPageContent() {
 }
 
 /**
- * Page shell: TopBar pinned at top, content below.
- *  - fixed   → content area is exactly the remaining viewport height and clips
- *              overflow (store + opening states never scroll)
- *  - default → content area grows and the page scrolls (summary + details)
+ * Page shell: fills the content row below the persistent nav (which is hoisted
+ * into the root layout — this page renders no bar of its own).
+ *  - fixed   → content area is exactly the row height and clips overflow (store
+ *              + opening states never scroll)
+ *  - default → content area grows and scrolls inside the row (summary + details)
  */
 function PacksShell({
     children,
@@ -275,17 +276,14 @@ function PacksShell({
     fixed?: boolean;
     withSprite?: boolean;
 }) {
-    const router = useRouter();
-    // Shell is ALWAYS a grid-rows-[auto_1fr] with a bare TopBar as the first
-    // (auto) row — same idiom as every other page, so the nav sits identically.
-    // `fixed` only changes the CONTENT row: a viewport-locked centered board
-    // for pack-opening, vs a scrollable padded page for summary/details.
+    // Fills the layout's content row. `fixed` chooses the content behavior: a
+    // row-locked centered board for pack-opening, vs a scrollable padded page
+    // for summary/details.
     return (
-        <div className="h-screen overflow-hidden grid grid-rows-[auto_1fr]">
-            <TopBar showBack onBack={() => router.push("/map")} />
+        <div className="h-full overflow-hidden grid grid-rows-[1fr]">
             {withSprite && <GuideSprite />}
             {fixed ? (
-                // Pack-opening board: viewport-locked, centered, never scrolls.
+                // Pack-opening board: row-locked, centered, never scrolls.
                 <div className="min-h-0 min-w-0 flex items-center justify-center p-4">{children}</div>
             ) : (
                 // Summary / details: a potentially long card list — scroll INSIDE
@@ -300,7 +298,7 @@ export default function Packs() {
     return (
         <Suspense
             fallback={
-                <div className="min-h-screen flex items-center justify-center">
+                <div className="h-full flex items-center justify-center">
                     <div className="text-xl animate-pulse">Loading...</div>
                 </div>
             }
