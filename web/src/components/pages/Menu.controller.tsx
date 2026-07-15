@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import SaveSlotList from "@/components/shell/SaveSlotList.view";
-import TopBar from "@/components/shell/TopBar.view";
 import MenuItem, { MenuItemData } from "@/components/Menu/MenuItem.view";
 
 /**
@@ -22,11 +21,10 @@ export default function Menu() {
     ];
 
     return (
-        <main className="min-h-screen bg-black text-white grid grid-rows-[auto_1fr] relative overflow-hidden font-mono">
+        <main className="min-h-screen bg-black text-white grid grid-rows-[1fr_auto] relative overflow-hidden font-mono">
             <div className="menu-grid-bg" />
 
-            <TopBar />
-
+            {/* No nav here — the menu is a front-end screen, like onboarding. */}
             <div className="relative z-10 flex items-center justify-center p-8">
                 <div className="flex gap-12 w-full max-w-6xl items-center">
                     {/* Left: menu, or the save-slot list once Campaign is chosen */}

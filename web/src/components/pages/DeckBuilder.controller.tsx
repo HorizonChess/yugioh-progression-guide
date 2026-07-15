@@ -1,7 +1,6 @@
 "use client";
 
 import { useProgression } from "@/context/ProgressionContext";
-import TopBar from "@/components/shell/TopBar.view";
 import GuideSprite from "@/components/shell/GuideSprite.view";
 import ScaleWrapper from "@/components/DeckBuilder/ScaleWrapper.view";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -413,7 +412,8 @@ export default function DeckBuilder() {
         <>
         <ScaleWrapper backgroundColor="#0f172a">
             <div className="flex flex-col h-full w-full bg-slate-900 text-slate-100 overflow-hidden">
-                    <TopBar />
+            {/* The nav is hoisted to the root layout above ScaleWrapper, so it's
+                no longer scaled with the board. */}
             <div className="flex flex-1 px-1 pt-1 pb-1 gap-1 overflow-hidden relative min-h-0">
 
                 {/* Left Column: Info + Controls */}

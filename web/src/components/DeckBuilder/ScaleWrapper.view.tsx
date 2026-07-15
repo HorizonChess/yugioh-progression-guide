@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 
 // Design width - the reference width for scaling (1080p monitor)
 const DESIGN_WIDTH = 1920;
@@ -14,60 +14,68 @@ interface ScaleWrapperProps {
 /**
  * ScaleWrapper - Adaptive scaling for fixed-width layouts
  *
- * Scales content based on viewport width, with height adapting dynamically.
- * This ensures layouts fill the viewport exactly on any screen size.
+ * Scales a fixed 1920-wide canvas to fill its CONTAINER (not the viewport), with
+ * height adapting dynamically. It's `absolute inset-0`, so it fills whatever
+ * `relative` box it's placed in — e.g. the layout's content row BELOW the
+ * persistent nav — instead of covering the whole screen. That keeps the nav
+ * unscaled and above the board.
  *
  * Usage:
  * ```tsx
- * <ScaleWrapper>
- *     <div className="h-full">  // Use h-full, not h-screen!
- *         Your page content
- *     </div>
- * </ScaleWrapper>
+ * <div className="relative"> // sized parent
+ *     <ScaleWrapper>
+ *         <div className="h-full">Your page content</div>
+ *     </ScaleWrapper>
+ * </div>
  * ```
  *
  * Important: Content inside should use `h-full` instead of `h-screen`
  * since it needs to reference the container, not the viewport.
  */
 export default function ScaleWrapper({ children, backgroundColor = '#0f172a' }: ScaleWrapperProps) {
+    const outerRef = useRef<HTMLDivElement>(null);
     const [zoom, setZoom] = useState(1);
     const [designHeight, setDesignHeight] = useState(911); // Initial value, will be recalculated
 
     useEffect(() => {
+        const el = outerRef.current;
+        if (!el) return;
+
         function updateZoom() {
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
+            const cw = el!.clientWidth;
+            const ch = el!.clientHeight;
+            if (cw === 0 || ch === 0) return;
 
-            // Scale based on width - ensures content always fills viewport horizontally
-            const scale = vw / DESIGN_WIDTH;
+            // Scale based on width - ensures content always fills the container horizontally
+            const scale = cw / DESIGN_WIDTH;
 
-            // Calculate height to fill viewport exactly
-            // designHeight * scale = vh, so designHeight = vh / scale
-            const adaptiveHeight = vh / scale;
+            // Calculate the design height that, once scaled, exactly fills the container
+            // designHeight * scale = ch, so designHeight = ch / scale
+            const adaptiveHeight = ch / scale;
 
             setZoom(scale);
             setDesignHeight(adaptiveHeight);
         }
 
         updateZoom();
-        window.addEventListener('resize', updateZoom);
-        return () => window.removeEventListener('resize', updateZoom);
+        // Observe the CONTAINER, not the window — the content row can change size
+        // independent of the viewport (e.g. the nav row above it).
+        const ro = new ResizeObserver(updateZoom);
+        ro.observe(el);
+        return () => ro.disconnect();
     }, []);
 
     return (
-        // Outer container - takes full viewport, clips overflow
-        // Using 100% instead of 100vw to avoid scrollbar width issues on Windows
+        // Outer container - fills its (relative) parent, clips overflow.
         <div
+            ref={outerRef}
             data-scale-wrapper="true"
             data-scale={zoom}
             style={{
-                width: '100%',
-                height: '100vh',
+                position: 'absolute',
+                inset: 0,
                 overflow: 'hidden',
                 backgroundColor,
-                position: 'fixed',
-                top: 0,
-                left: 0,
             }}
         >
             {/* Inner container - fixed width, adaptive height, scaled with transform */}

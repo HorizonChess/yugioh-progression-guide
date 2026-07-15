@@ -9,7 +9,6 @@ import CardTooltip from "@/components/card/CardTooltip.view";
 import CollectionFilters, { FilterState } from "@/components/Collection/CollectionFilters.view";
 import CollectionCard from "@/components/Collection/CollectionCard.view";
 import CollectionPagination from "@/components/Collection/CollectionPagination.view";
-import TopBar from "@/components/shell/TopBar.view";
 import { parseYDK, generateYDKFromCollection, downloadYDK } from "@/lib/ydk-parser";
 import ParchmentButton from "@/components/ui/ParchmentButton.view";
 import GuideSprite from "@/components/shell/GuideSprite.view";
@@ -253,19 +252,18 @@ export default function Collection() {
 
     if (loading && Object.keys(collection).length > 0) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="h-full flex items-center justify-center">
                 <div className="text-xl animate-pulse text-primary">Loading Collection...</div>
             </div>
         );
     }
 
     return (
-        <div className="h-screen overflow-hidden grid grid-rows-[auto_auto_1fr] relative">
+        <div className="h-full overflow-hidden grid grid-rows-[auto_1fr] relative">
             <GuideSprite />
 
-            <TopBar />
-
-            {/* Sub-header — title, counts, and the YDK import/export/delete actions */}
+            {/* Sub-header — title, counts, and the YDK import/export/delete actions.
+                The nav is hoisted to the root layout above this page. */}
             <div className="bg-wood-dark border-b-2 border-wood-border p-4 shadow-md relative z-40">
                 <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                     <div>

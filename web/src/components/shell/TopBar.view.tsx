@@ -22,7 +22,7 @@ export default function TopBar({ title, subtitle, showBack, onBack, children }: 
     }, []);
 
     return (
-        <div className="sticky top-0 z-[100] bg-gradient-to-b from-gray-900 to-black border-b-2 border-gray-700 p-3 flex justify-between items-center shadow-lg">
+        <div className="z-[100] bg-gradient-to-b from-gray-900 to-black border-b-2 border-gray-700 p-3 flex justify-between items-center shadow-lg">
             <div className="flex items-center gap-4">
                 {showBack && (
                     <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors">
