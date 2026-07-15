@@ -5,15 +5,7 @@ import { fetchAllSets, fetchCardsInSet, Card, CardSet, PulledCard } from "@/lib/
 import { generateBoosterPack } from "@/lib/pack-logic";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-const WHEEL_PRIZES = [
-    "Wildcard (Add any Common)",
-    "Wildcard (Add any Rare)",
-    "Bonus Pack (Current Set)",
-    "Bonus Pack (Old Set)",
-    "Ban 1 Opponent Card",
-    "Protect 1 Card"
-];
+import { WHEEL_PRIZES } from "@/lib/rewards";
 
 export default function RewardsPage() {
     const { pendingReward, claimReward, addToCollection, currentSetIndex } = useProgression();
@@ -50,7 +42,7 @@ export default function RewardsPage() {
         setSpinning(true);
         setTimeout(() => {
             const randomPrize = WHEEL_PRIZES[Math.floor(Math.random() * WHEEL_PRIZES.length)];
-            setPrize(randomPrize);
+            setPrize(randomPrize.label);
             setSpinning(false);
         }, 2000);
     };

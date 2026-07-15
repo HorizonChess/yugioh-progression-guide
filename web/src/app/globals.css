@@ -463,6 +463,183 @@ html::-webkit-scrollbar-corner,
   filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.5));
 }
 
+/* --- The record-match module (the board itself) ---------------------------
+ * A centered stack: heading → stone scoreboard → VICTORY/DEFEAT → back link.
+ * Rows are content-sized; ONE relative gap drives all vertical spacing, so it
+ * reflows at any width with no fixed-canvas scaling (avoid-magic-numbers-layout).
+ */
+.record-board {
+  @apply w-full max-w-2xl flex flex-col items-center;
+  gap: clamp(1.5rem, 4vh, 2.75rem);
+}
+
+/* Small gold kicker above the opponent heading */
+.record-eyebrow {
+  @apply block text-xs md:text-sm font-bold uppercase tracking-[0.3em] text-primary/80;
+  font-family: var(--font-techno);
+}
+
+/* Win Rate / Streak scoreboard — a stone panel split by a hairline divider */
+.record-board__scoreboard {
+  @apply w-full max-w-md flex items-stretch justify-around gap-4 px-8 py-5;
+}
+
+.record-board__divider {
+  @apply w-px self-stretch bg-wood-border/40;
+}
+
+.record-stat {
+  @apply flex-1 flex flex-col items-center gap-1;
+}
+
+.record-stat__label {
+  @apply text-[clamp(0.65rem,1.4vh,0.8rem)] font-bold uppercase tracking-[0.2em] text-primary/80;
+  font-family: var(--font-techno);
+}
+
+.record-stat__value {
+  @apply text-[clamp(1.75rem,5vh,2.75rem)] font-black text-white leading-none;
+  font-family: var(--font-techno);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* The two big commit buttons — even 2-up split, one relative gap */
+.record-board__actions {
+  @apply w-full grid grid-cols-2 gap-4 md:gap-8;
+}
+
+.record-action-btn {
+  @apply w-full h-[clamp(3.5rem,9vh,5rem)];
+}
+
+/* DEFEAT keeps the gold frame but tints the stone fill red via an overlay so it
+ * reads as the "loss" choice without a second button component. The overlay sits
+ * over FrameButton's inline gold fill (which a plain class can't override) and
+ * under the label (label is position:relative content, overlay is aria-hidden). */
+.record-action-btn--defeat {
+  position: relative;
+}
+
+.record-action-btn--defeat::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 42%,
+      rgba(211, 47, 47, 0.55) 0%,
+      rgba(211, 47, 47, 0.35) 60%,
+      rgba(139, 20, 20, 0.55) 100%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.record-action-btn--defeat > * {
+  position: relative;
+}
+
+/* Back-to-dashboard link — subtle gray→white, matches StoreView/Menu */
+.record-board__back {
+  @apply text-sm font-bold uppercase tracking-wider text-gray-400 hover:text-white
+    transition-colors flex items-center gap-2;
+}
+
+/* --- Winner's Wheel modal (win path) --------------------------------------
+ * The reward spinner shown in place of the record board after a win. A stacked
+ * glass module: heading → spinning wheel → spin/claim. All gold accents come
+ * from --primary so a token swap re-themes the whole thing.
+ */
+.wheel-modal {
+  /* A HEIGHT-BOUNDED grid: heading (auto) / wheel (1fr) / reveal (auto). The
+   * modal fills its cell (h-full, bounded by the parent flex cell = viewport −
+   * nav − padding) and never grows past it. Heading + reveal rows stay COMPACT
+   * (small type below) so they can't eat the height — the 1fr wheel row keeps
+   * most of it. */
+  @apply glass-panel w-full max-w-sm h-full grid justify-items-center px-6 py-6;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(0.75rem, 2.5vh, 1.5rem);
+}
+
+/* The wheel fills the modal WIDTH (so it stays big/dominant) but is CLAMPED by
+ * its 1fr row's height so it can never overflow the modal:
+ *  - width: 100%        → width-driven size (the normal, dominant case)
+ *  - aspect-ratio: 1    → height follows width to stay circular
+ *  - max-height: 100%   → clamps to the row height on short screens (shrinks the
+ *                          whole circle, no clip). The SMALLER bound wins.
+ * It's a size container, so the entire wheel (rim, labels, font, hub, pointer)
+ * scales in cqmin as ONE unit — shrink it and the text scales with it. */
+.wheel {
+  @apply relative w-full max-h-full self-center;
+  aspect-ratio: 1;
+  container-type: size;
+}
+
+/* Gold triangle pointer at 9 o'clock (LEFT), pointing inward/right into the rim.
+ * A left-side winner lands here and its label reads horizontally. cqmin-scaled. */
+.wheel__pointer {
+  @apply absolute top-1/2 -translate-y-1/2 z-30;
+  left: -1cqmin;
+  width: 0;
+  height: 0;
+  border-top: 4cqmin solid transparent;
+  border-bottom: 4cqmin solid transparent;
+  border-left: 6cqmin solid var(--primary);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+}
+
+/* Spinning disc — ONLY the colored conic-gradient wedges rotate (inline bg).
+ * Labels live in a separate static layer above it, so the spin looks clean and
+ * text never tumbles. */
+.wheel__disc {
+  @apply absolute inset-0 rounded-full;
+  border: 1.8cqmin solid var(--gold-dark);
+  box-shadow: 0 0 0 0.25rem rgba(0, 0, 0, 0.5), 0 8px 30px rgba(0, 0, 0, 0.6),
+    inset 0 0 30px rgba(0, 0, 0, 0.45);
+}
+
+/* Label layer — spins WITH the disc (rotation set inline), above it, below the
+ * pointer/hub. */
+.wheel__labels {
+  @apply absolute inset-0 z-10 pointer-events-none;
+}
+
+/* A label STRIP: a radius-length bar anchored at the hub, rotated (inline) to lie
+ * along its wedge. transform-origin:left center pins it at center; it reaches from
+ * the hub out to the rim, so the wedge's full length is the label's space. */
+.wheel__label-strip {
+  @apply absolute flex items-center;
+  left: 50%;
+  top: 50%;
+  width: 50%;            /* hub → rim = half the wheel */
+  height: 12cqmin;       /* the row's thickness (holds the text) */
+  margin-top: -6cqmin;   /* center the strip vertically on the radius */
+  transform-origin: left center;
+}
+
+/* The prize name, laid along the strip. Every label is painted so it reads
+ * upright when its wedge is at the LEFT pointer (where winners land): the strip
+ * points left there, so the text is rotated 180deg and left-aligned to hug the
+ * rim, reading outward. This orientation is fixed (never recomputed), so labels
+ * turn with the wheel like paint — no snap. Sized in cqmin to scale as one unit. */
+.wheel__label {
+  @apply w-full text-left font-black uppercase whitespace-nowrap leading-none;
+  padding-inline: 8cqmin;  /* symmetric clearance so the 180deg turn keeps position */
+  font-size: 3.9cqmin;
+  letter-spacing: -0.02em;
+  font-family: var(--font-techno);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  transform: rotate(180deg);
+  transform-origin: center;
+}
+
+/* Center hub cap — scales with the wheel via cqmin */
+.wheel__hub {
+  @apply absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full z-20;
+  width: 14cqmin;
+  height: 14cqmin;
+  background: radial-gradient(circle at 50% 40%, var(--gold-stone-light), var(--gold-stone-dark));
+  border: 1.2cqmin solid var(--gold-dark);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
 /* ============================================================
  * COLLECTION (/collection) — card tile + pagination.
  * ============================================================ */
