@@ -1,0 +1,47 @@
+{
+  "sourceImage": "web/public/assets/record match/record_match_ui.png",
+  "outputDir": "web/public/assets/record match/slices",
+  "debugImage": "web/public/assets/record match/slices/_debug_slices.png",
+  "slices": [
+    {
+      "name": "left_header_slab",
+      "layoutId": "el_div1_div0_div1",
+      "paddingPct": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
+    },
+    {
+      "name": "left_card_slab",
+      "layoutId": "el_div1_div0_div2",
+      "paddingPct": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
+    },
+    {
+      "name": "left_stats_slab",
+      "layoutId": "el_div1_div0_div3",
+      "paddingPct": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
+    },
+    {
+      "name": "victory_tablet_slab",
+      "layoutId": "el_div1_div0_div4",
+      "paddingPct": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
+    },
+    {
+      "name": "defeat_tablet_slab",
+      "layoutId": "el_div1_div0_div5",
+      "paddingPct": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
+    },
+    {
+      "name": "victory_button_slab",
+      "layoutId": "el_div1_div0_div6",
+      "paddingPct": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
+    },
+    {
+      "name": "defeat_button_slab",
+      "layoutId": "el_div1_div0_div7",
+      "paddingPct": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
+    },
+    {
+      "name": "back_button_slab",
+      "layoutId": "el_div1_div0_div8",
+      "paddingPct": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
+    }
+  ]
+}
