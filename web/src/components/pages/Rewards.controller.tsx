@@ -1,151 +1,154 @@
 "use client";
 
 import { useProgression } from "@/context/ProgressionContext";
-import { fetchAllSets, fetchCardsInSet, Card, CardSet, PulledCard } from "@/lib/api";
+import { fetchAllSets, fetchCardsInSet, PulledCard } from "@/lib/api";
 import { generateBoosterPack } from "@/lib/pack-logic";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { WHEEL_PRIZES } from "@/lib/rewards";
+import { RewardEntry, resolvePrizeKind, PrizeKind } from "@/lib/rewards";
+import { useState } from "react";
+import StonePanel from "@/components/ui/StonePanel.view";
+import GuideSprite from "@/components/shell/GuideSprite.view";
+import RewardCard from "@/components/Rewards/RewardCard.view";
+
+/**
+ * The REWARDS tab (route: /rewards) — the persisted reward ledger.
+ *
+ * Two sections: AVAILABLE (unclaimed rewards, each with a claim affordance
+ * appropriate to its prize kind) and CLAIMED (read-only history). Rewards are
+ * created by the record-match flow (win → the spun wheel prize; loss → the pity
+ * prize) and resolved here.
+ *
+ * Phase 1 wires the SIMPLE claims:
+ *  - text   → inline "Claim" (nothing to grant beyond acknowledging it)
+ *  - pity   → open 3 boosters of the just-finished CORE set → add to collection
+ * The interactive prizes (wildcard, tournament packs, ban/unban, starlight) are
+ * shown available but disabled ("coming soon") until their dedicated phases add
+ * the modal flows; snatch-steal is locked pending multiplayer.
+ */
+
+/** Prize kinds whose claim modal isn't built yet (shown available, disabled). */
+const COMING_SOON: Record<PrizeKind, string | null> = {
+    text: null,
+    pity: null,
+    snatch: "Requires multiplayer — coming soon",
+    wildcard: "Claim flow coming soon",
+    starlight: "Claim flow coming soon",
+    tournament: "Claim flow coming soon",
+    ban: "Claim flow coming soon",
+    unban: "Claim flow coming soon",
+};
 
 export default function RewardsPage() {
-    const { pendingReward, claimReward, addToCollection, currentSetIndex } = useProgression();
-    const router = useRouter();
-    const [spinning, setSpinning] = useState(false);
-    const [prize, setPrize] = useState<string | null>(null);
-    const [pityCards, setPityCards] = useState<PulledCard[]>([]);
-    const [openingPity, setOpeningPity] = useState(false);
-    const [setCards, setSetCards] = useState<Card[]>([]);
-    const [currentSet, setCurrentSet] = useState<CardSet | null>(null);
+    const { rewards, claimRewardEntry, addToCollection } = useProgression();
+    const [busyId, setBusyId] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (!pendingReward || pendingReward.claimed) {
-            router.push('/');
-            return;
-        }
+    const available = rewards.filter((r) => r.status === "available");
+    const claimed = rewards.filter((r) => r.status === "claimed");
 
-        async function loadSet() {
+    // --- Pity claim: open 3 boosters of the set the match was lost against ---
+    const claimPity = async (entry: RewardEntry) => {
+        setBusyId(entry.id);
+        try {
             const sets = await fetchAllSets();
-            // Pity packs use the set that just finished (currentSetIndex - 1),
-            // or the current set if we're still at index 0.
-            const targetIndex = currentSetIndex > 0 ? currentSetIndex - 1 : 0;
-            const set = sets[targetIndex];
-            if (set) {
-                const cards = await fetchCardsInSet(set.set_name);
-                setSetCards(cards);
-                setCurrentSet(set);
+            const set = sets[entry.wonFromSetIndex];
+            if (!set) {
+                // Can't resolve the source set — claim it anyway so it doesn't
+                // wedge the ledger (no cards granted).
+                claimRewardEntry(entry.id, { grantedCardIds: [] });
+                return;
             }
-        }
-        loadSet();
-    }, [pendingReward, currentSetIndex, router]);
-
-    const handleSpin = () => {
-        setSpinning(true);
-        setTimeout(() => {
-            const randomPrize = WHEEL_PRIZES[Math.floor(Math.random() * WHEEL_PRIZES.length)];
-            setPrize(randomPrize.label);
-            setSpinning(false);
-        }, 2000);
-    };
-
-    const handleOpenPity = () => {
-        if (!setCards.length || !currentSet) return;
-        setOpeningPity(true);
-        setTimeout(() => {
-            const newCards: PulledCard[] = [];
+            const setCards = await fetchCardsInSet(set.set_name);
+            const cards: PulledCard[] = [];
             for (let i = 0; i < 3; i++) {
-                const pack = generateBoosterPack(setCards, currentSet);
-                newCards.push(...pack);
+                cards.push(...generateBoosterPack(setCards, set));
             }
-            setPityCards(newCards);
-            setOpeningPity(false);
-        }, 1000);
-    };
-
-
-    const handleClaim = () => {
-        if (pityCards.length > 0) {
-            addToCollection(pityCards);
+            addToCollection(cards);
+            claimRewardEntry(entry.id, { grantedCardIds: cards.map((c) => c.id) });
+        } finally {
+            setBusyId(null);
         }
-        // If prize is a pack, we could add cards, but for text prizes we just acknowledge.
-        claimReward();
-        router.push('/');
     };
 
-    if (!pendingReward) return null;
+    // --- Text claim: nothing to grant, just acknowledge it ---
+    const claimText = (entry: RewardEntry) => {
+        claimRewardEntry(entry.id);
+    };
+
+    // Choose the claim affordance for an available entry by its prize kind.
+    const renderAvailable = (entry: RewardEntry) => {
+        const kind = resolvePrizeKind(entry.prizeId);
+        const comingSoon = COMING_SOON[kind];
+
+        if (comingSoon) {
+            return (
+                <RewardCard
+                    key={entry.id}
+                    entry={entry}
+                    locked
+                    lockedNote={comingSoon}
+                />
+            );
+        }
+
+        if (kind === "pity") {
+            return (
+                <RewardCard
+                    key={entry.id}
+                    entry={entry}
+                    actionLabel="Open 3 Packs"
+                    onAction={() => claimPity(entry)}
+                    busy={busyId === entry.id}
+                />
+            );
+        }
+
+        // text
+        return (
+            <RewardCard
+                key={entry.id}
+                entry={entry}
+                actionLabel="Claim"
+                onAction={() => claimText(entry)}
+                busy={busyId === entry.id}
+            />
+        );
+    };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-8">
-            <h1 className="text-4xl font-bold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)]">
-                {pendingReward.type === 'wheel' ? "Winner's Wheel" : "Pity Packs"}
-            </h1>
+        <div className="h-full overflow-hidden grid grid-rows-[1fr]">
+            <div className="min-h-0 overflow-y-auto custom-scrollbar p-6 md:p-8 pb-16">
+                <div className="max-w-3xl mx-auto space-y-8">
+                    <header className="text-center">
+                        <h1 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)]">
+                            Rewards
+                        </h1>
+                        <p className="text-white/60 text-sm mt-1">
+                            Claim what you&apos;ve earned on the road through history.
+                        </p>
+                    </header>
 
-            {pendingReward.type === 'wheel' && (
-                <div className="glass-panel p-12 text-center max-w-md w-full">
-                    {!prize ? (
-                        <>
-                            <div className={`text-6xl mb-8 ${spinning ? 'animate-spin' : ''}`}>🎡</div>
-                            <button
-                                onClick={handleSpin}
-                                disabled={spinning}
-                                className="px-8 py-4 bg-[var(--primary)] text-black font-bold rounded-lg hover:bg-[var(--primary-hover)] disabled:opacity-50"
-                            >
-                                {spinning ? "Spinning..." : "SPIN THE WHEEL"}
-                            </button>
-                        </>
-                    ) : (
-                        <div className="animate-in zoom-in duration-300">
-                            <div className="text-sm text-gray-400 mb-2">You Won:</div>
-                            <div className="text-3xl font-bold text-[var(--primary)] mb-8">{prize}</div>
-                            <button
-                                onClick={handleClaim}
-                                className="px-8 py-4 bg-green-600 text-white font-bold rounded-lg hover:bg-green-500"
-                            >
-                                Claim Prize
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
+                    <StonePanel title={`Available Rewards${available.length ? ` (${available.length})` : ""}`}>
+                        {available.length === 0 ? (
+                            <div className="reward-empty">No rewards waiting. Win or lose a match to earn some.</div>
+                        ) : (
+                            <div className="space-y-3">{available.map(renderAvailable)}</div>
+                        )}
+                    </StonePanel>
 
-            {pendingReward.type === 'pity' && (
-                <div className="w-full max-w-4xl">
-                    {pityCards.length === 0 ? (
-                        <div className="glass-panel p-12 text-center">
-                            <div className="text-6xl mb-6">🩹</div>
-                            <p className="text-xl mb-8">Take these 3 packs to strengthen your deck.</p>
-                            <button
-                                onClick={handleOpenPity}
-                                disabled={openingPity}
-                                className="px-8 py-4 bg-[var(--primary)] text-black font-bold rounded-lg hover:bg-[var(--primary-hover)] disabled:opacity-50"
-                            >
-                                {openingPity ? "Opening..." : "Open 3 Pity Packs"}
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-8">
-                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                                {pityCards.map((card, idx) => (
-                                    <div key={`${card.id}-${idx}`} className="relative group aspect-[2/3] animate-in fade-in zoom-in" style={{ animationDelay: `${idx * 50}ms` }}>
-                                        <img
-                                            src={card.card_images[0].image_url}
-                                            alt={card.name}
-                                            className="w-full h-full object-cover rounded-lg shadow-lg"
-                                        />
-                                    </div>
+                    <StonePanel title={`Claimed Rewards${claimed.length ? ` (${claimed.length})` : ""}`}>
+                        {claimed.length === 0 ? (
+                            <div className="reward-empty">Nothing claimed yet.</div>
+                        ) : (
+                            <div className="space-y-3">
+                                {claimed.map((entry) => (
+                                    <RewardCard key={entry.id} entry={entry} />
                                 ))}
                             </div>
-                            <div className="text-center">
-                                <button
-                                    onClick={handleClaim}
-                                    className="px-8 py-4 bg-green-600 text-white font-bold rounded-lg hover:bg-green-500"
-                                >
-                                    Add to Collection & Continue
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                        )}
+                    </StonePanel>
                 </div>
-            )}
+            </div>
+
+            <GuideSprite />
         </div>
     );
 }

@@ -14,12 +14,13 @@ import { useProgression } from "@/context/ProgressionContext";
 
    It's a client component, so it can vary itself per route via `usePathname()`
    (e.g. the active-link highlight below) without breaking that persistence. */
-const NAV_ROUTES = new Set(["/map", "/collection", "/deck-builder", "/packs", "/timeline"]);
+const NAV_ROUTES = new Set(["/map", "/collection", "/deck-builder", "/packs", "/timeline", "/rewards"]);
 
 const NAV_LINKS = [
     { href: "/map", label: "CAMPAIGN" },
     { href: "/collection", label: "COLLECTION" },
     { href: "/deck-builder", label: "DECK BUILDER" },
+    { href: "/rewards", label: "REWARDS" },
     { href: "/menu", label: "MENU" },
 ];
 

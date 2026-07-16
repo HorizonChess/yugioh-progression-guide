@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { PulledCard } from '@/lib/api';
+import { RewardEntry } from '@/lib/rewards';
 
 interface MatchResult {
     winner: 'player' | 'opponent';
@@ -9,6 +10,11 @@ interface MatchResult {
     date: string;
 }
 
+/**
+ * @deprecated Superseded by the persisted rewards ledger (`SaveSlot.rewards`).
+ * Left in place during the migration; scheduled for removal once no readers
+ * remain. See rewards-tab plan, cleanup phase.
+ */
 export interface RewardState {
     type: 'wheel' | 'pity';
     claimed: boolean;
@@ -34,7 +40,12 @@ export interface SaveSlot {
     currentSetIndex: number;
     collection: Record<string, number>; // Key: `${id}_${set}_${rarity}`
     matchHistory: MatchResult[];
-    pendingReward: RewardState | null;
+    pendingReward: RewardState | null; // @deprecated — see RewardState
+
+    // Rewards ledger (available + claimed). Optional for back-compat with saves
+    // created before the ledger existed — treated as [] when absent.
+    rewards?: RewardEntry[];
+    bannedCardIds?: number[]; // cosmetic deck-builder ban list
 
     // Settings
     settings: {
@@ -55,7 +66,9 @@ interface ProgressionContextType {
     currentSetIndex: number;
     collection: Record<string, number>;
     matchHistory: MatchResult[];
-    pendingReward: RewardState | null;
+    pendingReward: RewardState | null; // @deprecated
+    rewards: RewardEntry[];
+    bannedCardIds: number[];
     savedDecks: SavedDeck[];
 
     // Actions
@@ -68,9 +81,15 @@ interface ProgressionContextType {
     addToCollection: (cards: PulledCard[]) => void;
     recordMatch: (result: MatchResult) => void;
     advanceSet: () => void;
-    claimReward: () => void;
+    claimReward: () => void; // @deprecated — use claimRewardEntry
     resetProgress: () => void; // Resets ACTIVE save
     importCollection: (cardIds: number[], mode: 'add' | 'replace') => void;
+
+    // Rewards ledger
+    addReward: (entry: Omit<RewardEntry, 'id' | 'status' | 'wonDate'>) => void;
+    claimRewardEntry: (rewardId: string, payload?: Partial<RewardEntry>) => void;
+    banCard: (cardId: number) => void;
+    unbanCard: (cardId: number) => void;
 
     // Deck Management
     saveDeck: (deck: SavedDeck) => void;
@@ -126,6 +145,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
                             collection: migratedCollection,
                             matchHistory: parsedLegacy.matchHistory || [],
                             pendingReward: parsedLegacy.pendingReward || null,
+                            rewards: [],
+                            bannedCardIds: [],
                             settings: { startSetIndex: 0, packsPerRound: 24 },
                             savedDecks: []
                         };
@@ -158,6 +179,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             return {
                 ...updated,
                 savedDecks: updated.savedDecks || [],
+                rewards: updated.rewards || [],
+                bannedCardIds: updated.bannedCardIds || [],
                 lastPlayed: Date.now()
             };
         }));
@@ -175,6 +198,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             collection: {},
             matchHistory: [],
             pendingReward: null,
+            rewards: [],
+            bannedCardIds: [],
             settings: { startSetIndex, packsPerRound },
             savedDecks: []
         };
@@ -209,14 +234,13 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         });
     };
 
+    // Append-only now: the reward is created when the outcome is CLAIMED
+    // (win → the wheel prize, known only after the spin; loss → the pity prize),
+    // via addReward from the record-match controller — not here.
     const recordMatch = (result: MatchResult) => {
         updateActiveSave(save => ({
             ...save,
-            matchHistory: [...save.matchHistory, result],
-            pendingReward: {
-                type: result.winner === 'player' ? 'wheel' : 'pity',
-                claimed: false
-            }
+            matchHistory: [...save.matchHistory, result]
         }));
     };
 
@@ -227,10 +251,54 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         }));
     };
 
+    /** @deprecated legacy pendingReward clear — kept until the field is removed. */
     const claimReward = () => {
         updateActiveSave(save => ({
             ...save,
             pendingReward: null
+        }));
+    };
+
+    // --- Rewards ledger ---
+
+    const addReward = (entry: Omit<RewardEntry, 'id' | 'status' | 'wonDate'>) => {
+        updateActiveSave(save => ({
+            ...save,
+            rewards: [
+                ...(save.rewards || []),
+                {
+                    ...entry,
+                    id: crypto.randomUUID(),
+                    status: 'available' as const,
+                    wonDate: new Date().toISOString()
+                }
+            ]
+        }));
+    };
+
+    const claimRewardEntry = (rewardId: string, payload?: Partial<RewardEntry>) => {
+        updateActiveSave(save => ({
+            ...save,
+            rewards: (save.rewards || []).map(r =>
+                r.id === rewardId
+                    ? { ...r, ...payload, status: 'claimed' as const, claimedDate: new Date().toISOString() }
+                    : r
+            )
+        }));
+    };
+
+    const banCard = (cardId: number) => {
+        updateActiveSave(save => {
+            const current = save.bannedCardIds || [];
+            if (current.includes(cardId)) return save;
+            return { ...save, bannedCardIds: [...current, cardId] };
+        });
+    };
+
+    const unbanCard = (cardId: number) => {
+        updateActiveSave(save => ({
+            ...save,
+            bannedCardIds: (save.bannedCardIds || []).filter(id => id !== cardId)
         }));
     };
 
@@ -243,6 +311,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
                 collection: {},
                 matchHistory: [],
                 pendingReward: null,
+                rewards: [],
+                bannedCardIds: [],
                 savedDecks: []
             }));
         }
@@ -321,6 +391,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             matchHistory: activeSave?.matchHistory ?? [],
             savedDecks: activeSave?.savedDecks ?? [],
             pendingReward: activeSave?.pendingReward ?? null,
+            rewards: activeSave?.rewards ?? [],
+            bannedCardIds: activeSave?.bannedCardIds ?? [],
 
             createSave,
             loadSave,
@@ -333,6 +405,11 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             claimReward,
             resetProgress,
             importCollection,
+
+            addReward,
+            claimRewardEntry,
+            banCard,
+            unbanCard,
 
             saveDeck,
             deleteDeck,

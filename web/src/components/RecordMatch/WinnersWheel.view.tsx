@@ -10,6 +10,8 @@ interface WinnersWheelProps {
     onSpinComplete?: (prize: WheelPrize) => void;
     /** Fired when the player claims the revealed prize. */
     onClaim: (prize: WheelPrize) => void;
+    /** Fired when the player skips the ledger and heads back to the campaign. */
+    onBackToCampaign?: () => void;
 }
 
 const SPIN_MS = 3600;              // wheel-settle duration
@@ -29,7 +31,7 @@ const SLICE = 360 / WHEEL_PRIZES.length;
  * FrameButton so it matches the app and re-themes with --primary. Prize list is
  * the shared WHEEL_PRIZES.
  */
-export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelProps) {
+export default function WinnersWheel({ onSpinComplete, onClaim, onBackToCampaign }: WinnersWheelProps) {
     const [spinning, setSpinning] = useState(false);
     const [rotation, setRotation] = useState(0);
     const [result, setResult] = useState<WheelPrize | null>(null);
@@ -176,25 +178,45 @@ export default function WinnersWheel({ onSpinComplete, onClaim }: WinnersWheelPr
                     <div className="wheel-prize__name">{result ? result.label : ' '}</div>
                 </div>
 
-                {result ? (
-                    <FrameButton
-                        onClick={() => onClaim(result)}
-                        className="w-48 h-12"
-                        textClassName="tracking-[0.15em]"
-                        aria-label="Claim prize"
-                    >
-                        Claim Prize
-                    </FrameButton>
-                ) : (
-                    <FrameButton
-                        onClick={handleSpin}
-                        className="w-48 h-12"
-                        textClassName="tracking-[0.15em]"
-                        aria-label="Spin the wheel"
-                    >
-                        {spinning ? 'Spinning…' : 'Spin the Wheel'}
-                    </FrameButton>
-                )}
+                {/* Button COLUMN — laid out identically to the Defeat act (capped,
+                    full-width, stacked FrameButtons) so the win and loss acts look
+                    the same, only the wheel vs. the defeat message differing. The
+                    primary button swaps Spin -> Claim in place; the Back slot is
+                    ALWAYS in the column but invisible until a prize is revealed, so
+                    its height is reserved (the wheel row above never jumps) and the
+                    lone Spin button stays centered. */}
+                <div className="w-full max-w-[16rem] flex flex-col items-stretch gap-3">
+                    {result ? (
+                        <FrameButton
+                            onClick={() => onClaim(result)}
+                            className="w-full h-12"
+                            textClassName="tracking-[0.12em]"
+                            aria-label="Claim prize"
+                        >
+                            Claim Prize
+                        </FrameButton>
+                    ) : (
+                        <FrameButton
+                            onClick={handleSpin}
+                            className="w-full h-12"
+                            textClassName="tracking-[0.12em]"
+                            aria-label="Spin the wheel"
+                        >
+                            {spinning ? 'Spinning…' : 'Spin the Wheel'}
+                        </FrameButton>
+                    )}
+
+                    {onBackToCampaign && (
+                        <FrameButton
+                            onClick={result ? onBackToCampaign : undefined}
+                            className={`w-full h-12 ${result ? '' : 'invisible pointer-events-none'}`}
+                            textClassName="tracking-[0.12em]"
+                            aria-label="Back to campaign"
+                        >
+                            Back to Campaign
+                        </FrameButton>
+                    )}
+                </div>
             </div>
         </div>
     );

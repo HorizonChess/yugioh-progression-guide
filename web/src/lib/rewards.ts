@@ -29,3 +29,121 @@ export const WHEEL_PRIZES: WheelPrize[] = [
     { id: "unban", label: "Unban a Card", short: "Unban" },
     { id: "snatch-steal", label: "Snatch Steal", short: "Snatch Steal" },
 ];
+
+/**
+ * The Defeat (loss) reward. NOT a wheel prize — the wheel is win-only — so it's
+ * kept out of WHEEL_PRIZES and referenced by this id when a match is lost. Its
+ * claim flow opens 3 boosters of the just-finished CORE set (distinct from the
+ * `tournament-packs` prize, which opens 3 real Tournament packs).
+ */
+export const PITY_PRIZE: WheelPrize = {
+    id: "pity-packs",
+    label: "3 Pity Packs",
+    short: "Pity Packs",
+};
+
+/** Look up a prize descriptor by id across the wheel prizes + the pity prize. */
+export function getPrize(prizeId: string): WheelPrize | undefined {
+    if (prizeId === PITY_PRIZE.id) return PITY_PRIZE;
+    return WHEEL_PRIZES.find((p) => p.id === prizeId);
+}
+
+// --- Rewards ledger --------------------------------------------------------
+
+export type RewardStatus = "available" | "claimed";
+
+/**
+ * A single reward in a save's persisted ledger. Created "available" when a
+ * match outcome is claimed (win → the wheel prize; loss → the pity prize) and
+ * flipped to "claimed" once its per-type flow resolves. The `wonFrom*` anchors
+ * let the complex flows reference the pack the reward came from — the wildcard
+ * modal shows that pack's details, and the "released prior to this pack" gates
+ * (starlight / tournament) compare against `sets[wonFromSetIndex].tcg_date`.
+ */
+export interface RewardEntry {
+    /** Stable id — React key + ledger identity. */
+    id: string;
+    /** WheelPrize.id (or PITY_PRIZE.id) — the prize kind. */
+    prizeId: string;
+    /** CardSet.set_name recorded on the match this reward was won from. */
+    wonFromPackName: string;
+    /** currentSetIndex at time of win — anchor for the date gates. */
+    wonFromSetIndex: number;
+    /** ISO timestamp of when the reward was won. */
+    wonDate: string;
+    status: RewardStatus;
+    /** ISO timestamp set when the reward is claimed. */
+    claimedDate?: string;
+
+    // Per-type payload — only the field relevant to the prize is set on claim.
+    /** wildcard / starlight — the single granted card. */
+    grantedCardId?: number;
+    /** tournament-packs / pity — the opened pack contents. */
+    grantedCardIds?: number[];
+    /** ban / unban — the affected card. */
+    bannedCardId?: number;
+}
+
+/** The claim flow a prize routes to in the Rewards ledger UI. */
+export type PrizeKind =
+    | "wildcard"
+    | "starlight"
+    | "tournament"
+    | "pity"
+    | "ban"
+    | "unban"
+    | "snatch"
+    | "text";
+
+/** Map a prizeId to the claim flow that resolves it. */
+export function resolvePrizeKind(prizeId: string): PrizeKind {
+    if (prizeId === "wildcard-starlight") return "starlight";
+    if (prizeId.startsWith("wildcard-")) return "wildcard";
+    if (prizeId === "tournament-packs") return "tournament";
+    if (prizeId === "pity-packs") return "pity";
+    if (prizeId === "ban") return "ban";
+    if (prizeId === "unban") return "unban";
+    if (prizeId === "snatch-steal") return "snatch";
+    return "text";
+}
+
+/**
+ * Ascending rarity ladder for wildcards, low → high. A wildcard grants any card
+ * of its rarity OR BELOW, so `wildcardRarityFloor` returns the prize's ceiling
+ * and `isRarityAtOrBelow` tests a card's rarity against it. Uses the canonical
+ * set_rarity labels the API returns (see lib/utils.ts RARITY_ORDER); "Ultimate
+ * Rare" and "Secret Rare" share the ultimate/secret tier.
+ */
+const WILDCARD_RARITY_LADDER: readonly string[] = [
+    "Common",
+    "Rare",
+    "Super Rare",
+    "Ultra Rare",
+    "Ultimate Rare",
+    "Secret Rare",
+    "Starlight Rare",
+] as const;
+
+const WILDCARD_CEILING: Record<string, string> = {
+    "wildcard-common": "Common",
+    "wildcard-rare": "Rare",
+    "wildcard-super": "Super Rare",
+    "wildcard-ultra": "Ultra Rare",
+    // The ultimate/secret tier — treat Secret Rare as the ceiling (Ultimate sits
+    // just under it on the ladder, so "or below" naturally includes it).
+    "wildcard-ultimate-secret": "Secret Rare",
+    "wildcard-starlight": "Starlight Rare",
+};
+
+/** The highest rarity a wildcard prize may grant, e.g. "wildcard-super" → "Super Rare". */
+export function wildcardRarityFloor(prizeId: string): string {
+    return WILDCARD_CEILING[prizeId] ?? "Common";
+}
+
+/** True if `rarity` is at or below `ceiling` on the wildcard ladder (unknown rarities excluded). */
+export function isRarityAtOrBelow(rarity: string, ceiling: string): boolean {
+    const r = WILDCARD_RARITY_LADDER.indexOf(rarity);
+    const c = WILDCARD_RARITY_LADDER.indexOf(ceiling);
+    if (r === -1 || c === -1) return false;
+    return r <= c;
+}

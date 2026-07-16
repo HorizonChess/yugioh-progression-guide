@@ -601,6 +601,15 @@ html::-webkit-scrollbar-corner,
   gap: clamp(0.75rem, 2.5vh, 1.5rem);
 }
 
+/* --- Defeat content (loss act) -------------------------------------------
+ * The loss counterpart to .wheel-content: same shared `.win-panel`, same
+ * curtain-in, but a simpler centered stack (headline → message → two exits).
+ * Fills the act and centers vertically so it reads as a peer of the wheel. */
+.defeat-content {
+  @apply w-full h-full flex flex-col items-center justify-center text-center;
+  gap: clamp(1rem, 3vh, 1.75rem);
+}
+
 /* The wheel ROW cell — a flex box that centers the (square) wheel. It fills the
  * 1fr track, giving the wheel a DEFINITE height to size against. Needed because
  * the wheel is a size container (see below), which contributes ZERO intrinsic
@@ -746,6 +755,43 @@ html::-webkit-scrollbar-corner,
   /* min-height reserves the tallest single-line name so the slot never grows */
   @apply text-lg md:text-xl font-black text-primary;
   min-height: 1.5em;
+}
+
+/* ============================================================
+ * REWARDS (/rewards) — the ledger tab: available + claimed rows.
+ * ============================================================ */
+
+/* One ledger row: prize info on the left, claim affordance on the right. */
+.reward-card {
+  @apply flex items-center gap-4 p-4 rounded-lg
+    bg-black/25 border border-white/10;
+}
+
+.reward-card__title {
+  @apply text-base md:text-lg font-black text-white leading-tight truncate;
+}
+
+.reward-card__meta {
+  @apply mt-0.5 flex items-center gap-2 text-xs text-white/60;
+}
+
+.reward-card__note {
+  @apply mt-1 text-[0.7rem] uppercase tracking-wider text-primary/70;
+}
+
+.reward-card__claimed-badge {
+  @apply text-[0.7rem] font-bold uppercase tracking-[0.15em] text-green-400/90
+    px-3 py-1 rounded-full border border-green-500/30 bg-green-500/10;
+}
+
+.reward-card__locked-badge {
+  @apply text-[0.7rem] font-bold uppercase tracking-[0.15em] text-white/40
+    px-3 py-1 rounded-full border border-white/15 bg-white/5;
+}
+
+/* Empty-state line inside a ledger section. */
+.reward-empty {
+  @apply text-center text-white/45 text-sm py-6;
 }
 
 /* ============================================================

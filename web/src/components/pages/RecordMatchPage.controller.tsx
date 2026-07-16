@@ -7,7 +7,9 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import RecordMatch from "@/components/RecordMatch/RecordMatch.view";
 import WinnersWheel from "@/components/RecordMatch/WinnersWheel.view";
+import DefeatAct from "@/components/RecordMatch/DefeatAct.view";
 import GuideSprite from "@/components/shell/GuideSprite.view";
+import { WheelPrize, PITY_PRIZE } from "@/lib/rewards";
 
 /**
  * The Record Match screen (route: /timeline — the folder name is historical
@@ -17,24 +19,30 @@ import GuideSprite from "@/components/shell/GuideSprite.view";
  *
  *   WIN  → record → the board content VORTEXES away and the Winner's Wheel
  *          CURTAINS in — INSIDE THE SAME persistent glass panel (the box does
- *          not move / re-mount) → spin → claim → advance → /map.
- *   LOSS → the DEFEAT flourish → record → advance → the untouched /rewards pity flow.
+ *          not move / re-mount) → spin → claim the prize into the ledger →
+ *          advance → /rewards (or Back to Campaign → /map).
+ *   LOSS → record → the board content VORTEXES away and the DEFEAT act CURTAINS
+ *          in — SAME persistent panel, mirroring the win → "3 Pity Packs" with
+ *          two exits: Claim Pity Packs (→ /rewards) or Back to Campaign (→ /map).
  *
- * The win moment is ONE persistent `.win-panel`: only its inner CONTENT swaps
- * (`stage` = "board" | "wheel") under <AnimatePresence>, so the panel is a stable
- * stage and the acts change on it. Degrades to a plain cross-fade under
- * prefers-reduced-motion.
+ * The record moment is ONE persistent `.win-panel`: only its inner CONTENT swaps
+ * (`stage` = "board" | "wheel" | "defeat") under <AnimatePresence>, so the panel
+ * is a stable stage and the acts change on it. Degrades to a plain cross-fade
+ * under prefers-reduced-motion.
+ *
+ * Rewards are created when the outcome is CLAIMED (win → the spun WheelPrize,
+ * loss → the PITY_PRIZE) and pushed onto the persisted ledger via addReward —
+ * NOT in recordMatch (which is now append-only). See rewards-tab plan.
  */
-type Stage = "board" | "wheel";
+type Stage = "board" | "wheel" | "defeat";
 
 export default function RecordMatchPage() {
-    const { matchHistory, recordMatch, advanceSet, claimReward, currentSetIndex } = useProgression();
+    const { matchHistory, recordMatch, advanceSet, addReward, currentSetIndex } = useProgression();
     const router = useRouter();
     const reduceMotion = useReducedMotion();
     const [sets, setSets] = useState<CardSet[]>([]);
     const [loading, setLoading] = useState(true);
     const [stage, setStage] = useState<Stage>("board");
-    const [defeat, setDefeat] = useState(false);
 
     useEffect(() => {
         async function loadSets() {
@@ -70,28 +78,51 @@ export default function RecordMatchPage() {
         const currentSet = sets[currentSetIndex];
         if (!currentSet) return;
 
-        // Record immediately so a mid-transition refresh knows a reward is owed
-        // (recordMatch sets pendingReward: 'wheel' on a win, 'pity' on a loss).
+        // Append the match result (append-only; the reward is created on claim).
         recordMatch({ winner, packName: currentSet.set_name, date: new Date().toISOString() });
 
-        if (winner === "player") {
-            // Swap the panel's CONTENTS: board vortexes out, wheel curtains in.
-            setStage("wheel");
-        } else {
-            // Loss: play the flourish, then hand off to the untouched pity flow.
-            setDefeat(true);
-            setTimeout(() => {
-                advanceSet();
-                router.push("/rewards");
-            }, 2000);
-        }
+        // Swap the panel's CONTENTS: board vortexes out, the outcome act curtains
+        // in. Same persistent panel for both win and loss.
+        setStage(winner === "player" ? "wheel" : "defeat");
     };
 
-    // Wheel prize claimed → clear the owed reward, advance, go see progress.
-    // (Text prizes just acknowledge for now, mirroring /rewards; when Rewards
-    // becomes a ledger tab, resolve the prize here before clearing.)
-    const handleClaimPrize = () => {
-        claimReward();
+    // The pack this match was played against — recorded on every reward so its
+    // claim flow can reference the source pack (details view, date gates).
+    const currentSetForRewards = sets[currentSetIndex];
+
+    // Push a won reward onto the ledger, then advance the set. Shared by the win
+    // (spun prize) and loss (pity) claim paths.
+    const grantReward = (prizeId: string) => {
+        if (currentSetForRewards) {
+            addReward({
+                prizeId,
+                wonFromPackName: currentSetForRewards.set_name,
+                wonFromSetIndex: currentSetIndex,
+            });
+        }
+        advanceSet();
+    };
+
+    // WIN: the spun wheel prize is claimed → land it in the ledger → /rewards.
+    const handleClaimPrize = (prize: WheelPrize) => {
+        grantReward(prize.id);
+        router.push("/rewards");
+    };
+
+    // WIN: skip the ledger detour and head back to the map (set still advances).
+    const handleWinBackToCampaign = () => {
+        advanceSet();
+        router.push("/map");
+    };
+
+    // LOSS: claim the pity packs → land the pity reward in the ledger → /rewards.
+    const handleClaimPity = () => {
+        grantReward(PITY_PRIZE.id);
+        router.push("/rewards");
+    };
+
+    // LOSS: skip the pity reward for now, back to the map (set still advances).
+    const handleDefeatBackToCampaign = () => {
         advanceSet();
         router.push("/map");
     };
@@ -100,17 +131,6 @@ export default function RecordMatchPage() {
         return (
             <div className="h-full flex items-center justify-center">
                 <div className="text-xl animate-pulse">Loading...</div>
-            </div>
-        );
-    }
-
-    if (defeat) {
-        return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-                <div className="text-center animate-in zoom-in duration-500">
-                    <h1 className="record-outcome record-outcome--defeat">DEFEAT</h1>
-                    <p className="text-2xl text-white font-bold animate-pulse">Claiming pity packs...</p>
-                </div>
             </div>
         );
     }
@@ -161,7 +181,19 @@ export default function RecordMatchPage() {
                                 animate={curtainsAnimate}
                                 transition={{ duration: reduceMotion ? 0.25 : 0.5, ease: "easeOut", delay: reduceMotion ? 0 : 0.05 }}
                             >
-                                <WinnersWheel onClaim={handleClaimPrize} />
+                                <WinnersWheel onClaim={handleClaimPrize} onBackToCampaign={handleWinBackToCampaign} />
+                            </motion.div>
+                        )}
+
+                        {stage === "defeat" && (
+                            <motion.div
+                                key="defeat"
+                                className="win-panel__act"
+                                initial={curtainsInitial}
+                                animate={curtainsAnimate}
+                                transition={{ duration: reduceMotion ? 0.25 : 0.5, ease: "easeOut", delay: reduceMotion ? 0 : 0.05 }}
+                            >
+                                <DefeatAct onClaimPity={handleClaimPity} onBackToCampaign={handleDefeatBackToCampaign} />
                             </motion.div>
                         )}
                     </AnimatePresence>
