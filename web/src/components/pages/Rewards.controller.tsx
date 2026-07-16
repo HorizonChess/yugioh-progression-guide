@@ -8,6 +8,7 @@ import StonePanel from "@/components/ui/StonePanel.view";
 import GuideSprite from "@/components/shell/GuideSprite.view";
 import RewardCard from "@/components/Rewards/RewardCard.view";
 import PackRevealModal, { RevealSource } from "@/components/Rewards/PackRevealModal.view";
+import WildcardModal from "@/components/Rewards/WildcardModal.view";
 
 /**
  * The REWARDS tab (route: /rewards) — the persisted reward ledger.
@@ -24,9 +25,11 @@ import PackRevealModal, { RevealSource } from "@/components/Rewards/PackRevealMo
  *  - tournament  → the same `PackRevealModal`, opening 3 packs of the latest
  *                  tournament set released before the won pack
  * pity + tournament share one modal, differing only in which set they resolve.
- * The remaining interactive prizes (wildcard, ban/unban, starlight) are shown
- * available but disabled ("coming soon") until their phases; snatch-steal is
- * locked pending multiplayer.
+ *  - wildcard    → the `WildcardModal`: pick any card of the reward's rarity or
+ *                  below from the won pack.
+ * The remaining interactive prizes (ban/unban, starlight) are shown available
+ * but disabled ("coming soon") until their phases; snatch-steal is locked
+ * pending multiplayer.
  */
 
 /** Prize kinds whose claim modal isn't built yet (shown available, disabled). */
@@ -34,8 +37,8 @@ const COMING_SOON: Record<PrizeKind, string | null> = {
     text: null,
     pity: null,
     tournament: null,
+    wildcard: null,
     snatch: "Requires multiplayer — coming soon",
-    wildcard: "Claim flow coming soon",
     starlight: "Claim flow coming soon",
     ban: "Claim flow coming soon",
     unban: "Claim flow coming soon",
@@ -45,6 +48,8 @@ export default function RewardsPage() {
     const { rewards, claimRewardEntry, addToCollection } = useProgression();
     /** The reward whose 3-pack reveal modal is open (pity or tournament), if any. */
     const [revealEntry, setRevealEntry] = useState<RewardEntry | null>(null);
+    /** The reward whose wildcard card-picker modal is open, if any. */
+    const [wildcardEntry, setWildcardEntry] = useState<RewardEntry | null>(null);
 
     const available = rewards.filter((r) => r.status === "available");
     const claimed = rewards.filter((r) => r.status === "claimed");
@@ -85,6 +90,14 @@ export default function RewardsPage() {
         setRevealEntry(null);
     };
 
+    // --- Wildcard: grant the single chosen card and claim the reward ---
+    const chooseWildcard = (card: PulledCard) => {
+        if (!wildcardEntry) return;
+        addToCollection([card]);
+        claimRewardEntry(wildcardEntry.id, { grantedCardId: card.id });
+        setWildcardEntry(null);
+    };
+
     // Choose the claim affordance for an available entry by its prize kind.
     const renderAvailable = (entry: RewardEntry) => {
         const kind = resolvePrizeKind(entry.prizeId);
@@ -108,6 +121,17 @@ export default function RewardsPage() {
                     entry={entry}
                     actionLabel="Open 3 Packs"
                     onAction={() => setRevealEntry(entry)}
+                />
+            );
+        }
+
+        if (kind === "wildcard") {
+            return (
+                <RewardCard
+                    key={entry.id}
+                    entry={entry}
+                    actionLabel="Choose Card"
+                    onAction={() => setWildcardEntry(entry)}
                 />
             );
         }
@@ -173,6 +197,14 @@ export default function RewardsPage() {
                     resolveSource={resolveSource}
                     onCollect={collectReveal}
                     onClose={() => setRevealEntry(null)}
+                />
+            )}
+
+            {wildcardEntry && (
+                <WildcardModal
+                    entry={wildcardEntry}
+                    onChoose={chooseWildcard}
+                    onClose={() => setWildcardEntry(null)}
                 />
             )}
         </div>

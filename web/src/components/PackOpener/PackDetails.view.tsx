@@ -20,6 +20,8 @@ interface PackDetailsProps {
      * below. Omitted for the plain /packs details listing (all cards clickable).
      */
     selectableRarities?: Set<string>;
+    /** When set, the card with this id is highlighted (wildcard's pending pick). */
+    selectedCardId?: number;
 }
 
 const noop = () => {};
@@ -37,6 +39,7 @@ export default function PackDetails({
     onLeave,
     onBack,
     selectableRarities,
+    selectedCardId,
 }: PackDetailsProps) {
     const { cardsByRarity, sortedRarities } = processCardsForRarityGrid(cards, set.set_code);
 
@@ -66,6 +69,7 @@ export default function PackDetails({
                 onCardClick={onCardClick ?? noop}
                 onHover={onHover ?? noop}
                 onLeave={onLeave ?? noop}
+                selectedCardId={selectedCardId}
             />
         </div>
     );

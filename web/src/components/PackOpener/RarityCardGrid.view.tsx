@@ -9,6 +9,8 @@ interface RarityCardGridProps {
     onCardClick: (card: Card) => void;
     onHover: (card: Card, e: React.MouseEvent) => void;
     onLeave: () => void;
+    /** When set, the card with this id gets a selected highlight (wildcard pick). */
+    selectedCardId?: number;
 }
 
 export default function RarityCardGrid({
@@ -17,6 +19,7 @@ export default function RarityCardGrid({
     onCardClick,
     onHover,
     onLeave,
+    selectedCardId,
 }: RarityCardGridProps) {
     return (
         <div className="space-y-8">
@@ -25,6 +28,7 @@ export default function RarityCardGrid({
                     <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4">
                         {cardsByRarity[rarity].map((item, idx) => {
                             const { card, count } = item;
+                            const isSelected = selectedCardId === card.id;
                             return (
                                 <div
                                     key={`${card.id}-${idx}`}
@@ -33,8 +37,8 @@ export default function RarityCardGrid({
                                     onMouseEnter={(e) => onHover(card, e)}
                                     onMouseLeave={onLeave}
                                 >
-                                    <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
-                                        <div className="absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border border-white/10 group-hover:border-[var(--primary)]/50 transition-colors">
+                                    <div className={`relative aspect-[2/3] mb-2 transition-transform duration-200 ${isSelected ? "scale-105" : "hover:scale-105"}`}>
+                                        <div className={`absolute inset-0 bg-[var(--card-bg)] rounded-lg shadow-lg overflow-hidden border transition-colors ${isSelected ? "border-[var(--primary)] ring-2 ring-[var(--primary)] shadow-[0_0_18px_var(--primary)]" : "border-white/10 group-hover:border-[var(--primary)]/50"}`}>
                                             <Image
                                                 src={card.card_images[0].image_url_small}
                                                 alt={card.name}
