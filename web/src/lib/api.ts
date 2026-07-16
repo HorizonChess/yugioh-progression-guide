@@ -209,6 +209,28 @@ export async function fetchCardsInSet(setName: string): Promise<Card[]> {
     }
 }
 
+/**
+ * Fuzzy card-name search over the FULL YGOPRODeck catalog (`cardinfo.php?fname=`)
+ * — not limited to the app's timeline sets — for the ban/unban typeahead. Images
+ * are rewritten to R2 via `transformCardImages` (art exists for ≤2016 cards; a
+ * miss just 404s the image). A no-match query returns [] (the API answers 400
+ * with an `{error}` body, which we treat as "nothing found", not a failure).
+ */
+export async function searchCardsByName(query: string): Promise<Card[]> {
+    const q = query.trim();
+    if (!q) return [];
+    try {
+        const response = await fetch(`${BASE_URL}/cardinfo.php?fname=${encodeURIComponent(q)}`);
+        if (!response.ok) return []; // 400 = no match
+        const data = await response.json();
+        if (!Array.isArray(data.data)) return [];
+        return (data.data as Card[]).map(transformCardImages);
+    } catch (error) {
+        console.error(`Error searching cards for "${q}":`, error);
+        return [];
+    }
+}
+
 // In-memory cache for card data
 const cardCache: Record<number, Card> = {};
 

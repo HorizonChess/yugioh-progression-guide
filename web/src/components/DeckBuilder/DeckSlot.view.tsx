@@ -17,10 +17,12 @@ interface DeckSlotProps {
     onDrag?: (e: React.DragEvent) => void;
     onDragEnd?: (e: React.DragEvent) => void;
     isUnavailable?: boolean;
+    /** Cosmetic ban (Phase 5): greyed like unavailable, not draggable, marked "BANNED". */
+    banned?: boolean;
     dragContext?: 'search' | 'deck';
 }
 
-export default function DeckSlot({ card, index, onClick, onDoubleClick, onContextMenu, onHover, className = "", onDragStart, onDrop, onDragOver, onDrag, onDragEnd, isUnavailable, dragContext }: DeckSlotProps) {
+export default function DeckSlot({ card, index, onClick, onDoubleClick, onContextMenu, onHover, className = "", onDragStart, onDrop, onDragOver, onDrag, onDragEnd, isUnavailable, banned, dragContext }: DeckSlotProps) {
     const [isDragOver, setIsDragOver] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [imageError, setImageError] = useState(false);
@@ -71,11 +73,13 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
                     border-[0.5px] border-slate-outline/30
                     ${isDragging && dragContext === 'deck' ? 'opacity-0' : ''}
                     ${isDragOver ? "ring-4 ring-blue-400 bg-blue-100/20 scale-105 z-20" : ""}
-                    ${isUnavailable
-                        ? "grayscale opacity-50 cursor-not-allowed"
-                        : card
-                            ? "cursor-pointer hover:ring-2 hover:ring-yellow-400 hover:z-10 group"
-                            : "bg-white/5"
+                    ${banned
+                        ? "grayscale opacity-60 cursor-not-allowed ring-1 ring-red-600/70"
+                        : isUnavailable
+                            ? "grayscale opacity-50 cursor-not-allowed"
+                            : card
+                                ? "cursor-pointer hover:ring-2 hover:ring-yellow-400 hover:z-10 group"
+                                : "bg-white/5"
                     }
                 `}
                 onClick={onClick}
@@ -83,7 +87,7 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
                 onContextMenu={onContextMenu}
                 onMouseEnter={() => onHover && onHover(card || null)}
                 onMouseLeave={() => onHover && onHover(null)}
-                draggable={!!card && !isUnavailable}
+                draggable={!!card && !isUnavailable && !banned}
                 onDragStart={(e) => {
                     if (card && onDragStart) {
                         setIsDragging(true);
@@ -105,6 +109,14 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
                         />
                         {/* Hover Shine */}
                         <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 pointer-events-none rounded-[1px]" />
+                        {/* Cosmetic ban marker */}
+                        {banned && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <span className="rotate-[-18deg] bg-red-700/90 text-white text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded shadow-md border border-red-300/40">
+                                    BANNED
+                                </span>
+                            </div>
+                        )}
                     </>
                 ) : (
                     /* Empty Slot Zone */

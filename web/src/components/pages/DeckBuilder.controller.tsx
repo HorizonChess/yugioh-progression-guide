@@ -17,7 +17,10 @@ import DeckControls from "@/components/DeckBuilder/DeckControls.view";
 import { SavedDeck } from "@/context/ProgressionContext";
 
 export default function DeckBuilder() {
-    const { collection, saveDeck, savedDecks, deleteDeck } = useProgression();
+    const { collection, saveDeck, savedDecks, deleteDeck, bannedCardIds } = useProgression();
+    // Cosmetic ban list (Phase 5): banned cards are greyed in the search panel and
+    // blocked from being added. Saved decks are never stripped.
+    const bannedIds = useMemo(() => new Set(bannedCardIds), [bannedCardIds]);
     const [allCards, setAllCards] = useState<Card[]>([]);
     const [, setLoading] = useState(true);
     const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
@@ -349,6 +352,7 @@ export default function DeckBuilder() {
             if ((to === 'extra' || to === 'side') && targetDeck.length >= 15 && data.from !== to) return alert("Extra/Side Deck Full (Max 15)");
 
             if (data.from === 'search') {
+                if (bannedIds.has(card.id)) return alert("This card is banned and cannot be added.");
                 if (getCopiesInAllDecks(card.id) >= 3) return alert("Max 3 copies allowed.");
             }
 
@@ -399,6 +403,7 @@ export default function DeckBuilder() {
         const isExtra = isExtraDeckCard(card);
         const deck = isExtra ? extraDeck : mainDeck;
 
+        if (bannedIds.has(card.id)) return alert("This card is banned and cannot be added.");
         if (!isExtra && deck.length >= 60) return alert("Main Deck Full");
         if (isExtra && deck.length >= 15) return alert("Extra Deck Full");
         if (getCopiesInAllDecks(card.id) >= 3) return alert("Max 3 copies allowed.");
@@ -472,6 +477,7 @@ export default function DeckBuilder() {
                         onDragEnd={handleDragEnd}
                         onHover={handleHover}
                         onCardDoubleClick={handleDoubleClick}
+                        bannedIds={bannedIds}
                     />
                 </div>
 

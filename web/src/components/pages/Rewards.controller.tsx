@@ -1,7 +1,7 @@
 "use client";
 
 import { useProgression } from "@/context/ProgressionContext";
-import { fetchAllSets, fetchTournamentSets, fetchCardsInSet, PulledCard } from "@/lib/api";
+import { fetchAllSets, fetchTournamentSets, fetchCardsInSet, Card, PulledCard } from "@/lib/api";
 import { RewardEntry, resolvePrizeKind, PrizeKind } from "@/lib/rewards";
 import { useState } from "react";
 import StonePanel from "@/components/ui/StonePanel.view";
@@ -9,6 +9,7 @@ import GuideSprite from "@/components/shell/GuideSprite.view";
 import RewardCard from "@/components/Rewards/RewardCard.view";
 import PackRevealModal, { RevealSource } from "@/components/Rewards/PackRevealModal.view";
 import WildcardModal from "@/components/Rewards/WildcardModal.view";
+import BanInput from "@/components/Rewards/BanInput.view";
 
 /**
  * The REWARDS tab (route: /rewards) — the persisted reward ledger.
@@ -27,9 +28,10 @@ import WildcardModal from "@/components/Rewards/WildcardModal.view";
  * pity + tournament share one modal, differing only in which set they resolve.
  *  - wildcard    → the `WildcardModal`: pick any card of the reward's rarity or
  *                  below from the won pack.
- * The remaining interactive prizes (ban/unban, starlight) are shown available
- * but disabled ("coming soon") until their phases; snatch-steal is locked
- * pending multiplayer.
+ *  - ban / unban → the `BanInput` typeahead (cosmetic: the deck builder reads
+ *                  `bannedCardIds` and blocks/greys the add).
+ * The remaining prize (starlight) is shown available but disabled ("coming
+ * soon") until Phase 6; snatch-steal is locked pending multiplayer.
  */
 
 /** Prize kinds whose claim modal isn't built yet (shown available, disabled). */
@@ -38,18 +40,20 @@ const COMING_SOON: Record<PrizeKind, string | null> = {
     pity: null,
     tournament: null,
     wildcard: null,
+    ban: null,
+    unban: null,
     snatch: "Requires multiplayer — coming soon",
     starlight: "Claim flow coming soon",
-    ban: "Claim flow coming soon",
-    unban: "Claim flow coming soon",
 };
 
 export default function RewardsPage() {
-    const { rewards, claimRewardEntry, addToCollection } = useProgression();
+    const { rewards, claimRewardEntry, addToCollection, banCard, unbanCard, bannedCardIds } = useProgression();
     /** The reward whose 3-pack reveal modal is open (pity or tournament), if any. */
     const [revealEntry, setRevealEntry] = useState<RewardEntry | null>(null);
     /** The reward whose wildcard card-picker modal is open, if any. */
     const [wildcardEntry, setWildcardEntry] = useState<RewardEntry | null>(null);
+    /** The reward whose ban/unban typeahead is open, if any. */
+    const [banEntry, setBanEntry] = useState<RewardEntry | null>(null);
 
     const available = rewards.filter((r) => r.status === "available");
     const claimed = rewards.filter((r) => r.status === "claimed");
@@ -98,6 +102,16 @@ export default function RewardsPage() {
         setWildcardEntry(null);
     };
 
+    // --- Ban / Unban: mark (or unmark) the card cosmetically and claim ---
+    const pickBanTarget = (card: Card) => {
+        if (!banEntry) return;
+        const kind = resolvePrizeKind(banEntry.prizeId);
+        if (kind === "ban") banCard(card.id);
+        else unbanCard(card.id);
+        claimRewardEntry(banEntry.id, { bannedCardId: card.id });
+        setBanEntry(null);
+    };
+
     // Choose the claim affordance for an available entry by its prize kind.
     const renderAvailable = (entry: RewardEntry) => {
         const kind = resolvePrizeKind(entry.prizeId);
@@ -132,6 +146,17 @@ export default function RewardsPage() {
                     entry={entry}
                     actionLabel="Choose Card"
                     onAction={() => setWildcardEntry(entry)}
+                />
+            );
+        }
+
+        if (kind === "ban" || kind === "unban") {
+            return (
+                <RewardCard
+                    key={entry.id}
+                    entry={entry}
+                    actionLabel={kind === "ban" ? "Ban a Card" : "Unban a Card"}
+                    onAction={() => setBanEntry(entry)}
                 />
             );
         }
@@ -205,6 +230,15 @@ export default function RewardsPage() {
                     entry={wildcardEntry}
                     onChoose={chooseWildcard}
                     onClose={() => setWildcardEntry(null)}
+                />
+            )}
+
+            {banEntry && (
+                <BanInput
+                    mode={resolvePrizeKind(banEntry.prizeId) === "unban" ? "unban" : "ban"}
+                    bannedCardIds={bannedCardIds}
+                    onPick={pickBanTarget}
+                    onClose={() => setBanEntry(null)}
                 />
             )}
         </div>

@@ -11,9 +11,11 @@ interface CardSearchPanelProps {
     onDrag: (e: React.DragEvent) => void;
     onDragEnd: (e: React.DragEvent) => void;
     onCardDoubleClick?: (card: Card) => void;
+    /** Cosmetically-banned card ids (Phase 5): greyed + marked, add is blocked. */
+    bannedIds?: Set<number>;
 }
 
-export default function CardSearchPanel({ collectionCards = [], onHover, onDragStart, onDrag, onDragEnd, onCardDoubleClick }: CardSearchPanelProps) {
+export default function CardSearchPanel({ collectionCards = [], onHover, onDragStart, onDrag, onDragEnd, onCardDoubleClick, bannedIds }: CardSearchPanelProps) {
     // --- Filters State ---
     const [name, setName] = useState("");
     const [desc, setDesc] = useState("");
@@ -204,12 +206,14 @@ export default function CardSearchPanel({ collectionCards = [], onHover, onDragS
                 <div className="grid grid-cols-4 gap-1">
                     {currentCards.map((card, i) => {
                         const count = collectionCards.find(c => c.card.id === card.id)?.count || 0;
+                        const isBanned = bannedIds?.has(card.id) ?? false;
                         return (
                             <div key={card.id + i} className="relative">
                                 <DeckSlot
                                     index={i}
                                     card={card}
                                     isUnavailable={count === 0}
+                                    banned={isBanned}
                                     dragContext="search"
                                     onHover={onHover}
                                     onDragStart={(e) => onDragStart(e, card, 'search')}
