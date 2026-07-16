@@ -77,13 +77,46 @@ const EXCLUDE_KEYWORDS = [
     "Magic Ruler", // Identical to Spell Ruler
 ];
 
+/**
+ * The tournament-family sets `fetchAllSets` filters OUT via EXCLUDE_KEYWORDS —
+ * pulled back in by `fetchTournamentSets()` for the "3 Tournament Packs" reward.
+ * Kept aligned with the pack-logic tournament types (see pack-logic.ts
+ * `determinePackType` / `generateTournamentPack`) so the reward opens with the
+ * correct tournament ratios.
+ */
+const TOURNAMENT_KEYWORDS = [
+    "Tournament Pack",   // incl. "OTS Tournament Pack"
+    "Champion Pack",
+    "Turbo Pack",
+    "Astral Pack",
+];
+
+/**
+ * Cached raw `/cardsets.php` response (unfiltered). Both `fetchAllSets` and
+ * `fetchTournamentSets` reduce this, so it's fetched once per session.
+ */
+let rawSetsPromise: Promise<CardSet[]> | null = null;
+
+async function fetchRawSets(): Promise<CardSet[]> {
+    if (!rawSetsPromise) {
+        rawSetsPromise = (async () => {
+            const response = await fetch(`${BASE_URL}/cardsets.php`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch card sets');
+            }
+            return (await response.json()) as CardSet[];
+        })().catch((error) => {
+            // Don't cache a rejection — let the next call retry.
+            rawSetsPromise = null;
+            throw error;
+        });
+    }
+    return rawSetsPromise;
+}
+
 export async function fetchAllSets(): Promise<CardSet[]> {
     try {
-        const response = await fetch(`${BASE_URL}/cardsets.php`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch card sets');
-        }
-        const data: CardSet[] = await response.json();
+        const data = await fetchRawSets();
 
         // Filter and sort by date
         return data
@@ -110,6 +143,37 @@ export async function fetchAllSets(): Promise<CardSet[]> {
             });
     } catch (error) {
         console.error('Error fetching sets:', error);
+        return [];
+    }
+}
+
+/**
+ * The tournament-family sets `fetchAllSets` drops — surfaced for the "3
+ * Tournament Packs" reward. Same date cutoff as the main sets, sorted ascending
+ * by date. Booster art usually isn't in booster_images.json for these (the
+ * ledger doesn't show pack art, and the reveal only uses the set name), so
+ * `set_image` is left undefined rather than hotlinking.
+ */
+export async function fetchTournamentSets(): Promise<CardSet[]> {
+    try {
+        const data = await fetchRawSets();
+
+        return data
+            .filter(set => {
+                if (!set.tcg_date) return false;
+                if (set.tcg_date >= CUTOFF_DATE) return false;
+
+                const name = set.set_name;
+                return TOURNAMENT_KEYWORDS.some(keyword => name.includes(keyword));
+            })
+            .sort((a, b) => new Date(a.tcg_date).getTime() - new Date(b.tcg_date).getTime())
+            .map(set => ({
+                ...set,
+                original_image: undefined,
+                set_image: boosterImages[set.set_code] || undefined,
+            }));
+    } catch (error) {
+        console.error('Error fetching tournament sets:', error);
         return [];
     }
 }
