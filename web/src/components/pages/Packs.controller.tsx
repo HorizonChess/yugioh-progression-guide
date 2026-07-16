@@ -1,8 +1,7 @@
 "use client";
 
 import { useProgression } from "@/context/ProgressionContext";
-import { fetchAllSets, fetchCardsInSet, Card, CardSet, PulledCard } from "@/lib/api";
-import { generateBoosterPack } from "@/lib/pack-logic";
+import { fetchAllSets, fetchCardsInSet, Card, CardSet } from "@/lib/api";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import GuideSprite from "@/components/shell/GuideSprite.view";
@@ -13,8 +12,10 @@ import CardTooltip from "@/components/card/CardTooltip.view";
 import RarityCardGrid from "@/components/PackOpener/RarityCardGrid.view";
 import StoreView from "@/components/PackOpener/StoreView.view";
 import PackOpeningView from "@/components/PackOpener/PackOpeningView.view";
+import PackDetails from "@/components/PackOpener/PackDetails.view";
 import { processCardsForRarityGrid } from "@/lib/card-utils";
 import { useCardTooltip } from "@/hooks/useCardTooltip";
+import { usePackOpening } from "@/hooks/usePackOpening";
 
 /**
  * The PACKS screen (route: /packs). Controller for four states:
@@ -25,7 +26,7 @@ import { useCardTooltip } from "@/hooks/useCardTooltip";
  *
  * The store + opening states render inside a fixed shell (filling the content
  * row below the persistent nav) so they never scroll; summary + details use a
- * scrollable shell.
+ * scrollable shell. The reveal lifecycle lives in `usePackOpening`.
  */
 function PacksPageContent() {
     const { currentSetIndex, addToCollection } = useProgression();
@@ -34,19 +35,13 @@ function PacksPageContent() {
 
     const [currentSet, setCurrentSet] = useState<CardSet | null>(null);
     const [setCards, setSetCards] = useState<Card[]>([]);
-    const [isOpening, setIsOpening] = useState(false);
     const [loading, setLoading] = useState(true);
-
-    const [packsToOpen, setPacksToOpen] = useState<PulledCard[][]>([]);
-    const [currentPackIndex, setCurrentPackIndex] = useState(0);
-    const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
-    const [allOpenedCards, setAllOpenedCards] = useState<PulledCard[]>([]);
-    const [showSummary, setShowSummary] = useState(false);
 
     const [customQuantity, setCustomQuantity] = useState<number>(1);
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
     const [viewDetails, setViewDetails] = useState(false);
 
+    const pack = usePackOpening();
     const { hoveredCard, tooltipPosition, onHover, onLeave } = useCardTooltip();
 
     const setParam = searchParams.get("set");
@@ -71,54 +66,8 @@ function PacksPageContent() {
         loadData();
     }, [targetSetIndex]);
 
-    const handleOpenPacks = (count: number) => {
-        if (!setCards.length || count <= 0 || !currentSet) return;
-
-        const newPacks: PulledCard[][] = [];
-        for (let i = 0; i < count; i++) {
-            newPacks.push(generateBoosterPack(setCards, currentSet));
-        }
-
-        setPacksToOpen(newPacks);
-        setCurrentPackIndex(0);
-        setFlippedCards(new Set());
-        setAllOpenedCards([]);
-        setShowSummary(false);
-        setIsOpening(true);
-    };
-
-    const handleCardClick = (index: number, card: Card) => {
-        if (flippedCards.has(index)) {
-            setSelectedCard(card); // already flipped → open details
-            return;
-        }
-        setFlippedCards(new Set(flippedCards).add(index));
-    };
-
-    const handleFlipAll = () => {
-        const currentPack = packsToOpen[currentPackIndex];
-        if (!currentPack) return;
-        setFlippedCards(new Set(currentPack.map((_, idx) => idx)));
-    };
-
-    const handleOpenAll = () => {
-        const newCards = packsToOpen.slice(currentPackIndex).flat();
-        setAllOpenedCards((prev) => [...prev, ...newCards]);
-        setShowSummary(true);
-    };
-
-    const handleNextPack = () => {
-        setAllOpenedCards((prev) => [...prev, ...packsToOpen[currentPackIndex]]);
-        if (currentPackIndex < packsToOpen.length - 1) {
-            setCurrentPackIndex((prev) => prev + 1);
-            setFlippedCards(new Set());
-        } else {
-            setShowSummary(true);
-        }
-    };
-
     const handleSaveAndContinue = () => {
-        addToCollection(allOpenedCards);
+        addToCollection(pack.allOpenedCards);
         router.push("/collection");
     };
 
@@ -126,14 +75,6 @@ function PacksPageContent() {
         if (confirm("Are you sure? All opened cards will be lost.")) {
             router.push("/map");
         }
-    };
-
-    const isPackFullyOpened =
-        packsToOpen[currentPackIndex] && flippedCards.size === packsToOpen[currentPackIndex].length;
-
-    const getProcessedCards = (cards: Card[]) => {
-        if (!currentSet) return { cardsByRarity: {}, sortedRarities: [] };
-        return processCardsForRarityGrid(cards, currentSet.set_code);
     };
 
     if (loading) {
@@ -156,21 +97,21 @@ function PacksPageContent() {
     }
 
     // --- The 5-4 reveal + the store both fit the viewport (fixed shell, no scroll).
-    if (isOpening && !showSummary) {
+    if (pack.isOpening && !pack.showSummary) {
         return (
             <PacksShell fixed>
                 {(hoveredCard || selectedCard) && renderOverlays()}
                 <PackOpeningView
                     set={currentSet}
-                    pack={packsToOpen[currentPackIndex]}
-                    packIndex={currentPackIndex}
-                    packCount={packsToOpen.length}
-                    flippedCards={flippedCards}
-                    fullyOpened={!!isPackFullyOpened}
-                    onCardClick={handleCardClick}
-                    onFlipAll={handleFlipAll}
-                    onNextPack={handleNextPack}
-                    onOpenAll={handleOpenAll}
+                    pack={pack.packsToOpen[pack.currentPackIndex]}
+                    packIndex={pack.currentPackIndex}
+                    packCount={pack.packsToOpen.length}
+                    flippedCards={pack.flippedCards}
+                    fullyOpened={pack.isPackFullyOpened}
+                    onCardClick={(index, card) => pack.handleCardClick(index, card, setSelectedCard)}
+                    onFlipAll={pack.handleFlipAll}
+                    onNextPack={pack.handleNextPack}
+                    onOpenAll={pack.handleOpenAll}
                     onBack={handleDiscardAndExit}
                     onHover={onHover}
                     onLeave={onLeave}
@@ -179,7 +120,7 @@ function PacksPageContent() {
         );
     }
 
-    if (!isOpening && !viewDetails) {
+    if (!pack.isOpening && !viewDetails) {
         return (
             <PacksShell fixed withSprite>
                 {renderOverlays()}
@@ -189,7 +130,7 @@ function PacksPageContent() {
                     isLocked={isLocked}
                     quantity={customQuantity}
                     setQuantity={setCustomQuantity}
-                    onOpen={() => handleOpenPacks(customQuantity)}
+                    onOpen={() => pack.openPacks(setCards, currentSet, customQuantity)}
                     onViewDetails={() => setViewDetails(true)}
                     onBack={() => router.push("/map")}
                 />
@@ -199,9 +140,20 @@ function PacksPageContent() {
 
     // --- Summary + Details show the full card list; they scroll normally.
     return (
-        <PacksShell withSprite={!isOpening}>
+        <PacksShell withSprite={!pack.isOpening}>
             {renderOverlays()}
-            {viewDetails ? renderDetails() : renderSummary()}
+            {viewDetails ? (
+                <PackDetails
+                    set={currentSet}
+                    cards={setCards}
+                    onCardClick={setSelectedCard}
+                    onHover={onHover}
+                    onLeave={onLeave}
+                    onBack={() => setViewDetails(false)}
+                />
+            ) : (
+                renderSummary()
+            )}
         </PacksShell>
     );
 
@@ -216,37 +168,20 @@ function PacksPageContent() {
         );
     }
 
-    function renderDetails() {
-        const { cardsByRarity, sortedRarities } = getProcessedCards(setCards);
-        return (
-            <div className="max-w-7xl mx-auto">
-                <StonePanel className="flex items-center justify-between mb-8 sticky top-4 z-50">
-                    <div>
-                        <h1 className="text-3xl font-black text-white mb-1">{currentSet!.set_name}</h1>
-                        <p className="text-primary text-sm font-bold">{setCards.length} Cards in Set</p>
-                    </div>
-                    <ParchmentButton onClick={() => setViewDetails(false)} className="flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                        Back
-                    </ParchmentButton>
-                </StonePanel>
-                <RarityCardGrid cardsByRarity={cardsByRarity} sortedRarities={sortedRarities} onCardClick={setSelectedCard} onHover={onHover} onLeave={onLeave} />
-            </div>
-        );
-    }
-
     function renderSummary() {
-        const { cardsByRarity, sortedRarities } = getProcessedCards(allOpenedCards);
+        const { cardsByRarity, sortedRarities } = currentSet
+            ? processCardsForRarityGrid(pack.allOpenedCards, currentSet.set_code)
+            : { cardsByRarity: {}, sortedRarities: [] };
         return (
             <div className="max-w-7xl mx-auto">
                 <StonePanel className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 sticky top-4 z-50">
                     <div className="text-center md:text-left">
                         <h1 className="text-2xl md:text-3xl font-black text-white mb-1">{currentSet!.set_name}</h1>
-                        <p className="text-primary text-sm font-bold">Opened {allOpenedCards.length} Cards</p>
+                        <p className="text-primary text-sm font-bold">Opened {pack.allOpenedCards.length} Cards</p>
                     </div>
                     <div className="flex gap-4">
                         <button onClick={handleDiscardAndExit} className="pack-exit-btn">Back to Campaign</button>
-                        <ParchmentButton onClick={() => { setIsOpening(false); setShowSummary(false); setAllOpenedCards([]); }}>
+                        <ParchmentButton onClick={pack.reset}>
                             Open More
                         </ParchmentButton>
                         <ParchmentButton onClick={handleSaveAndContinue} className="text-green-900 border-green-800 hover:bg-green-50">
