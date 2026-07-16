@@ -1,5 +1,36 @@
 # Rewards Tab — Implementation Plan
 
+## Status (last updated 2026-07-16)
+
+**Branch:** `feature/rewards` (branched from `main` after the old
+`feature/record-match-winners-wheel` was fast-forward-merged into `main`).
+Nothing pushed to `origin` yet (main is 19 commits ahead of origin/main locally).
+
+**Phase 1 — DONE & committed** (`0a1cd95`). Verified: `tsc` clean (non-test),
+eslint clean on touched files, `/rewards` + `/timeline` + `/map` build (HTTP 200).
+Not yet click-tested by hand in the browser.
+
+- Ledger data model in `lib/rewards.ts` (`RewardEntry`, `PrizeKind`,
+  `resolvePrizeKind`, `wildcardRarityFloor`/`isRarityAtOrBelow`, `PITY_PRIZE`, `getPrize`).
+- `ProgressionContext`: `rewards`/`bannedCardIds` on `SaveSlot` (optional, back-compat),
+  `addReward`/`claimRewardEntry`/`banCard`/`unbanCard`, `recordMatch` append-only.
+  `pendingReward`/`RewardState`/`claimReward` deprecated but still wired (removed in Phase 6).
+- Nav: `/rewards` in allow-list + REWARDS link before MENU.
+- Record-match: full-screen defeat flourish retired; loss vortexes into an in-panel
+  **DefeatAct** (`components/RecordMatch/DefeatAct.view.tsx`); win + loss both advance
+  the set, both offer **Back to Campaign**. WinnersWheel + DefeatAct share an identical
+  stacked capped button column (reserved-but-invisible Back slot → no wheel jump, Spin
+  stays centered).
+- Rewards tab rewritten into the ledger (`Rewards.controller` + `components/Rewards/RewardCard.view.tsx`):
+  text claims inline, **pity** opens 3 boosters of the finished core set → collection.
+  Interactive prizes show "coming soon"; snatch locked.
+
+**NEXT: Phase 2 — Shared primitives (DRY groundwork).** Extract `ui/Modal.view.tsx`
+(from `CardDetailModal`), `PackOpener/PackDetails.view.tsx` (from `Packs.controller.renderDetails`),
+and `hooks/usePackOpening.ts` (from `Packs.controller`); refactor `Packs.controller` to
+consume all three and re-verify `/packs` still opens packs unchanged. Then Phases 3-6
+(tournament packs → wildcard → ban/unban → starlight + cleanup) per below.
+
 ## Context
 
 The record-match feature is built: winning vortexes the board away and spins the **Winner's Wheel**
