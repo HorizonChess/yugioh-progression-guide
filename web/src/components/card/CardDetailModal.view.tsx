@@ -1,13 +1,17 @@
 
+import React from "react";
 import { Card } from "@/lib/api";
 import Modal from "@/components/ui/Modal.view";
 
 interface CardDetailModalProps {
     card: Card;
     onClose: () => void;
+    /** Optional confirm/action slot rendered below the details (e.g. "Ban this card").
+     *  When omitted the modal is purely read-only (its default use). */
+    action?: React.ReactNode;
 }
 
-export default function CardDetailModal({ card, onClose }: CardDetailModalProps) {
+export default function CardDetailModal({ card, onClose, action }: CardDetailModalProps) {
     return (
         <Modal
             onClose={onClose}
@@ -78,6 +82,9 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                     <span>ID: {card.id}</span>
                     {card.archetype && <span>Archetype: {card.archetype}</span>}
                 </div>
+
+                {/* Optional confirm/action slot (e.g. the ban flow's confirm button). */}
+                {action && <div className="mt-4">{action}</div>}
             </div>
         </Modal>
     );

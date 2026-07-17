@@ -63,3 +63,6 @@ scripts/**/temp_*.png
 /visual-baseline/
 /visual-after/
 _shoot.mjs
+
+# Browser-driver screenshots (the scripts are committed; their output is not)
+scripts/drivers/out/

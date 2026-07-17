@@ -108,6 +108,40 @@ export function resolvePrizeKind(prizeId: string): PrizeKind {
 }
 
 /**
+ * The single card a claimed reward resolved to (for the ledger's claimed view),
+ * or null for rewards without one pick — pack rewards (pity/tournament open 3
+ * packs, shown as a count instead) and text rewards. Ban/unban surface the
+ * affected card; wildcard/starlight/snatch surface the granted/stolen card.
+ */
+export function claimedCardId(entry: RewardEntry): number | null {
+    switch (resolvePrizeKind(entry.prizeId)) {
+        case "wildcard":
+        case "starlight":
+        case "snatch":
+            return entry.grantedCardId ?? null;
+        case "ban":
+        case "unban":
+            return entry.bannedCardId ?? null;
+        default:
+            return null; // pity / tournament (grantedCardIds) and text
+    }
+}
+
+/** Short caption shown under a claimed reward's picked card, by prize kind. */
+export function claimedCardCaption(entry: RewardEntry): string {
+    switch (resolvePrizeKind(entry.prizeId)) {
+        case "ban":
+            return "Banned";
+        case "unban":
+            return "Unbanned";
+        case "snatch":
+            return "Snatched";
+        default:
+            return "Added to collection"; // wildcard / starlight
+    }
+}
+
+/**
  * Ascending rarity ladder for wildcards, low → high. A wildcard grants any card
  * of its rarity OR BELOW, so `wildcardRarityFloor` returns the prize's ceiling
  * and `isRarityAtOrBelow` tests a card's rarity against it. Uses the canonical

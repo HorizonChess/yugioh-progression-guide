@@ -210,21 +210,57 @@ export async function fetchCardsInSet(setName: string): Promise<Card[]> {
 }
 
 /**
- * Fuzzy card-name search over the FULL YGOPRODeck catalog (`cardinfo.php?fname=`)
- * — not limited to the app's timeline sets — for the ban/unban typeahead. Images
- * are rewritten to R2 via `transformCardImages` (art exists for ≤2016 cards; a
- * miss just 404s the image). A no-match query returns [] (the API answers 400
- * with an `{error}` body, which we treat as "nothing found", not a failure).
+ * set_name → tcg_date over the RAW (unfiltered) set list. Used to date a card's
+ * printings so we can tell whether the app's timeline covers it (i.e. it has a
+ * printing before CUTOFF_DATE). Cached for the session via `fetchRawSets`.
+ */
+export async function fetchSetDateMap(): Promise<Map<string, string>> {
+    const sets = await fetchRawSets();
+    const map = new Map<string, string>();
+    for (const set of sets) {
+        if (set.tcg_date) map.set(set.set_name, set.tcg_date);
+    }
+    return map;
+}
+
+/**
+ * True if `card` existed by the app's cutoff — i.e. it has at least one printing
+ * (in ANY set: core booster, structure deck, tin, etc.) dated before CUTOFF_DATE.
+ * This is a pure DATE test, not set-membership: a card printed only in a structure
+ * deck still counts, matching how Starlight search reaches structure-deck cards.
+ * Cards printed only after the cutoff (post-Link era) have no R2 art and aren't
+ * part of the progression, so they must not be bannable. Undatable printings are
+ * ignored; a card with no datable pre-cutoff printing is treated as too new.
+ */
+export function existedByCutoff(card: Card, setDates: Map<string, string>): boolean {
+    return (card.card_sets ?? []).some((printing) => {
+        const date = setDates.get(printing.set_name);
+        return date != null && date < CUTOFF_DATE;
+    });
+}
+
+/**
+ * Fuzzy card-name search (`cardinfo.php?fname=`) for the ban typeahead, RESTRICTED
+ * to cards that existed by the cutoff (`existedByCutoff`) — purely by printing
+ * date, so any card with a pre-cutoff printing in any set kind is bannable, while
+ * post-cutoff-only cards (which showed as blank thumbnails) are filtered out.
+ * Images are rewritten to R2 via `transformCardImages`. A no-match query returns
+ * [] (the API answers 400 with an `{error}` body, treated as "nothing found").
  */
 export async function searchCardsByName(query: string): Promise<Card[]> {
     const q = query.trim();
     if (!q) return [];
     try {
-        const response = await fetch(`${BASE_URL}/cardinfo.php?fname=${encodeURIComponent(q)}`);
+        const [response, setDates] = await Promise.all([
+            fetch(`${BASE_URL}/cardinfo.php?fname=${encodeURIComponent(q)}`),
+            fetchSetDateMap(),
+        ]);
         if (!response.ok) return []; // 400 = no match
         const data = await response.json();
         if (!Array.isArray(data.data)) return [];
-        return (data.data as Card[]).map(transformCardImages);
+        return (data.data as Card[])
+            .filter((card) => existedByCutoff(card, setDates))
+            .map(transformCardImages);
     } catch (error) {
         console.error(`Error searching cards for "${q}":`, error);
         return [];

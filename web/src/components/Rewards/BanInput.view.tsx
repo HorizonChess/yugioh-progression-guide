@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, searchCardsByName, fetchCardsByIds } from "@/lib/api";
 import Modal from "@/components/ui/Modal.view";
 import ParchmentInput from "@/components/ui/ParchmentInput.view";
+import CardDetailModal from "@/components/card/CardDetailModal.view";
+import FrameButton from "@/components/ui/FrameButton.view";
 
 interface BanInputProps {
     mode: "ban" | "unban";
@@ -16,15 +18,19 @@ interface BanInputProps {
 
 /**
  * The Ban / Unban reward claim — a parchment typeahead hosted in the shared
- * `Modal`. Ban searches the FULL card DB (`searchCardsByName`); Unban lists the
- * save's currently-banned cards (`fetchCardsByIds(bannedCardIds)`). Picking a
- * result hands the card up; the ban itself is cosmetic (the deck builder reads
- * `bannedCardIds` and blocks/greys the add — no saved decks are stripped).
+ * `Modal`. Ban searches the FULL card DB (`searchCardsByName`, restricted to
+ * cards that existed by the cutoff); Unban lists the save's currently-banned
+ * cards (`fetchCardsByIds(bannedCardIds)`). Clicking a result opens its detail
+ * modal for CONFIRMATION — only confirming there hands the card up. The ban
+ * itself is cosmetic (the deck builder reads `bannedCardIds` and blocks/greys
+ * the add — no saved decks are stripped).
  */
 export default function BanInput({ mode, bannedCardIds = [], onPick, onClose }: BanInputProps) {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<Card[]>([]);
     const [loading, setLoading] = useState(false);
+    /** A clicked card awaiting confirmation in its detail modal. */
+    const [pending, setPending] = useState<Card | null>(null);
     const reqId = useRef(0);
 
     const isBan = mode === "ban";
@@ -116,7 +122,7 @@ export default function BanInput({ mode, bannedCardIds = [], onPick, onClose }: 
                         {shown.map((card) => (
                             <li key={card.id}>
                                 <button
-                                    onClick={() => onPick(card)}
+                                    onClick={() => setPending(card)}
                                     className="w-full flex items-center gap-3 p-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 hover:border-primary/50 transition-colors text-left"
                                 >
                                     <div className="relative w-10 h-[58px] shrink-0 rounded overflow-hidden bg-black/40">
@@ -139,6 +145,31 @@ export default function BanInput({ mode, bannedCardIds = [], onPick, onClose }: 
                     </ul>
                 )}
             </div>
+
+            {/* Confirm the pick inside its detail modal before committing. */}
+            {pending && (
+                <CardDetailModal
+                    card={pending}
+                    onClose={() => setPending(null)}
+                    action={
+                        <div className="flex items-center gap-3">
+                            <FrameButton
+                                onClick={() => onPick(pending)}
+                                className="h-11 px-5 flex-1 min-w-0"
+                                textClassName="tracking-[0.1em] text-[0.72rem] truncate"
+                            >
+                                {isBan ? "Ban This Card" : "Unban This Card"}
+                            </FrameButton>
+                            <button
+                                onClick={() => setPending(null)}
+                                className="h-11 px-4 shrink-0 rounded-lg border border-white/15 text-white/70 text-sm font-bold hover:bg-white/5 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    }
+                />
+            )}
         </Modal>
     );
 }

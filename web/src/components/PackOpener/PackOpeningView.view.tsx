@@ -41,10 +41,14 @@ export default function PackOpeningView({
     onHover: (card: Card, e: React.MouseEvent) => void;
     onLeave: () => void;
 }) {
-    // Standard 9-card pack -> 5 on top, 4 staggered below. Reprint packs
-    // (>10 cards) use the aligned "wide" grid split evenly across two rows.
+    // Three shapes:
+    //  - single (≤5 cards, e.g. 3-card Tournament packs): one centered row, no
+    //    empty second row (which used to leave a tall empty slab).
+    //  - wide (>10, reprint packs): aligned auto-flow split evenly across 2 rows.
+    //  - standard (6-10): the classic 5-on-top / staggered-below layout.
+    const isSingle = pack.length <= 5;
     const isWide = pack.length > 10;
-    const topCount = isWide ? Math.ceil(pack.length / 2) : 5;
+    const topCount = isSingle ? pack.length : isWide ? Math.ceil(pack.length / 2) : 5;
 
     return (
         <div className="h-full w-full flex flex-col min-h-0">
@@ -61,10 +65,15 @@ export default function PackOpeningView({
                 <div className="w-1/3" />
             </div>
 
-            {/* Cards panel — fills remaining height; the grid distributes it evenly */}
-            <div className="flex-1 flex flex-col items-center w-full max-w-7xl mx-auto min-h-0">
-                <StonePanel className="w-full flex-1 min-h-0 flex flex-col relative px-6 py-3 shadow-2xl">
-                    <div className={`pack-grid ${isWide ? "pack-grid--wide" : ""}`}>
+            {/* Cards panel — normally fills remaining height (grid distributes it
+                evenly). For a SINGLE-row small pack the panel shrinks to the cards
+                (justify-center) so the slab isn't a tall empty box. */}
+            <div className={`flex-1 flex flex-col items-center w-full max-w-7xl mx-auto min-h-0 ${isSingle ? "justify-center" : ""}`}>
+                <StonePanel className={`w-full min-h-0 flex flex-col relative px-6 py-3 shadow-2xl ${isSingle ? "flex-none" : "flex-1"}`}>
+                    <div
+                        className={`pack-grid ${isSingle ? "pack-grid--single" : ""} ${isWide ? "pack-grid--wide" : ""}`}
+                        style={isSingle ? ({ "--pack-cols": pack.length } as React.CSSProperties) : undefined}
+                    >
                         {pack.map((card, idx) => {
                             const setInfo =
                                 card.card_sets?.find((s) => s.set_code.split("-")[0] === set.set_code.split("-")[0]) ||
@@ -94,8 +103,11 @@ export default function PackOpeningView({
                     </div>
                 </StonePanel>
 
-                {/* Controls below the panel */}
-                <div className="flex justify-center items-center gap-4 pt-3 shrink-0">
+                {/* Controls below the panel. Single-row packs shrink-wrap the slab
+                    and center the block, so a larger gap here just uses existing
+                    slack — it does NOT grow the modal (unlike the flex-1 standard
+                    layout, where the panel already reaches the controls). */}
+                <div className={`flex justify-center items-center gap-4 shrink-0 ${isSingle ? "pt-8" : "pt-3"}`}>
                     {!fullyOpened && <ParchmentButton onClick={onFlipAll}>Flip All</ParchmentButton>}
                     <button onClick={onNextPack} disabled={!fullyOpened} className={fullyOpened ? "pack-next-btn" : "pack-next-btn--disabled"}>
                         {packIndex < packCount - 1 ? "Next Pack" : "Finish"}

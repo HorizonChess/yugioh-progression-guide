@@ -1,15 +1,16 @@
 "use client";
 
 import { useProgression } from "@/context/ProgressionContext";
-import { fetchAllSets, fetchTournamentSets, fetchCardsInSet, Card, PulledCard } from "@/lib/api";
-import { RewardEntry, resolvePrizeKind, PrizeKind } from "@/lib/rewards";
-import { useState } from "react";
+import { fetchAllSets, fetchTournamentSets, fetchCardsInSet, fetchCardsByIds, Card, PulledCard } from "@/lib/api";
+import { RewardEntry, resolvePrizeKind, PrizeKind, claimedCardId } from "@/lib/rewards";
+import { useEffect, useMemo, useState } from "react";
 import StonePanel from "@/components/ui/StonePanel.view";
 import GuideSprite from "@/components/shell/GuideSprite.view";
 import RewardCard from "@/components/Rewards/RewardCard.view";
 import PackRevealModal, { RevealSource } from "@/components/Rewards/PackRevealModal.view";
 import WildcardModal from "@/components/Rewards/WildcardModal.view";
 import BanInput from "@/components/Rewards/BanInput.view";
+import CardDetailModal from "@/components/card/CardDetailModal.view";
 
 /**
  * The REWARDS tab (route: /rewards) — the persisted reward ledger.
@@ -54,9 +55,51 @@ export default function RewardsPage() {
     const [wildcardEntry, setWildcardEntry] = useState<RewardEntry | null>(null);
     /** The reward whose ban/unban typeahead is open, if any. */
     const [banEntry, setBanEntry] = useState<RewardEntry | null>(null);
+    /** A claimed reward's picked card, opened in a read-only detail modal. */
+    const [inspectCard, setInspectCard] = useState<Card | null>(null);
 
     const available = rewards.filter((r) => r.status === "available");
     const claimed = rewards.filter((r) => r.status === "claimed");
+
+    // Resolve each claimed single-pick reward's card (wildcard/ban/snatch) so the
+    // ledger can show its image. Pack rewards have no single pick (see claimedCardId).
+    const claimedCardIds = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    claimed
+                        .map((e) => claimedCardId(e))
+                        .filter((id): id is number => id != null)
+                )
+            ),
+        [claimed]
+    );
+    const [pickedCards, setPickedCards] = useState<Record<number, Card>>({});
+    useEffect(() => {
+        const missing = claimedCardIds.filter((id) => !pickedCards[id]);
+        if (missing.length === 0) return;
+        let cancelled = false;
+        fetchCardsByIds(missing).then((cards) => {
+            if (cancelled || cards.length === 0) return;
+            setPickedCards((prev) => {
+                const next = { ...prev };
+                for (const c of cards) next[c.id] = c;
+                return next;
+            });
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [claimedCardIds, pickedCards]);
+
+    /** The resolved card + opened-count a claimed entry shows in its ledger row. */
+    const claimedExtras = (entry: RewardEntry) => {
+        const id = claimedCardId(entry);
+        return {
+            pickedCard: id != null ? pickedCards[id] ?? null : null,
+            packCount: entry.grantedCardIds?.length,
+        };
+    };
 
     // --- Text claim: nothing to grant, just acknowledge it ---
     const claimText = (entry: RewardEntry) => {
@@ -206,7 +249,12 @@ export default function RewardsPage() {
                         ) : (
                             <div className="space-y-3">
                                 {claimed.map((entry) => (
-                                    <RewardCard key={entry.id} entry={entry} />
+                                    <RewardCard
+                                        key={entry.id}
+                                        entry={entry}
+                                        {...claimedExtras(entry)}
+                                        onPickedCardClick={setInspectCard}
+                                    />
                                 ))}
                             </div>
                         )}
@@ -240,6 +288,10 @@ export default function RewardsPage() {
                     onPick={pickBanTarget}
                     onClose={() => setBanEntry(null)}
                 />
+            )}
+
+            {inspectCard && (
+                <CardDetailModal card={inspectCard} onClose={() => setInspectCard(null)} />
             )}
         </div>
     );

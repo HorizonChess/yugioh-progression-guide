@@ -1,7 +1,8 @@
 "use client";
 
 import React from 'react';
-import { RewardEntry, getPrize } from '@/lib/rewards';
+import { Card } from '@/lib/api';
+import { RewardEntry, getPrize, claimedCardCaption, resolvePrizeKind } from '@/lib/rewards';
 import FrameButton from '@/components/ui/FrameButton.view';
 
 interface RewardCardProps {
@@ -16,6 +17,13 @@ interface RewardCardProps {
     lockedNote?: string;
     /** Busy state while a claim flow runs (disables the button). */
     busy?: boolean;
+    /** The single card a CLAIMED reward resolved to (wildcard/ban/etc.) — shown as
+     *  a thumbnail. Pack rewards pass none (shown as a count via `packCount`). */
+    pickedCard?: Card | null;
+    /** For claimed pack rewards (pity/tournament): how many cards were opened. */
+    packCount?: number;
+    /** Open the picked card's detail modal (claimed thumbnail click). */
+    onPickedCardClick?: (card: Card) => void;
 }
 
 /**
@@ -26,14 +34,35 @@ interface RewardCardProps {
  * each prize kind does), so this view stays dumb. Claimed entries render without
  * an action (read-only) — the controller passes no `onAction`/`actionLabel`.
  */
-export default function RewardCard({ entry, actionLabel, onAction, locked, lockedNote, busy }: RewardCardProps) {
+export default function RewardCard({ entry, actionLabel, onAction, locked, lockedNote, busy, pickedCard, packCount, onPickedCardClick }: RewardCardProps) {
     const prize = getPrize(entry.prizeId);
     const label = prize?.label ?? entry.prizeId;
     const isClaimed = entry.status === 'claimed';
     const date = new Date(isClaimed && entry.claimedDate ? entry.claimedDate : entry.wonDate);
+    const isBanKind = resolvePrizeKind(entry.prizeId) === 'ban';
 
     return (
         <div className="reward-card">
+            {/* Claimed single-pick thumbnail (wildcard / ban / snatch / …). */}
+            {isClaimed && pickedCard && (
+                <button
+                    type="button"
+                    onClick={() => onPickedCardClick?.(pickedCard)}
+                    className={`reward-card__thumb group ${isBanKind ? 'reward-card__thumb--banned' : ''}`}
+                    aria-label={`View ${pickedCard.name}`}
+                >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={pickedCard.card_images?.[0]?.image_url_small}
+                        alt={pickedCard.name}
+                        className="w-full h-full object-cover"
+                    />
+                    {isBanKind && (
+                        <span className="reward-card__thumb-marker">BANNED</span>
+                    )}
+                </button>
+            )}
+
             <div className="min-w-0 flex-1">
                 <div className="reward-card__title">{label}</div>
                 <div className="reward-card__meta">
@@ -43,6 +72,19 @@ export default function RewardCard({ entry, actionLabel, onAction, locked, locke
                         {isClaimed ? 'Claimed' : 'Won'} {date.toLocaleDateString()}
                     </span>
                 </div>
+                {/* What the claim resolved to. */}
+                {isClaimed && pickedCard && (
+                    <div className="reward-card__pick">
+                        <span className="reward-card__pick-name truncate">{pickedCard.name}</span>
+                        <span aria-hidden className="opacity-40">·</span>
+                        <span className="reward-card__pick-caption">{claimedCardCaption(entry)}</span>
+                    </div>
+                )}
+                {isClaimed && !pickedCard && packCount ? (
+                    <div className="reward-card__pick">
+                        <span className="reward-card__pick-caption">Opened {packCount} cards</span>
+                    </div>
+                ) : null}
                 {locked && lockedNote && (
                     <div className="reward-card__note">{lockedNote}</div>
                 )}

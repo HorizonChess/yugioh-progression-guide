@@ -779,6 +779,33 @@ html::-webkit-scrollbar-corner,
   @apply mt-1 text-[0.7rem] uppercase tracking-wider text-primary/70;
 }
 
+/* Claimed reward's picked-card thumbnail (wildcard / ban / snatch). */
+.reward-card__thumb {
+  @apply relative shrink-0 w-11 aspect-[59/86] rounded overflow-hidden
+    border border-white/15 bg-black/40 transition-all;
+}
+.reward-card__thumb:hover {
+  @apply border-primary/60 ring-1 ring-primary/40 scale-105;
+}
+.reward-card__thumb--banned img {
+  @apply grayscale opacity-70;
+}
+.reward-card__thumb-marker {
+  @apply absolute inset-x-0 bottom-0 text-center text-[0.5rem] font-black
+    tracking-wider text-white bg-red-700/90 py-px;
+}
+
+/* "<card name> · <caption>" line under a claimed reward. */
+.reward-card__pick {
+  @apply mt-1 flex items-center gap-2 text-xs text-white/70;
+}
+.reward-card__pick-name {
+  @apply font-bold text-white/90;
+}
+.reward-card__pick-caption {
+  @apply uppercase tracking-wider text-[0.65rem] text-primary/80;
+}
+
 .reward-card__claimed-badge {
   @apply text-[0.7rem] font-bold uppercase tracking-[0.15em] text-green-400/90
     px-3 py-1 rounded-full border border-green-500/30 bg-green-500/10;
@@ -901,6 +928,28 @@ html::-webkit-scrollbar-corner,
 .pack-grid--wide .pack-grid__cell--bottom,
 .pack-grid--wide .pack-grid__cell--bottom-start {
   grid-column: auto;
+}
+
+/* Small packs (≤5 cards, e.g. 3-card Tournament packs): a SINGLE centered row.
+   --pack-cols is set inline to the card count. The cards stay the SAME SIZE as a
+   standard pack's cards (whose row is ~40vh tall) rather than stretching to fill
+   the modal — so the slab (a flex-none StonePanel) shrink-wraps this one row
+   instead of being a tall empty box. Columns are auto-width so cards keep their
+   aspect ratio; no 1fr stretch, no clipping. */
+.pack-grid--single {
+  grid-template-columns: repeat(var(--pack-cols, 5), auto);
+  grid-template-rows: auto;
+  flex: 0 0 auto;
+  align-self: center;
+  justify-content: center;
+  align-content: center;
+}
+
+.pack-grid--single .pack-grid__cell--top {
+  grid-row: 1;
+  grid-column: auto;
+  height: auto;
+  max-height: 40vh;
 }
 
 /* --- A card within a cell --- */
