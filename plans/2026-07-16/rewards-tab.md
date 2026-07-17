@@ -1,10 +1,21 @@
 # Rewards Tab — Implementation Plan
 
-## Status (last updated 2026-07-16)
+## Status (last updated 2026-07-17)
 
 **Branch:** `feature/rewards` (branched from `main` after the old
 `feature/record-match-winners-wheel` was fast-forward-merged into `main`).
 Nothing pushed to `origin` yet (main is 19 commits ahead of origin/main locally).
+
+**ALL PHASES DONE.** Phases 1–5 committed. Phase-5 follow-up fixes (tournament
+slab sizing, ban timeline date-filter, claimed-section card display, ban
+confirm-in-details, reusable driver folder) committed as `93ee69d`. **Phase 6 —
+Starlight search + cleanup — built & verified this session** (pending commit
+approval): `StarlightSearchModal` (full-catalog typeahead date-gated to cards
+released before the won pack, granted at Starlight Rare, confirm-in-details);
+snatch-steal remains Available-but-locked; deprecated `RewardState` /
+`pendingReward` / `claimReward` removed (grep-clean). `tsc` clean (non-test),
+eslint clean on touched files, `rewards-starlight.mjs` driver passes (search
+gate include/exclude, confirm step, grant at Starlight Rare, claimed thumbnail).
 
 **Phase 1 — DONE & committed** (`0a1cd95`). Verified: `tsc` clean (non-test),
 eslint clean on touched files, `/rewards` + `/timeline` + `/map` build (HTTP 200).

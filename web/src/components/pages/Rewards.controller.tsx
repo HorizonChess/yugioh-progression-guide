@@ -9,6 +9,7 @@ import GuideSprite from "@/components/shell/GuideSprite.view";
 import RewardCard from "@/components/Rewards/RewardCard.view";
 import PackRevealModal, { RevealSource } from "@/components/Rewards/PackRevealModal.view";
 import WildcardModal from "@/components/Rewards/WildcardModal.view";
+import StarlightSearchModal from "@/components/Rewards/StarlightSearchModal.view";
 import BanInput from "@/components/Rewards/BanInput.view";
 import CardDetailModal from "@/components/card/CardDetailModal.view";
 
@@ -31,8 +32,9 @@ import CardDetailModal from "@/components/card/CardDetailModal.view";
  *                  below from the won pack.
  *  - ban / unban → the `BanInput` typeahead (cosmetic: the deck builder reads
  *                  `bannedCardIds` and blocks/greys the add).
- * The remaining prize (starlight) is shown available but disabled ("coming
- * soon") until Phase 6; snatch-steal is locked pending multiplayer.
+ *  - starlight   → the `StarlightSearchModal`: a full-catalog typeahead gated to
+ *                  cards released before the won pack, granted at Starlight Rare.
+ * Snatch-steal is the only prize still locked (pending multiplayer).
  */
 
 /** Prize kinds whose claim modal isn't built yet (shown available, disabled). */
@@ -41,10 +43,10 @@ const COMING_SOON: Record<PrizeKind, string | null> = {
     pity: null,
     tournament: null,
     wildcard: null,
+    starlight: null,
     ban: null,
     unban: null,
     snatch: "Requires multiplayer — coming soon",
-    starlight: "Claim flow coming soon",
 };
 
 export default function RewardsPage() {
@@ -53,6 +55,8 @@ export default function RewardsPage() {
     const [revealEntry, setRevealEntry] = useState<RewardEntry | null>(null);
     /** The reward whose wildcard card-picker modal is open, if any. */
     const [wildcardEntry, setWildcardEntry] = useState<RewardEntry | null>(null);
+    /** The reward whose starlight full-catalog search modal is open, if any. */
+    const [starlightEntry, setStarlightEntry] = useState<RewardEntry | null>(null);
     /** The reward whose ban/unban typeahead is open, if any. */
     const [banEntry, setBanEntry] = useState<RewardEntry | null>(null);
     /** A claimed reward's picked card, opened in a read-only detail modal. */
@@ -145,6 +149,14 @@ export default function RewardsPage() {
         setWildcardEntry(null);
     };
 
+    // --- Starlight: grant the single searched card and claim the reward ---
+    const chooseStarlight = (card: PulledCard) => {
+        if (!starlightEntry) return;
+        addToCollection([card]);
+        claimRewardEntry(starlightEntry.id, { grantedCardId: card.id });
+        setStarlightEntry(null);
+    };
+
     // --- Ban / Unban: mark (or unmark) the card cosmetically and claim ---
     const pickBanTarget = (card: Card) => {
         if (!banEntry) return;
@@ -189,6 +201,17 @@ export default function RewardsPage() {
                     entry={entry}
                     actionLabel="Choose Card"
                     onAction={() => setWildcardEntry(entry)}
+                />
+            );
+        }
+
+        if (kind === "starlight") {
+            return (
+                <RewardCard
+                    key={entry.id}
+                    entry={entry}
+                    actionLabel="Search Card"
+                    onAction={() => setStarlightEntry(entry)}
                 />
             );
         }
@@ -278,6 +301,14 @@ export default function RewardsPage() {
                     entry={wildcardEntry}
                     onChoose={chooseWildcard}
                     onClose={() => setWildcardEntry(null)}
+                />
+            )}
+
+            {starlightEntry && (
+                <StarlightSearchModal
+                    entry={starlightEntry}
+                    onChoose={chooseStarlight}
+                    onClose={() => setStarlightEntry(null)}
                 />
             )}
 

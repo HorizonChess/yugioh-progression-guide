@@ -31,6 +31,9 @@ reports the assertions each driver checks.
   core/pity (5+4 two-row).
 - `rewards-ban-claimed.mjs` — ban search timeline filtering, confirm-in-details
   flow, and claimed-ledger card thumbnails.
+- `rewards-starlight.mjs` — Starlight full-catalog search (date-gated to cards
+  released before the won pack), confirm-in-details, and the granted card landing
+  in the collection at Starlight Rare.
 
 Extend these rather than writing throwaway drivers. Keep the scripts checked in;
 keep generated images out of git.

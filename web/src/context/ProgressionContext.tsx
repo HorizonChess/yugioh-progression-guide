@@ -10,16 +10,6 @@ interface MatchResult {
     date: string;
 }
 
-/**
- * @deprecated Superseded by the persisted rewards ledger (`SaveSlot.rewards`).
- * Left in place during the migration; scheduled for removal once no readers
- * remain. See rewards-tab plan, cleanup phase.
- */
-export interface RewardState {
-    type: 'wheel' | 'pity';
-    claimed: boolean;
-}
-
 export interface SavedDeck {
     id: string;
     name: string;
@@ -40,7 +30,6 @@ export interface SaveSlot {
     currentSetIndex: number;
     collection: Record<string, number>; // Key: `${id}_${set}_${rarity}`
     matchHistory: MatchResult[];
-    pendingReward: RewardState | null; // @deprecated — see RewardState
 
     // Rewards ledger (available + claimed). Optional for back-compat with saves
     // created before the ledger existed — treated as [] when absent.
@@ -66,7 +55,6 @@ interface ProgressionContextType {
     currentSetIndex: number;
     collection: Record<string, number>;
     matchHistory: MatchResult[];
-    pendingReward: RewardState | null; // @deprecated
     rewards: RewardEntry[];
     bannedCardIds: number[];
     savedDecks: SavedDeck[];
@@ -81,7 +69,6 @@ interface ProgressionContextType {
     addToCollection: (cards: PulledCard[]) => void;
     recordMatch: (result: MatchResult) => void;
     advanceSet: () => void;
-    claimReward: () => void; // @deprecated — use claimRewardEntry
     resetProgress: () => void; // Resets ACTIVE save
     importCollection: (cardIds: number[], mode: 'add' | 'replace') => void;
 
@@ -144,7 +131,6 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
                             currentSetIndex: parsedLegacy.currentSetIndex || 0,
                             collection: migratedCollection,
                             matchHistory: parsedLegacy.matchHistory || [],
-                            pendingReward: parsedLegacy.pendingReward || null,
                             rewards: [],
                             bannedCardIds: [],
                             settings: { startSetIndex: 0, packsPerRound: 24 },
@@ -197,7 +183,6 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             currentSetIndex: startSetIndex,
             collection: {},
             matchHistory: [],
-            pendingReward: null,
             rewards: [],
             bannedCardIds: [],
             settings: { startSetIndex, packsPerRound },
@@ -248,14 +233,6 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         updateActiveSave(save => ({
             ...save,
             currentSetIndex: save.currentSetIndex + 1
-        }));
-    };
-
-    /** @deprecated legacy pendingReward clear — kept until the field is removed. */
-    const claimReward = () => {
-        updateActiveSave(save => ({
-            ...save,
-            pendingReward: null
         }));
     };
 
@@ -310,7 +287,6 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
                 currentSetIndex: save.settings.startSetIndex,
                 collection: {},
                 matchHistory: [],
-                pendingReward: null,
                 rewards: [],
                 bannedCardIds: [],
                 savedDecks: []
@@ -390,7 +366,6 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             collection: activeSave?.collection ?? {},
             matchHistory: activeSave?.matchHistory ?? [],
             savedDecks: activeSave?.savedDecks ?? [],
-            pendingReward: activeSave?.pendingReward ?? null,
             rewards: activeSave?.rewards ?? [],
             bannedCardIds: activeSave?.bannedCardIds ?? [],
 
@@ -402,7 +377,6 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             addToCollection,
             recordMatch,
             advanceSet,
-            claimReward,
             resetProgress,
             importCollection,
 

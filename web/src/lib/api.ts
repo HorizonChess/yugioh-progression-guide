@@ -240,6 +240,22 @@ export function existedByCutoff(card: Card, setDates: Map<string, string>): bool
 }
 
 /**
+ * The earliest datable printing of `card` (across ALL set kinds), or null if none
+ * of its printings can be dated via `setDates`. Used by the Starlight search to
+ * gate a card to those with a printing released BEFORE the won pack — the same
+ * pure-date rule as `existedByCutoff`, but against the pack's date rather than the
+ * global cutoff, so Starlight can reach off-timeline (e.g. structure-deck) cards.
+ */
+export function earliestPrintingDate(card: Card, setDates: Map<string, string>): string | null {
+    let earliest: string | null = null;
+    for (const printing of card.card_sets ?? []) {
+        const date = setDates.get(printing.set_name);
+        if (date != null && (earliest == null || date < earliest)) earliest = date;
+    }
+    return earliest;
+}
+
+/**
  * Fuzzy card-name search (`cardinfo.php?fname=`) for the ban typeahead, RESTRICTED
  * to cards that existed by the cutoff (`existedByCutoff`) — purely by printing
  * date, so any card with a pre-cutoff printing in any set kind is bannable, while
