@@ -12,6 +12,7 @@ interface TopBarProps {
 }
 
 import { useProgression } from "@/context/ProgressionContext";
+import { asset } from '@/lib/utils';
 
 export default function TopBar({ title, subtitle, showBack, onBack, children }: TopBarProps) {
     const { isGuideVisible, toggleGuide } = useProgression();
@@ -54,7 +55,7 @@ export default function TopBar({ title, subtitle, showBack, onBack, children }: 
                     title={isGuideVisible ? "Hide Guide" : "Show Guide"}
                 >
                     <img
-                        src="/sprites/yugi_neutral_v2_transparent.png?v=4"
+                        src={asset("/sprites/yugi_neutral_v2_transparent.png?v=4")}
                         alt="Toggle Guide"
                         className="w-full h-full object-cover object-top scale-150 translate-y-1"
                     />
