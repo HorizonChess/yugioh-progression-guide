@@ -107,26 +107,55 @@ We use a suite of custom scripts to maintain assets and data integrity:
 
 ## Architecture Overview
 
+### Persistent Navigation: AppNav
+
+The nav bar is the app's persistent chrome — like a browser's address bar, it must
+look and sit **identically** on every page and never re-mount or animate on
+navigation. It is a single self-gating component, [src/components/shell/AppNav.view.tsx](src/components/shell/AppNav.view.tsx),
+rendered **once** in [src/app/layout.tsx](src/app/layout.tsx) — never inside a page.
+
+-   **Allow-list, not per-page:** AppNav uses `usePathname()` to render only on the
+    "app main zone" routes (`/map`, `/collection`, `/deck-builder`, `/packs`,
+    `/timeline`) and returns `null` everywhere else (menu, onboarding, start, root,
+    rewards have no nav). To put the nav on a new page, add its route to the
+    allow-list — do **not** render a bar in the page controller.
+-   **Layout frame:** `<body>` is `h-screen grid grid-rows-[auto_1fr]`. AppNav is the
+    `auto` row; the routed page fills the `1fr` content row inside
+    `<main className="relative min-h-0 min-w-0">`. Because the nav lives above (and
+    outside) `template.tsx`, it sits below the page-transition animation and stays
+    put. `template.tsx`'s motion wrapper carries `h-full` so the height chain reaches
+    each page (without it, inner `.custom-scrollbar` containers lose their bounded
+    height).
+-   **Pages fill the content row:** in-scope pages use `h-full` (not `h-screen` /
+    `min-h-screen`), including their loading / empty / Suspense states, so they sit
+    exactly below the nav.
+-   **Prop-less, links-only:** the bar is the standard variant everywhere (there is no
+    per-page back-arrow/title bar). It can still vary by route from within — e.g. the
+    current page's link is highlighted gold (`.topbar-nav-link--active`). A back
+    affordance, if needed, belongs in the page content, not the nav.
+
 ### Layout Scaling: ScaleWrapper
 
-For pages that require fixed proportions across different screen sizes, use the `ScaleWrapper` component. This ensures layouts designed on a 1920px-wide desktop maintain exact horizontal proportions on any screen.
-
-#### When to use ScaleWrapper:
-- **Use it for:** Pages with precise layouts where element positions matter (deck builder, campaign map)
-- **Don't use it for:** Simple scrollable pages, forms, or content that should naturally reflow
+The `ScaleWrapper` component ensures the deck-builder's fixed 1920px-wide desktop
+layout maintains exact horizontal proportions on any screen.
 
 #### Currently using ScaleWrapper:
-- `/deck-builder` - DuelingBook-style deck constructor
-- `/map` - Campaign timeline with fixed button positions
+- `/deck-builder` - DuelingBook-style deck constructor (the only page that uses it)
 
 #### How it works:
-1. **Width-based scaling:** `scale = viewportWidth / 1920`
-2. **Adaptive height:** `designHeight = viewportHeight / scale`
-3. **Result:** Content always fills viewport exactly, no margins, no clipping
+ScaleWrapper scales relative to its **container** (not the viewport). It's
+`position: absolute; inset: 0`, so it fills whatever `relative` box it's placed in —
+in practice the layout's `1fr` content row **below** the persistent nav — and watches
+that box with a `ResizeObserver` rather than `window` resize. This keeps the nav
+unscaled and above the scaled board.
 
-The math ensures that on ANY screen:
-- Scaled width = viewport width (fills exactly)
-- Scaled height = viewport height (fills exactly)
+1. **Width-based scaling:** `scale = containerWidth / 1920`
+2. **Adaptive height:** `designHeight = containerHeight / scale`
+3. **Result:** Content always fills its container exactly, no margins, no clipping
+
+The math ensures that in ANY container:
+- Scaled width = container width (fills exactly)
+- Scaled height = container height (fills exactly)
 
 #### Requirements for content inside ScaleWrapper:
 

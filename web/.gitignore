@@ -58,3 +58,11 @@ scripts/**/test_*.png
 scripts/**/test_*.webp
 scripts/**/temp_*.jpg
 scripts/**/temp_*.png
+
+# Visual-regression baselines & temp screenshot scripts (local dev aid, not committed)
+/visual-baseline/
+/visual-after/
+_shoot.mjs
+
+# Browser-driver screenshots (the scripts are committed; their output is not)
+scripts/drivers/out/

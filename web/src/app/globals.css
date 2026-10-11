@@ -2,24 +2,86 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * ============================================================
+ * DESIGN TOKENS — single source of truth for theme colors.
+ * Change a value here and it updates the whole app.
+ * These are mirrored in tailwind.config.js so you can use
+ * named utility classes (bg-primary, text-wood-border, etc.)
+ * with opacity modifiers (bg-wood-border/20). Prefer the
+ * Tailwind class over a raw #hex or var() in components.
+ * ============================================================
+ */
 :root {
   /* Core Colors */
   --background: #050505;
   --foreground: #e0e0e0;
 
-  /* Brand Colors */
+  /* Brand — Gold */
   --primary: #d4af37;
   /* Metallic Gold */
   --primary-hover: #f5c542;
+  --gold-dark: #b8860b;
+  /* Deep gold — used for pressed-button shadows/borders */
+
+  /* Gold-stone gradient — the FrameButton fill (light → base → dark) */
+  --gold-stone-light: #f6dd94;
+  --gold-stone: #d8b871;
+  --gold-stone-dark: #b59748;
+
+  /* Winner's Wheel gold — DERIVED from --primary so a token swap re-themes the
+     whole wheel (rim, wedges, eye). A 4-stop bevel (bright → base → deep → shadow)
+     built by mixing --primary toward white/black. Change --primary and the wheel
+     follows. */
+  --wheel-gold-bright: color-mix(in srgb, var(--primary) 55%, white);
+  --wheel-gold: var(--primary);
+  --wheel-gold-deep: color-mix(in srgb, var(--primary) 70%, black);
+  --wheel-gold-shadow: color-mix(in srgb, var(--primary) 45%, black);
+  /* The light (metal) wedge fill + the dark (stone) wedge fill, both tied to
+     --primary so the face re-themes too. */
+  --wheel-wedge-light: color-mix(in srgb, var(--primary) 82%, white);
+  --wheel-wedge-dark: color-mix(in srgb, var(--primary) 22%, #0d0803);
+
+  /* Brand — Secondary / Accent */
   --secondary: #4a148c;
   /* Deep Purple */
   --secondary-hover: #7c43bd;
   --accent: #d32f2f;
   /* Life Point Red */
 
-  /* UI Colors */
+  /* Parchment / Wood — the "physical" module palette */
+  --parchment: #e6dcc3;
+  --parchment-light: #f0e6d2;
+  --wood-dark: #1a120b;
+  --wood: #2d2414;
+  --wood-light: #6b543a;
+  --wood-mid: #6b5b45;
+  --wood-border: #8b7355;
+  --ink: #2c1810;
+
+  /* Deck-builder — Lime/Olive search UI */
+  --lime: #99cc00;
+  --lime-bright: #b3e619;
+  --lime-pale: #dbea7b;
+  --olive: #666600;
+  --olive-mid: #999900;
+  --olive-bright: #cccc00;
+
+  /* Status — Win / Loss */
+  --win: #aaffaa;
+  --loss: #ffaaaa;
+
+  /* UI Colors — neutral surface scale (dark → light) */
+  --surface-deep: #111111;
+  /* Deepest inset (e.g. card-description well) */
   --card-bg: #1a1a1a;
-  --border: #333333;
+  /* Default modal/panel surface */
+  --surface-raised: #2d2d2d;
+  /* Raised control panel (e.g. deck controls) */
+  --divider: #333333;
+  /* Neutral hairline divider / subtle border */
+  --slate-outline: #0d1b2a;
+  /* Dark slate hairline outline on deck cards */
   --glass-bg: rgba(20, 20, 20, 0.7);
   --glass-border: rgba(255, 255, 255, 0.1);
 
@@ -39,10 +101,15 @@
 html,
 body {
   max-width: 100vw;
-  overflow-x: hidden;
   background: transparent;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  /* Lock the DOCUMENT from scrolling. Every page is a self-contained full-height
+     shell that scrolls in its own inner .custom-scrollbar row — the document
+     never scrolls. Pinning it means a page briefly overflowing while mounting
+     during a route transition can't flash a transient document scrollbar. */
+  height: 100%;
+  overflow: hidden;
 }
 
 
@@ -71,20 +138,20 @@ a:hover {
 }
 
 .stone-panel {
-  background-color: #2d2414;
+  background-color: var(--wood);
   background-image: url('../../public/ui/stone_texture.jpg');
   background-size: cover;
   background-position: center;
 
   /* 3D Bevel Effect using Borders */
   border: 4px solid;
-  border-top-color: #6b543a;
+  border-top-color: var(--wood-light);
   /* Lighter Top */
-  border-left-color: #6b543a;
+  border-left-color: var(--wood-light);
   /* Lighter Left */
-  border-bottom-color: #1a120b;
+  border-bottom-color: var(--wood-dark);
   /* Darker Bottom */
-  border-right-color: #1a120b;
+  border-right-color: var(--wood-dark);
   /* Darker Right */
 
   border-radius: 2px;
@@ -101,18 +168,18 @@ a:hover {
 }
 
 .parchment-bg {
-  background-color: #e6dcc3;
+  background-color: var(--parchment);
   background-image: url('../../public/ui/parchment.svg');
   background-size: cover;
-  border: 2px solid #8b7355;
+  border: 2px solid var(--wood-border);
   box-shadow: inset 0 0 10px rgba(139, 115, 85, 0.3);
-  color: #2c1810;
+  color: var(--ink);
   font-family: 'Times New Roman', serif;
 }
 
 .parchment-bg:focus {
   outline: none;
-  border-color: #d4af37;
+  border-color: var(--primary);
   box-shadow: inset 0 0 10px rgba(212, 175, 55, 0.3);
 }
 
@@ -153,6 +220,55 @@ button {
   scrollbar-width: none;
 }
 
+/* Retro gold-on-wood scrollbar. Defined once and applied BOTH globally (the
+   `html` root) and to per-region scroll containers (.custom-scrollbar on long
+   card lists, info/description panels). Rooting it globally means any scrollbar
+   the browser ever paints — including a transient one mid-navigation before a
+   container gets its class — is already styled, so the vanilla scrollbar never
+   flashes. `.custom-scrollbar` additionally gets `scrollbar-gutter: stable` so
+   its track's width is reserved even when idle and toggling scroll never nudges
+   layout. Apply .custom-scrollbar to the ELEMENT that scrolls, not the document,
+   so on paged content the bar sits inside the content area (beneath the nav). */
+html,
+.custom-scrollbar {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) var(--wood-dark);
+}
+
+.custom-scrollbar {
+  scrollbar-gutter: stable;
+}
+
+html::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+html::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--wood-dark);
+  border-radius: 6px;
+}
+
+html::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--primary-hover), var(--primary) 55%, var(--gold-dark));
+  border: 2px solid var(--wood-dark);
+  border-radius: 6px;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(var(--primary-hover), var(--primary));
+}
+
+html::-webkit-scrollbar-corner,
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: var(--wood-dark);
+}
+
 /* 3D Transform Utilities */
 .perspective-1000 {
   perspective: 1000px;
@@ -176,4 +292,752 @@ button {
 
 .rotate-x-12 {
   transform: rotateX(12deg);
+}
+
+/* ============================================================
+ * TIMELINE (/map) — component classes.
+ * Long/repeated Tailwind moved out of map/page.tsx so the JSX
+ * scans as semantic elements. Fluid clamp() sizing that a
+ * caller tunes (tile height, panel size) stays inline at the
+ * call site; these classes hold the fixed look + states.
+ * ============================================================ */
+
+/* Round gold scroll arrows flanking the carousel */
+.timeline-scroll-btn {
+  @apply absolute top-1/2 -translate-y-1/2 z-20 w-12 h-12 sm:w-16 sm:h-16 rounded-full
+    bg-black/50 border-2 border-primary text-primary flex items-center justify-center
+    transition-all hover:bg-primary hover:text-black hover:scale-110;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.timeline-scroll-btn__icon {
+  @apply w-8 h-8 sm:w-10 sm:h-10;
+}
+
+/* The horizontal scroll rail holding every tile. Scrolls on X only — we pin
+   overflow-y:hidden because overflow-x:auto otherwise computes the Y axis to
+   `auto` (NOT clip), and the scale-125 current tile + reserved caption padding
+   overflow by a few px, which would silently become vertically scrollable
+   (.hide-scrollbar hides the bar's look but does NOT stop Y scrolling).
+   px-[50vw] lets any tile center. The bottom padding RESERVES room for each
+   tile's absolutely-positioned caption (which doesn't add to content height) so
+   names never get clipped — sized for the enlarged current pack. */
+.timeline-carousel {
+  @apply w-full overflow-x-auto overflow-y-hidden hide-scrollbar flex items-center px-[50vw] relative z-10
+    pt-[clamp(1rem,3vh,2.5rem)] pb-[clamp(4.5rem,12vh,8rem)];
+}
+
+/* A carousel entry: the chain connector + the pack tile, laid out in a row.
+   items-center centers the connector on the TILE, and because the tile's
+   laid-out height is exactly the art height (the caption is absolute, see
+   below), the connector lands on the art's midline — not floating below it. */
+.timeline-link {
+  @apply flex items-center;
+}
+
+/* The connector overlaps into the adjacent tiles' gap via negative margin.
+   It lives OUTSIDE the scaled .timeline-node so the current tile's scale-125
+   never distorts or resizes the chain. */
+.timeline-link__connector {
+  @apply flex-shrink-0 -mx-4 z-0;
+}
+
+/* One pack tile: current is scaled up + gold-ringed, others dimmed/greyed.
+   position:relative anchors the absolute caption; the tile's own height is
+   just the art, which keeps the connector aligned to the art center.
+   --art-h is the single source of truth for pack-art height, shared by the art
+   frame and the caption's placement (see .timeline-node__caption). */
+.timeline-node {
+  --art-h: clamp(11rem, 26vh, 20rem);
+  @apply relative flex-shrink-0 transition-all duration-500 z-10;
+}
+
+.timeline-node--current {
+  @apply scale-125 z-20;
+}
+
+.timeline-node--other {
+  @apply scale-90 opacity-60 grayscale hover:opacity-100 hover:scale-95 hover:grayscale-0;
+}
+
+/* Pack art frame — height-driven (--art-h), aspect derives the width */
+.timeline-node__art {
+  @apply relative block aspect-[2/3] rounded-xl overflow-hidden
+    shadow-2xl transition-all duration-300 bg-black;
+  height: var(--art-h);
+}
+
+.timeline-node__art--current {
+  @apply ring-4 ring-primary;
+  box-shadow: 0 0 50px rgba(212, 175, 55, 0.5);
+}
+
+.timeline-node__art--other {
+  @apply hover:ring-2 hover:ring-gray-500;
+}
+
+/* Fills the art frame, letterboxing the pack image */
+.timeline-node__art-inner {
+  @apply w-full h-full flex items-center justify-center overflow-hidden;
+}
+
+.timeline-node__img {
+  @apply w-full h-full object-contain transform hover:scale-110 transition-transform duration-700;
+}
+
+.timeline-node__art-fallback {
+  @apply w-full h-full bg-gray-800 flex items-center justify-center text-xs text-gray-500;
+}
+
+/* Dark WON/LOST overlay covering a played pack's art */
+.timeline-node__stamp-overlay {
+  @apply absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px];
+}
+
+/* Name + date, anchored just below the art. It's absolute (→ excluded from the
+   tile's height so it can't push the connector off the art center), placed a
+   small relational gap below the art bottom. The scroller reserves matching
+   room below the art (see .timeline-carousel) so this never clips — even for
+   the enlarged current pack. Scales with the node, as intended. */
+.timeline-node__caption {
+  @apply absolute left-1/2 -translate-x-1/2 text-center w-max max-w-[min(12rem,40vw)];
+  top: calc(var(--art-h) + var(--art-h) * 0.04);
+}
+
+.timeline-node__name {
+  @apply font-bold text-sm mb-1 truncate;
+}
+
+.timeline-node__name--current {
+  @apply text-white text-[clamp(1rem,2.2vh,1.25rem)] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)];
+}
+
+.timeline-node__name--other {
+  @apply text-gray-500;
+}
+
+.timeline-node__date {
+  @apply text-xs font-mono tracking-widest;
+}
+
+.timeline-node__date--current {
+  @apply text-gray-300 drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)];
+}
+
+.timeline-node__date--other {
+  @apply text-gray-600;
+}
+
+/* WON / LOST stamp over a played pack */
+.timeline-stamp {
+  @apply text-2xl font-black uppercase -rotate-12 border-4 px-4 py-2 rounded-xl shadow-xl;
+}
+
+.timeline-stamp--won {
+  @apply text-win border-win bg-green-900/50;
+}
+
+.timeline-stamp--lost {
+  @apply text-loss border-loss bg-red-900/50;
+}
+
+/* Scoreboard gem labels/values pinned over the stats panel PNG */
+.stats-gem {
+  @apply absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5;
+}
+
+.stats-gem__label {
+  @apply text-[clamp(8px,1.1vh,11px)] uppercase tracking-[0.2em] font-bold drop-shadow-md;
+  font-family: var(--font-techno);
+}
+
+.stats-gem__value {
+  @apply text-[clamp(1.1rem,3vh,1.75rem)] text-white;
+  font-family: var(--font-techno);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* ============================================================
+ * RECORD MATCH (/timeline) — the VICTORY/DEFEAT flourish.
+ * Gradient-filled text; victory = gold, defeat = red.
+ * ============================================================ */
+.record-outcome {
+  @apply text-6xl md:text-8xl font-black uppercase tracking-tighter mb-4
+    text-transparent bg-clip-text;
+}
+
+.record-outcome--victory {
+  @apply bg-gradient-to-b from-yellow-300 to-yellow-600;
+  filter: drop-shadow(0 0 30px rgba(234, 179, 8, 0.5));
+}
+
+.record-outcome--defeat {
+  @apply bg-gradient-to-b from-red-500 to-red-900;
+  filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.5));
+}
+
+/* --- The win moment: ONE persistent panel ---------------------------------
+ * The record board and the Winner's Wheel are two ACTS on ONE stage. `.win-panel`
+ * is the always-mounted glass shell (it never unmounts across the swap); its
+ * `__stage` body cell holds both acts absolutely-stacked so only the CONTENTS
+ * cross-fade/vortex while the box stays put (see RecordMatchPage.controller).
+ * Sized to hold the taller of the two acts comfortably — no jump between states.
+ */
+.win-panel {
+  /* Bounded by the parent flex cell (viewport − nav − padding); fills up to a
+     comfortable cap so both acts fit without the box resizing. min-h keeps it
+     from collapsing to the shorter act. */
+  @apply glass-panel relative w-full max-w-md flex flex-col;
+  height: min(100%, 40rem);
+  min-height: min(100%, 32rem);
+  padding: clamp(1.25rem, 3.5vh, 2rem);
+}
+
+/* The body cell both acts share. Position context for the absolutely-stacked
+   acts; each act fills it, so swapping content never nudges the panel. */
+.win-panel__stage {
+  @apply relative flex-1 min-h-0;
+}
+
+/* One act (board OR wheel). Absolutely fills the stage; its child stack fills
+   the width (items-stretch, NOT items-center — centering here would collapse a
+   child to content width) and centers vertically. Both acts occupy the exact
+   same box and cross-fade in place. */
+.win-panel__act {
+  @apply absolute inset-0 flex flex-col items-stretch justify-center;
+}
+
+/* --- The record-match board content (act 1) -------------------------------
+ * A centered stack: heading → stone scoreboard → VICTORY/DEFEAT → back link.
+ * Rows are content-sized; ONE relative gap drives all vertical spacing, so it
+ * reflows at any width with no fixed-canvas scaling (avoid-magic-numbers-layout).
+ */
+.record-board {
+  @apply w-full flex flex-col items-center;
+  gap: clamp(1.25rem, 3.5vh, 2.25rem);
+}
+
+/* Small gold kicker above the opponent heading */
+.record-eyebrow {
+  @apply block text-xs md:text-sm font-bold uppercase tracking-[0.3em] text-primary/80;
+  font-family: var(--font-techno);
+}
+
+/* Win Rate / Streak scoreboard — a stone panel split by a hairline divider */
+.record-board__scoreboard {
+  @apply w-full max-w-md flex items-stretch justify-around gap-4 px-8 py-5;
+}
+
+.record-board__divider {
+  @apply w-px self-stretch bg-wood-border/40;
+}
+
+.record-stat {
+  @apply flex-1 flex flex-col items-center gap-1;
+}
+
+.record-stat__label {
+  @apply text-[clamp(0.65rem,1.4vh,0.8rem)] font-bold uppercase tracking-[0.2em] text-primary/80;
+  font-family: var(--font-techno);
+}
+
+.record-stat__value {
+  @apply text-[clamp(1.75rem,5vh,2.75rem)] font-black text-white leading-none;
+  font-family: var(--font-techno);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* The two big commit buttons — even 2-up split, one relative gap */
+.record-board__actions {
+  @apply w-full grid grid-cols-2 gap-4 md:gap-8;
+}
+
+.record-action-btn {
+  @apply w-full h-[clamp(3.5rem,9vh,5rem)];
+}
+
+/* DEFEAT keeps the gold frame but tints the stone fill red via an overlay so it
+ * reads as the "loss" choice without a second button component. The overlay sits
+ * over FrameButton's inline gold fill (which a plain class can't override) and
+ * under the label (label is position:relative content, overlay is aria-hidden). */
+.record-action-btn--defeat {
+  position: relative;
+}
+
+.record-action-btn--defeat::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 42%,
+      rgba(211, 47, 47, 0.55) 0%,
+      rgba(211, 47, 47, 0.35) 60%,
+      rgba(139, 20, 20, 0.55) 100%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.record-action-btn--defeat > * {
+  position: relative;
+}
+
+/* Back-to-dashboard link — subtle gray→white, matches StoreView/Menu */
+.record-board__back {
+  @apply text-sm font-bold uppercase tracking-wider text-gray-400 hover:text-white
+    transition-colors flex items-center gap-2;
+}
+
+/* --- Winner's Wheel content (act 2) ---------------------------------------
+ * The reward spinner shown in place of the record board after a win — rendered
+ * inside the shared `.win-panel` (glass + size live there, NOT here). A stacked
+ * module: heading → spinning wheel → spin/claim. All gold accents come from
+ * --primary so a token swap re-themes the whole thing.
+ */
+.wheel-content {
+  /* A HEIGHT-BOUNDED grid that fills its act: heading (auto) / wheel (1fr) /
+   * reveal (auto). Heading + reveal rows stay COMPACT so they can't eat the
+   * height — the 1fr wheel row keeps most of it. */
+  @apply w-full h-full grid justify-items-center;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(0.75rem, 2.5vh, 1.5rem);
+}
+
+/* --- Defeat content (loss act) -------------------------------------------
+ * The loss counterpart to .wheel-content: same shared `.win-panel`, same
+ * curtain-in, but a simpler centered stack (headline → message → two exits).
+ * Fills the act and centers vertically so it reads as a peer of the wheel. */
+.defeat-content {
+  @apply w-full h-full flex flex-col items-center justify-center text-center;
+  gap: clamp(1rem, 3vh, 1.75rem);
+}
+
+/* The wheel ROW cell — a flex box that centers the (square) wheel. It fills the
+ * 1fr track, giving the wheel a DEFINITE height to size against. Needed because
+ * the wheel is a size container (see below), which contributes ZERO intrinsic
+ * width; sizing it from this cell's definite HEIGHT (not intrinsic width) is what
+ * keeps it perfectly circular instead of collapsing to an ellipse. */
+.wheel-row {
+  @apply w-full h-full min-h-0 flex items-center justify-center;
+}
+
+/* The wheel is a PERFECT square, HEIGHT-DRIVEN so size containment can't collapse
+ * it to an ellipse:
+ *  - height: 100%     → definite size from the .wheel-row cell (the 1fr track)
+ *  - aspect-ratio: 1  → width follows height → always circular
+ *  - max-width: 100%  → on a narrow panel, clamp to the cell width and let height
+ *                        follow via aspect-ratio (shrinks the whole circle, no clip)
+ * It's a size container, so the entire wheel (rim, labels, font, hub, pointer)
+ * scales in cqmin as ONE unit — shrink it and the text scales with it. */
+.wheel {
+  @apply relative h-full max-w-full;
+  aspect-ratio: 1;
+  container-type: size;
+}
+
+/* Spinning disc — ONLY the colored conic-gradient wedges rotate (inline bg).
+ * The gold RIM, studs, hub and pointer are now a STATIC SVG overlay
+ * (.wheel__decor-layer / WheelDecor), so the disc itself is just the wedges +
+ * their dividing grooves + a soft inset for depth. Labels live in a separate
+ * static layer above it, so the spin stays clean and text never tumbles.
+ *
+ * INSET a hair inside the rim's inner groove (rim inner edge ≈ 45.4% of radius,
+ * i.e. ~4.6cqmin of slack per side) so the wedge EDGES and their dark dividers
+ * terminate UNDER the gold band instead of protruding past it as spokes. The rim
+ * then cleanly caps every wedge line at the wheel's edge. */
+.wheel__disc {
+  @apply absolute rounded-full;
+  inset: 4.6cqmin;
+  /* Thin dark grooves between wedges via a second conic layer of hairlines,
+     drawn UNDER the wedge gradient's hard stops for a carved-segment look. */
+  box-shadow: inset 0 0 6cqmin rgba(0, 0, 0, 0.55), inset 0 0 0 1cqmin rgba(0, 0, 0, 0.35);
+}
+
+/* Rim + studs — SPINS with the wheel (inline rotation). It's the wheel's metal
+ * body, so it turns with the wedges; a still rim would read as a picture frame.
+ * Sits above the sheen so the metal stays crisp/bright. */
+.wheel__rim {
+  @apply absolute inset-0 z-[15] pointer-events-none;
+}
+
+.wheel__rim-svg {
+  @apply w-full h-full;
+}
+
+/* Static domed SHEEN over the spinning wedges (does not rotate): a soft top-left
+ * radial highlight + bottom vignette so the face reads convex/carved, not flat. */
+.wheel__sheen {
+  @apply absolute inset-0 rounded-full z-10 pointer-events-none;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 42%),
+    radial-gradient(circle at 62% 78%, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 55%);
+}
+
+/* Static SVG overlay — Eye-of-Horus hub + fixed ankh pointer. Sits ABOVE
+ * everything; the SVG's own coordinate space scales with the wheel. A drop-shadow
+ * lifts it off the stone background. */
+.wheel__decor-layer {
+  @apply absolute inset-0 z-30 pointer-events-none;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+}
+
+.wheel__hub-svg {
+  @apply w-full h-full;
+  /* Let the ankh pointer + its plate extend just past the rim on the left */
+  overflow: visible;
+}
+
+/* Label layer — spins WITH the disc (rotation set inline). Above the disc + its
+ * sheen (so text stays crisp), below the static decor overlay (rim/hub/pointer). */
+.wheel__labels {
+  @apply absolute inset-0 z-20 pointer-events-none;
+}
+
+/* A label STRIP: a radius-length bar anchored at the hub, rotated (inline) to lie
+ * along its wedge. transform-origin:left center pins it at center; it reaches from
+ * the hub out to the rim, so the wedge's full length is the label's space. */
+.wheel__label-strip {
+  @apply absolute flex items-center;
+  left: 50%;
+  top: 50%;
+  width: 50%;            /* hub → rim = half the wheel */
+  height: 12cqmin;       /* the row's thickness (holds the text) */
+  margin-top: -6cqmin;   /* center the strip vertically on the radius */
+  transform-origin: left center;
+}
+
+/* The prize name, laid along the strip. Every label is painted so it reads
+ * upright when its wedge is at the LEFT pointer (where winners land): the strip
+ * points left there, so the text is rotated 180deg and left-aligned to hug the
+ * rim, reading outward. This orientation is fixed (never recomputed), so labels
+ * turn with the wheel like paint — no snap. Sized in cqmin to scale as one unit. */
+.wheel__label {
+  @apply w-full text-left font-black uppercase whitespace-nowrap leading-none;
+  /* Symmetric inline padding keeps text off BOTH the eye-hub (inner) and the
+     studded rim (outer). Balanced at 7.5cqmin (9 clipped "3 TOURN. PACKS"; 6 hugged
+     the rim too tightly) — the smaller hub + thinner rim give the long short-labels
+     ("SNATCH STEAL", "3 TOURN. PACKS") room without crowding the bezel. Symmetric so
+     the 180deg turn keeps position. */
+  padding-inline: 7.5cqmin;
+  font-size: 3.6cqmin;
+  letter-spacing: -0.02em;
+  font-family: var(--font-techno);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  transform: rotate(180deg);
+  transform-origin: center;
+}
+
+/* Footer — the CONSTANT-height bottom slot of .wheel-content. Its height never
+ * changes between spin and reveal, so the 1fr wheel row above never resizes (the
+ * wheel doesn't jump smaller when the prize appears). The prize line is always in
+ * the layout; only its visibility toggles. */
+.wheel-footer {
+  @apply w-full flex flex-col items-center gap-2;
+}
+
+/* Prize reveal line — ALWAYS occupies its space (height reserved); before the
+ * result lands it's just invisible, so appearing = a visibility/opacity toggle,
+ * not a layout insertion. */
+.wheel-prize {
+  @apply text-center leading-tight opacity-0 transition-opacity duration-300;
+  visibility: hidden;
+}
+
+.wheel-prize.is-revealed {
+  @apply opacity-100;
+  visibility: visible;
+}
+
+.wheel-prize__kicker {
+  @apply text-[0.65rem] uppercase tracking-[0.3em] text-primary/80 mb-0.5;
+  font-family: var(--font-techno);
+}
+
+.wheel-prize__name {
+  /* min-height reserves the tallest single-line name so the slot never grows */
+  @apply text-lg md:text-xl font-black text-primary;
+  min-height: 1.5em;
+}
+
+/* ============================================================
+ * REWARDS (/rewards) — the ledger tab: available + claimed rows.
+ * ============================================================ */
+
+/* One ledger row: prize info on the left, claim affordance on the right. */
+.reward-card {
+  @apply flex items-center gap-4 p-4 rounded-lg
+    bg-black/25 border border-white/10;
+}
+
+.reward-card__title {
+  @apply text-base md:text-lg font-black text-white leading-tight truncate;
+}
+
+.reward-card__meta {
+  @apply mt-0.5 flex items-center gap-2 text-xs text-white/60;
+}
+
+.reward-card__note {
+  @apply mt-1 text-[0.7rem] uppercase tracking-wider text-primary/70;
+}
+
+/* Claimed reward's picked-card thumbnail (wildcard / ban / snatch). */
+.reward-card__thumb {
+  @apply relative shrink-0 w-11 aspect-[59/86] rounded overflow-hidden
+    border border-white/15 bg-black/40 transition-all;
+}
+.reward-card__thumb:hover {
+  @apply border-primary/60 ring-1 ring-primary/40 scale-105;
+}
+.reward-card__thumb--banned img {
+  @apply grayscale opacity-70;
+}
+.reward-card__thumb-marker {
+  @apply absolute inset-x-0 bottom-0 text-center text-[0.5rem] font-black
+    tracking-wider text-white bg-red-700/90 py-px;
+}
+
+/* "<card name> · <caption>" line under a claimed reward. */
+.reward-card__pick {
+  @apply mt-1 flex items-center gap-2 text-xs text-white/70;
+}
+.reward-card__pick-name {
+  @apply font-bold text-white/90;
+}
+.reward-card__pick-caption {
+  @apply uppercase tracking-wider text-[0.65rem] text-primary/80;
+}
+
+.reward-card__claimed-badge {
+  @apply text-[0.7rem] font-bold uppercase tracking-[0.15em] text-green-400/90
+    px-3 py-1 rounded-full border border-green-500/30 bg-green-500/10;
+}
+
+.reward-card__locked-badge {
+  @apply text-[0.7rem] font-bold uppercase tracking-[0.15em] text-white/40
+    px-3 py-1 rounded-full border border-white/15 bg-white/5;
+}
+
+/* Empty-state line inside a ledger section. */
+.reward-empty {
+  @apply text-center text-white/45 text-sm py-6;
+}
+
+/* ============================================================
+ * COLLECTION (/collection) — card tile + pagination.
+ * ============================================================ */
+
+/* Rounded art frame that holds the card image + count badge */
+.collection-card__frame {
+  @apply absolute inset-0 bg-card-bg rounded-lg shadow-lg overflow-hidden
+    border border-white/10 group-hover:border-primary/50 transition-colors;
+}
+
+.collection-card__badge {
+  @apply absolute top-1 right-1 w-6 h-6 bg-black/80 rounded-full flex items-center
+    justify-center border border-primary shadow-md z-10;
+}
+
+.collection-card__name {
+  @apply text-[10px] md:text-xs font-bold text-white leading-tight line-clamp-2 h-8
+    group-hover:text-primary transition-colors;
+}
+
+.collection-card__rarity {
+  @apply text-[9px] md:text-[10px] text-gray-400 uppercase tracking-wider mt-0.5;
+}
+
+/* Shared prev/next pager button (collection + anywhere paged) */
+.pager-btn {
+  @apply px-4 py-2 bg-white/10 rounded hover:bg-white/20
+    disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* ============================================================
+ * PACK OPENING (/packs) — buttons on the reveal screen.
+ * ============================================================ */
+
+/* "Back to Campaign" — subtle red danger-exit */
+.pack-exit-btn {
+  @apply px-6 py-3 text-base text-red-400 hover:text-red-300 font-bold transition-colors
+    bg-black/40 rounded-lg border border-red-900/50 hover:bg-black/60;
+}
+
+/* Next Pack / Finish — gold 3D press button (enabled state) */
+.pack-next-btn {
+  @apply px-8 py-3 font-black rounded-xl transition-all uppercase tracking-wider
+    bg-primary text-black hover:bg-primary-hover border border-gold-dark
+    active:shadow-none active:translate-y-[4px];
+  box-shadow: 0 4px 0 var(--gold-dark);
+}
+
+.pack-next-btn--disabled {
+  @apply px-8 py-3 font-black rounded-xl uppercase tracking-wider
+    bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700;
+}
+
+/* --- The 5-4 reveal grid ---------------------------------------------------
+ * A 10-column x 2-row grid. Each card spans 2 columns, so the top row holds 5
+ * (cols 1-2,3-4,5-6,7-8,9-10). The bottom row of 4 starts at column 2 — a
+ * half-card offset — so each bottom card nestles under a GAP in the top row
+ * (the staggered look). One `gap` value drives ALL spacing, identical at every
+ * viewport; `1fr` columns/rows share leftover space evenly by construction —
+ * no per-card margins, no magic numbers. Reprint packs (>10 cards) fall back to
+ * an aligned auto-flow grid via .pack-grid--wide.
+ */
+.pack-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  /* minmax(0,1fr) lets the two rows DIVIDE the container height instead of
+     growing to card content (which caused overflow). Requires the grid to have
+     a definite height — it fills the flex panel via flex:1 + min-height:0. */
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.5rem, 1.5vh, 1.25rem);
+  width: 100%;
+  flex: 1 1 0;
+  min-height: 0;
+  justify-items: center;
+  align-items: stretch;
+}
+
+/* Top row: 5 cards, each spanning 2 cols, pinned to row 1 */
+.pack-grid__cell--top {
+  grid-row: 1;
+  grid-column: span 2;
+  min-height: 0;
+  height: 100%;
+}
+
+/* Bottom row: 4 cards, each span 2. The FIRST bottom card starts at column 2
+   (half-card offset) so the row of 4 nestles under the gaps of the 5 above. */
+.pack-grid__cell--bottom {
+  grid-row: 2;
+  grid-column: span 2;
+  min-height: 0;
+  height: 100%;
+}
+
+.pack-grid__cell--bottom-start {
+  grid-column: 2 / span 2;
+}
+
+/* Wide (reprint) packs: simple even auto-flow, both rows aligned (no offset) */
+.pack-grid--wide {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.pack-grid--wide .pack-grid__cell--top,
+.pack-grid--wide .pack-grid__cell--bottom,
+.pack-grid--wide .pack-grid__cell--bottom-start {
+  grid-column: auto;
+}
+
+/* Small packs (≤5 cards, e.g. 3-card Tournament packs): a SINGLE centered row.
+   --pack-cols is set inline to the card count. The cards stay the SAME SIZE as a
+   standard pack's cards (whose row is ~40vh tall) rather than stretching to fill
+   the modal — so the slab (a flex-none StonePanel) shrink-wraps this one row
+   instead of being a tall empty box. Columns are auto-width so cards keep their
+   aspect ratio; no 1fr stretch, no clipping. */
+.pack-grid--single {
+  grid-template-columns: repeat(var(--pack-cols, 5), auto);
+  grid-template-rows: auto;
+  flex: 0 0 auto;
+  align-self: center;
+  justify-content: center;
+  align-content: center;
+}
+
+.pack-grid--single .pack-grid__cell--top {
+  grid-row: 1;
+  grid-column: auto;
+  height: auto;
+  max-height: 40vh;
+}
+
+/* --- A card within a cell --- */
+.pack-card {
+  @apply flex flex-col items-center justify-end cursor-pointer;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* The flip box: fills the cell above the label; sizer sets aspect ratio */
+.pack-card__box {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Invisible sizer — native card image at its true ratio, capped by the cell */
+.pack-card__sizer {
+  max-height: 100%;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  opacity: 0;
+  pointer-events: none;
+  display: block;
+}
+
+.pack-card__label {
+  @apply text-center transition-opacity duration-300 pointer-events-none;
+  width: 140%;
+  flex: 0 0 auto;
+  padding-top: 0.25rem;
+}
+
+/* ============================================================
+ * MENU (/menu) — retro grid background + skewed menu items.
+ * ============================================================ */
+
+/* Faint 40px tech grid behind the menu */
+.menu-grid-bg {
+  @apply absolute inset-0 opacity-20;
+  background-image:
+    linear-gradient(to right, var(--card-bg) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--card-bg) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* A skewed menu entry; hover slides + glows (active variant only) */
+.menu-item {
+  @apply relative overflow-hidden bg-gradient-to-r from-gray-900 to-black
+    border-l-4 p-6 skew-x-[-10deg] transition-all duration-300;
+}
+
+.menu-item--active {
+  @apply border-primary group-hover:translate-x-4 group-hover:bg-gray-800
+    group-hover:shadow-[0_0_20px_rgba(212,175,55,0.2)];
+}
+
+.menu-item--disabled {
+  @apply border-gray-700;
+}
+
+/* ============================================================
+ * SHELL — the persistent AppNav chrome.
+ * ============================================================ */
+
+/* A top-bar nav link (CAMPAIGN / COLLECTION / …); brightens on hover */
+.topbar-nav-link {
+  @apply hover:text-white transition-colors;
+}
+
+/* The link for the route we're currently on — pinned bright (gold), not grey. */
+.topbar-nav-link--active {
+  @apply text-primary;
+}
+
+/* ============================================================
+ * DECK BUILDER (/deck-builder) — control-panel widgets.
+ * NOTE: layout is slated for a mobile rebuild; these are
+ * styling-only classes, not structural layout.
+ * ============================================================ */
+
+/* One of the 6 metal action buttons in the deck controls grid */
+.deck-control-btn {
+  @apply bg-gradient-to-b from-gray-200 to-gray-400 text-black border border-gray-600
+    rounded shadow font-bold hover:brightness-110 py-1;
 }

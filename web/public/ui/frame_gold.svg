@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" preserveAspectRatio="none">
+  <!--
+    SVG replica of button_gold.png for CSS border-image (9-slice), slice = 58.
+    IMPORTANT: with a 58px slice, ONLY draw inside the 58px-wide border band
+    (i.e. within 58 of any edge). Anything drawn in the central 58..142 x 58..142
+    region gets clipped by the slicer and would appear as stray inner lines.
+    The button's center fill is supplied by CSS (background gradient), NOT here.
+  -->
+  <defs>
+    <linearGradient id="goldBevel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbe38a"/>
+      <stop offset="0.35" stop-color="#e6c04a"/>
+      <stop offset="0.65" stop-color="#c9962b"/>
+      <stop offset="1" stop-color="#8a5e12"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Beveled gold band (outer ring). Center is cut out (evenodd) and left
+       transparent so the CSS background shows through as the fill. -->
+  <path fill="url(#goldBevel)" fill-rule="evenodd"
+    d="M4 4 H196 V196 H4 Z  M46 46 V154 H154 V46 Z"/>
+
+  <!-- Outer dark edge (inside the band, within the slice) -->
+  <rect x="4" y="4" width="192" height="192" rx="12" fill="none" stroke="#3a2708" stroke-width="4"/>
+
+  <!-- 3D bevel: highlight top/left, shadow bottom/right — all within the band -->
+  <path fill="none" stroke="#ffe9a8" stroke-width="2" stroke-opacity="0.85" d="M9 9 H191 M9 9 V191"/>
+  <path fill="none" stroke="#6b4a10" stroke-width="2" stroke-opacity="0.85" d="M191 9 V191 H9"/>
+
+  <!-- Inner rim of the band (the gold's inner edge). Sits at 46, which is inside
+       the 58 slice, so it renders continuously as part of the border, not as a
+       floating center rectangle. -->
+  <rect x="46" y="46" width="108" height="108" rx="4" fill="none" stroke="#7a561a" stroke-width="3"/>
+  <path fill="none" stroke="#ffe9a8" stroke-width="1.2" stroke-opacity="0.6" d="M47 47 H153 M47 47 V153"/>
+
+  <g fill="none" stroke="#6e4c12" stroke-width="3" stroke-linejoin="miter" stroke-linecap="square" opacity="0.9">
+    <!-- Corner L-keys, inside each fixed 58x58 corner -->
+    <path d="M18 32 v-14 h14 M168 32 v-14 h-14 M18 168 v14 h14 M168 168 v14 h-14"/>
+
+    <!-- Edge meander units in the tileable strip (58..142). Each unit is seamless
+         end-to-end so border-image-repeat:round tiles it without smearing. -->
+    <path d="M58 30 h6 v-8 h12 v8 h12 v-8 h12 v8 h12 v-8 h12 v8 h6"/>   <!-- top -->
+    <path d="M58 170 h6 v8 h12 v-8 h12 v8 h12 v-8 h12 v8 h12 v-8 h6"/>  <!-- bottom -->
+    <path d="M30 58 v6 h-8 v12 h8 v12 h-8 v12 h8 v12 h-8 v12 h8 v6"/>   <!-- left -->
+    <path d="M170 58 v6 h8 v12 h-8 v12 h8 v12 h-8 v12 h8 v12 h-8 v6"/>  <!-- right -->
+  </g>
+</svg>

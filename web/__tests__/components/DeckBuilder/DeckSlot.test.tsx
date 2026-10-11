@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import DeckSlot from '@/components/DeckBuilder/DeckSlot';
+import DeckSlot from '@/components/DeckBuilder/DeckSlot.view';
 import { Card } from '@/lib/api';
 
 const mockCard: Card = {

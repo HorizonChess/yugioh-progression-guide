@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import SideExtraDeckGrid from '@/components/DeckBuilder/SideExtraDeckGrid';
+import SideExtraDeckGrid from '@/components/DeckBuilder/SideExtraDeckGrid.view';
 import { Card } from '@/lib/api';
 
 const mockCard: Card = {
