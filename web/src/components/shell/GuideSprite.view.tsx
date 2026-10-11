@@ -1,28 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { asset } from '@/lib/utils';
 
 const SPRITES = [
     {
-        url: "/sprites/yugi_neutral_v2_transparent.png?v=4",
+        url: asset("/sprites/yugi_neutral_v2_transparent.png?v=4"),
         alt: "Yugi Muto (Neutral)",
         quote: "Believe in the heart of the cards!",
         style: {}
     },
     {
-        url: "/sprites/yugi_happy_v2_transparent.png?v=4",
+        url: asset("/sprites/yugi_happy_v2_transparent.png?v=4"),
         alt: "Yugi Muto (Happy)",
         quote: "We did it! The puzzle is complete!",
         style: {}
     },
     {
-        url: "/sprites/yugi_sad_v2_transparent.png?v=4",
+        url: asset("/sprites/yugi_sad_v2_transparent.png?v=4"),
         alt: "Yugi Muto (Sad)",
         quote: "I... I can't lose now...",
         style: {}
     },
     {
-        url: "/sprites/yugi_happy_v2_transparent.png?v=4", // Placeholder until Action sprite is regenerated
+        url: asset("/sprites/yugi_happy_v2_transparent.png?v=4"), // Placeholder until Action sprite is regenerated
         alt: "Yugi Muto (Action)",
         quote: "My grandpa's deck has no pathetic cards!",
         style: {}
