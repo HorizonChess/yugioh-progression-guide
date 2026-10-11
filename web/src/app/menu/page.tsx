@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import SaveSlotList from "@/components/SaveSlotList";
 import TopBar from "@/components/TopBar";
+import { asset } from '@/lib/utils';
 
 export default function MenuPage() {
     const [duelistName, setDuelistName] = useState("");
@@ -75,7 +76,7 @@ export default function MenuPage() {
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--primary)_0%,transparent_70%)] opacity-5 animate-pulse"></div>
                         {/* Placeholder for dynamic character art */}
                         <img
-                            src="/sprites/yugi_v2.png"
+                            src={asset("/sprites/yugi_v2.png")}
                             alt="Yugi"
                             className="absolute bottom-0 right-0 h-full object-contain drop-shadow-[0_0_50px_rgba(0,0,0,0.8)] mask-image-gradient"
                             style={{ maskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)' }}

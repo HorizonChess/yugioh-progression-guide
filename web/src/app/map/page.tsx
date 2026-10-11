@@ -174,7 +174,7 @@ export default function MapPage() {
                 <div className="absolute bottom-4 left-0 right-0 z-30 pointer-events-none">
                     {/* Centered Stats Box */}
                     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex justify-center pointer-events-auto animate-in slide-in-from-bottom-10 duration-700">
-                        <div className="relative w-[300px] h-[120px] bg-[url('/ui/stats_panel_cropped.png')] bg-[length:100%_100%] bg-center bg-no-repeat">
+                        <div className="relative w-[300px] h-[120px] bg-[url('../../public/ui/stats_panel_cropped.png')] bg-[length:100%_100%] bg-center bg-no-repeat">
                             <div className="absolute top-1/2 -translate-y-1/2 left-[56px] w-20 flex flex-col items-center gap-1">
                                 <span className="text-[10px] text-[#aaffaa] uppercase tracking-[0.2em] font-bold drop-shadow-md" style={{ fontFamily: 'var(--font-techno)' }}>Wins</span>
                                 <span className="text-2xl text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'var(--font-techno)' }}>{wins}</span>
