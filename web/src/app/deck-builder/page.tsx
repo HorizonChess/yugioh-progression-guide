@@ -1,21 +1,30 @@
 "use client";
 
-import { useProgression } from "@/context/ProgressionContext";
+import { useProgression, SavedDeck } from "@/context/ProgressionContext";
 import GuideSprite from "@/components/layout/GuideSprite";
 import ScaleWrapper from "@/components/deck-builder/ScaleWrapper";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, fetchCardsByIds } from "@/lib/api";
 import { parseYDKWithSections, generateYDK, downloadYDK } from "@/lib/ydk-parser";
-import { isExtraDeckCard, removeCardFromDeck, sortDeckCards } from "@/lib/deck-utils";
+import {
+    isExtraDeckCard,
+    removeCardFromDeck,
+    sortDeckCards,
+    parseDragPayload,
+    DRAG_MIME,
+    DeckZone,
+    DragSource,
+    DragPayload,
+} from "@/lib/deck-utils";
 import { ownedCardIds, ownedCountsById } from "@/lib/collection";
+import { isDefined } from "@/lib/utils";
 import CardInfoPanel from "@/components/deck-builder/CardInfoPanel";
 import MainDeckGrid from "@/components/deck-builder/MainDeckGrid";
 import SideExtraDeckGrid from "@/components/deck-builder/SideExtraDeckGrid";
 import CardSearchPanel from "@/components/deck-builder/CardSearchPanel";
 import LoadDeckModal from "@/components/deck-builder/LoadDeckModal";
-import DragPreview from "@/components/deck-builder/DragPreview";
+import DragPreview, { DragPreviewHandle, dragPreviewTransform } from "@/components/deck-builder/DragPreview";
 import DeckControls from "@/components/deck-builder/DeckControls";
-import { SavedDeck } from "@/context/ProgressionContext";
 
 export default function DeckBuilder() {
     const { collection, saveDeck, savedDecks, deleteDeck, bannedCardIds } = useProgression();
@@ -33,20 +42,27 @@ export default function DeckBuilder() {
     const [deckName, setDeckName] = useState("New Deck");
     const [showLoadModal, setShowLoadModal] = useState(false);
 
-    // Drag Preview State
-    const [draggedCard, setDraggedCard] = useState<Card | null>(null);
-    const dragPreviewRef = useRef<{ element: HTMLDivElement | null; position: { x: number; y: number }; rafId: number | null }>({ element: null, position: { x: 0, y: 0 }, rafId: null });
+    // Drag Preview State: the dragged card + where the drag started. Later
+    // pointer moves go straight to the preview element via dragPreviewRef.
+    const [drag, setDrag] = useState<{ card: Card; x: number; y: number } | null>(null);
+    const dragPreviewRef = useRef<DragPreviewHandle>({ element: null, rafId: null });
     const emptyDragImageRef = useRef<HTMLImageElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const dragSourceRef = useRef<{ from: 'search' | 'main' | 'extra' | 'side', index: number, cardId: number } | null>(null);
+    const dragSourceRef = useRef<{ from: DragSource; index: number; cardId: number } | null>(null);
     const dropOccurredRef = useRef(false);
+
+    const decks: Record<DeckZone, Card[]> = { main: mainDeck, extra: extraDeck, side: sideDeck };
+    const setDeck = (zone: DeckZone, cards: Card[]) => {
+        if (zone === 'main') setMainDeck(cards);
+        else if (zone === 'extra') setExtraDeck(cards);
+        else setSideDeck(cards);
+    };
 
     const updateDragPreviewPosition = (x: number, y: number) => {
         const ref = dragPreviewRef.current;
         if (ref.rafId !== null) cancelAnimationFrame(ref.rafId);
         ref.rafId = requestAnimationFrame(() => {
-            if (ref.element) ref.element.style.transform = `translate3d(${x - 52.5}px, ${y - 76.5}px, 0)`;
-            ref.position = { x, y };
+            if (ref.element) ref.element.style.transform = dragPreviewTransform(x, y);
             ref.rafId = null;
         });
     };
@@ -68,21 +84,23 @@ export default function DeckBuilder() {
         };
     }, [collection]);
 
+    // Firefox gives no coordinates on `drag`, so also track the pointer via dragover.
+    const isDragging = drag !== null;
     useEffect(() => {
-        const handleDocumentDragOver = (e: DragEvent) => {
-            if (draggedCard) updateDragPreviewPosition(e.clientX, e.clientY);
-        };
+        if (!isDragging) return;
+        const preview = dragPreviewRef.current;
+        const handleDocumentDragOver = (e: DragEvent) => updateDragPreviewPosition(e.clientX, e.clientY);
         document.addEventListener('dragover', handleDocumentDragOver);
         return () => {
             document.removeEventListener('dragover', handleDocumentDragOver);
-            if (dragPreviewRef.current.rafId !== null) cancelAnimationFrame(dragPreviewRef.current.rafId);
+            if (preview.rafId !== null) cancelAnimationFrame(preview.rafId);
         };
-    }, [draggedCard]);
+    }, [isDragging]);
 
     const collectionCards = useMemo(() => {
         const counts = ownedCountsById(collection);
         [...mainDeck, ...extraDeck, ...sideDeck].forEach(card => {
-            const current = counts.get(card.id) || 0;
+            const current = counts.get(card.id) ?? 0;
             counts.set(card.id, Math.max(0, current - 1));
         });
         return allCards.map(card => ({
@@ -146,7 +164,7 @@ export default function DeckBuilder() {
             setAllCards(cardsToUse);
         }
 
-        const getCards = (ids: number[]) => ids.map(id => cardsToUse.find(c => c.id === id)).filter(Boolean) as Card[];
+        const getCards = (ids: number[]) => ids.map(id => cardsToUse.find(c => c.id === id)).filter(isDefined);
         setMainDeck(getCards(deck.mainDeck));
         setExtraDeck(getCards(deck.extraDeck));
         setSideDeck(getCards(deck.sideDeck));
@@ -191,7 +209,7 @@ export default function DeckBuilder() {
         setAllCards(newAllCards);
 
         const getCards = (ids: number[]) =>
-            ids.map(id => fetchedCards.find(c => c.id === id)).filter(Boolean) as Card[];
+            ids.map(id => fetchedCards.find(c => c.id === id)).filter(isDefined);
 
         setMainDeck(getCards(main));
         setExtraDeck(getCards(extra));
@@ -250,9 +268,9 @@ export default function DeckBuilder() {
         return countIn(mainDeck) + countIn(extraDeck) + countIn(sideDeck);
     };
 
-    const handleDragStart = (e: React.DragEvent, card: Card, from: 'search' | 'main' | 'extra' | 'side', index?: number) => {
-        const data = { cardId: card.id, from, index };
-        e.dataTransfer.setData("application/json", JSON.stringify(data));
+    const handleDragStart = (e: React.DragEvent, card: Card, from: DragSource, index?: number) => {
+        const payload: DragPayload = { cardId: card.id, from, index };
+        e.dataTransfer.setData(DRAG_MIME, JSON.stringify(payload));
         e.dataTransfer.effectAllowed = "move";
 
         // Track drag source for drag-to-remove
@@ -264,11 +282,17 @@ export default function DeckBuilder() {
             e.dataTransfer.setDragImage(emptyDragImageRef.current, 0, 0);
         }
 
-        // Set position in ref BEFORE mounting component (prevents flicker)
-        dragPreviewRef.current.position = { x: e.clientX, y: e.clientY };
+        // Mount the custom preview at the pointer (start position as props, so no flicker)
+        setDrag({ card, x: e.clientX, y: e.clientY });
+    };
 
-        // Show custom preview (state triggers mount, will use position from ref)
-        setDraggedCard(card);
+    const stopDragPreview = () => {
+        setDrag(null);
+        const preview = dragPreviewRef.current;
+        if (preview.rafId !== null) {
+            cancelAnimationFrame(preview.rafId);
+            preview.rafId = null;
+        }
     };
 
     const handleDrag = (e: React.DragEvent) => {
@@ -284,21 +308,13 @@ export default function DeckBuilder() {
         if (!dropOccurredRef.current && dragSourceRef.current) {
             const { from, index } = dragSourceRef.current;
             if (from !== 'search' && index >= 0) {
-                if (from === 'main') setMainDeck(removeCardFromDeck(mainDeck, index));
-                else if (from === 'extra') setExtraDeck(removeCardFromDeck(extraDeck, index));
-                else if (from === 'side') setSideDeck(removeCardFromDeck(sideDeck, index));
+                setDeck(from, removeCardFromDeck(decks[from], index));
             }
         }
 
         dragSourceRef.current = null;
         dropOccurredRef.current = false;
-        setDraggedCard(null);
-
-        if (dragPreviewRef.current.rafId !== null) {
-            cancelAnimationFrame(dragPreviewRef.current.rafId);
-            dragPreviewRef.current.rafId = null;
-        }
-        dragPreviewRef.current.position = { x: 0, y: 0 };
+        stopDragPreview();
     };
 
     // Helper to find card by ID - searches allCards and current decks
@@ -309,79 +325,55 @@ export default function DeckBuilder() {
             || sideDeck.find(c => c.id === cardId);
     };
 
-    const handleDrop = (e: React.DragEvent, to: 'main' | 'extra' | 'side', index: number) => {
+    const insertAt = (deck: Card[], index: number, card: Card) => {
+        const next = [...deck];
+        next.splice(index, 0, card);
+        return next;
+    };
+
+    const handleDrop = (e: React.DragEvent, to: DeckZone, index: number) => {
         e.preventDefault();
         dropOccurredRef.current = true;
-        try {
-            const data = JSON.parse(e.dataTransfer.getData("application/json"));
-            const card = findCardById(data.cardId);
-            if (!card) return;
+        // Always clear the drag preview, whatever the drop's outcome.
+        stopDragPreview();
 
-            const isExtra = isExtraDeckCard(card);
-            if (to === 'extra' && !isExtra) return alert("Only Extra Deck monsters can go in Extra Deck");
-            if (to === 'main' && isExtra && data.from !== 'main') return alert("Extra Deck monsters cannot go in Main Deck");
+        const payload = parseDragPayload(e.dataTransfer);
+        if (!payload) return;
+        const { from } = payload;
+        const card = findCardById(payload.cardId);
+        if (!card) return;
 
-            const getDeck = (zone: string) => {
-                if (zone === 'side') return sideDeck;
-                if (zone === 'extra') return extraDeck;
-                return mainDeck;
-            };
-            const setDeck = (zone: string, newDeck: Card[]) => {
-                if (zone === 'side') setSideDeck(newDeck);
-                else if (zone === 'extra') setExtraDeck(newDeck);
-                else setMainDeck(newDeck);
-            };
+        const isExtra = isExtraDeckCard(card);
+        if (to === 'extra' && !isExtra) return alert("Only Extra Deck monsters can go in Extra Deck");
+        if (to === 'main' && isExtra && from !== 'main') return alert("Extra Deck monsters cannot go in Main Deck");
 
-            const sourceDeck = getDeck(data.from);
-            const targetDeck = getDeck(to);
+        const targetDeck = decks[to];
+        if (to === 'main' && targetDeck.length >= 60 && from !== 'main') return alert("Main Deck Full (Max 60)");
+        if ((to === 'extra' || to === 'side') && targetDeck.length >= 15 && from !== to) return alert("Extra/Side Deck Full (Max 15)");
 
-            if (to === 'main' && targetDeck.length >= 60 && data.from !== 'main') return alert("Main Deck Full (Max 60)");
-            if ((to === 'extra' || to === 'side') && targetDeck.length >= 15 && data.from !== to) return alert("Extra/Side Deck Full (Max 15)");
+        if (from === 'search') {
+            if (bannedIds.has(card.id)) return alert("This card is banned and cannot be added.");
+            if (getCopiesInAllDecks(card.id) >= 3) return alert("Max 3 copies allowed.");
+            const available = collectionCards.find(entry => entry.card.id === card.id)?.count ?? 0;
+            if (available <= 0) return;
+            setDeck(to, insertAt(targetDeck, index, card));
+            return;
+        }
 
-            if (data.from === 'search') {
-                if (bannedIds.has(card.id)) return alert("This card is banned and cannot be added.");
-                if (getCopiesInAllDecks(card.id) >= 3) return alert("Max 3 copies allowed.");
-            }
-
-            if (data.from !== 'search') {
-                const newSource = [...sourceDeck];
-                newSource.splice(data.index, 1);
-                setDeck(data.from, newSource);
-            } else {
-                const available = collectionCards.find(entry => entry.card.id === card.id)?.count || 0;
-                if (available <= 0) return;
-            }
-
-            const newTarget = (data.from === to && data.from !== 'search') ? [...sourceDeck] : [...targetDeck];
-
-            if (data.from === to) {
-                const d = [...sourceDeck];
-                d.splice(data.index, 1);
-                d.splice(index, 0, card);
-                setDeck(to, d);
-                return;
-            }
-
-            newTarget.splice(index, 0, card);
-            setDeck(to, newTarget);
-
-        } catch (err) {
-            console.error("Drop failed:", err);
-        } finally {
-            // ALWAYS cleanup drag state, even if drop fails
-            setDraggedCard(null);
-            if (dragPreviewRef.current.rafId !== null) {
-                cancelAnimationFrame(dragPreviewRef.current.rafId);
-                dragPreviewRef.current.rafId = null;
-            }
+        // Moving between (or within) deck sections.
+        if (payload.index === undefined) return;
+        const sourceWithout = removeCardFromDeck(decks[from], payload.index);
+        if (from === to) {
+            setDeck(to, insertAt(sourceWithout, index, card));
+        } else {
+            setDeck(from, sourceWithout);
+            setDeck(to, insertAt(targetDeck, index, card));
         }
     };
 
-    const handleRightClick = (e: React.MouseEvent, _card: Card, from: 'main' | 'extra' | 'side', index: number) => {
+    const handleRightClick = (e: React.MouseEvent, _card: Card, from: DeckZone, index: number) => {
         e.preventDefault();
-        if (from === 'main') setMainDeck(removeCardFromDeck(mainDeck, index));
-        else if (from === 'extra') setExtraDeck(removeCardFromDeck(extraDeck, index));
-        else if (from === 'side') setSideDeck(removeCardFromDeck(sideDeck, index));
+        setDeck(from, removeCardFromDeck(decks[from], index));
     };
 
     const handleSearchDragStart = (e: React.DragEvent, card: Card) => handleDragStart(e, card, 'search');
@@ -493,7 +485,7 @@ export default function DeckBuilder() {
             </div>
         </ScaleWrapper>
 
-        {draggedCard && <DragPreview card={draggedCard} previewRef={dragPreviewRef} />}
+        {drag && <DragPreview card={drag.card} x={drag.x} y={drag.y} previewRef={dragPreviewRef} />}
         </>
     );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card } from "@/lib/api";
 
 interface DeckSlotProps {
@@ -25,16 +25,15 @@ interface DeckSlotProps {
 export default function DeckSlot({ card, index, onClick, onDoubleClick, onContextMenu, onHover, className = "", onDragStart, onDrop, onDragOver, onDrag, onDragEnd, isUnavailable, banned, dragContext }: DeckSlotProps) {
     const [isDragOver, setIsDragOver] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
-    const [imageError, setImageError] = useState(false);
 
-    // Defensive cleanup: reset drag states when card changes or component unmounts
-    useEffect(() => {
-        setImageError(false); // Reset image error when card changes
-        return () => {
-            setIsDragging(false);
-            setIsDragOver(false);
-        };
-    }, [card?.id]); // Reset when card changes (using optional chaining for undefined)
+    // Slots are keyed by position, so a slot can get a new card while mounted:
+    // reset its drag visuals when that happens (state adjusted during render).
+    const [prevCardId, setPrevCardId] = useState(card?.id);
+    if (card?.id !== prevCardId) {
+        setPrevCardId(card?.id);
+        setIsDragging(false);
+        setIsDragOver(false);
+    }
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -85,8 +84,8 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
                 onContextMenu={onContextMenu}
-                onMouseEnter={() => onHover && onHover(card || null)}
-                onMouseLeave={() => onHover && onHover(null)}
+                onMouseEnter={() => onHover?.(card ?? null)}
+                onMouseLeave={() => onHover?.(null)}
                 draggable={!!card && !isUnavailable && !banned}
                 onDragStart={(e) => {
                     if (card && onDragStart) {
@@ -94,16 +93,16 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
                         onDragStart(e, card, index);
                     }
                 }}
-                onDrag={(e) => onDrag && onDrag(e)}
+                onDrag={(e) => onDrag?.(e)}
                 onDragEnd={(e) => {
                     setIsDragging(false);
-                    onDragEnd && onDragEnd(e);
+                    onDragEnd?.(e);
                 }}
             >
                 {card ? (
                     <>
                         <img
-                            src={card.card_images[0].image_url_cropped}
+                            src={card.card_images[0]?.image_url_cropped}
                             alt={card.name}
                             className="w-full h-full object-fill rounded-[1px]"
                         />

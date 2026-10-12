@@ -1,5 +1,39 @@
 import { Card } from "@/lib/api";
 
+/** The three deck sections a card can sit in. */
+export type DeckZone = "main" | "extra" | "side";
+
+/** Where a drag started: a deck section or the collection search panel. */
+export type DragSource = DeckZone | "search";
+
+/** What's carried in a card drag's dataTransfer. */
+export interface DragPayload {
+    cardId: number;
+    from: DragSource;
+    /** Position in the source deck; absent when dragged from search. */
+    index?: number;
+}
+
+export const DRAG_MIME = "application/json";
+
+const DRAG_SOURCES: readonly DragSource[] = ["main", "extra", "side", "search"];
+
+/** Reads and validates a card drag's payload; null for foreign or malformed drops. */
+export function parseDragPayload(dataTransfer: DataTransfer): DragPayload | null {
+    let data: unknown;
+    try {
+        data = JSON.parse(dataTransfer.getData(DRAG_MIME)) as unknown;
+    } catch {
+        return null;
+    }
+    if (typeof data !== "object" || data === null) return null;
+    const { cardId, from, index } = data as Record<string, unknown>;
+    if (typeof cardId !== "number") return null;
+    const source = DRAG_SOURCES.find((s) => s === from);
+    if (!source) return null;
+    return { cardId, from: source, index: typeof index === "number" ? index : undefined };
+}
+
 /**
  * Checks if a card belongs in the Extra Deck (Fusion, Synchro, XYZ, Link).
  */

@@ -41,7 +41,7 @@ export default function MainDeckGrid({
                     card={card}
                     dragContext="deck"
                     onHover={onHover}
-                    onDragStart={(e) => onDragStart(e, card!, 'main', i)}
+                    onDragStart={(e, slotCard) => onDragStart(e, slotCard, 'main', i)}
                     onDrag={onDrag}
                     onDragEnd={onDragEnd}
                     onDrop={(e) => onDrop(e, 'main', i)}

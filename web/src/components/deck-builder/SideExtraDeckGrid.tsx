@@ -1,17 +1,20 @@
 "use client";
 
 import { Card } from "@/lib/api";
+import { DeckZone } from "@/lib/deck-utils";
 import DeckSlot from "./DeckSlot";
+
+type SideZone = Exclude<DeckZone, "main">;
 
 interface SideExtraDeckGridProps {
     sideDeck: Card[];
     extraDeck: Card[];
     onHover: (card: Card | null) => void;
-    onDragStart: (e: React.DragEvent, card: Card, from: 'extra' | 'side', index: number) => void;
+    onDragStart: (e: React.DragEvent, card: Card, from: SideZone, index: number) => void;
     onDrag: (e: React.DragEvent) => void;
     onDragEnd: (e: React.DragEvent) => void;
-    onDrop: (e: React.DragEvent, to: 'extra' | 'side', index: number) => void;
-    onRightClick: (e: React.MouseEvent, card: Card, from: 'extra' | 'side', index: number) => void;
+    onDrop: (e: React.DragEvent, to: SideZone, index: number) => void;
+    onRightClick: (e: React.MouseEvent, card: Card, from: SideZone, index: number) => void;
 }
 
 export default function SideExtraDeckGrid({
@@ -30,7 +33,7 @@ export default function SideExtraDeckGrid({
         e.dataTransfer.dropEffect = "move";
     };
 
-    const renderSlots = (cards: Card[], zone: 'extra' | 'side', totalSlots: number) => {
+    const renderSlots = (cards: Card[], zone: SideZone, totalSlots: number) => {
         const slots = [];
         for (let i = 0; i < totalSlots; i++) {
             const card = cards[i];
@@ -44,7 +47,7 @@ export default function SideExtraDeckGrid({
                         card={card}
                         dragContext="deck"
                         onHover={onHover}
-                        onDragStart={(e) => onDragStart(e, card!, zone, i)}
+                        onDragStart={(e, slotCard) => onDragStart(e, slotCard, zone, i)}
                         onDrag={onDrag}
                         onDragEnd={onDragEnd}
                         onDrop={(e) => onDrop(e, zone, i)}

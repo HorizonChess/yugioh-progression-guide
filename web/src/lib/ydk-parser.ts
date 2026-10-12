@@ -1,4 +1,5 @@
 import { Collection, ownedCountsById } from '@/lib/collection';
+import { DeckZone } from '@/lib/deck-utils';
 
 /**
  * Parses a YDK file content and returns an array of card IDs.
@@ -33,7 +34,7 @@ export function parseYDK(content: string): number[] {
 export function parseYDKWithSections(content: string): { main: number[], extra: number[], side: number[] } {
     const lines = content.split(/\r?\n/);
     const result = { main: [] as number[], extra: [] as number[], side: [] as number[] };
-    let currentSection: 'main' | 'extra' | 'side' = 'main';
+    let currentSection: DeckZone = 'main';
 
     for (const line of lines) {
         const trimmed = line.trim();

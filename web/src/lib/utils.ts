@@ -44,3 +44,6 @@ export function sortCardsByRarity(cards: Card[], setCodePrefix?: string): Card[]
 
 /** Prefix a file from /public with the site's base path (needed when hosted under a subfolder, e.g. GitHub Pages). */
 export const asset = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}${path}`;
+
+/** Type guard for filtering out null/undefined, e.g. `ids.map(lookup).filter(isDefined)`. */
+export const isDefined = <T>(value: T | null | undefined): value is T => value != null;
