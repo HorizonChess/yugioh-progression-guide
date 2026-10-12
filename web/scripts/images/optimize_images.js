@@ -55,7 +55,7 @@ function loadProgress() {
     if (RESUME && fs.existsSync(PROGRESS_FILE)) {
         try {
             return JSON.parse(fs.readFileSync(PROGRESS_FILE, 'utf8'));
-        } catch (e) {
+        } catch {
             console.warn('Could not load progress file, starting fresh');
         }
     }
@@ -119,7 +119,7 @@ async function checkSizedImagesExist(imageId) {
             }
         }
         return true; // All sizes exist
-    } catch (e) {
+    } catch {
         return false;
     }
 }
@@ -371,7 +371,7 @@ async function main() {
     if (fs.existsSync(TEMP_DIR)) {
         try {
             fs.rmdirSync(TEMP_DIR);
-        } catch (e) {
+        } catch {
             // Directory not empty, that's fine
         }
     }

@@ -18,13 +18,12 @@ export interface FilterState {
     atkMax: string;
     defMin: string;
     defMax: string;
-    sort: string;
+    sort: SortKey;
 }
 
 interface CollectionFiltersProps {
     onFilterChange: (filters: FilterState) => void;
     className?: string;
-    compact?: boolean;
 }
 
 const CATEGORIES = ["All", "Monster", "Spell", "Trap"];
@@ -64,25 +63,29 @@ const SORT_OPTIONS = [
     { label: "Level (High-Low)", value: "level_desc" },
     { label: "Newest (ID High-Low)", value: "newest" },
     { label: "Oldest (ID Low-High)", value: "oldest" },
-];
+] as const;
 
-export default function CollectionFilters({ onFilterChange, className = "", compact = false }: CollectionFiltersProps) {
-    const [filters, setFilters] = useState<FilterState>({
-        search: "",
-        set: "All",
-        rarity: "All",
-        category: "All",
-        cardType: "All",
-        subtype: "All",
-        attribute: "All",
-        level: "All",
-        scale: "All",
-        atkMin: "",
-        atkMax: "",
-        defMin: "",
-        defMax: "",
-        sort: "name_asc"
-    });
+export type SortKey = (typeof SORT_OPTIONS)[number]["value"];
+
+export const DEFAULT_FILTERS: FilterState = {
+    search: "",
+    set: "All",
+    rarity: "All",
+    category: "All",
+    cardType: "All",
+    subtype: "All",
+    attribute: "All",
+    level: "All",
+    scale: "All",
+    atkMin: "",
+    atkMax: "",
+    defMin: "",
+    defMax: "",
+    sort: "name_asc",
+};
+
+export default function CollectionFilters({ onFilterChange, className = "" }: CollectionFiltersProps) {
+    const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
     const [sets, setSets] = useState<CardSet[]>([]);
 
@@ -102,28 +105,11 @@ export default function CollectionFilters({ onFilterChange, className = "", comp
         return () => clearTimeout(timer);
     }, [filters, onFilterChange]);
 
-    const handleChange = (key: keyof FilterState, value: string) => {
+    const handleChange = (key: Exclude<keyof FilterState, "sort">, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
     };
 
-    const handleReset = () => {
-        setFilters({
-            search: "",
-            set: "All",
-            rarity: "All",
-            category: "All",
-            cardType: "All",
-            subtype: "All",
-            attribute: "All",
-            level: "All",
-            scale: "All",
-            atkMin: "",
-            atkMax: "",
-            defMin: "",
-            defMax: "",
-            sort: "name_asc"
-        });
-    };
+    const handleReset = () => setFilters(DEFAULT_FILTERS);
 
     return (
         <div className={`flex flex-col gap-4 w-64 ${className}`}>
@@ -261,7 +247,10 @@ export default function CollectionFilters({ onFilterChange, className = "", comp
                         <label className="text-xs font-bold text-primary uppercase drop-shadow-sm">Sort By</label>
                         <select
                             value={filters.sort}
-                            onChange={(e) => handleChange('sort', e.target.value)}
+                            onChange={(e) => {
+                                const option = SORT_OPTIONS.find((o) => o.value === e.target.value);
+                                if (option) setFilters((prev) => ({ ...prev, sort: option.value }));
+                            }}
                             className="parchment-bg border-2 border-wood-border rounded-xl px-4 py-2 text-ink font-bold font-serif focus:outline-none focus:border-primary shadow-inner transition-all opacity-90 focus:opacity-100 appearance-none cursor-pointer w-full"
                         >
                             {SORT_OPTIONS.map(option => (

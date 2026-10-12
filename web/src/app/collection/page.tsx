@@ -2,11 +2,11 @@
 
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchCardsByIds, Card } from "@/lib/api";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import CardDetailModal from "@/components/card/CardDetailModal";
 import CardTooltip from "@/components/card/CardTooltip";
-import CollectionFilters, { FilterState } from "@/components/collection/CollectionFilters";
+import CollectionFilters, { DEFAULT_FILTERS, FilterState } from "@/components/collection/CollectionFilters";
 import CollectionCard from "@/components/collection/CollectionCard";
 import CollectionPagination from "@/components/collection/CollectionPagination";
 import { parseYDK, generateYDKFromCollection, downloadYDK } from "@/lib/ydk-parser";
@@ -30,22 +30,13 @@ export default function Collection() {
     const { hoveredCard, tooltipPosition, onHover, onLeave } = useCardTooltip();
     const [currentPage, setCurrentPage] = useState(1);
 
-    const [filters, setFilters] = useState<FilterState>({
-        search: "",
-        set: "All",
-        rarity: "All",
-        category: "All",
-        cardType: "All",
-        subtype: "All",
-        attribute: "All",
-        level: "All",
-        scale: "All",
-        atkMin: "",
-        atkMax: "",
-        defMin: "",
-        defMax: "",
-        sort: "name_asc",
-    });
+    const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+
+    // Stable, because CollectionFilters re-sends filters whenever this handler changes.
+    const handleFilterChange = useCallback((next: FilterState) => {
+        setFilters(next);
+        setCurrentPage(1);
+    }, []);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -131,7 +122,7 @@ export default function Collection() {
 
                 // Rarity — prefer the PULLED rarity, fall back to card's set list
                 if (filters.rarity !== "All") {
-                    if (rarity && rarity !== "Unknown") {
+                    if (rarity !== "Unknown") {
                         if (rarity !== filters.rarity) return false;
                     } else {
                         const hasRarity = card.card_sets?.some((s) => s.set_rarity === filters.rarity);
@@ -176,7 +167,7 @@ export default function Collection() {
                 // Level / Rank / Link
                 if (filters.level !== "All") {
                     const lvl = parseInt(filters.level);
-                    const cardLevel = card.level ?? (card as any).rank ?? card.linkval;
+                    const cardLevel = card.level ?? card.rank ?? card.linkval;
                     if (cardLevel !== lvl) return false;
                 }
 
@@ -200,8 +191,8 @@ export default function Collection() {
                 return true;
             })
             .sort((a, b) => {
-                const cardA = a.card!;
-                const cardB = b.card!;
+                const cardA = a.card;
+                const cardB = b.card;
                 switch (filters.sort) {
                     case "name_asc": return cardA.name.localeCompare(cardB.name);
                     case "name_desc": return cardB.name.localeCompare(cardA.name);
@@ -218,20 +209,15 @@ export default function Collection() {
     const totalPages = Math.ceil(filteredCards.length / ITEMS_PER_PAGE);
     const displayedEntries = filteredCards.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-    // Reset to page 1 whenever the filters change
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [filters]);
-
     // The rarity label shown on a tile: the pulled rarity, else the active
     // rarity filter if this card has it, else the card's first printed rarity.
     const resolveRarity = (entry: (typeof displayedEntries)[number]) => {
         const { card, rarity } = entry;
-        if (rarity && rarity !== "Unknown") return rarity;
-        if (filters.rarity !== "All" && card!.card_sets?.some((s) => s.set_rarity === filters.rarity)) {
+        if (rarity !== "Unknown") return rarity;
+        if (filters.rarity !== "All" && card.card_sets?.some((s) => s.set_rarity === filters.rarity)) {
             return filters.rarity;
         }
-        return card!.card_sets?.[0]?.set_rarity || "Common";
+        return card.card_sets?.[0]?.set_rarity || "Common";
     };
 
     if (loading && Object.keys(collection).length > 0) {
@@ -278,7 +264,7 @@ export default function Collection() {
             <div className="min-h-0 p-4 md:p-8 overflow-y-auto custom-scrollbar">
                 <div className="max-w-[1920px] mx-auto flex flex-col lg:flex-row gap-6 items-start">
                     <div className="w-full lg:w-auto sticky top-4 z-30">
-                        <CollectionFilters onFilterChange={setFilters} />
+                        <CollectionFilters onFilterChange={handleFilterChange} />
                     </div>
 
                     <StonePanel className="flex-1 w-full min-h-[80vh]">
@@ -299,11 +285,11 @@ export default function Collection() {
                                     {displayedEntries.map((entry) => (
                                         <CollectionCard
                                             key={entry.key}
-                                            card={entry.card!}
+                                            card={entry.card}
                                             count={entry.count}
                                             rarity={resolveRarity(entry)}
-                                            onSelect={() => setSelectedCard(entry.card!)}
-                                            onHover={(e) => onHover(entry.card!, e)}
+                                            onSelect={() => setSelectedCard(entry.card)}
+                                            onHover={(e) => onHover(entry.card, e)}
                                             onLeave={onLeave}
                                         />
                                     ))}

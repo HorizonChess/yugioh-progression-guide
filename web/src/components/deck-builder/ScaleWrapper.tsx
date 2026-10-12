@@ -41,9 +41,9 @@ export default function ScaleWrapper({ children, backgroundColor = '#0f172a' }: 
         const el = outerRef.current;
         if (!el) return;
 
-        function updateZoom() {
-            const cw = el!.clientWidth;
-            const ch = el!.clientHeight;
+        const updateZoom = () => {
+            const cw = el.clientWidth;
+            const ch = el.clientHeight;
             if (cw === 0 || ch === 0) return;
 
             // Scale based on width - ensures content always fills the container horizontally
@@ -55,7 +55,7 @@ export default function ScaleWrapper({ children, backgroundColor = '#0f172a' }: 
 
             setZoom(scale);
             setDesignHeight(adaptiveHeight);
-        }
+        };
 
         updateZoom();
         // Observe the CONTAINER, not the window — the content row can change size

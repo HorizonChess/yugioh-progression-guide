@@ -1,5 +1,4 @@
 const sharp = require('sharp');
-const fs = require('fs');
 const path = require('path');
 
 // Script lives in web/scripts/images/, so public/ is two levels up.

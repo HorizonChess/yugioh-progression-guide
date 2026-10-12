@@ -52,10 +52,11 @@ export default function WinnersWheel({ onSpinComplete, onClaim, onBackToCampaign
 
     const handleSpin = () => {
         if (spinning || result) return;
-        setSpinning(true);
 
         const index = Math.floor(Math.random() * WHEEL_PRIZES.length);
         const prize = WHEEL_PRIZES[index];
+        if (!prize) return;
+        setSpinning(true);
 
         // Land the chosen wedge under the LEFT pointer (9 o'clock). In the top-
         // clockwise frame the left is 270deg, so rotating wedge i's CENTER (at

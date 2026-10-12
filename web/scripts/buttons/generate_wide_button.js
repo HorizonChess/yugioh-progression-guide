@@ -9,7 +9,6 @@ async function generateWideButton() {
         console.log('Loading button_gold.png...');
         // Load original image (1024x1024)
         const image = sharp(inputPath);
-        const metadata = await image.metadata();
 
         // Target dimensions: 1024x256 (4:1 ratio)
         // We resize the source to 256x256 first to get the corners at the right scale

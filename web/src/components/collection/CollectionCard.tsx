@@ -23,6 +23,8 @@ export default function CollectionCard({
     onHover: (e: React.MouseEvent) => void;
     onLeave: () => void;
 }) {
+    const imageUrl = card.card_images[0]?.image_url_small;
+
     return (
         <div
             className="flex flex-col group cursor-pointer"
@@ -32,14 +34,16 @@ export default function CollectionCard({
         >
             <div className="relative aspect-[2/3] mb-2 hover:scale-105 transition-transform duration-200">
                 <div className="collection-card__frame">
-                    <Image
-                        src={card.card_images[0].image_url_small}
-                        alt={card.name}
-                        fill
-                        sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
-                        className="object-cover"
-                        loading="lazy"
-                    />
+                    {imageUrl && (
+                        <Image
+                            src={imageUrl}
+                            alt={card.name}
+                            fill
+                            sizes="(max-width: 640px) 25vw, (max-width: 768px) 20vw, (max-width: 1024px) 16vw, (max-width: 1280px) 12vw, 11vw"
+                            className="object-cover"
+                            loading="lazy"
+                        />
+                    )}
                     <div className="collection-card__badge">
                         <span className="text-xs font-bold text-primary">{count}</span>
                     </div>

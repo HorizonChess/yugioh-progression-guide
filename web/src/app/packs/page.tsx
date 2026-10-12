@@ -103,7 +103,7 @@ function PacksPageContent() {
                 {(hoveredCard || selectedCard) && renderOverlays()}
                 <PackOpeningView
                     set={currentSet}
-                    pack={pack.packsToOpen[pack.currentPackIndex]}
+                    pack={pack.currentPack ?? []}
                     packIndex={pack.currentPackIndex}
                     packCount={pack.packsToOpen.length}
                     flippedCards={pack.flippedCards}
@@ -152,7 +152,7 @@ function PacksPageContent() {
                     onBack={() => setViewDetails(false)}
                 />
             ) : (
-                renderSummary()
+                renderSummary(currentSet)
             )}
         </PacksShell>
     );
@@ -168,15 +168,13 @@ function PacksPageContent() {
         );
     }
 
-    function renderSummary() {
-        const { cardsByRarity, sortedRarities } = currentSet
-            ? processCardsForRarityGrid(pack.allOpenedCards, currentSet.set_code)
-            : { cardsByRarity: {}, sortedRarities: [] };
+    function renderSummary(set: CardSet) {
+        const { cardsByRarity, sortedRarities } = processCardsForRarityGrid(pack.allOpenedCards, set.set_code);
         return (
             <div className="max-w-7xl mx-auto">
                 <StonePanel className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 sticky top-4 z-50">
                     <div className="text-center md:text-left">
-                        <h1 className="text-2xl md:text-3xl font-black text-white mb-1">{currentSet!.set_name}</h1>
+                        <h1 className="text-2xl md:text-3xl font-black text-white mb-1">{set.set_name}</h1>
                         <p className="text-primary text-sm font-bold">Opened {pack.allOpenedCards.length} Cards</p>
                     </div>
                     <div className="flex gap-4">

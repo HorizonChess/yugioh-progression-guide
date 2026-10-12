@@ -139,7 +139,7 @@ export default function PackRevealModal({ entry, resolveSource, onCollect, onClo
             <div className="min-h-0 flex-1 p-4">
                 <PackOpeningView
                     set={set}
-                    pack={pack.packsToOpen[pack.currentPackIndex]}
+                    pack={pack.currentPack ?? []}
                     packIndex={pack.currentPackIndex}
                     packCount={pack.packsToOpen.length}
                     flippedCards={pack.flippedCards}

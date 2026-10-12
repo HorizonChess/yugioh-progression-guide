@@ -2,7 +2,6 @@
 
 import { Card } from "@/lib/api";
 import { createPortal } from "react-dom";
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import { asset } from '@/lib/utils';
 
@@ -13,14 +12,8 @@ interface CardTooltipProps {
 }
 
 export default function CardTooltip({ card, x, y }: CardTooltipProps) {
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-        return () => setMounted(false);
-    }, []);
-
-    if (!mounted) return null;
+    // Only ever rendered after a client-side hover, so window/document exist.
+    const imageUrl = card.card_images[0]?.image_url_small;
 
     // Calculate position to keep tooltip on screen
     // Default to right of cursor, but flip to left if near edge
@@ -57,15 +50,17 @@ export default function CardTooltip({ card, x, y }: CardTooltipProps) {
             {/* Left Side: Card Image */}
             <div className="w-[180px] shrink-0">
                 <div className="relative aspect-[2/3] rounded-lg overflow-hidden shadow-lg border border-white/20">
-                    <Image
-                        src={card.card_images[0].image_url_small}
-                        alt={card.name}
-                        fill
-                        className="object-cover"
-                        sizes="200px"
-                        quality={100}
-                        priority
-                    />
+                    {imageUrl && (
+                        <Image
+                            src={imageUrl}
+                            alt={card.name}
+                            fill
+                            className="object-cover"
+                            sizes="200px"
+                            quality={100}
+                            priority
+                        />
+                    )}
                 </div>
             </div>
 

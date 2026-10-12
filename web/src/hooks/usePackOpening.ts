@@ -60,7 +60,9 @@ export function usePackOpening() {
     };
 
     const handleNextPack = () => {
-        setAllOpenedCards((prev) => [...prev, ...packsToOpen[currentPackIndex]]);
+        const currentPack = packsToOpen[currentPackIndex];
+        if (!currentPack) return;
+        setAllOpenedCards((prev) => [...prev, ...currentPack]);
         if (currentPackIndex < packsToOpen.length - 1) {
             setCurrentPackIndex((prev) => prev + 1);
             setFlippedCards(new Set());

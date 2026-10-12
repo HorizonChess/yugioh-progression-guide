@@ -29,7 +29,7 @@ export default function PackCard({ card, isFlipped, onClick, rarity, onMouseEnte
             {/* Card box — height-driven; sizer keeps aspect ratio */}
             <div className="pack-card__box">
                 <img
-                    src={card.card_images[0].image_url}
+                    src={card.card_images[0]?.image_url}
                     alt="Sizer"
                     className="pack-card__sizer"
                 />
@@ -47,7 +47,7 @@ export default function PackCard({ card, isFlipped, onClick, rarity, onMouseEnte
                     </div>
                     <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-lg overflow-hidden shadow-xl border border-white/10">
                         <img
-                            src={card.card_images[0].image_url}
+                            src={card.card_images[0]?.image_url}
                             alt={card.name}
                             className="w-full h-full object-cover"
                             style={{ transform: "translateZ(0)" }}

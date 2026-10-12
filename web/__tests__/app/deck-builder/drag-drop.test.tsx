@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import DeckBuilderPage from '@/app/deck-builder/page';
 
 // Mock the context

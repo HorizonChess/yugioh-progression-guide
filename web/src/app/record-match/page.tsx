@@ -57,19 +57,12 @@ export default function RecordMatchPage() {
     const total = matchHistory.length;
     const winRate = total > 0 ? `${Math.round((wins / total) * 100)}%` : "--";
 
+    // Current run of same-result matches: +N wins or -N losses.
     let streak = 0;
-    for (let i = matchHistory.length - 1; i >= 0; i--) {
-        const isWin = matchHistory[i].winner === "player";
-        if (i === matchHistory.length - 1) {
-            streak = isWin ? 1 : -1;
-        } else {
-            const prevWin = matchHistory[i + 1].winner === "player";
-            if (isWin === prevWin) {
-                streak += isWin ? 1 : -1;
-            } else {
-                break;
-            }
-        }
+    for (const match of [...matchHistory].reverse()) {
+        const step = match.winner === "player" ? 1 : -1;
+        if (streak !== 0 && Math.sign(streak) !== step) break;
+        streak += step;
     }
     const streakDisplay = streak === 0 ? "--" : streak > 0 ? `+${streak}` : `${streak}`;
 

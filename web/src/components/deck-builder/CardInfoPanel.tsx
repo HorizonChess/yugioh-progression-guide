@@ -26,7 +26,7 @@ export default function CardInfoPanel({ card }: CardInfoPanelProps) {
             */}
             <div className="w-full shrink-0">
                 <img
-                    src={card.card_images[0].image_url}
+                    src={card.card_images[0]?.image_url}
                     alt={card.name}
                     className="w-full h-auto"
                 />

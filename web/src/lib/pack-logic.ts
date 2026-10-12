@@ -17,7 +17,8 @@ export interface PackResult {
 }
 
 // Rarity Definitions
-type Rarity = 'Common' | 'Rare' | 'Super Rare' | 'Ultra Rare' | 'Secret Rare' | 'Ultimate Rare' | 'Ghost Rare' | 'Starlight Rare' | 'Short Print';
+const RARITIES = ['Common', 'Rare', 'Super Rare', 'Ultra Rare', 'Secret Rare', 'Ultimate Rare', 'Ghost Rare', 'Starlight Rare', 'Short Print'] as const;
+type Rarity = (typeof RARITIES)[number];
 
 // Rarity hierarchy for fallback logic (most rare to least rare)
 const RARITY_HIERARCHY: readonly string[] = [
@@ -459,8 +460,8 @@ function getCardNumber(card: Card, setPrefix: string): number | null {
     if (!setEntry) return null;
 
     // Extract number from set_code like "PGLD-EN033" -> 33
-    const match = setEntry.set_code.match(/(\d+)$/);
-    return match ? parseInt(match[1], 10) : null;
+    const digits = setEntry.set_code.match(/(\d+)$/)?.[1];
+    return digits ? parseInt(digits, 10) : null;
 }
 
 /**
@@ -485,7 +486,7 @@ function generatePremiumGoldPack(setCards: Card[], setInfo: CardSet): PulledCard
     // 2 Gold Secrets (same for all variants)
     for (let i = 0; i < 2; i++) {
         if (goldSecrets.length > 0) {
-            pack.push(toPulledCard(getRandomCard(goldSecrets), 'Gold Secret Rare', setPrefix));
+            pack.push(toPulledCard(pickRandom(goldSecrets), 'Gold Secret Rare', setPrefix));
         }
     }
 
@@ -497,16 +498,16 @@ function generatePremiumGoldPack(setCards: Card[], setInfo: CardSet): PulledCard
         const pool2 = filterByCardNumberRange(allGoldRares, setPrefix, 22, 69);
 
         if (pool1.length > 0) {
-            pack.push(toPulledCard(getRandomCard(pool1), 'Gold Rare', setPrefix));
+            pack.push(toPulledCard(pickRandom(pool1), 'Gold Rare', setPrefix));
         } else if (allGoldRares.length > 0) {
-            pack.push(toPulledCard(getRandomCard(allGoldRares), 'Gold Rare', setPrefix));
+            pack.push(toPulledCard(pickRandom(allGoldRares), 'Gold Rare', setPrefix));
         }
 
         for (let i = 0; i < 2; i++) {
             if (pool2.length > 0) {
-                pack.push(toPulledCard(getRandomCard(pool2), 'Gold Rare', setPrefix));
+                pack.push(toPulledCard(pickRandom(pool2), 'Gold Rare', setPrefix));
             } else if (allGoldRares.length > 0) {
-                pack.push(toPulledCard(getRandomCard(allGoldRares), 'Gold Rare', setPrefix));
+                pack.push(toPulledCard(pickRandom(allGoldRares), 'Gold Rare', setPrefix));
             }
         }
     } else if (name.includes('infinite gold')) {
@@ -514,7 +515,7 @@ function generatePremiumGoldPack(setCards: Card[], setInfo: CardSet): PulledCard
         // 3 Gold Rares (no specific ranges)
         for (let i = 0; i < 3; i++) {
             if (allGoldRares.length > 0) {
-                pack.push(toPulledCard(getRandomCard(allGoldRares), 'Gold Rare', setPrefix));
+                pack.push(toPulledCard(pickRandom(allGoldRares), 'Gold Rare', setPrefix));
             }
         }
     } else {
@@ -524,16 +525,16 @@ function generatePremiumGoldPack(setCards: Card[], setInfo: CardSet): PulledCard
         const pool2 = filterByCardNumberRange(allGoldRares, setPrefix, 51, 90);
 
         if (pool1.length > 0) {
-            pack.push(toPulledCard(getRandomCard(pool1), 'Gold Rare', setPrefix));
+            pack.push(toPulledCard(pickRandom(pool1), 'Gold Rare', setPrefix));
         } else if (allGoldRares.length > 0) {
-            pack.push(toPulledCard(getRandomCard(allGoldRares), 'Gold Rare', setPrefix));
+            pack.push(toPulledCard(pickRandom(allGoldRares), 'Gold Rare', setPrefix));
         }
 
         for (let i = 0; i < 2; i++) {
             if (pool2.length > 0) {
-                pack.push(toPulledCard(getRandomCard(pool2), 'Gold Rare', setPrefix));
+                pack.push(toPulledCard(pickRandom(pool2), 'Gold Rare', setPrefix));
             } else if (allGoldRares.length > 0) {
-                pack.push(toPulledCard(getRandomCard(allGoldRares), 'Gold Rare', setPrefix));
+                pack.push(toPulledCard(pickRandom(allGoldRares), 'Gold Rare', setPrefix));
             }
         }
     }
@@ -561,7 +562,7 @@ function generatePackFromConfig(setCards: Card[], setInfo: CardSet, config: Pack
     // 1. Add Guaranteed Commons
     for (let i = 0; i < config.guaranteedCommons; i++) {
         if (commons.length > 0) {
-            const card = getRandomCard(commons);
+            const card = pickRandom(commons);
             const rarity = isRarity(card, 'Short Print', setPrefix) ? 'Short Print' : 'Common';
             pack.push(toPulledCard(card, rarity, setPrefix));
         }
@@ -570,10 +571,10 @@ function generatePackFromConfig(setCards: Card[], setInfo: CardSet, config: Pack
     // 2. Add Guaranteed Rare (if applicable)
     if (config.guaranteedRare) {
         if (rares.length > 0) {
-            pack.push(toPulledCard(getRandomCard(rares), 'Rare', setPrefix));
+            pack.push(toPulledCard(pickRandom(rares), 'Rare', setPrefix));
         } else if (commons.length > 0) {
             // Fallback to common if no rares available
-            const card = getRandomCard(commons);
+            const card = pickRandom(commons);
             const rarity = isRarity(card, 'Short Print', setPrefix) ? 'Short Print' : 'Common';
             pack.push(toPulledCard(card, rarity, setPrefix));
         }
@@ -587,7 +588,7 @@ function generatePackFromConfig(setCards: Card[], setInfo: CardSet, config: Pack
         } else {
             // If no foil pulled and not guaranteed foil, add common
             if (commons.length > 0) {
-                const card = getRandomCard(commons);
+                const card = pickRandom(commons);
                 const rarity = isRarity(card, 'Short Print', setPrefix) ? 'Short Print' : 'Common';
                 pack.push(toPulledCard(card, rarity, setPrefix));
             }
@@ -599,7 +600,7 @@ function generatePackFromConfig(setCards: Card[], setInfo: CardSet, config: Pack
         console.warn(`Pack underflow for ${setInfo.set_name}: expected ${config.cardsPerPack}, got ${pack.length}. Filling with commons.`);
         // Fill remaining slots with commons as emergency fallback
         while (pack.length < config.cardsPerPack && commons.length > 0) {
-            const card = getRandomCard(commons);
+            const card = pickRandom(commons);
             const rarity = isRarity(card, 'Short Print', setPrefix) ? 'Short Print' : 'Common';
             pack.push(toPulledCard(card, rarity, setPrefix));
         }
@@ -622,16 +623,15 @@ function tryGetCardWithFallback(setCards: Card[], setPrefix: string, startRarity
     if (startIndex === -1) {
         // Unknown rarity, try it directly
         const pool = setCards.filter(c => isRarity(c, startRarity, setPrefix));
-        if (pool.length > 0) return { card: getRandomCard(pool), rarity: startRarity };
+        if (pool.length > 0) return { card: pickRandom(pool), rarity: startRarity };
         return null;
     }
 
     // Try each rarity from the starting point down to Common
-    for (let i = startIndex; i < RARITY_HIERARCHY.length; i++) {
-        const rarity = RARITY_HIERARCHY[i];
+    for (const rarity of RARITY_HIERARCHY.slice(startIndex)) {
         const pool = setCards.filter(c => isRarity(c, rarity, setPrefix));
         if (pool.length > 0) {
-            return { card: getRandomCard(pool), rarity };
+            return { card: pickRandom(pool), rarity };
         }
     }
 
@@ -645,23 +645,24 @@ function tryGetCardWithFallback(setCards: Card[], setPrefix: string, startRarity
 function rollFoilSlot(setCards: Card[], setInfo: CardSet, config: PackConfig, fallbackRarity: string): FoilResult | null {
     const setPrefix = setInfo.set_code;
 
-    // Calculate Hat Size (LCM of ratios)
-    const ratios = config.ratios;
-    const denoms = Object.values(ratios).map(v => v!);
-    if (denoms.length === 0) return null;
+    // The configured odds, rarest (highest 1-in-X denominator) first.
+    const odds = Object.entries(config.ratios)
+        .flatMap(([name, ratio]) => {
+            const rarity = RARITIES.find(r => r === name);
+            return rarity && ratio ? [{ rarity, ratio }] : [];
+        })
+        .sort((a, b) => b.ratio - a.ratio);
+    if (odds.length === 0) return null;
 
-    const hatSize = lcmArray(denoms);
+    // Calculate Hat Size (LCM of ratios)
+    const hatSize = lcmArray(odds.map(o => o.ratio));
 
     // Roll a number from 1 to hatSize
     const roll = Math.floor(Math.random() * hatSize) + 1;
 
     let currentThreshold = 0;
 
-    // Sort rarities by scarcity (highest ratio denominator = rarest = check first)
-    const sortedRarities = (Object.keys(ratios) as Rarity[]).sort((a, b) => (ratios[b] || 0) - (ratios[a] || 0));
-
-    for (const rarity of sortedRarities) {
-        const ratio = ratios[rarity]!;
+    for (const { rarity, ratio } of odds) {
         const slots = Math.floor(hatSize / ratio);
 
         if (roll <= currentThreshold + slots) {
@@ -670,7 +671,7 @@ function rollFoilSlot(setCards: Card[], setInfo: CardSet, config: PackConfig, fa
             // Handle "Ultimate can be upgrade" logic (SOD-ABPF eras)
             if (rarity === 'Ultimate Rare' && config.ultimateCanBeUpgrade) {
                 const ultimates = setCards.filter(c => isRarity(c, 'Ultimate Rare', setPrefix));
-                if (ultimates.length > 0) return { card: getRandomCard(ultimates), rarity: 'Ultimate Rare' };
+                if (ultimates.length > 0) return { card: pickRandom(ultimates), rarity: 'Ultimate Rare' };
             }
 
             // Try to get a card of this rarity, falling back through hierarchy if needed
@@ -701,12 +702,12 @@ function generateSimplePack(setCards: Card[], setInfo: CardSet): PulledCard[] {
 
     // 8 Commons
     for (let i = 0; i < 8; i++) {
-        if (commons.length > 0) pack.push(toPulledCard(getRandomCard(commons), 'Common', setPrefix));
+        if (commons.length > 0) pack.push(toPulledCard(pickRandom(commons), 'Common', setPrefix));
     }
 
     // 1 Rare
-    if (rares.length > 0) pack.push(toPulledCard(getRandomCard(rares), 'Rare', setPrefix));
-    else if (commons.length > 0) pack.push(toPulledCard(getRandomCard(commons), 'Common', setPrefix));
+    if (rares.length > 0) pack.push(toPulledCard(pickRandom(rares), 'Rare', setPrefix));
+    else if (commons.length > 0) pack.push(toPulledCard(pickRandom(commons), 'Common', setPrefix));
 
     return pack;
 }
@@ -716,10 +717,11 @@ function isRarity(card: Card, rarity: string, setPrefix: string): boolean {
     return card.card_sets.some(s => s.set_code.startsWith(setPrefix) && s.set_rarity === rarity);
 }
 
-function getRandomCard(cards: Card[]): Card {
-    if (cards.length === 0) return {} as Card;
-    const index = Math.floor(Math.random() * cards.length);
-    return cards[index];
+/** A random element of a non-empty array. Callers check for an empty pool first. */
+function pickRandom<T>(items: readonly T[]): T {
+    const item = items[Math.floor(Math.random() * items.length)];
+    if (item === undefined) throw new Error("pickRandom: empty pool");
+    return item;
 }
 
 function toPulledCard(card: Card, rarity: string, setCode: string): PulledCard {
@@ -740,10 +742,5 @@ function lcm(a: number, b: number): number {
 }
 
 function lcmArray(arr: number[]): number {
-    if (arr.length === 0) return 1;
-    let result = arr[0];
-    for (let i = 1; i < arr.length; i++) {
-        result = lcm(result, arr[i]);
-    }
-    return result;
+    return arr.reduce((acc, n) => lcm(acc, n), 1);
 }

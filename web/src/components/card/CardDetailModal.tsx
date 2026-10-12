@@ -21,7 +21,7 @@ export default function CardDetailModal({ card, onClose, action }: CardDetailMod
             {/* Left: Card Image */}
             <div className="w-full md:w-1/2 bg-black/50 p-8 flex items-center justify-center">
                 <img
-                    src={card.card_images[0].image_url}
+                    src={card.card_images[0]?.image_url}
                     alt={card.name}
                     className="max-w-full max-h-[60vh] object-contain drop-shadow-2xl"
                 />

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { asset } from '@/lib/utils';
+import { useProgression } from "@/context/ProgressionContext";
 
 const SPRITES = [
     {
@@ -28,9 +29,7 @@ const SPRITES = [
         quote: "My grandpa's deck has no pathetic cards!",
         style: {}
     }
-];
-
-import { useProgression } from "@/context/ProgressionContext";
+] as const;
 
 export default function GuideSprite() {
     const { isGuideVisible } = useProgression();
@@ -54,7 +53,7 @@ export default function GuideSprite() {
 
     if (!visible || !isGuideVisible) return null;
 
-    const currentSprite = SPRITES[spriteIndex];
+    const currentSprite = SPRITES[spriteIndex] ?? SPRITES[0];
 
     return (
         <div className="fixed bottom-0 left-0 z-50 animate-in slide-in-from-bottom-10 duration-500 pointer-events-none flex items-end">
