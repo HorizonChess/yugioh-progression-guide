@@ -2,7 +2,7 @@
 
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets, fetchTournamentSets, fetchCardsInSet, fetchCardsByIds, Card, PulledCard } from "@/lib/api";
-import { RewardEntry, resolvePrizeKind, PrizeKind, claimedCardId } from "@/lib/rewards";
+import { RewardEntry, resolvePrizeKind, claimedCardId } from "@/lib/rewards";
 import { useEffect, useMemo, useState } from "react";
 import StonePanel from "@/components/ui/StonePanel";
 import GuideSprite from "@/components/layout/GuideSprite";
@@ -22,7 +22,6 @@ import CardDetailModal from "@/components/card/CardDetailModal";
  * prize) and resolved here.
  *
  * Claims wired so far:
- *  - text        → inline "Claim" (nothing to grant beyond acknowledging it)
  *  - pity        → the shared `PackRevealModal`, opening 3 boosters of the
  *                  just-finished CORE set
  *  - tournament  → the same `PackRevealModal`, opening 3 packs of the latest
@@ -37,17 +36,8 @@ import CardDetailModal from "@/components/card/CardDetailModal";
  * Snatch-steal is the only prize still locked (pending multiplayer).
  */
 
-/** Prize kinds whose claim modal isn't built yet (shown available, disabled). */
-const COMING_SOON: Record<PrizeKind, string | null> = {
-    text: null,
-    pity: null,
-    tournament: null,
-    wildcard: null,
-    starlight: null,
-    ban: null,
-    unban: null,
-    snatch: "Requires multiplayer — coming soon",
-};
+/** Shown on prizes whose claim flow isn't built yet (snatch-steal). */
+const LOCKED_NOTE = "Requires multiplayer — coming soon";
 
 export default function RewardsPage() {
     const { rewards, claimRewardEntry, addToCollection, banCard, unbanCard, bannedCardIds } = useProgression();
@@ -62,8 +52,8 @@ export default function RewardsPage() {
     /** A claimed reward's picked card, opened in a read-only detail modal. */
     const [inspectCard, setInspectCard] = useState<Card | null>(null);
 
-    const available = rewards.filter((r) => r.status === "available");
-    const claimed = rewards.filter((r) => r.status === "claimed");
+    const available = useMemo(() => rewards.filter((r) => r.status === "available"), [rewards]);
+    const claimed = useMemo(() => rewards.filter((r) => r.status === "claimed"), [rewards]);
 
     // Resolve each claimed single-pick reward's card (wildcard/ban/snatch) so the
     // ledger can show its image. Pack rewards have no single pick (see claimedCardId).
@@ -103,11 +93,6 @@ export default function RewardsPage() {
             pickedCard: id != null ? pickedCards[id] ?? null : null,
             packCount: entry.grantedCardIds?.length,
         };
-    };
-
-    // --- Text claim: nothing to grant, just acknowledge it ---
-    const claimText = (entry: RewardEntry) => {
-        claimRewardEntry(entry.id);
     };
 
     // Which set a reward's 3 packs open from — the only thing that differs
@@ -167,74 +152,31 @@ export default function RewardsPage() {
         setBanEntry(null);
     };
 
-    // Choose the claim affordance for an available entry by its prize kind.
-    const renderAvailable = (entry: RewardEntry) => {
+    // The claim button for an available entry, by prize kind; null = still locked.
+    const claimAction = (entry: RewardEntry): { label: string; onClick: () => void } | null => {
         const kind = resolvePrizeKind(entry.prizeId);
-        const comingSoon = COMING_SOON[kind];
-
-        if (comingSoon) {
-            return (
-                <RewardCard
-                    key={entry.id}
-                    entry={entry}
-                    locked
-                    lockedNote={comingSoon}
-                />
-            );
+        switch (kind) {
+            case "pity":
+            case "tournament":
+                return { label: "Open 3 Packs", onClick: () => setRevealEntry(entry) };
+            case "wildcard":
+                return { label: "Choose Card", onClick: () => setWildcardEntry(entry) };
+            case "starlight":
+                return { label: "Search Card", onClick: () => setStarlightEntry(entry) };
+            case "ban":
+            case "unban":
+                return { label: kind === "ban" ? "Ban a Card" : "Unban a Card", onClick: () => setBanEntry(entry) };
+            case "snatch":
+                return null;
         }
+    };
 
-        if (kind === "pity" || kind === "tournament") {
-            return (
-                <RewardCard
-                    key={entry.id}
-                    entry={entry}
-                    actionLabel="Open 3 Packs"
-                    onAction={() => setRevealEntry(entry)}
-                />
-            );
-        }
-
-        if (kind === "wildcard") {
-            return (
-                <RewardCard
-                    key={entry.id}
-                    entry={entry}
-                    actionLabel="Choose Card"
-                    onAction={() => setWildcardEntry(entry)}
-                />
-            );
-        }
-
-        if (kind === "starlight") {
-            return (
-                <RewardCard
-                    key={entry.id}
-                    entry={entry}
-                    actionLabel="Search Card"
-                    onAction={() => setStarlightEntry(entry)}
-                />
-            );
-        }
-
-        if (kind === "ban" || kind === "unban") {
-            return (
-                <RewardCard
-                    key={entry.id}
-                    entry={entry}
-                    actionLabel={kind === "ban" ? "Ban a Card" : "Unban a Card"}
-                    onAction={() => setBanEntry(entry)}
-                />
-            );
-        }
-
-        // text
-        return (
-            <RewardCard
-                key={entry.id}
-                entry={entry}
-                actionLabel="Claim"
-                onAction={() => claimText(entry)}
-            />
+    const renderAvailable = (entry: RewardEntry) => {
+        const action = claimAction(entry);
+        return action ? (
+            <RewardCard key={entry.id} entry={entry} actionLabel={action.label} onAction={action.onClick} />
+        ) : (
+            <RewardCard key={entry.id} entry={entry} locked lockedNote={LOCKED_NOTE} />
         );
     };
 

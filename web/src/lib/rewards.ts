@@ -8,7 +8,7 @@
  * prize resolution (granting wildcards/packs, ban/unban, snatch steal) grows
  * from here.
  */
-export interface WheelPrize {
+interface PrizeDef {
     /** Stable id — safe to key React lists / persist a claimed prize by. */
     id: string;
     /** Full player-facing label shown on the reveal. */
@@ -17,7 +17,7 @@ export interface WheelPrize {
     short: string;
 }
 
-export const WHEEL_PRIZES: WheelPrize[] = [
+export const WHEEL_PRIZES = [
     { id: "wildcard-common", label: "Wildcard (Common)", short: "Common" },
     { id: "wildcard-rare", label: "Wildcard (Rare)", short: "Rare" },
     { id: "wildcard-super", label: "Wildcard (Super Rare)", short: "Super Rare" },
@@ -28,7 +28,7 @@ export const WHEEL_PRIZES: WheelPrize[] = [
     { id: "ban", label: "Ban a Card", short: "Ban" },
     { id: "unban", label: "Unban a Card", short: "Unban" },
     { id: "snatch-steal", label: "Snatch Steal", short: "Snatch Steal" },
-];
+] as const satisfies readonly PrizeDef[];
 
 /**
  * The Defeat (loss) reward. NOT a wheel prize — the wheel is win-only — so it's
@@ -36,16 +36,28 @@ export const WHEEL_PRIZES: WheelPrize[] = [
  * claim flow opens 3 boosters of the just-finished CORE set (distinct from the
  * `tournament-packs` prize, which opens 3 real Tournament packs).
  */
-export const PITY_PRIZE: WheelPrize = {
+export const PITY_PRIZE = {
     id: "pity-packs",
     label: "3 Pity Packs",
     short: "Pity Packs",
-};
+} as const satisfies PrizeDef;
+
+/** Every prize a reward can carry: the wheel prizes plus the pity prize. */
+export type PrizeId = (typeof WHEEL_PRIZES)[number]["id"] | typeof PITY_PRIZE.id;
+
+export interface WheelPrize extends PrizeDef {
+    id: PrizeId;
+}
+
+const ALL_PRIZES: readonly WheelPrize[] = [...WHEEL_PRIZES, PITY_PRIZE];
+
+export function isPrizeId(value: unknown): value is PrizeId {
+    return ALL_PRIZES.some((p) => p.id === value);
+}
 
 /** Look up a prize descriptor by id across the wheel prizes + the pity prize. */
-export function getPrize(prizeId: string): WheelPrize | undefined {
-    if (prizeId === PITY_PRIZE.id) return PITY_PRIZE;
-    return WHEEL_PRIZES.find((p) => p.id === prizeId);
+export function getPrize(prizeId: PrizeId): WheelPrize | undefined {
+    return ALL_PRIZES.find((p) => p.id === prizeId);
 }
 
 // --- Rewards ledger --------------------------------------------------------
@@ -64,7 +76,7 @@ export interface RewardEntry {
     /** Stable id — React key + ledger identity. */
     id: string;
     /** WheelPrize.id (or PITY_PRIZE.id) — the prize kind. */
-    prizeId: string;
+    prizeId: PrizeId;
     /** CardSet.set_name recorded on the match this reward was won from. */
     wonFromPackName: string;
     /** currentSetIndex at time of win — anchor for the date gates. */
@@ -92,25 +104,31 @@ export type PrizeKind =
     | "pity"
     | "ban"
     | "unban"
-    | "snatch"
-    | "text";
+    | "snatch";
+
+const PRIZE_KIND: Record<PrizeId, PrizeKind> = {
+    "wildcard-common": "wildcard",
+    "wildcard-rare": "wildcard",
+    "wildcard-super": "wildcard",
+    "wildcard-ultra": "wildcard",
+    "wildcard-ultimate-secret": "wildcard",
+    "wildcard-starlight": "starlight",
+    "tournament-packs": "tournament",
+    "pity-packs": "pity",
+    ban: "ban",
+    unban: "unban",
+    "snatch-steal": "snatch",
+};
 
 /** Map a prizeId to the claim flow that resolves it. */
-export function resolvePrizeKind(prizeId: string): PrizeKind {
-    if (prizeId === "wildcard-starlight") return "starlight";
-    if (prizeId.startsWith("wildcard-")) return "wildcard";
-    if (prizeId === "tournament-packs") return "tournament";
-    if (prizeId === "pity-packs") return "pity";
-    if (prizeId === "ban") return "ban";
-    if (prizeId === "unban") return "unban";
-    if (prizeId === "snatch-steal") return "snatch";
-    return "text";
+export function resolvePrizeKind(prizeId: PrizeId): PrizeKind {
+    return PRIZE_KIND[prizeId];
 }
 
 /**
  * The single card a claimed reward resolved to (for the ledger's claimed view),
  * or null for rewards without one pick — pack rewards (pity/tournament open 3
- * packs, shown as a count instead) and text rewards. Ban/unban surface the
+ * packs, shown as a count instead). Ban/unban surface the
  * affected card; wildcard/starlight/snatch surface the granted/stolen card.
  */
 export function claimedCardId(entry: RewardEntry): number | null {
@@ -123,7 +141,7 @@ export function claimedCardId(entry: RewardEntry): number | null {
         case "unban":
             return entry.bannedCardId ?? null;
         default:
-            return null; // pity / tournament (grantedCardIds) and text
+            return null; // pity / tournament (grantedCardIds)
     }
 }
 
@@ -158,7 +176,7 @@ const WILDCARD_RARITY_LADDER: readonly string[] = [
     "Starlight Rare",
 ] as const;
 
-const WILDCARD_CEILING: Record<string, string> = {
+const WILDCARD_CEILING: Partial<Record<PrizeId, string>> = {
     "wildcard-common": "Common",
     "wildcard-rare": "Rare",
     "wildcard-super": "Super Rare",
@@ -170,7 +188,7 @@ const WILDCARD_CEILING: Record<string, string> = {
 };
 
 /** The highest rarity a wildcard prize may grant, e.g. "wildcard-super" → "Super Rare". */
-export function wildcardRarityFloor(prizeId: string): string {
+export function wildcardRarityFloor(prizeId: PrizeId): string {
     return WILDCARD_CEILING[prizeId] ?? "Common";
 }
 

@@ -86,9 +86,9 @@ export async function downloadYDK(filename: string, content: string): Promise<vo
     const blob = new Blob([contentWithBOM], { type: 'text/plain;charset=utf-8' });
 
     // Strategy 1: File System Access API (Force "Save As")
-    if ('showSaveFilePicker' in window) {
+    if (window.showSaveFilePicker) {
         try {
-            const handle = await (window as any).showSaveFilePicker({
+            const handle = await window.showSaveFilePicker({
                 suggestedName: filename,
                 types: [{
                     description: 'YDK File',
@@ -101,7 +101,7 @@ export async function downloadYDK(filename: string, content: string): Promise<vo
             return;
         } catch (err) {
             // Ignore AbortError (user cancelled)
-            if ((err as Error).name === 'AbortError') return;
+            if (err instanceof DOMException && err.name === 'AbortError') return;
             console.error('SaveFilePicker failed:', err);
         }
     }

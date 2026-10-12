@@ -9,7 +9,7 @@ import RecordMatch from "@/components/record-match/RecordMatch";
 import WinnersWheel from "@/components/record-match/WinnersWheel";
 import DefeatAct from "@/components/record-match/DefeatAct";
 import GuideSprite from "@/components/layout/GuideSprite";
-import { WheelPrize, PITY_PRIZE } from "@/lib/rewards";
+import { WheelPrize, PITY_PRIZE, PrizeId } from "@/lib/rewards";
 
 /**
  * The Record Match screen (route: /record-match). Wraps the record-match
@@ -91,7 +91,7 @@ export default function RecordMatchPage() {
 
     // Push a won reward onto the ledger, then advance the set. Shared by the win
     // (spun prize) and loss (pity) claim paths.
-    const grantReward = (prizeId: string) => {
+    const grantReward = (prizeId: PrizeId) => {
         if (currentSetForRewards) {
             addReward({
                 prizeId,

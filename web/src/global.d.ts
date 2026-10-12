@@ -13,3 +13,14 @@ declare module "*.module.css" {
     const classes: { readonly [key: string]: string };
     export default classes;
 }
+
+// File System Access API "Save As" picker — Chromium-only, so not in TypeScript's
+// DOM lib. Optional because other browsers don't have it.
+interface SaveFilePickerOptions {
+    suggestedName?: string;
+    types?: { description?: string; accept: Record<string, string[]> }[];
+}
+
+interface Window {
+    showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<FileSystemFileHandle>;
+}

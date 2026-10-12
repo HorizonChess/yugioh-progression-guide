@@ -97,6 +97,27 @@ const TOURNAMENT_KEYWORDS = [
  */
 let rawSetsPromise: Promise<CardSet[]> | null = null;
 
+/*
+ * Response bodies are read as `unknown` and narrowed to the expected container
+ * (an array, or `{ data: [...] }`). The items themselves are trusted to match
+ * `CardSet` / `Card` — this module is the trust boundary for API data.
+ */
+async function readJson(response: Response): Promise<unknown> {
+    return (await response.json()) as unknown;
+}
+
+/**
+ * GET a `cardinfo.php` query, with images rewritten to R2. The API answers 400
+ * (with an `{ error }` body) when nothing matches, treated as "no cards".
+ */
+async function fetchCardInfo(query: string): Promise<Card[]> {
+    const response = await fetch(`${BASE_URL}/cardinfo.php?${query}`);
+    if (!response.ok) return [];
+    const body = await readJson(response);
+    if (typeof body !== 'object' || body === null || !('data' in body) || !Array.isArray(body.data)) return [];
+    return (body.data as Card[]).map(transformCardImages);
+}
+
 async function fetchRawSets(): Promise<CardSet[]> {
     if (!rawSetsPromise) {
         rawSetsPromise = (async () => {
@@ -104,7 +125,9 @@ async function fetchRawSets(): Promise<CardSet[]> {
             if (!response.ok) {
                 throw new Error('Failed to fetch card sets');
             }
-            return (await response.json()) as CardSet[];
+            const body = await readJson(response);
+            if (!Array.isArray(body)) throw new Error('Unexpected card sets response');
+            return body as CardSet[];
         })().catch((error) => {
             // Don't cache a rejection — let the next call retry.
             rawSetsPromise = null;
@@ -197,12 +220,7 @@ function transformCardImages(card: Card): Card {
 
 export async function fetchCardsInSet(setName: string): Promise<Card[]> {
     try {
-        const response = await fetch(`${BASE_URL}/cardinfo.php?set=${encodeURIComponent(setName)}`);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch cards for set: ${setName}`);
-        }
-        const data = await response.json();
-        return (data.data as Card[]).map(transformCardImages);
+        return await fetchCardInfo(`set=${encodeURIComponent(setName)}`);
     } catch (error) {
         console.error(`Error fetching cards for ${setName}:`, error);
         return [];
@@ -260,23 +278,17 @@ export function earliestPrintingDate(card: Card, setDates: Map<string, string>):
  * to cards that existed by the cutoff (`existedByCutoff`) — purely by printing
  * date, so any card with a pre-cutoff printing in any set kind is bannable, while
  * post-cutoff-only cards (which showed as blank thumbnails) are filtered out.
- * Images are rewritten to R2 via `transformCardImages`. A no-match query returns
- * [] (the API answers 400 with an `{error}` body, treated as "nothing found").
+ * A no-match query returns [].
  */
 export async function searchCardsByName(query: string): Promise<Card[]> {
     const q = query.trim();
     if (!q) return [];
     try {
-        const [response, setDates] = await Promise.all([
-            fetch(`${BASE_URL}/cardinfo.php?fname=${encodeURIComponent(q)}`),
+        const [cards, setDates] = await Promise.all([
+            fetchCardInfo(`fname=${encodeURIComponent(q)}`),
             fetchSetDateMap(),
         ]);
-        if (!response.ok) return []; // 400 = no match
-        const data = await response.json();
-        if (!Array.isArray(data.data)) return [];
-        return (data.data as Card[])
-            .filter((card) => existedByCutoff(card, setDates))
-            .map(transformCardImages);
+        return cards.filter((card) => existedByCutoff(card, setDates));
     } catch (error) {
         console.error(`Error searching cards for "${q}":`, error);
         return [];
@@ -284,7 +296,7 @@ export async function searchCardsByName(query: string): Promise<Card[]> {
 }
 
 // In-memory cache for card data
-const cardCache: Record<number, Card> = {};
+const cardCache = new Map<number, Card>();
 
 export async function fetchCardsByIds(ids: number[]): Promise<Card[]> {
     if (ids.length === 0) return [];
@@ -293,32 +305,18 @@ export async function fetchCardsByIds(ids: number[]): Promise<Card[]> {
     const uniqueIds = Array.from(new Set(ids));
 
     // Identify missing IDs
-    const missingIds = uniqueIds.filter(id => !cardCache[id]);
+    const missingIds = uniqueIds.filter(id => !cardCache.has(id));
 
-    // Fetch missing IDs
+    // Fetch missing IDs (the API takes comma-separated IDs)
     if (missingIds.length > 0) {
         try {
-            // API allows comma separated IDs
-            const idString = missingIds.join(',');
-            const response = await fetch(`${BASE_URL}/cardinfo.php?id=${idString}`);
-            if (response.ok) {
-                const data = await response.json();
-                const fetchedCards = (data.data as Card[]).map(transformCardImages);
-
-                // Update cache
-                fetchedCards.forEach(card => {
-                    cardCache[card.id] = card;
-                });
-            } else {
-                console.error('Failed to fetch cards by IDs');
-            }
+            const fetchedCards = await fetchCardInfo(`id=${missingIds.join(',')}`);
+            fetchedCards.forEach(card => cardCache.set(card.id, card));
         } catch (error) {
             console.error('Error fetching cards by IDs:', error);
         }
     }
 
     // Return cards from cache
-    return uniqueIds
-        .map(id => cardCache[id])
-        .filter(card => card !== undefined);
+    return uniqueIds.flatMap(id => cardCache.get(id) ?? []);
 }
