@@ -1,9 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { asset } from '@/lib/utils';
 
 export default function GlobalBackground() {
-    const pathname = usePathname();
+    // trailingSlash (for static hosting) makes this "/menu/"; strip it so the check matches
+    const pathname = usePathname().replace(/(.)\/$/, "$1");
 
     // Don't show on menu page
     if (pathname === '/menu') {
@@ -15,7 +17,7 @@ export default function GlobalBackground() {
             {/* Background Texture - Full Screen */}
             {/* Background Texture - Full Screen */}
             <div className="fixed inset-0 z-[-1]" style={{
-                backgroundImage: "url('/bg-stone.png')",
+                backgroundImage: `url('${asset("/bg-stone.png")}')`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundAttachment: 'fixed',

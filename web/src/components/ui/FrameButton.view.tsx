@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ReactNode } from "react";
+import { asset } from '@/lib/utils';
 
 interface FrameButtonProps {
     children: ReactNode;
@@ -40,7 +41,7 @@ export default function FrameButton({
     const frameStyle = {
         borderStyle: "solid" as const,
         borderWidth: "clamp(0.6rem, 1.2vw, 0.9rem)",
-        borderImageSource: "url('/ui/frame_gold.svg')",
+        borderImageSource: `url('${asset("/ui/frame_gold.svg")}')`,
         borderImageSlice: "58", // no `fill` — frame only, CSS supplies the center
         borderImageRepeat: "round",
         borderImageWidth: "1",

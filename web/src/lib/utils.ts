@@ -41,3 +41,6 @@ export function sortCardsByRarity(cards: Card[], setCodePrefix?: string): Card[]
         return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
     });
 }
+
+/** Prefix a file from /public with the site's base path (needed when hosted under a subfolder, e.g. GitHub Pages). */
+export const asset = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}${path}`;

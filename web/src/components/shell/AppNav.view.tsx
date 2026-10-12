@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useProgression } from "@/context/ProgressionContext";
+import { asset } from '@/lib/utils';
 
 /* AppNav — the app's single persistent nav bar. It's hoisted into the root layout
    and rendered ONCE, above the routed content and outside the page-transition
@@ -25,7 +26,8 @@ const NAV_LINKS = [
 ];
 
 export default function AppNav() {
-    const pathname = usePathname();
+    // trailingSlash (for static hosting) makes this "/map/"; strip it so route lookups match
+    const pathname = usePathname().replace(/(.)\/$/, "$1");
     const { isGuideVisible, toggleGuide } = useProgression();
     const [duelistName, setDuelistName] = useState("Duelist");
 
@@ -55,7 +57,7 @@ export default function AppNav() {
                     title={isGuideVisible ? "Hide Guide" : "Show Guide"}
                 >
                     <img
-                        src="/sprites/yugi_neutral_v2_transparent.png?v=4"
+                        src={asset("/sprites/yugi_neutral_v2_transparent.png?v=4")}
                         alt="Toggle Guide"
                         className="w-full h-full object-cover object-top scale-150 translate-y-1"
                     />

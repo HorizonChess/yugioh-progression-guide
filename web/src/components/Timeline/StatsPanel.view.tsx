@@ -1,5 +1,7 @@
 "use client";
 
+import { asset } from '@/lib/utils';
+
 /**
  * Wins/losses scoreboard. Uses the painted PNG at its true 952:792 aspect
  * (never stretched); the numbers are pinned as % over the panel's green/red
@@ -10,7 +12,7 @@
  */
 export default function StatsPanel({ wins, losses }: { wins: number; losses: number }) {
     return (
-        <div className="relative h-[clamp(6.5rem,16vh,12rem)] aspect-[952/792] bg-[url('/ui/stats_panel_cropped.png')] bg-contain bg-center bg-no-repeat animate-in slide-in-from-bottom-10 duration-700 lg:mx-auto">
+        <div className="relative h-[clamp(6.5rem,16vh,12rem)] aspect-[952/792] bg-contain bg-center bg-no-repeat animate-in slide-in-from-bottom-10 duration-700 lg:mx-auto" style={{ backgroundImage: `url('${asset("/ui/stats_panel_cropped.png")}')` }}>
             {/* Green gem ~ 30% x, ~46% y */}
             <div className="stats-gem top-[46%] left-[30%]">
                 <span className="stats-gem__label text-win">Wins</span>

@@ -4,6 +4,7 @@ import { Card } from "@/lib/api";
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { asset } from '@/lib/utils';
 
 interface CardTooltipProps {
     card: Card;
@@ -38,7 +39,7 @@ export default function CardTooltip({ card, x, y }: CardTooltipProps) {
     };
 
     // Helper to get icon path
-    const getAttributeIcon = (attr: string) => `/ui/icons/${attr}.svg`;
+    const getAttributeIcon = (attr: string) => asset(`/ui/icons/${attr}.svg`);
     const getSpellTrapIcon = (race: string) => {
         const raceMap: Record<string, string> = {
             'Continuous': 'Continuous',
@@ -48,7 +49,7 @@ export default function CardTooltip({ card, x, y }: CardTooltipProps) {
             'Field': 'Field',
             'Ritual': 'Ritual'
         };
-        return raceMap[race] ? `/ui/icons/${raceMap[race]}.svg` : null;
+        return raceMap[race] ? asset(`/ui/icons/${raceMap[race]}.svg`) : null;
     };
 
     return createPortal(
@@ -84,7 +85,7 @@ export default function CardTooltip({ card, x, y }: CardTooltipProps) {
                             <div className="flex items-center gap-2">
                                 <div className="relative w-5 h-5">
                                     <Image
-                                        src="/ui/icons/Star.svg"
+                                        src={asset("/ui/icons/Star.svg")}
                                         alt="Level"
                                         fill
                                         className="object-contain"
