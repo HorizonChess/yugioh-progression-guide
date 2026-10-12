@@ -51,7 +51,6 @@ export default function RewardCard({ entry, actionLabel, onAction, locked, locke
                     className={`reward-card__thumb group ${isBanKind ? 'reward-card__thumb--banned' : ''}`}
                     aria-label={`View ${pickedCard.name}`}
                 >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                         src={pickedCard.card_images?.[0]?.image_url_small}
                         alt={pickedCard.name}

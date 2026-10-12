@@ -164,7 +164,6 @@ export default function StarlightSearchModal({ entry, onChoose, onClose }: Starl
                                 >
                                     <div className="relative w-10 h-[58px] shrink-0 rounded overflow-hidden bg-black/40">
                                         {card.card_images?.[0]?.image_url_small && (
-                                            // eslint-disable-next-line @next/next/no-img-element
                                             <img
                                                 src={card.card_images[0].image_url_small}
                                                 alt={card.name}
