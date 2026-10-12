@@ -20,6 +20,8 @@ Override the base URL with `APP_BASE` (e.g. a preview deploy):
 APP_BASE=http://localhost:3001 node scripts/drivers/rewards-packs.mjs
 ```
 
+No Playwright browser downloaded? Use an installed one with `PW_CHANNEL=chrome`.
+
 Screenshots are written to `scripts/drivers/out/` (gitignored). Console output
 reports the assertions each driver checks.
 
@@ -27,6 +29,9 @@ reports the assertions each driver checks.
 
 - `_lib.mjs` — shared helpers: `launchSeeded`, `makeSave`/`reward`, `readSave`,
   `outPath`, `STORE_KEY`.
+- `smoke.mjs` — every route renders without errors, nav highlighting, removed
+  routes 404, the root/onboarding redirect, deck-builder add/drag/remove, and a
+  partial save loading with defaults.
 - `rewards-packs.mjs` — the 3-pack reveal for tournament (single-row slab) vs.
   core/pity (5+4 two-row).
 - `rewards-ban-claimed.mjs` — ban search timeline filtering, confirm-in-details

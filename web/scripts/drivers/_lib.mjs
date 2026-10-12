@@ -21,6 +21,14 @@ export const BASE = process.env.APP_BASE || "http://localhost:3000";
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const OUT_DIR = join(HERE, "out");
 
+/**
+ * Launch Chromium. Set PW_CHANNEL=chrome (or msedge) to use an installed browser
+ * instead of Playwright's own download (`npx playwright install chromium`).
+ */
+export function launchBrowser() {
+    return chromium.launch(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {});
+}
+
 /** Absolute path for a screenshot in out/ (auto-created). */
 export function outPath(name) {
     mkdirSync(OUT_DIR, { recursive: true });
@@ -50,7 +58,7 @@ export function makeSave(overrides = {}) {
  * console errors for assertions. Remember to `await browser.close()`.
  */
 export async function launchSeeded(save, { route = "/rewards", viewport = { width: 1440, height: 950 } } = {}) {
-    const browser = await chromium.launch();
+    const browser = await launchBrowser();
     const page = await browser.newPage({ viewport });
     const errors = [];
     page.on("console", (m) => {
@@ -74,7 +82,7 @@ export async function readSave(page) {
 export function reward(overrides = {}) {
     return {
         id: `rw-${Math.random().toString(36).slice(2, 8)}`,
-        prizeId: "text",
+        prizeId: "wildcard-common",
         wonFromPackName: "Core",
         wonFromSetIndex: 30,
         wonDate: new Date().toISOString(),
