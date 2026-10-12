@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useProgression } from "@/context/ProgressionContext";
@@ -28,12 +27,7 @@ const NAV_LINKS = [
 export default function AppNav() {
     // trailingSlash (for static hosting) makes this "/timeline/"; strip it so route lookups match
     const pathname = usePathname().replace(/(.)\/$/, "$1");
-    const { isGuideVisible, toggleGuide } = useProgression();
-    const [duelistName, setDuelistName] = useState("Duelist");
-
-    useEffect(() => {
-        setDuelistName(localStorage.getItem("duelistName") || "Duelist");
-    }, []);
+    const { isGuideVisible, toggleGuide, duelistName } = useProgression();
 
     if (!NAV_ROUTES.has(pathname)) return null;
 
@@ -42,7 +36,7 @@ export default function AppNav() {
             <div className="flex items-center gap-4">
                 <Link href="/menu" className="group flex items-center gap-4 hover:opacity-80 transition-opacity">
                     <div>
-                        <h2 className="text-primary font-bold text-lg tracking-wider uppercase leading-none">{duelistName}</h2>
+                        <h2 className="text-primary font-bold text-lg tracking-wider uppercase leading-none">{duelistName ?? "Duelist"}</h2>
                         <p className="text-[10px] text-gray-500 font-mono">ID: 8492-001</p>
                     </div>
                 </Link>

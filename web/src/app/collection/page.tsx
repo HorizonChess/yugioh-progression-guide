@@ -14,6 +14,7 @@ import ParchmentButton from "@/components/ui/ParchmentButton";
 import GuideSprite from "@/components/layout/GuideSprite";
 import StonePanel from "@/components/ui/StonePanel";
 import { useCardTooltip } from "@/hooks/useCardTooltip";
+import { ownedCardIds, parseCollectionKey, UNKNOWN_SET } from "@/lib/collection";
 
 const ITEMS_PER_PAGE = 60;
 
@@ -22,7 +23,7 @@ const ITEMS_PER_PAGE = 60;
  * sortable, paginated grid, with YDK import/export and per-card detail/tooltip.
  */
 export default function Collection() {
-    const { collection, importCollection, activeSaveId } = useProgression();
+    const { collection, importCollection } = useProgression();
     const [cards, setCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -83,48 +84,31 @@ export default function Collection() {
         await downloadYDK("collection.ydk", content);
     };
 
+    // Fetch card data for every owned card id.
     useEffect(() => {
-        async function loadCollection() {
-            if (!activeSaveId) {
-                setLoading(false);
-                return;
-            }
-
-            setLoading(true);
-            // Collection keys are strings: ID_SET_RARITY — extract unique IDs to fetch card data
-            const uniqueIds = new Set<number>();
-            Object.keys(collection).forEach((key) => {
-                const [idStr] = key.split("_");
-                const id = parseInt(idStr);
-                if (!isNaN(id)) uniqueIds.add(id);
-            });
-
-            if (uniqueIds.size > 0) {
-                const fetchedCards = await fetchCardsByIds(Array.from(uniqueIds));
-                setCards(fetchedCards);
-            } else {
-                setCards([]);
-            }
+        let cancelled = false;
+        fetchCardsByIds(ownedCardIds(collection)).then((fetched) => {
+            if (cancelled) return;
+            setCards(fetched);
             setLoading(false);
-        }
-        loadCollection();
-    }, [collection, activeSaveId]);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [collection]);
 
     // Filter + sort the OWNED variants (one entry per ID_SET_RARITY we hold)
     const filteredCards = useMemo(() => {
-        const collectionEntries = Object.entries(collection)
-            .map(([key, count]) => {
-                const [idStr, setCode, rarity] = key.split("_");
-                const id = parseInt(idStr);
-                const card = cards.find((c) => c.id === id);
-                return { key, count, id, setCode, rarity, card };
-            })
-            .filter((entry) => entry.card);
+        const cardsById = new Map(cards.map((c) => [c.id, c]));
+        const collectionEntries = Object.entries(collection).flatMap(([key, count]) => {
+            const parsed = parseCollectionKey(key);
+            const card = parsed && cardsById.get(parsed.id);
+            return parsed && card ? [{ key, count, ...parsed, card }] : [];
+        });
 
         return collectionEntries
             .filter((entry) => {
                 const { card, setCode, rarity } = entry;
-                if (!card) return false;
 
                 // Search
                 if (filters.search) {
@@ -136,7 +120,7 @@ export default function Collection() {
 
                 // Set — prefer the PULLED set code, fall back to card's set list
                 if (filters.set !== "All") {
-                    if (setCode && setCode !== "Unknown") {
+                    if (setCode !== UNKNOWN_SET) {
                         const setInfo = card.card_sets?.find((s) => s.set_code === setCode);
                         if (setInfo?.set_name !== filters.set) return false;
                     } else {

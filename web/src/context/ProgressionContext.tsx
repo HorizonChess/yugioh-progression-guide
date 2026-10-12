@@ -1,59 +1,34 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { PulledCard } from '@/lib/api';
 import { RewardEntry } from '@/lib/rewards';
+import { Collection, collectionKey } from '@/lib/collection';
+import {
+    MatchResult,
+    SavedDeck,
+    SaveSlot,
+    DEFAULT_PACKS_PER_ROUND,
+    loadPersistedState,
+    persistState,
+    loadDuelistName,
+    persistDuelistName,
+} from '@/lib/storage';
 
-interface MatchResult {
-    winner: 'player' | 'opponent';
-    packName: string;
-    date: string;
-}
-
-export interface SavedDeck {
-    id: string;
-    name: string;
-    mainDeck: number[];
-    extraDeck: number[];
-    sideDeck: number[];
-    createdAt: number;
-}
-
-// The core data for a single run
-export interface SaveSlot {
-    id: string;
-    name: string;
-    createdAt: number;
-    lastPlayed: number;
-
-    // Game State
-    currentSetIndex: number;
-    collection: Record<string, number>; // Key: `${id}_${set}_${rarity}`
-    matchHistory: MatchResult[];
-
-    // Rewards ledger (available + claimed). Optional for back-compat with saves
-    // created before the ledger existed — treated as [] when absent.
-    rewards?: RewardEntry[];
-    bannedCardIds?: number[]; // cosmetic deck-builder ban list
-
-    // Settings
-    settings: {
-        startSetIndex: number;
-        packsPerRound: number;
-    };
-    savedDecks: SavedDeck[];
-}
+export type { MatchResult, SavedDeck, SaveSlot } from '@/lib/storage';
 
 interface ProgressionContextType {
     // Global State
     saves: SaveSlot[];
     activeSaveId: string | null;
     hasLoaded: boolean;
-    hasStarted: boolean;
+    /** The player's name from onboarding; null until they've entered one. */
+    duelistName: string | null;
+    setDuelistName: (name: string) => void;
 
     // Active Save Data (Convenience accessors for current UI)
     currentSetIndex: number;
-    collection: Record<string, number>;
+    collection: Collection;
     matchHistory: MatchResult[];
     rewards: RewardEntry[];
     bannedCardIds: number[];
@@ -63,13 +38,11 @@ interface ProgressionContextType {
     createSave: (name: string, startSetIndex?: number, packsPerRound?: number) => void;
     loadSave: (id: string) => void;
     deleteSave: (id: string) => void;
-    startSeries: () => void;
 
     // Game Actions (Apply to active save)
     addToCollection: (cards: PulledCard[]) => void;
     recordMatch: (result: MatchResult) => void;
     advanceSet: () => void;
-    resetProgress: () => void; // Resets ACTIVE save
     importCollection: (cardIds: number[], mode: 'add' | 'replace') => void;
 
     // Rewards ledger
@@ -89,92 +62,49 @@ interface ProgressionContextType {
 
 const ProgressionContext = createContext<ProgressionContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'yugioh-progression-saves-v2';
-const LEGACY_KEY = 'yugioh-progression-save';
+// Stable fallbacks while no save is active, so consumers' memo deps don't churn.
+const EMPTY_COLLECTION: Collection = {};
+const EMPTY: never[] = [];
 
 export function ProgressionProvider({ children }: { children: ReactNode }) {
     const [saves, setSaves] = useState<SaveSlot[]>([]);
     const [activeSaveId, setActiveSaveId] = useState<string | null>(null);
+    const [duelistName, setDuelistNameState] = useState<string | null>(null);
     const [hasLoaded, setHasLoaded] = useState(false);
 
-    // Load from localStorage on mount
+    // Load from localStorage on mount. localStorage doesn't exist during the
+    // static prerender, so this has to happen client-side after hydration.
     useEffect(() => {
-        const loadData = () => {
-            try {
-                // 1. Try loading new v2 format
-                const savedV2 = localStorage.getItem(STORAGE_KEY);
-                if (savedV2) {
-                    const parsed = JSON.parse(savedV2);
-                    setSaves(parsed.saves || []);
-                    setActiveSaveId(parsed.activeSaveId || null);
-                } else {
-                    // 2. Check for legacy data to migrate
-                    const legacy = localStorage.getItem(LEGACY_KEY);
-                    if (legacy) {
-                        const parsedLegacy = JSON.parse(legacy);
-
-                        // Migrate legacy collection (number keys) to string keys
-                        const legacyCollection = parsedLegacy.collection || {};
-                        const migratedCollection: Record<string, number> = {};
-
-                        Object.entries(legacyCollection).forEach(([id, count]) => {
-                            // Legacy data has no set/rarity info, so we use a placeholder
-                            const key = `${id}_Unknown_Common`;
-                            migratedCollection[key] = count as number;
-                        });
-
-                        const legacySave: SaveSlot = {
-                            id: 'legacy-1',
-                            name: 'Legacy Run',
-                            createdAt: Date.now(),
-                            lastPlayed: Date.now(),
-                            currentSetIndex: parsedLegacy.currentSetIndex || 0,
-                            collection: migratedCollection,
-                            matchHistory: parsedLegacy.matchHistory || [],
-                            rewards: [],
-                            bannedCardIds: [],
-                            settings: { startSetIndex: 0, packsPerRound: 24 },
-                            savedDecks: []
-                        };
-                        setSaves([legacySave]);
-                        setActiveSaveId(legacySave.id);
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to load saves", e);
-            } finally {
-                setHasLoaded(true);
-            }
-        };
-        loadData();
+        const state = loadPersistedState();
+        /* eslint-disable react-hooks/set-state-in-effect -- one-time hydration from localStorage */
+        setSaves(state.saves);
+        setActiveSaveId(state.activeSaveId);
+        setDuelistNameState(loadDuelistName());
+        setHasLoaded(true);
+        /* eslint-enable react-hooks/set-state-in-effect */
     }, []);
 
     // Save to localStorage on change
     useEffect(() => {
-        if (hasLoaded) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ saves, activeSaveId }));
-        }
+        if (hasLoaded) persistState({ saves, activeSaveId });
     }, [saves, activeSaveId, hasLoaded]);
+
+    const setDuelistName = (name: string) => {
+        persistDuelistName(name);
+        setDuelistNameState(name);
+    };
 
     // Helper to update active save
     const updateActiveSave = (updater: (save: SaveSlot) => SaveSlot) => {
         if (!activeSaveId) return;
-        setSaves(prev => prev.map(save => {
-            if (save.id !== activeSaveId) return save;
-            const updated = updater(save);
-            return {
-                ...updated,
-                savedDecks: updated.savedDecks || [],
-                rewards: updated.rewards || [],
-                bannedCardIds: updated.bannedCardIds || [],
-                lastPlayed: Date.now()
-            };
-        }));
+        setSaves(prev => prev.map(save =>
+            save.id === activeSaveId ? { ...updater(save), lastPlayed: Date.now() } : save
+        ));
     };
 
     // --- Save Management ---
 
-    const createSave = (name: string, startSetIndex = 0, packsPerRound = 24) => {
+    const createSave = (name: string, startSetIndex = 0, packsPerRound = DEFAULT_PACKS_PER_ROUND) => {
         const newSave: SaveSlot = {
             id: crypto.randomUUID(),
             name,
@@ -199,10 +129,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     };
 
     const deleteSave = (id: string) => {
-        if (confirm("Are you sure you want to delete this save file?")) {
-            setSaves(prev => prev.filter(s => s.id !== id));
-            if (activeSaveId === id) setActiveSaveId(null);
-        }
+        setSaves(prev => prev.filter(s => s.id !== id));
+        if (activeSaveId === id) setActiveSaveId(null);
     };
 
     // --- Game Actions ---
@@ -211,9 +139,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         updateActiveSave(save => {
             const newCollection = { ...save.collection };
             cards.forEach(card => {
-                // Key: ID_SET_RARITY
-                const key = `${card.id}_${card.pulled_set_code}_${card.pulled_rarity}`;
-                newCollection[key] = (newCollection[key] || 0) + 1;
+                const key = collectionKey(card.id, card.pulled_set_code, card.pulled_rarity);
+                newCollection[key] = (newCollection[key] ?? 0) + 1;
             });
             return { ...save, collection: newCollection };
         });
@@ -242,7 +169,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         updateActiveSave(save => ({
             ...save,
             rewards: [
-                ...(save.rewards || []),
+                ...save.rewards,
                 {
                     ...entry,
                     id: crypto.randomUUID(),
@@ -256,7 +183,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     const claimRewardEntry = (rewardId: string, payload?: Partial<RewardEntry>) => {
         updateActiveSave(save => ({
             ...save,
-            rewards: (save.rewards || []).map(r =>
+            rewards: save.rewards.map(r =>
                 r.id === rewardId
                     ? { ...r, ...payload, status: 'claimed' as const, claimedDate: new Date().toISOString() }
                     : r
@@ -265,72 +192,37 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     };
 
     const banCard = (cardId: number) => {
-        updateActiveSave(save => {
-            const current = save.bannedCardIds || [];
-            if (current.includes(cardId)) return save;
-            return { ...save, bannedCardIds: [...current, cardId] };
-        });
+        updateActiveSave(save =>
+            save.bannedCardIds.includes(cardId)
+                ? save
+                : { ...save, bannedCardIds: [...save.bannedCardIds, cardId] }
+        );
     };
 
     const unbanCard = (cardId: number) => {
         updateActiveSave(save => ({
             ...save,
-            bannedCardIds: (save.bannedCardIds || []).filter(id => id !== cardId)
+            bannedCardIds: save.bannedCardIds.filter(id => id !== cardId)
         }));
     };
 
-    const resetProgress = () => {
-        if (!activeSaveId) return;
-        if (confirm("Reset current run?")) {
-            updateActiveSave(save => ({
-                ...save,
-                currentSetIndex: save.settings.startSetIndex,
-                collection: {},
-                matchHistory: [],
-                rewards: [],
-                bannedCardIds: [],
-                savedDecks: []
-            }));
-        }
-    };
-
     const importCollection = (cardIds: number[], mode: 'add' | 'replace') => {
-        if (!activeSaveId) return;
-
-        setSaves(prev => {
-            const updatedSaves = prev.map(s => {
-                if (s.id === activeSaveId) {
-                    const newCollection: Record<string, number> = mode === 'replace' ? {} : { ...s.collection };
-
-                    cardIds.forEach(id => {
-                        // Imported cards have no set/rarity info
-                        const key = `${id}_Unknown_Common`;
-                        newCollection[key] = (newCollection[key] || 0) + 1;
-                    });
-
-                    return {
-                        ...s,
-                        collection: newCollection,
-                        lastPlayed: Date.now()
-                    };
-                }
-                return s;
+        updateActiveSave(save => {
+            const newCollection: Collection = mode === 'replace' ? {} : { ...save.collection };
+            cardIds.forEach(id => {
+                // Imported cards have no set/rarity info
+                const key = collectionKey(id);
+                newCollection[key] = (newCollection[key] ?? 0) + 1;
             });
-
-            // Force save immediately
-            if (hasLoaded) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({ saves: updatedSaves, activeSaveId }));
-            }
-
-            return updatedSaves;
+            return { ...save, collection: newCollection };
         });
     };
 
     // --- Deck Management ---
     const saveDeck = (deck: SavedDeck) => {
         updateActiveSave(save => {
-            const existingIndex = (save.savedDecks || []).findIndex(d => d.id === deck.id);
-            const newDecks = [...(save.savedDecks || [])];
+            const existingIndex = save.savedDecks.findIndex(d => d.id === deck.id);
+            const newDecks = [...save.savedDecks];
             if (existingIndex >= 0) {
                 newDecks[existingIndex] = deck;
             } else {
@@ -343,7 +235,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     const deleteDeck = (deckId: string) => {
         updateActiveSave(save => ({
             ...save,
-            savedDecks: (save.savedDecks || []).filter(d => d.id !== deckId)
+            savedDecks: save.savedDecks.filter(d => d.id !== deckId)
         }));
     };
 
@@ -359,25 +251,23 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             saves,
             activeSaveId,
             hasLoaded,
-            hasStarted: !!activeSaveId,
+            duelistName,
+            setDuelistName,
 
-            // Expose active save data directly for backward compatibility
             currentSetIndex: activeSave?.currentSetIndex ?? 0,
-            collection: activeSave?.collection ?? {},
-            matchHistory: activeSave?.matchHistory ?? [],
-            savedDecks: activeSave?.savedDecks ?? [],
-            rewards: activeSave?.rewards ?? [],
-            bannedCardIds: activeSave?.bannedCardIds ?? [],
+            collection: activeSave?.collection ?? EMPTY_COLLECTION,
+            matchHistory: activeSave?.matchHistory ?? EMPTY,
+            savedDecks: activeSave?.savedDecks ?? EMPTY,
+            rewards: activeSave?.rewards ?? EMPTY,
+            bannedCardIds: activeSave?.bannedCardIds ?? EMPTY,
 
             createSave,
             loadSave,
             deleteSave,
-            startSeries: () => createSave("New Journey"),
 
             addToCollection,
             recordMatch,
             advanceSet,
-            resetProgress,
             importCollection,
 
             addReward,

@@ -2,17 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useProgression } from "@/context/ProgressionContext";
 
 export default function OnboardingPage() {
     const [name, setName] = useState("");
     const router = useRouter();
-    // We'll need to add a setName method to context later, for now just local state/logic
+    const { setDuelistName } = useProgression();
 
     const handleStart = () => {
         if (!name.trim()) return;
 
-        // TODO: Save name to context/persistence
-        localStorage.setItem("duelistName", name);
+        setDuelistName(name.trim());
 
         router.push("/menu");
     };
@@ -21,7 +21,6 @@ export default function OnboardingPage() {
         <main className="min-h-screen bg-black text-white flex items-center justify-center p-4 relative overflow-hidden">
             {/* Background Effects */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--primary)_0%,_transparent_70%)] opacity-10 animate-pulse"></div>
-            <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20"></div>
 
             <div className="relative z-10 max-w-md w-full bg-black/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl">
                 <div className="text-center mb-8">

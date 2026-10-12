@@ -41,7 +41,7 @@ export default function SaveSlotList({ onSaveSelect }: SaveSlotListProps) {
 
     const handleDelete = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
-        deleteSave(id);
+        if (confirm("Are you sure you want to delete this save file?")) deleteSave(id);
     };
 
     return (

@@ -1,3 +1,5 @@
+import { Collection, ownedCountsById } from '@/lib/collection';
+
 /**
  * Parses a YDK file content and returns an array of card IDs.
  * YDK files typically have sections like #main, #extra, #side.
@@ -62,15 +64,12 @@ export function generateYDK(deck: { main: number[], extra: number[], side: numbe
 /**
  * Generates YDK file content from a flat collection (main deck only format).
  */
-export function generateYDKFromCollection(collection: Record<string, number>): string {
+export function generateYDKFromCollection(collection: Collection): string {
     const lines = ['#created by Progression Series Guide', '#main'];
 
-    Object.entries(collection).forEach(([idStr, count]) => {
-        const id = parseInt(idStr);
-        for (let i = 0; i < count; i++) {
-            lines.push(id.toString());
-        }
-    });
+    for (const [id, count] of ownedCountsById(collection)) {
+        for (let i = 0; i < count; i++) lines.push(id.toString());
+    }
 
     lines.push('#extra', '!side');
     return lines.join('\n');

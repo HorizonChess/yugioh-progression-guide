@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, fetchCardsByIds } from "@/lib/api";
 import { parseYDKWithSections, generateYDK, downloadYDK } from "@/lib/ydk-parser";
 import { isExtraDeckCard, removeCardFromDeck, sortDeckCards } from "@/lib/deck-utils";
+import { ownedCardIds, ownedCountsById } from "@/lib/collection";
 import CardInfoPanel from "@/components/deck-builder/CardInfoPanel";
 import MainDeckGrid from "@/components/deck-builder/MainDeckGrid";
 import SideExtraDeckGrid from "@/components/deck-builder/SideExtraDeckGrid";
@@ -22,7 +23,6 @@ export default function DeckBuilder() {
     // blocked from being added. Saved decks are never stripped.
     const bannedIds = useMemo(() => new Set(bannedCardIds), [bannedCardIds]);
     const [allCards, setAllCards] = useState<Card[]>([]);
-    const [, setLoading] = useState(true);
     const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
 
     // Deck State
@@ -57,23 +57,15 @@ export default function DeckBuilder() {
         emptyDragImageRef.current = img;
     }, []);
 
+    // Fetch card data for everything owned (an empty collection clears the list).
     useEffect(() => {
-        async function loadCollection() {
-            setLoading(true);
-            const uniqueIds = new Set<number>();
-            Object.keys(collection).forEach(key => {
-                const [idStr] = key.split('_');
-                const id = parseInt(idStr);
-                if (!isNaN(id)) uniqueIds.add(id);
-            });
-
-            if (uniqueIds.size > 0) {
-                const fetchedCards = await fetchCardsByIds(Array.from(uniqueIds));
-                setAllCards(fetchedCards);
-            }
-            setLoading(false);
-        }
-        loadCollection();
+        let cancelled = false;
+        fetchCardsByIds(ownedCardIds(collection)).then(cards => {
+            if (!cancelled) setAllCards(cards);
+        });
+        return () => {
+            cancelled = true;
+        };
     }, [collection]);
 
     useEffect(() => {
@@ -88,12 +80,7 @@ export default function DeckBuilder() {
     }, [draggedCard]);
 
     const collectionCards = useMemo(() => {
-        const counts = new Map<number, number>();
-        Object.entries(collection).forEach(([key, count]) => {
-            const [idStr] = key.split('_');
-            const id = parseInt(idStr);
-            counts.set(id, (counts.get(id) || 0) + count);
-        });
+        const counts = ownedCountsById(collection);
         [...mainDeck, ...extraDeck, ...sideDeck].forEach(card => {
             const current = counts.get(card.id) || 0;
             counts.set(card.id, Math.max(0, current - 1));
