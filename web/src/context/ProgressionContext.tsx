@@ -221,7 +221,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
 
     // Append-only now: the reward is created when the outcome is CLAIMED
     // (win → the wheel prize, known only after the spin; loss → the pity prize),
-    // via addReward from the record-match controller — not here.
+    // via addReward from the record-match page — not here.
     const recordMatch = (result: MatchResult) => {
         updateActiveSave(save => ({
             ...save,

@@ -43,7 +43,7 @@ We use CSS variables to define the theme:
 -   **Parchment**: `Times New Roman` - Used within parchment elements for authenticity.
 
 ### Guide Sprite
-A reactive character helper (Yugi) implemented in `src/components/GuideSprite.tsx`.
+A reactive character helper (Yugi) implemented in `src/components/layout/GuideSprite.tsx`.
 -   **States**: Neutral, Happy, Sad, Action.
 -   **Interaction**: Reacts to game events (opening packs, winning/losing) with speech bubbles.
 
@@ -111,14 +111,14 @@ We use a suite of custom scripts to maintain assets and data integrity:
 
 The nav bar is the app's persistent chrome — like a browser's address bar, it must
 look and sit **identically** on every page and never re-mount or animate on
-navigation. It is a single self-gating component, [src/components/shell/AppNav.view.tsx](src/components/shell/AppNav.view.tsx),
+navigation. It is a single self-gating component, [src/components/layout/AppNav.tsx](src/components/layout/AppNav.tsx),
 rendered **once** in [src/app/layout.tsx](src/app/layout.tsx) — never inside a page.
 
 -   **Allow-list, not per-page:** AppNav uses `usePathname()` to render only on the
-    "app main zone" routes (`/map`, `/collection`, `/deck-builder`, `/packs`,
-    `/timeline`) and returns `null` everywhere else (menu, onboarding, start, root,
-    rewards have no nav). To put the nav on a new page, add its route to the
-    allow-list — do **not** render a bar in the page controller.
+    "app main zone" routes (`/timeline`, `/collection`, `/deck-builder`, `/packs`,
+    `/record-match`, `/rewards`) and returns `null` everywhere else (menu,
+    onboarding, root have no nav). To put the nav on a new page, add its route to the
+    allow-list — do **not** render a bar in the page.
 -   **Layout frame:** `<body>` is `h-screen grid grid-rows-[auto_1fr]`. AppNav is the
     `auto` row; the routed page fills the `1fr` content row inside
     `<main className="relative min-h-0 min-w-0">`. Because the nav lives above (and
@@ -170,7 +170,7 @@ The math ensures that in ANY container:
 
 #### Example usage:
 ```tsx
-import ScaleWrapper from "@/components/ScaleWrapper";
+import ScaleWrapper from "@/components/deck-builder/ScaleWrapper";
 
 export default function MyPage() {
     return (
@@ -191,10 +191,16 @@ export default function MyPage() {
 
 **Full technical documentation**: See [Fixed_app_scale_progress.md](Fixed_app_scale_progress.md) for the complete 14-attempt development history and mathematical rationale.
 
+### Project layout
+-   `src/app/<route>/page.tsx`: each route's page component (state, data loading, handlers).
+-   `src/components/<feature>/`: components for one feature (`deck-builder`, `packs`, `rewards`, ...); `ui/`, `card/` and `layout/` are shared.
+-   `src/lib/`: pure logic and API access; `src/hooks/`: shared hooks; `src/context/`: the save-state provider.
+
 ### `src/app` (Routes)
 -   **`/menu`**: Save slot management.
--   **`/map`**: Timeline visualization of unlocked sets.
--   **`/timeline`**: Match recording interface.
+-   **`/timeline`**: Timeline visualization of unlocked sets.
+-   **`/record-match`**: Match recording interface.
+-   **`/rewards`**: Reward ledger (claim wheel prizes and pity packs).
 -   **`/packs`**: Pack opening simulator with 3D flip animations.
     -   **No-Scroll Design**: Optimized layout to fit all cards within the viewport on various screen sizes.
     -   **Summary View**: Displays a "Finished Opening" summary where cards are grouped by rarity (Common -> Secret Rare) and sorted alphabetically, matching the Set Details view.

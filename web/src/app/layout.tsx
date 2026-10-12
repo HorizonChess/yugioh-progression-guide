@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Inter, Outfit, Russo_One } from "next/font/google";
 import "./globals.css";
 import { ProgressionProvider } from "@/context/ProgressionContext";
-import GlobalBackground from "@/components/shell/GlobalBackground.view";
-import AppNav from "@/components/shell/AppNav.view";
+import GlobalBackground from "@/components/layout/GlobalBackground";
+import AppNav from "@/components/layout/AppNav";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });

@@ -295,8 +295,8 @@ html::-webkit-scrollbar-corner,
 }
 
 /* ============================================================
- * TIMELINE (/map) — component classes.
- * Long/repeated Tailwind moved out of map/page.tsx so the JSX
+ * TIMELINE (/timeline) — component classes.
+ * Long/repeated Tailwind moved out of timeline/page.tsx so the JSX
  * scans as semantic elements. Fluid clamp() sizing that a
  * caller tunes (tile height, panel size) stays inline at the
  * call site; these classes hold the fixed look + states.
@@ -480,7 +480,7 @@ html::-webkit-scrollbar-corner,
  * The record board and the Winner's Wheel are two ACTS on ONE stage. `.win-panel`
  * is the always-mounted glass shell (it never unmounts across the swap); its
  * `__stage` body cell holds both acts absolutely-stacked so only the CONTENTS
- * cross-fade/vortex while the box stays put (see RecordMatchPage.controller).
+ * cross-fade/vortex while the box stays put (see app/record-match/page.tsx).
  * Sized to hold the taller of the two acts comfortably — no jump between states.
  */
 .win-panel {

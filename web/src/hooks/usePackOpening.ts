@@ -3,7 +3,7 @@ import { Card, CardSet, PulledCard } from "@/lib/api";
 import { generateBoosterPack } from "@/lib/pack-logic";
 
 /**
- * Pack-opener orchestration extracted from `Packs.controller`: the reveal
+ * Pack-opener orchestration extracted from the /packs page: the reveal
  * lifecycle (generate N packs → flip cards → advance packs → summary) and the
  * accumulated `allOpenedCards`. UI concerns stay in the caller — the card-detail
  * modal (opened via `onAlreadyFlipped`) and which shell to render (`isOpening` /

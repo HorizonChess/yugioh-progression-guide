@@ -18,7 +18,7 @@ jest.mock('@/lib/api', () => ({
 
 // Mock GuideSprite. (The nav — AppNav — is rendered by the root layout, not by
 // the DeckBuilder page under test, so there's nothing to mock for it here.)
-jest.mock('@/components/shell/GuideSprite.view', () => {
+jest.mock('@/components/layout/GuideSprite', () => {
     return function MockGuideSprite() {
         return <div data-testid="guide-sprite">GuideSprite</div>;
     };
