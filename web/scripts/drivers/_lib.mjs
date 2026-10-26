@@ -29,6 +29,20 @@ export function launchBrowser() {
     return chromium.launch(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {});
 }
 
+/**
+ * Replace the app's localStorage with `items` ({ key: string | null }). Seeds from
+ * /favicon.ico — same origin, but no app code runs there — because seeding from an
+ * app page races its hydration: the page's mount effect can persist its empty
+ * initial state over the seed. Navigate to the page under test afterwards.
+ */
+export async function seedStorage(page, items) {
+    await page.goto(`${BASE}/favicon.ico`);
+    await page.evaluate((entries) => {
+        localStorage.clear();
+        for (const [key, value] of entries) if (value != null) localStorage.setItem(key, value);
+    }, Object.entries(items));
+}
+
 /** Absolute path for a screenshot in out/ (auto-created). */
 export function outPath(name) {
     mkdirSync(OUT_DIR, { recursive: true });
@@ -53,9 +67,9 @@ export function makeSave(overrides = {}) {
 }
 
 /**
- * Launch a browser, seed the given save into localStorage on `route`, reload so
- * the app picks it up, and return { browser, page, errors }. `errors` collects
- * console errors for assertions. Remember to `await browser.close()`.
+ * Launch a browser, seed the given save into localStorage, open `route`, and
+ * return { browser, page, errors }. `errors` collects console errors for
+ * assertions. Remember to `await browser.close()`.
  */
 export async function launchSeeded(save, { route = "/rewards", viewport = { width: 1440, height: 950 } } = {}) {
     const browser = await launchBrowser();
@@ -64,12 +78,8 @@ export async function launchSeeded(save, { route = "/rewards", viewport = { widt
     page.on("console", (m) => {
         if (m.type() === "error") errors.push(m.text());
     });
-    await page.goto(`${BASE}${route}`, { waitUntil: "domcontentloaded" });
-    await page.evaluate(
-        ([k, v]) => localStorage.setItem(k, v),
-        [STORE_KEY, JSON.stringify({ saves: [save], activeSaveId: save.id })]
-    );
-    await page.reload({ waitUntil: "networkidle" });
+    await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }) });
+    await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });
     return { browser, page, errors };
 }
 
