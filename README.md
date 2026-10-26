@@ -24,18 +24,28 @@ new set in release order by winning duels.
 | --- | --- |
 | App | Next.js 16 (App Router), React 19, TypeScript |
 | Styling | Tailwind CSS, Framer Motion |
+| Server (in progress) | Fastify and MongoDB Atlas, with game rules shared with the app in `shared/` |
 | Data | [YGOPRODeck API](https://ygoprodeck.com/api-guide/) for cards and sets, localStorage for saves |
 | Images | Cloudflare R2, with Node and Python scripts to fetch, crop and optimise artwork |
-| Testing | Jest and React Testing Library |
-| Hosting | GitHub Pages (static export), deployed by GitHub Actions on every push to `main` |
+| Testing | Jest and React Testing Library (web), Vitest (shared, api), Playwright drivers |
+| Hosting | GitHub Pages (static export), deployed by GitHub Actions on every push to `main`; moving to one Render service (`render.yaml`) |
 
 ## Running it locally
 
+The repo is an npm workspace (`shared/`, `api/`, `web/`), so install once from the root:
+
 ```bash
-cd web
-npm install
-npm run dev     # http://localhost:3000
-npm test        # unit and component tests
+npm install            # every workspace
+npm run dev -w web     # the app at http://localhost:3000
+npm test               # every workspace's tests
+```
+
+The server needs a MongoDB connection string. Copy `api/.env.example` to
+`api/.env` (gitignored) and fill it in, then:
+
+```bash
+npm run sync-cards -w @ygo/api   # mirror YGOPRODeck sets and cards into MongoDB
+npm run dev -w @ygo/api          # the API at http://localhost:4000
 ```
 
 More detail on the architecture, pack logic and design system is in

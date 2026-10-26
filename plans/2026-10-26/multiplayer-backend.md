@@ -271,3 +271,25 @@ The plan also gets copied into the repo at `plans/2026-10-26/multiplayer-backend
   - Update `smoke.mjs`: the onboarding redirect changes and routes need auth.
   - Check the dev "issues" console badge, per `.agent/rules/testing-rules.md`.
 - **End to end:** run `npm run dev` (Next on :3000, API on :4000; localhost ports are same-site, so the cookies work), then deploy to the Render free tier and run the duo flow against the live URL.
+
+## Progress log
+
+### Phase 1: backend foundation (done 2026-10-26, branch `feat/backend-foundation`)
+- npm workspaces (`shared`, `api`, `web`). The root lockfile was seeded from web's old one, so no resolved version changed.
+- `@ygo/shared` holds the types, set filters, collection and reward rules, pack logic (with an injectable RNG) and the YGOPRODeck zod schemas. The `web/src/lib/*` files re-export from it.
+- The Fastify API has zod env config, a MongoDB connection, `/api/health`, helmet and CSP, rate limits on `/api` only, and same-origin static serving of `web/out`.
+- `npm run sync-cards -w @ygo/api` mirrors YGOPRODeck into Atlas: 1035 sets and 8068 pre-cutoff cards, with guards against broken or shrinking responses.
+- CI (`ci.yml`) runs lint, typecheck, test and build for every workspace. `deploy.yml` keeps publishing to GitHub Pages after CI passes, until Render is live. `render.yaml` is ready; it was rehearsed locally against Atlas, but the service isn't created yet.
+
+**Deviations from the plan above**
+- Shared and API tests use **Vitest** (ESM-native); web keeps Jest.
+- The **domain schemas** (User, Series, PackSession, …) move into the phases that use them (2 and 3) rather than being designed up front.
+- The **GitHub Pages deploy is kept** until the Render service is verified, instead of being retired in Phase 1.
+
+**Found along the way**
+- Next 16's static export writes segment prefetches as `__next.<seg>/__PAGE__.txt`, but the router requests `__next.<seg>.__PAGE__.txt`. On GitHub Pages every client navigation 404s its prefetch and falls back to a full page reload. The API fixes this with a URL rewrite.
+- Playwright drivers could have their seeded save wiped by the app's own mount effect. They now seed from `/favicon.ico`.
+- Known, not yet fixed: `/bg/fabric_pattern.png` (deck builder grid background) was never committed, and `npm audit` flags the image-tooling dependencies. Both go on a housekeeping branch.
+- `crypto.randomInt` caps its range below 2^48. The server's crypto RNG (Phase 3) must respect that.
+
+**Before Phase 2:** the user creates the Render service from `render.yaml` (region close to the Atlas cluster), plus the Gmail app password and Discord app when auth needs them.
