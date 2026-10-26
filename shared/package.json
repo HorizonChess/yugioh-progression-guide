@@ -1,0 +1,14 @@
+{
+  "name": "@ygo/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pure game logic, types and schemas shared by the web app and the API",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}
