@@ -1,95 +1,20 @@
 import boosterImagesData from '@/data/booster_images.json';
+import {
+    existedByCutoff,
+    setDateMap,
+    timelineSets,
+    tournamentSets,
+    type Card,
+    type CardSet,
+} from '@ygo/shared';
+
+// Card/set types and the timeline filters live in @ygo/shared so the API uses the same rules.
+export type { Card, CardSet, PulledCard } from '@ygo/shared';
+export { existedByCutoff, earliestPrintingDate } from '@ygo/shared';
 
 const boosterImages = boosterImagesData as Record<string, string>;
 
 const BASE_URL = 'https://db.ygoprodeck.com/api/v7';
-
-export interface CardSet {
-    set_name: string;
-    set_code: string;
-    num_of_cards: number;
-    tcg_date: string;
-    set_image?: string;
-    original_image?: string;
-}
-
-export interface Card {
-    id: number;
-    name: string;
-    type: string;
-    frameType: string;
-    desc: string;
-    race: string;
-    archetype?: string;
-    atk?: number;
-    def?: number;
-    level?: number;
-    rank?: number;
-    attribute?: string;
-    scale?: number;
-    linkval?: number;
-    linkmarkers?: string[];
-    card_sets?: {
-        set_name: string;
-        set_code: string;
-        set_rarity: string;
-        set_rarity_code: string;
-        set_price: string;
-    }[];
-    card_images: {
-        id: number;
-        image_url: string;
-        image_url_small: string;
-        image_url_cropped: string;
-    }[];
-}
-
-export interface PulledCard extends Card {
-    pulled_rarity: string;
-    pulled_set_code: string;
-}
-
-// Filter out sets that are too new (Link era started around 2017 with Code of the Duelist)
-// We want to stop before Link monsters.
-// "Code of the Duelist" (COTD) was released Aug 4, 2017.
-// We can filter by date.
-const CUTOFF_DATE = '2017-08-01';
-
-const EXCLUDE_KEYWORDS = [
-    "Structure Deck",
-    "Starter Deck",
-    "Tournament Pack",
-    "Duelist Pack",
-    "Battle Pack",
-    "Star Pack",
-    "Turbo Pack",
-    "Astral Pack",
-    "Champion Pack",
-    "OTS Tournament Pack",
-    "Premium Pack",
-    "Movie Pack",
-    "Super Starter",
-    "Speed Duel",
-    "Duel Terminal",
-    "Legendary Decks",
-    "Box Set",
-    "Special Edition",
-    "Magic Ruler", // Identical to Spell Ruler
-];
-
-/**
- * The tournament-family sets `fetchAllSets` filters OUT via EXCLUDE_KEYWORDS —
- * pulled back in by `fetchTournamentSets()` for the "3 Tournament Packs" reward.
- * Kept aligned with the pack-logic tournament types (see pack-logic.ts
- * `determinePackType` / `generateTournamentPack`) so the reward opens with the
- * correct tournament ratios.
- */
-const TOURNAMENT_KEYWORDS = [
-    "Tournament Pack",   // incl. "OTS Tournament Pack"
-    "Champion Pack",
-    "Turbo Pack",
-    "Astral Pack",
-];
 
 /**
  * Cached raw `/cardsets.php` response (unfiltered). Both `fetchAllSets` and
@@ -141,29 +66,15 @@ export async function fetchAllSets(): Promise<CardSet[]> {
     try {
         const data = await fetchRawSets();
 
-        // Filter and sort by date
-        return data
-            .filter(set => {
-                if (!set.tcg_date) return false;
-                if (set.tcg_date >= CUTOFF_DATE) return false;
-                if (set.num_of_cards <= 20) return false;
-
-                const name = set.set_name;
-                for (const keyword of EXCLUDE_KEYWORDS) {
-                    if (name.includes(keyword)) return false;
-                }
-                return true;
-            })
-            .sort((a, b) => new Date(a.tcg_date).getTime() - new Date(b.tcg_date).getTime())
-            .map(set => {
-                const fandomImage = boosterImages[set.set_code];
-                // STRICT: Do not use set.set_image from API to avoid hotlinking YGOPRODeck
-                return {
-                    ...set,
-                    original_image: undefined, // Don't keep the original URL either
-                    set_image: fandomImage || undefined // Only use safe image or undefined
-                };
-            });
+        return timelineSets(data).map(set => {
+            const fandomImage = boosterImages[set.set_code];
+            // STRICT: Do not use set.set_image from API to avoid hotlinking YGOPRODeck
+            return {
+                ...set,
+                original_image: undefined, // Don't keep the original URL either
+                set_image: fandomImage || undefined // Only use safe image or undefined
+            };
+        });
     } catch (error) {
         console.error('Error fetching sets:', error);
         return [];
@@ -181,20 +92,11 @@ export async function fetchTournamentSets(): Promise<CardSet[]> {
     try {
         const data = await fetchRawSets();
 
-        return data
-            .filter(set => {
-                if (!set.tcg_date) return false;
-                if (set.tcg_date >= CUTOFF_DATE) return false;
-
-                const name = set.set_name;
-                return TOURNAMENT_KEYWORDS.some(keyword => name.includes(keyword));
-            })
-            .sort((a, b) => new Date(a.tcg_date).getTime() - new Date(b.tcg_date).getTime())
-            .map(set => ({
-                ...set,
-                original_image: undefined,
-                set_image: boosterImages[set.set_code] || undefined,
-            }));
+        return tournamentSets(data).map(set => ({
+            ...set,
+            original_image: undefined,
+            set_image: boosterImages[set.set_code] || undefined,
+        }));
     } catch (error) {
         console.error('Error fetching tournament sets:', error);
         return [];
@@ -233,44 +135,7 @@ export async function fetchCardsInSet(setName: string): Promise<Card[]> {
  * printing before CUTOFF_DATE). Cached for the session via `fetchRawSets`.
  */
 export async function fetchSetDateMap(): Promise<Map<string, string>> {
-    const sets = await fetchRawSets();
-    const map = new Map<string, string>();
-    for (const set of sets) {
-        if (set.tcg_date) map.set(set.set_name, set.tcg_date);
-    }
-    return map;
-}
-
-/**
- * True if `card` existed by the app's cutoff — i.e. it has at least one printing
- * (in ANY set: core booster, structure deck, tin, etc.) dated before CUTOFF_DATE.
- * This is a pure DATE test, not set-membership: a card printed only in a structure
- * deck still counts, matching how Starlight search reaches structure-deck cards.
- * Cards printed only after the cutoff (post-Link era) have no R2 art and aren't
- * part of the progression, so they must not be bannable. Undatable printings are
- * ignored; a card with no datable pre-cutoff printing is treated as too new.
- */
-export function existedByCutoff(card: Card, setDates: Map<string, string>): boolean {
-    return (card.card_sets ?? []).some((printing) => {
-        const date = setDates.get(printing.set_name);
-        return date != null && date < CUTOFF_DATE;
-    });
-}
-
-/**
- * The earliest datable printing of `card` (across ALL set kinds), or null if none
- * of its printings can be dated via `setDates`. Used by the Starlight search to
- * gate a card to those with a printing released BEFORE the won pack — the same
- * pure-date rule as `existedByCutoff`, but against the pack's date rather than the
- * global cutoff, so Starlight can reach off-timeline (e.g. structure-deck) cards.
- */
-export function earliestPrintingDate(card: Card, setDates: Map<string, string>): string | null {
-    let earliest: string | null = null;
-    for (const printing of card.card_sets ?? []) {
-        const date = setDates.get(printing.set_name);
-        if (date != null && (earliest == null || date < earliest)) earliest = date;
-    }
-    return earliest;
+    return setDateMap(await fetchRawSets());
 }
 
 /**
