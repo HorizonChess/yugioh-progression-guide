@@ -1,4 +1,5 @@
 import type { Card, CardSet, PulledCard } from './types';
+import { randomIndex, type Rng } from './rng';
 
 /**
  * Booster Pack Logic
@@ -65,7 +66,28 @@ interface PackConfig {
     ultimateCanBeUpgrade: boolean; // If true, Ultimate Rare can replace Rare/Super/Ultra (Hobby box logic)
 }
 
-export function generateBoosterPack(setCards: Card[], setInfo: CardSet): PulledCard[] {
+/**
+ * The Rng used by the current `generateBoosterPack` call. Pack generation is
+ * fully synchronous, so swapping it for the duration of one call can't leak
+ * into another — even on the server.
+ */
+let activeRng: Rng = Math.random;
+
+/**
+ * Rolls one booster pack of `setInfo` from `setCards`. `rng` defaults to
+ * `Math.random`; the server passes a cryptographic source, tests a seeded one.
+ */
+export function generateBoosterPack(setCards: Card[], setInfo: CardSet, rng: Rng = Math.random): PulledCard[] {
+    const previousRng = activeRng;
+    activeRng = rng;
+    try {
+        return generatePackOfType(setCards, setInfo);
+    } finally {
+        activeRng = previousRng;
+    }
+}
+
+function generatePackOfType(setCards: Card[], setInfo: CardSet): PulledCard[] {
     const packType = determinePackType(setInfo);
 
     if (packType === PackType.Core) {
@@ -658,7 +680,7 @@ function rollFoilSlot(setCards: Card[], setInfo: CardSet, config: PackConfig, fa
     const hatSize = lcmArray(odds.map(o => o.ratio));
 
     // Roll a number from 1 to hatSize
-    const roll = Math.floor(Math.random() * hatSize) + 1;
+    const roll = randomIndex(activeRng, hatSize) + 1;
 
     let currentThreshold = 0;
 
@@ -719,7 +741,7 @@ function isRarity(card: Card, rarity: string, setPrefix: string): boolean {
 
 /** A random element of a non-empty array. Callers check for an empty pool first. */
 function pickRandom<T>(items: readonly T[]): T {
-    const item = items[Math.floor(Math.random() * items.length)];
+    const item = items[randomIndex(activeRng, items.length)];
     if (item === undefined) throw new Error("pickRandom: empty pool");
     return item;
 }
