@@ -11,6 +11,8 @@ const EnvSchema = z.object({
     PORT: z.coerce.number().int().positive().default(4000),
     MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
     MONGODB_DB: z.string().min(1).default('ygo-progression'),
+    /** The built web app (`web/out`). When set, the API also serves the site, from one origin. */
+    WEB_DIST: z.string().min(1).optional(),
     /** Public R2 bucket serving card art; allowed as an image source by the CSP. */
     IMAGE_HOST: z.url().optional(),
 });
