@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    # main runs these checks through deploy.yml, before publishing.
+    branches-ignore: [main]
+  pull_request:
+  # Lets deploy.yml run these checks before it publishes.
+  workflow_call:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # Public Cloudflare R2 bucket that serves the card and pack images
+      NEXT_PUBLIC_IMAGE_HOST: https://pub-9397530dccf24d04a56c8eafb6e3edd0.r2.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # API tests start an in-memory MongoDB; keep its binary between runs.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

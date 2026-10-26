@@ -1,5 +1,8 @@
 name: Deploy to GitHub Pages
 
+# The static site stays on GitHub Pages until the Render service (render.yaml)
+# is live and verified; then this workflow is retired.
+
 on:
   push:
     branches: [main]
@@ -15,11 +18,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: ci
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
     env:
       NEXT_PUBLIC_BASE_PATH: /yugioh-progression-guide
       # Public Cloudflare R2 bucket that serves the card and pack images
@@ -30,12 +34,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
       - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npx jest
-      - run: npm run build
+      - run: npm run build -w web
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/out
