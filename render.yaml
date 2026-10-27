@@ -1,0 +1,30 @@
+# Render Blueprint: one web service serves the site (web/out), /api and /ws from
+# a single origin. Create it in Render via New → Blueprint, pointing at this repo.
+services:
+  - type: web
+    name: ygo-progression
+    runtime: node
+    plan: free
+    # Keep this in the same part of the world as the Atlas cluster.
+    region: frankfurt
+    branch: main
+    # NODE_ENV=production would make npm skip devDependencies the build needs.
+    buildCommand: npm ci --include=dev && npm run build -w web && npm run build -w @ygo/api
+    startCommand: node api/dist/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: WEB_DIST
+        value: web/out
+      - key: MONGODB_DB
+        value: ygo-progression
+      - key: IMAGE_HOST
+        value: https://pub-9397530dccf24d04a56c8eafb6e3edd0.r2.dev
+      - key: NEXT_PUBLIC_IMAGE_HOST
+        value: https://pub-9397530dccf24d04a56c8eafb6e3edd0.r2.dev
+      # Secret: entered in the Render dashboard, never committed.
+      - key: MONGODB_URI
+        sync: false

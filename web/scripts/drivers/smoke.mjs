@@ -7,7 +7,7 @@
 //
 //   node scripts/drivers/smoke.mjs
 
-import { BASE, STORE_KEY, launchBrowser, makeSave, outPath } from "./_lib.mjs";
+import { BASE, STORE_KEY, launchBrowser, makeSave, outPath, seedStorage } from "./_lib.mjs";
 
 const BLUE_EYES = 89631139;
 const DARK_MAGICIAN = 46986414;
@@ -38,15 +38,10 @@ async function seededPage(seed = save, duelistName = "Tester") {
     const page = await browser.newPage({ viewport: { width: 1440, height: 950 } });
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    await page.goto(`${BASE}/menu/`, { waitUntil: "domcontentloaded" });
-    await page.evaluate(
-        ([k, v, name]) => {
-            localStorage.clear();
-            if (v) localStorage.setItem(k, v);
-            if (name) localStorage.setItem("duelistName", name);
-        },
-        [STORE_KEY, seed && JSON.stringify({ saves: [seed], activeSaveId: seed.id }), duelistName]
-    );
+    await seedStorage(page, {
+        [STORE_KEY]: seed && JSON.stringify({ saves: [seed], activeSaveId: seed.id }),
+        duelistName,
+    });
     return { page, errors };
 }
 

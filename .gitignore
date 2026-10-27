@@ -9,3 +9,18 @@ nul
 temp_*
 *_old.*
 
+# Dependencies (npm workspaces install at the repo root)
+node_modules
+
+# Secrets: database URIs, OAuth and SMTP credentials, API keys. Never commit these;
+# set them in the host's environment instead. Only the blank template is tracked.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Build output and test artifacts
+dist/
+coverage/
+*.tsbuildinfo
