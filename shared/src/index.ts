@@ -5,3 +5,4 @@ export * from './rewards';
 export * from './pack-logic';
 export * from './rng';
 export * from './schemas/ygoprodeck';
+export * from './schemas/auth';
