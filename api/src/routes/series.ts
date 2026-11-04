@@ -4,6 +4,7 @@ import type { CardCatalog } from '../cards/catalog';
 import {
     TooManySeriesError,
     createSoloSeries,
+    deleteSeries,
     findPlayer,
     listSeriesFor,
     MAX_SERIES_PER_USER,
@@ -101,5 +102,13 @@ export async function seriesRoutes(app: FastifyInstance, options: { catalog: Car
             return reply.code(500).send({ error: 'This series is missing your player record' });
         }
         return { series: publicSeries(series, timeline), me: publicPlayer(player) };
+    });
+
+    // Duo series can't be deleted from under a rival; Phase 4 adds leaving.
+    app.delete('/:seriesId', { preHandler: [requireAuth, requireSeriesMember] }, async (request, reply) => {
+        const series = request.series!;
+        if (series.mode !== 'solo') return reply.code(409).send({ error: 'Only solo series can be deleted' });
+        await deleteSeries(app.mongo, app.db, series._id);
+        return reply.code(204).send();
     });
 }

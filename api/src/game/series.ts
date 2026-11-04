@@ -124,6 +124,20 @@ export async function createSoloSeries(
     return { series, player };
 }
 
+/** Removes a series with its players and openings. */
+export async function deleteSeries(mongo: MongoClient, db: Db, seriesId: ObjectId): Promise<void> {
+    const session = mongo.startSession();
+    try {
+        await session.withTransaction(async () => {
+            await seriesCollection(db).deleteOne({ _id: seriesId }, { session });
+            await seriesPlayersCollection(db).deleteMany({ seriesId }, { session });
+            await db.collection('packSessions').deleteMany({ seriesId }, { session });
+        });
+    } finally {
+        await session.endSession();
+    }
+}
+
 export function listSeriesFor(db: Db, userId: ObjectId): Promise<SeriesDoc[]> {
     return seriesCollection(db).find({ memberIds: userId }).sort({ updatedAt: -1 }).toArray();
 }

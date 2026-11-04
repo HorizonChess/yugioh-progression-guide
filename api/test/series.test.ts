@@ -133,6 +133,17 @@ describe('reading series', () => {
         expect((await get('', `/api/series/${id}`)).statusCode).toBe(401);
     });
 
+    it('deletes a solo series with its player record, for members only', async () => {
+        const yami = await player('Yami');
+        const kaiba = await player('Kaiba');
+        const id = (await create(yami)).json().series.id;
+        const del = (cookie: string) => app.inject({ method: 'DELETE', url: `/api/series/${id}`, headers: { cookie } });
+        expect((await del(kaiba)).statusCode).toBe(403);
+        expect((await del(yami)).statusCode).toBe(204);
+        expect(await seriesPlayersCollection(app.db).countDocuments()).toBe(0);
+        expect((await get(yami, `/api/series/${id}`)).statusCode).toBe(404);
+    });
+
     it('answers 404 for unknown and malformed ids', async () => {
         const yami = await player('Yami');
         expect((await get(yami, '/api/series/0123456789abcdef01234567')).statusCode).toBe(404);

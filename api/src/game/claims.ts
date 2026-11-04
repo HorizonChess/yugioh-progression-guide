@@ -1,10 +1,12 @@
 import { ObjectId, type ClientSession, type Db, type MongoClient } from 'mongodb';
 import {
     existedByCutoff,
-    isRarityAtOrBelow,
+    REWARD_PACKS,
     resolvePrizeKind,
     resolveSetIndex,
-    wildcardRarityFloor,
+    starlightGrant,
+    tournamentSetFor,
+    wildcardGrant,
     type CardSet,
     type RewardEntry,
 } from '@ygo/shared';
@@ -12,8 +14,6 @@ import type { CardCatalog } from '../cards/catalog';
 import { collectionInc, packSessions, rollPacks, type PackSessionDoc } from './packs';
 import { findPlayer, seriesCollection, seriesPlayersCollection, type SeriesDoc } from './series';
 
-const REWARD_PACKS = 3;
-const SHORT_PRINTS = new Set(['Short Print', 'Super Short Print', 'SP']);
 
 export class ClaimError extends Error {
     constructor(readonly status: 400 | 404 | 409, message: string) {
@@ -102,30 +102,20 @@ function grantCard(ctx: Context, id: number, setCode: string, rarity: string): E
     };
 }
 
-/** Any card from the won set, at or below the wildcard's rarity. */
 async function wildcard(ctx: Context): Promise<Effect> {
     const id = requireCardId(ctx);
     const card = (await ctx.catalog.cardsInSet(ctx.anchor.set_name)).find((c) => c.id === id);
-    const ceiling = wildcardRarityFloor(ctx.reward.prizeId);
-    const rarity = card?.card_sets
-        ?.filter((p) => p.set_name === ctx.anchor.set_name)
-        .map((p) => (SHORT_PRINTS.has(p.set_rarity) ? 'Common' : p.set_rarity))
-        .find((r) => isRarityAtOrBelow(r, ceiling));
-    if (!rarity) throw notEligible();
-    return grantCard(ctx, id, ctx.anchor.set_code, rarity);
+    const grant = card && wildcardGrant(card, ctx.anchor, ctx.reward.prizeId);
+    if (!grant) throw notEligible();
+    return grantCard(ctx, id, grant.setCode, grant.rarity);
 }
 
-/** Any card with a printing released before the won set, as a Starlight Rare. */
 async function starlight(ctx: Context): Promise<Effect> {
     const id = requireCardId(ctx);
     const [card] = await ctx.catalog.cardsByIds([id]);
-    const dates = await ctx.catalog.setDates();
-    const earliest = (card?.card_sets ?? [])
-        .map((p) => ({ code: p.set_code, date: dates.get(p.set_name) }))
-        .filter((p): p is { code: string; date: string } => p.date !== undefined && p.date < ctx.anchor.tcg_date)
-        .sort((a, b) => a.date.localeCompare(b.date))[0];
-    if (!earliest) throw notEligible();
-    return grantCard(ctx, id, earliest.code, 'Starlight Rare');
+    const grant = card && starlightGrant(card, ctx.anchor.tcg_date, await ctx.catalog.setDates());
+    if (!grant) throw notEligible();
+    return grantCard(ctx, id, grant.setCode, grant.rarity);
 }
 
 async function banlist(ctx: Context, kind: 'ban' | 'unban'): Promise<Effect> {
@@ -134,7 +124,7 @@ async function banlist(ctx: Context, kind: 'ban' | 'unban'): Promise<Effect> {
     if (kind === 'unban' && !banned) throw notEligible();
     if (kind === 'ban') {
         const [card] = await ctx.catalog.cardsByIds([id]);
-        if (banned || !card || !existedByCutoff(card,await ctx.catalog.setDates())) throw notEligible();
+        if (banned || !card || !existedByCutoff(card, await ctx.catalog.setDates())) throw notEligible();
     }
     const change = kind === 'ban' ? { $addToSet: { bannedCardIds: id } } : { $pull: { bannedCardIds: id } };
     return {
@@ -152,9 +142,7 @@ async function banlist(ctx: Context, kind: 'ban' | 'unban'): Promise<Effect> {
 async function packs(ctx: Context, kind: 'pity' | 'tournament'): Promise<Effect> {
     let set = ctx.anchor;
     if (kind === 'tournament') {
-        const pool = await ctx.catalog.tournamentSets();
-        const before = pool.filter((s) => s.tcg_date < ctx.anchor.tcg_date);
-        const chosen = (before.length ? before : pool).at(-1);
+        const chosen = tournamentSetFor(await ctx.catalog.tournamentSets(), ctx.anchor.tcg_date);
         if (!chosen) throw new ClaimError(409, 'No tournament packs are available');
         set = chosen;
     }
