@@ -308,7 +308,7 @@ Merged into `main` with `chore/housekeeping` (the dead `fabric_pattern.png` refe
 - Mobile redesign added as Phase 7.
 - GitHub's built-in "pages build and deployment" (Jekyll) job fails on every push. That predates this project and doesn't affect the site, which is published by `deploy.yml`; switching the repo's Pages source to "GitHub Actions" stops it.
 
-### Phase 2: auth (in progress, branch `feat/auth`)
+### Phase 2: auth (done 2026-11-04, branch `feat/auth`)
 Done:
 - Shared account input rules (`@ygo/shared` `schemas/auth.ts`).
 - Storage: argon2id passwords with a timing-equalising dummy check, users unique by email / duelist name / Google id, hashed-token sessions with a sliding 30-day expiry and TTL index.
@@ -325,6 +325,6 @@ Done:
 - `npm run test-server -w @ygo/api` runs the API on an in-memory database with captured email, and `web/scripts/drivers/auth.mjs` drives sign-up, confirmation, sign-in, and reset through it in a real browser.
 - Verified: lint, typecheck, 27 shared + 70 API + 36 web tests, the build, the auth driver (26 checks) and the existing smoke driver. A real test email was accepted by Gmail.
 
-Still to do before merging Phase 2: the user's own real Google sign-in click-through (`http://localhost:4000/api/auth/google/start`), and promoting their account with `promote-admin` once it exists in Atlas. Before inviting other players: publish the Google app out of Testing mode (only listed test users can sign in until then).
+Verified by hand on 2026-11-04 against Atlas and real Google: Google sign-in with the duelist-name step, Gmail delivery, and `promote-admin` (the account `HorizonDev` is the user's admin test account; keep it). Before inviting other players: publish the Google app out of Testing mode, since only listed test users can sign in until then.
 
 Known: sign-up answers 409 for a taken email, so it can reveal that an email is registered. Reset and verify will not.
