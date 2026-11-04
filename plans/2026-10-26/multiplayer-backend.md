@@ -224,7 +224,7 @@ Revised with the user on 2026-11-04: the onboarding has its own look, unlike the
    - The notifications collection, the WS plugin and client, and the AppNav bell.
    - The series-wide banlist and snatch-steal.
 5. **`feat/duelist-kingdom-onboarding`**
-   - The invitation sign-up and sign-in in place in the menu.
+   - The title screen and onboarding scene at `/`: the invitation sign-up, sign-in, reset and Google name claim, written on the letter.
    - The signed-in and signed-out menu items.
    - Remove `/onboarding` and `duelistName`.
 6. **`feat/guest-and-import`**
@@ -236,6 +236,8 @@ Revised with the user on 2026-11-04: the onboarding has its own look, unlike the
    - The mobile version looks bad and barely works (packs can't even be opened on a phone).
    - Redesign it so every flow works on a phone, with great UX that keeps the app's 90s Yu-Gi-Oh! look and feel. This includes the parked items: GuideSprite overlapping the VICTORY/DEFEAT buttons, and the mobile deck builder.
    - Verify every route and flow at phone widths with the Playwright drivers.
+
+**Coming soon (noted 2026-11-04):** the whole app gets a UI do-over: art, animation and layout on every screen, keeping the 90s Yu-Gi-Oh! vibe. The onboarding scene (Phase 5) and the physics chains (`feat/physics-chain`) are the first pieces in the new style. The do-over and Phase 7 touch the same screens, so they're expected to go together.
 
 The plan also gets copied into the repo at `plans/2026-10-26/multiplayer-backend.md`, per the plans convention.
 
@@ -323,7 +325,7 @@ Verified by hand on 2026-11-04 against Atlas and real Google: Google sign-in wit
 
 Known: sign-up answers 409 for a taken email, so it can reveal that an email is registered. Reset and verify will not.
 
-### Phase 3: server solo series (in progress, branch `feat/server-solo-series`)
+### Phase 3: server solo series (done 2026-11-04, branch `feat/server-solo-series`)
 Broken into small commits, each tested on its own:
 1. **Shared rules and series input** (`shared/src/rules.ts`, `schemas/series.ts`): packs per set {12, 24, 30}, the series-creation rules, and the "can these packs be opened" gate.
 2. **Card catalog on the server**: the timeline and tournament sets computed from the synced `cardSets` (the same `timelineSets` the web uses, so set indexes match), cards by set, and a crypto RNG (48 random bits per draw, under `crypto.randomInt`'s cap).
