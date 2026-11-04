@@ -62,7 +62,7 @@ describe('email verification', () => {
         expect(mail.text).toContain('Yami');
         const { url, kind, token } = linkOf(mail);
         expect(kind).toBe('verify');
-        expect(url.origin + url.pathname).toBe('https://app.example/menu/');
+        expect(url.origin + url.pathname).toBe('https://app.example/');
 
         expect((await me(cookie)).json().user.emailVerified).toBe(false);
 

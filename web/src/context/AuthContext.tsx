@@ -19,8 +19,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<PublicUser | null>(null);
     const [loading, setLoading] = useState(true);
-    // Re-checked on reaching the menu, so signing in elsewhere shows up there.
-    const onMenu = usePathname().startsWith("/menu");
+    // Re-checked on reaching the title or the menu, so signing in elsewhere shows up there.
+    const pathname = usePathname();
+    const checkpoint = pathname === "/" ? "title" : pathname.startsWith("/menu") ? "menu" : "game";
 
     useEffect(() => {
         let cancelled = false;
@@ -32,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => {
             cancelled = true;
         };
-    }, [onMenu]);
+    }, [checkpoint]);
 
     const signOut = async () => {
         await signOutRequest();

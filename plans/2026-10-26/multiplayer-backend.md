@@ -185,22 +185,16 @@ Multi-document mutations (confirming a result, snatch-steal, saving a session, a
 - **Removals.** `/onboarding`, `duelistName` in localStorage and the duplicate name input in `SaveSlotList` are removed. The root `/` goes straight to `/menu`.
 - **Join links.** `/join?code=…` uses a query param because static export can't do dynamic segments. Signed out, it shows the invitation and then sign-in or sign-up, then joins.
 
-### Duelist Kingdom onboarding (in-place in the menu)
-- **Where it renders.** The left column of the menu swaps its `MenuItem` list for the onboarding panel using the existing Framer Motion slide. The Yugi art, `.menu-grid-bg` and gold glow stay exactly as they are.
+### Duelist Kingdom onboarding (its own scene, at `/`)
+Revised with the user on 2026-11-04: the onboarding has its own look, unlike the menu, and the letter theme runs through all of it. The first version (panels in the menu's left column) was replaced.
+- **Title screen (`/`).** A candlelit desk with the logo and PRESS START. Signed in, it greets the duelist and goes to the menu. Signing out and EXIT GAME come back here, and email links and the Google redirect land here (`AUTH_PAGE_PATH = '/'`).
 - **Sign-up**
-  1. A sealed envelope with a wax seal. Clicking cracks the seal.
-  2. The letter unfolds into a parchment form ("YOU ARE CORDIALLY INVITED TO DUELIST KINGDOM").
-  3. Fields: **duelist name** (debounced live availability check), **email** and **password** (with a strength meter).
-  4. Four **star chips** act as the step indicators and light up as each field validates.
-  5. **ACCEPT THE INVITATION** sends the chips flying into a duelist glove.
-  6. A "check your email" verification notice, then the **import local saves** step if any local saves exist, then back to the menu signed in.
-- **Sign-in:** "PRESENT YOUR INVITATION". A parchment card with email and password, a Google button and a forgot-password link.
-  - A first-time Google sign-in gets one extra step to claim a duelist name.
-- **Art and motion**
-  - All art is built from SVG and CSS on the existing tokens: `.parchment-bg`, `--primary`, `--wood-*` and FrameButton.
-  - This follows the `WheelDecor` precedent, so no new raster asset pipeline is needed.
-  - It respects `prefers-reduced-motion`.
-  - Components live in `web/src/components/onboarding/` (`InvitationEnvelope`, `InvitationForm`, `StarChips`, `SignInCard`, `ClaimDuelistName`, `ImportLocalSaves`).
+  1. A sealed envelope lands on the desk front up and writes "Welcome to the Yu-Gi-Oh! Progression Series" on itself, then turns over.
+  2. Breaking the wax seal shatters it into pieces that skid across the desk. The flap opens and the letter slides out and unfolds (tri-fold).
+  3. The letter: "You are cordially invited to Duelist Kingdom", duelist name (live check), email, password with a strength meter, and four star chips that light up as each validates.
+  4. ACCEPT THE INVITATION drops the chips into a leather cuff, says to check email, then ENTER THE KINGDOM goes to the menu. The **import local saves** step slots in here in Phase 6.
+- **Sign-in:** "I already have an invitation" brings the letter up as "Present your invitation", with Google and forgot password. A first-time Google sign-in claims a duelist name on the letter. "Play as a guest" goes to the menu, whose guest list adds SIGN IN.
+- **How it's made (2.5D):** GSAP timelines, real CSS 3D for the flip, flap and folds, SVG filter lighting for the paper, wood, leather and wax, and a canvas for the dust and the seal's shards. It honours `prefers-reduced-motion` (every animation jumps to its end). Code in `web/src/components/onboarding/` with its own `onboarding.css` and fonts, loaded only on `/`.
 
 ## Phases (each on its own branch, small verified commits, user check-in before merge)
 
@@ -321,7 +315,7 @@ Done:
 
 - `npm run promote-admin -w @ygo/api -- <email or duelist name> [--demote] [--allow-unverified]` is the only way to become an admin (no HTTP route). It refuses unconfirmed emails unless told otherwise and writes each change to `auditLog`.
 
-- Plain test page at `/dev/auth/` (web), which is also where email links and the Google redirect land (`AUTH_PAGE_PATH` in `api/src/auth/landing.ts`; Phase 5 moves it to `/menu/`). `ALLOWED_ORIGINS` also enables CORS for the Next dev server.
+- Plain test page at `/dev/auth/` (web), which is also where email links and the Google redirect land (`AUTH_PAGE_PATH` in `api/src/auth/landing.ts`; Phase 5 moves it to `/`). `ALLOWED_ORIGINS` also enables CORS for the Next dev server.
 - `npm run test-server -w @ygo/api` runs the API on an in-memory database with captured email, and `web/scripts/drivers/auth.mjs` drives sign-up, confirmation, sign-in, and reset through it in a real browser.
 - Verified: lint, typecheck, 27 shared + 70 API + 36 web tests, the build, the auth driver (26 checks) and the existing smoke driver. A real test email was accepted by Gmail.
 
@@ -354,11 +348,12 @@ Merged into `main` on 2026-11-04 after the user tested it by hand; not pushed.
 
 ### Phase 5: Duelist Kingdom onboarding (in progress, branch `feat/duelist-kingdom-onboarding`)
 Moved ahead of Phase 4 by the user (2026-11-04): signing in and out from the menu matters for all further testing.
-- The menu's left column shows the account flows in place of the menu items (`components/onboarding/`): the sealed envelope, the invitation form with live name check, strength meter and four star chips, the glove the chips fly into, "Present your invitation" sign-in with Google and forgot password, a reset form, and the Google duelist-name claim.
-- Menu items follow the account: signed out SIGN IN / SIGN UP / PLAY AS GUEST / EXIT GAME; signed in CAMPAIGN MODE / CARD COLLECTION / OPTIONS / DEV MODE (admins; disabled until 3b) / SIGN OUT.
-- Email links and the Google redirect land on `/menu/` (`AUTH_PAGE_PATH`). `/onboarding`, the stored `duelistName` and `/dev/auth` are gone; `/` goes to `/menu`. Guests are named "Guest" in the nav.
+- First version: the account flows in the menu's left column. The user found its art and motion too plain and wanted the onboarding as its own scene, so it was rebuilt as described under "Duelist Kingdom onboarding" above.
+- Menu items follow the account: CAMPAIGN MODE / CARD COLLECTION / OPTIONS, then signed in DEV MODE (admins; disabled until 3b) / SIGN OUT, or for guests SIGN IN, then EXIT GAME. SIGN OUT and EXIT GAME return to the title screen.
+- `/onboarding`, the stored `duelistName` and `/dev/auth` are gone. Guests are named "Guest" in the nav.
 - The "import local saves" step waits for Phase 6.
-- `auth.mjs` drives all of it through the menu (27 checks).
+- `auth.mjs` drives all of it through the title screen (31 checks); `smoke.mjs` covers the guest path and EXIT GAME.
+- Visual makeover of the rest of the app: planned to pair with Phase 7 (mobile redesign), since both touch every screen. The first piece, physics chains between timeline packs, is on `feat/physics-chain`.
 
 Decided with the user (2026-11-04):
 - Snatch Steal is left off the wheel in solo series; there's no rival to steal from. The wheel the server spins depends on the series mode (step 5).

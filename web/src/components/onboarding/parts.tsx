@@ -1,28 +1,16 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { DuelistNameSchema } from "@ygo/shared";
 import { checkDuelistName } from "@/lib/auth-client";
-import ParchmentInput from "@/components/ui/ParchmentInput";
 
-export function ParchmentCard({ title, kicker, children }: { title: string; kicker?: string; children: ReactNode }) {
-    return (
-        <div className="parchment-bg rounded-xl p-6 shadow-2xl space-y-4">
-            <header className="text-center">
-                {kicker && <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-wood-light">{kicker}</p>}
-                <h2 className="text-xl font-black uppercase tracking-wider text-ink">{title}</h2>
-            </header>
-            {children}
-        </div>
-    );
-}
-
+/** A line to write on, the way a letter has one. */
 export function Field({ id, label, hint, ...input }: { id: string; label: string; hint?: ReactNode } & React.InputHTMLAttributes<HTMLInputElement>) {
     return (
-        <div className="space-y-1">
-            <label htmlFor={id} className="text-xs font-bold uppercase tracking-wider text-wood-light">{label}</label>
-            <ParchmentInput id={id} className="w-full text-base" {...input} />
-            {hint && <p className="text-xs text-wood-light">{hint}</p>}
+        <div className="ob-field ob-ink">
+            <label htmlFor={id}>{label}</label>
+            <input id={id} {...input} />
+            {hint && <p className="ob-field__hint">{hint}</p>}
         </div>
     );
 }
@@ -32,17 +20,50 @@ export type Notice = { kind: "ok" | "error"; text: string };
 export function NoticeLine({ notice }: { notice: Notice | null }) {
     if (!notice) return null;
     return (
-        <p role="status" className={`rounded-lg border px-3 py-2 text-sm font-bold ${notice.kind === "ok" ? "border-green-800/40 text-green-900" : "border-red-800/40 text-red-800"}`}>
+        <p role="status" className={`ob-notice ob-notice--${notice.kind}`}>
             {notice.text}
         </p>
     );
 }
 
-export function StarChip({ lit, label }: { lit: boolean; label: string }) {
+/** A wax-red button, pressed like a seal. */
+export function WaxButton({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
     return (
-        <svg viewBox="0 0 24 24" className={`h-7 w-7 transition-all duration-300 ${lit ? "drop-shadow-[0_0_6px_var(--primary)] scale-110" : "opacity-40"}`} role="img" aria-label={`Star chip for ${label.toLowerCase()}${lit ? ": ready" : ""}`}>
-            <circle cx="12" cy="12" r="11" fill={lit ? "var(--primary)" : "var(--wood-border)"} stroke="var(--wood-dark)" strokeWidth="1" />
-            <path d="M12 4.5l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 9.8l5-.7z" fill={lit ? "#fff8dc" : "var(--parchment)"} />
+        <button type="submit" className="ob-wax-btn ob-ink" {...props}>
+            {children}
+        </button>
+    );
+}
+
+/** A gold star chip with a pressed star; unlit it's dull pewter. */
+export function StarChip({ lit, label, size = 30 }: { lit: boolean; label?: string; size?: number }) {
+    const id = useId();
+    return (
+        <svg
+            viewBox="0 0 40 40"
+            width={size}
+            height={size}
+            className={`ob-chip ${lit ? "ob-chip--lit" : ""}`}
+            role={label ? "img" : undefined}
+            aria-hidden={label ? undefined : true}
+            aria-label={label ? `Star chip for ${label.toLowerCase()}${lit ? ": ready" : ""}` : undefined}
+        >
+            <defs>
+                <radialGradient id={`${id}f`} cx="0.35" cy="0.3" r="0.8">
+                    <stop offset="0" stopColor={lit ? "#fff6cf" : "#b9b4aa"} />
+                    <stop offset="0.45" stopColor={lit ? "#e0b743" : "#7d776c"} />
+                    <stop offset="1" stopColor={lit ? "#7a5410" : "#3e3a33"} />
+                </radialGradient>
+                <linearGradient id={`${id}r`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stopColor={lit ? "#fff1b8" : "#cfcac0"} />
+                    <stop offset="1" stopColor={lit ? "#5c3e08" : "#2a2722"} />
+                </linearGradient>
+            </defs>
+            <circle cx="20" cy="20" r="18.5" fill={`url(#${id}r)`} />
+            <circle cx="20" cy="20" r="16" fill={`url(#${id}f)`} />
+            <path d="M20 8.5l3.4 7 7.7 1.1-5.6 5.4 1.3 7.6L20 26l-6.8 3.6 1.3-7.6-5.6-5.4 7.7-1.1z" fill={lit ? "#8a6312" : "#4a463f"} opacity="0.55" transform="translate(0.6 0.8)" />
+            <path d="M20 8.5l3.4 7 7.7 1.1-5.6 5.4 1.3 7.6L20 26l-6.8 3.6 1.3-7.6-5.6-5.4 7.7-1.1z" fill={lit ? "#fff3c2" : "#a39d92"} />
+            <ellipse cx="14" cy="12" rx="6" ry="3" fill="#fff" opacity={lit ? 0.45 : 0.15} transform="rotate(-30 14 12)" />
         </svg>
     );
 }
@@ -58,13 +79,11 @@ const STRENGTH = ["Too short", "Weak", "Fair", "Good", "Strong"];
 export function StrengthMeter({ password }: { password: string }) {
     const score = passwordStrength(password);
     return (
-        <div className="flex items-center gap-2" aria-label={`Password strength: ${STRENGTH[score]}`}>
-            <div className="flex flex-1 gap-1">
-                {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className={`h-1.5 flex-1 rounded ${i <= score ? "bg-primary" : "bg-wood-border/40"}`} />
-                ))}
+        <div className="ob-strength ob-ink" aria-label={`Password strength: ${STRENGTH[score]}`}>
+            <div className="ob-strength__bars">
+                {[1, 2, 3, 4].map((i) => <span key={i} className={i <= score ? "is-on" : ""} />)}
             </div>
-            <span className="w-16 text-right text-[10px] font-bold uppercase text-wood-light">{password ? STRENGTH[score] : ""}</span>
+            <span className="ob-strength__word">{password ? STRENGTH[score] : ""}</span>
         </div>
     );
 }

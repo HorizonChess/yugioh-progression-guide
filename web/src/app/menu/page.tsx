@@ -1,76 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { asset } from '@/lib/utils';
 import SaveSlotList from "@/components/layout/SaveSlotList";
 import { useAuth } from "@/context/AuthContext";
 import { useProgression } from "@/context/ProgressionContext";
 import MenuItem, { MenuItemData } from "@/components/menu/MenuItem";
-import AccountPanel, { type AccountView, type Landing } from "@/components/onboarding/AccountPanel";
-import { verifyEmail } from "@/lib/auth-client";
 
 /**
  * The main MENU (route: /menu). A retro terminal-styled screen: skewed menu
- * entries on the left (Campaign flips to the save-slot list, Sign in / Sign up
- * to the account panel), character art on
- * the right, and a status footer.
+ * entries on the left (Campaign flips to the save-slot list), character art on
+ * the right, and a status footer. Signing in, signing out and EXIT GAME go to
+ * the title screen (/).
  */
 export default function Menu() {
-    const [view, setView] = useState<"menu" | "saves" | "account">("menu");
-    const [accountStart, setAccountStart] = useState<AccountView>("signin");
-    const [landing, setLanding] = useState<Landing | undefined>(undefined);
-    const [banner, setBanner] = useState<string | null>(null);
+    const [view, setView] = useState<"menu" | "saves">("menu");
     const { activeSeriesId } = useProgression();
     const { user, loading, signOut } = useAuth();
     const router = useRouter();
 
-    // Email links and the Google redirect land here with ?verify=, ?reset= or ?google=.
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const verify = params.get("verify");
-        const reset = params.get("reset") ?? undefined;
-        const google = params.get("google") ?? undefined;
-        if (!verify && !reset && !google) return;
-        router.replace("/menu/");
-        if (verify) void verifyEmail(verify).then((r) => setBanner(r.ok ? "Email confirmed. Thank you!" : r.message));
-        if (google === "ok") void Promise.resolve().then(() => setBanner("Signed in with Google."));
-        else if (reset || google) {
-            void Promise.resolve().then(() => {
-                setLanding({ reset, google });
-                setView("account");
-            });
-        }
-    }, [router]);
-
-    const openAccount = (start: AccountView) => {
-        setAccountStart(start);
-        setLanding(undefined);
-        setView("account");
-    };
-
+    const account: MenuItemData[] = !user
+        ? [{ label: "SIGN IN", href: "/?invite", description: "Keep your progress in an account" }]
+        : [
+              ...(user.role === "admin" ? [{ label: "DEV MODE", href: "#", description: "Coming soon", disabled: true }] : []),
+              { label: "SIGN OUT", action: () => void signOut().then(() => router.push("/")), description: `Signed in as ${user.duelistName}` },
+          ];
     const menuItems: MenuItemData[] = loading
         ? []
-        : user
-          ? [
-                { label: "CAMPAIGN MODE", action: () => setView("saves"), description: "Continue your progression journey" },
-                {
-                    label: "CARD COLLECTION",
-                    href: "/collection",
-                    description: activeSeriesId ? "View your acquired cards" : "Pick a save in Campaign Mode first",
-                    disabled: !activeSeriesId,
-                },
-                { label: "OPTIONS", href: "#", description: "Configure game settings", disabled: true },
-                ...(user.role === "admin" ? [{ label: "DEV MODE", href: "#", description: "Coming soon", disabled: true }] : []),
-                { label: "SIGN OUT", action: () => void signOut(), description: `Signed in as ${user.duelistName}` },
-            ]
-          : [
-                { label: "SIGN IN", action: () => openAccount("signin"), description: "Present your invitation" },
-                { label: "SIGN UP", action: () => openAccount("envelope"), description: "Answer the call to Duelist Kingdom" },
-                { label: "PLAY AS GUEST", action: () => setView("saves"), description: "Play on this device without an account" },
-                { label: "EXIT GAME", href: "/", description: "Return to title screen" },
-            ];
+        : [
+              { label: "CAMPAIGN MODE", action: () => setView("saves"), description: user ? "Continue your progression journey" : "Playing as a guest, on this device" },
+              {
+                  label: "CARD COLLECTION",
+                  href: "/collection",
+                  description: activeSeriesId ? "View your acquired cards" : "Pick a save in Campaign Mode first",
+                  disabled: !activeSeriesId,
+              },
+              { label: "OPTIONS", href: "#", description: "Configure game settings", disabled: true },
+              ...account,
+              { label: "EXIT GAME", href: "/", description: "Return to title screen" },
+          ];
 
     return (
         <main className="min-h-screen bg-black text-white grid grid-rows-[1fr_auto] relative overflow-hidden font-mono">
@@ -81,14 +51,7 @@ export default function Menu() {
                 <div className="flex gap-12 w-full max-w-6xl items-center">
                     {/* Left: menu, or the save-slot list once Campaign is chosen */}
                     <div className="flex-1 space-y-4">
-                        {banner && view === "menu" && (
-                            <p role="status" className="rounded border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary">{banner}</p>
-                        )}
-                        {view === "account" ? (
-                            <div className="animate-in slide-in-from-left-10 fade-in duration-300">
-                                <AccountPanel key={accountStart} start={accountStart} landing={landing} onClose={() => setView("menu")} />
-                            </div>
-                        ) : view === "saves" ? (
+                        {view === "saves" ? (
                             <div className="animate-in slide-in-from-left-10 fade-in duration-300">
                                 <button onClick={() => setView("menu")} className="mb-6 text-gray-500 hover:text-white flex items-center gap-2 transition-colors">
                                     ◀ BACK TO MENU
