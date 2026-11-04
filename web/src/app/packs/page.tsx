@@ -120,7 +120,7 @@ function PacksPageContent() {
     };
 
     const handleReroll = async () => {
-        if (!openingId.current || !confirm("Spend a Redoer Ticket to reroll all of these packs?")) return;
+        if (!openingId.current || !confirm("Spend a Redoer Ticket to reroll all of these packs? The cards you opened will be lost.")) return;
         try {
             startReveal(await reroll(openingId.current));
         } catch (error) {
