@@ -65,6 +65,26 @@ export function findUserByDuelistName(db: Db, name: string) {
     return usersCollection(db).findOne({ duelistNameKey: duelistNameKey(name) });
 }
 
+export function findUserByGoogleSub(db: Db, sub: string) {
+    return usersCollection(db).findOne({ googleSub: sub });
+}
+
+/**
+ * Attaches a Google account to an existing user. Google has verified the email,
+ * so it counts as verified here too. If the email was *not* verified before, whoever
+ * registered it may not own it, so their password is dropped: the Google owner
+ * takes the account and the pre-registration can't be used to get back in.
+ * Returns whether the password was dropped, so the caller can end old sessions.
+ */
+export async function linkGoogle(db: Db, user: UserDoc, sub: string): Promise<{ passwordDropped: boolean }> {
+    const passwordDropped = !user.emailVerified && Boolean(user.passwordHash);
+    await usersCollection(db).updateOne(
+        { _id: user._id },
+        { $set: { googleSub: sub, emailVerified: true }, ...(passwordDropped ? { $unset: { passwordHash: '' as const } } : {}) },
+    );
+    return { passwordDropped };
+}
+
 export function toPublicUser(user: UserDoc): PublicUser {
     return {
         id: user._id.toHexString(),

@@ -24,6 +24,13 @@ const EnvSchema = z.object({
         .string()
         .default('')
         .transform(value => value.split(',').map(origin => origin.trim()).filter(Boolean)),
+    /** Google sign-in is switched on only when both of these are set. */
+    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+    /** The API's public origin, used to build the Google redirect URI. Defaults to `http://localhost:<PORT>`. */
+    PUBLIC_URL: z.url().optional(),
+    /** Where the browser lands after Google sign-in. Defaults to PUBLIC_URL; set to the Next dev server locally. */
+    WEB_URL: z.url().optional(),
 });
 
 export type Config = z.infer<typeof EnvSchema>;
