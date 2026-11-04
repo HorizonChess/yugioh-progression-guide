@@ -307,3 +307,15 @@ Merged into `main` with `chore/housekeeping` (the dead `fabric_pattern.png` refe
 - Auth is our own module, not Supabase like Lesson Manager (that app has no server auth code to reuse).
 - Mobile redesign added as Phase 7.
 - GitHub's built-in "pages build and deployment" (Jekyll) job fails on every push. That predates this project and doesn't affect the site, which is published by `deploy.yml`; switching the repo's Pages source to "GitHub Actions" stops it.
+
+### Phase 2: auth (in progress, branch `feat/auth`)
+Done:
+- Shared account input rules (`@ygo/shared` `schemas/auth.ts`).
+- Storage: argon2id passwords with a timing-equalising dummy check, users unique by email / duelist name / Google id, hashed-token sessions with a sliding 30-day expiry and TTL index.
+- `/api/auth/{signup,login,logout,me,duelist-name-available}`. Login takes an email or a duelist name and gives one identical 401 for every failure. Signup and login are limited to 10 per minute per IP, the name check to 30.
+- Session cookie: `sid`, `httpOnly`, `SameSite=Lax`, `Secure` in production, 30 days.
+- `requireAuth` / `requireAdmin` middleware and an `Origin` check on every non-GET `/api` request (own origin plus `ALLOWED_ORIGINS`).
+
+Still to do: email verification and password reset over Gmail SMTP, Google sign-in, `promote-admin` script, the plain test sign-in/up form.
+
+Known: sign-up answers 409 for a taken email, so it can reveal that an email is registered. Reset and verify will not.
