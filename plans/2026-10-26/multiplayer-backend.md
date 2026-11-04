@@ -328,3 +328,16 @@ Done:
 Verified by hand on 2026-11-04 against Atlas and real Google: Google sign-in with the duelist-name step, Gmail delivery, and `promote-admin` (the account `HorizonDev` is the user's admin test account; keep it). Before inviting other players: publish the Google app out of Testing mode, since only listed test users can sign in until then.
 
 Known: sign-up answers 409 for a taken email, so it can reveal that an email is registered. Reset and verify will not.
+
+### Phase 3: server solo series (in progress, branch `feat/server-solo-series`)
+Broken into small commits, each tested on its own:
+1. **Shared rules and series input** (`shared/src/rules.ts`, `schemas/series.ts`): packs per set {12, 24, 30}, the series-creation rules, and the "can these packs be opened" gate.
+2. **Card catalog on the server**: the timeline and tournament sets computed from the synced `cardSets` (the same `timelineSets` the web uses, so set indexes match), cards by set, and a crypto RNG (48 random bits per draw, under `crypto.randomInt`'s cap).
+3. **Solo series**: create, list and read your own series; `requireSeriesMember`. Each series stores its rules, set index, banlist and match history; each player's collection, decks and reward ledger live in `seriesPlayers`.
+4. **Pack sessions**: open once for the current set, persist flips, resume after a reload, save into the collection (transaction), and reroll with a Redoer Ticket.
+5. **Match results and the wheel**: solo reports apply at once, and only after the current set's opening is saved. A win creates a wheel-spin reward and a loss creates pity packs, and the set advances. `POST /rewards/:id/spin` picks the prize on the server. Redoer Ticket joins the wheel here.
+6. **Reward claims**: wildcard, starlight, tournament and pity (as pack sessions), ban and unban, Redoer Ticket. Every eligibility rule the browser used to check is re-checked on the server.
+7. **Decks and YDK import**: server-side deck save and validation (owned cards only), and the collection import at creation, or anytime in solo.
+8. **Web**: a `GameRepository` with `LocalRepo` (today's localStorage behaviour, for guests) and `RemoteRepo`; `ProgressionContext` becomes async commands; the pages call it; `WinnersWheel` lands on the server's prize. Playwright `pack-session.mjs`, and `smoke.mjs` updated.
+
+Open question for the user (default chosen, easy to flip in one place): Snatch Steal can't be used in a solo series, since there is no rival. The default keeps it on the wheel everywhere, matching the guest game, and a solo claim is refused with a clear message. The alternative is to leave it off the solo wheel.
