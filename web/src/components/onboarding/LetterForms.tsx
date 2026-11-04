@@ -6,7 +6,7 @@ import { EmailSchema, PasswordSchema, type PublicUser } from "@ygo/shared";
 import { useAuth } from "@/context/AuthContext";
 import * as auth from "@/lib/auth-client";
 import StarCuff from "./StarCuff";
-import { Field, NoticeLine, StarChip, StrengthMeter, WaxButton, passwordStrength, useNameCheck, type Notice } from "./parts";
+import { Field, NoticeLine, StarChip, StrengthMeter, WaxButton, useNameCheck, type Notice } from "./parts";
 
 export type LetterView = "invite" | "signin" | "forgot" | "reset" | "claim";
 
@@ -144,7 +144,6 @@ export default function LetterForms({ start, landing, reduce, onEnter, onGuest }
         { label: "Duelist name", lit: name.ok },
         { label: "Email", lit: EmailSchema.safeParse(email).success },
         { label: "Password", lit: PasswordSchema.safeParse(password).success },
-        { label: "Strong password", lit: passwordStrength(password) >= 3 },
     ];
 
     let page: ReactNode;
@@ -152,7 +151,7 @@ export default function LetterForms({ start, landing, reduce, onEnter, onGuest }
         page = (
             <>
                 <Heading kicker="Invitation accepted" title={`Welcome, ${accepted.duelistName}`} />
-                <StarCuff chips={chips.filter((c) => c.lit).length} reduce={reduce} />
+                <StarCuff chips={chips.length} reduce={reduce} />
                 <p className="ob-letter__text ob-ink">
                     Your star chips are set. We sent a confirmation link to <b>{accepted.email}</b>. Check your email to confirm it.
                 </p>
@@ -175,7 +174,7 @@ export default function LetterForms({ start, landing, reduce, onEnter, onGuest }
                 </div>
                 <NoticeLine notice={notice} />
                 <div className="ob-letter__actions">
-                    <WaxButton disabled={!chips.slice(0, 3).every((c) => c.lit) || busy}>{busy ? "Sealing…" : "Accept the Invitation"}</WaxButton>
+                    <WaxButton disabled={!chips.every((c) => c.lit) || busy}>{busy ? "Sealing…" : "Accept the Invitation"}</WaxButton>
                 </div>
                 <Links>
                     <button type="button" onClick={() => go("signin")}>Already invited? Present your invitation</button>

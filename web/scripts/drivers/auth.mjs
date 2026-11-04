@@ -77,7 +77,7 @@ try {
     await page.screenshot({ path: outPath("auth-1-title.png") });
     await button("Press Start").click();
     for (const label of ["Break the seal", "I already have an invitation", "Play as a guest"]) {
-        await button(label).waitFor({ timeout: 10000 });
+        await button(label).waitFor({ timeout: 15000 });
         check(true, `signed out: the envelope offers "${label}"`);
     }
 
@@ -89,7 +89,7 @@ try {
     check(true, "sign up: a free duelist name is flagged available");
     await page.getByLabel("Email", { exact: true }).fill(EMAIL);
     await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-    check((await page.getByRole("img", { name: /ready$/ }).count()) === 4, "sign up: all four star chips light up");
+    check((await page.getByRole("img", { name: /ready$/ }).count()) === 3, "sign up: all three star chips light up");
     await page.screenshot({ path: outPath("auth-2-invitation.png") });
     await button("Accept the Invitation").click();
     await page.getByText(`Welcome, ${NAME}`).waitFor({ timeout: 8000 });

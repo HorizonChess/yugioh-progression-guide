@@ -96,15 +96,10 @@
 .ob-env__back { transform: rotateY(180deg); transform-style: preserve-3d; }
 
 .ob-env__address { position: absolute; left: 8%; top: 25%; right: 8%; color: var(--ink); }
-.ob-write {
-  --reveal: 108%;
-  margin: 0; font-family: var(--font-pinyon), cursive; line-height: 1.05; white-space: nowrap;
-  -webkit-mask-image: linear-gradient(90deg, #000 var(--reveal), transparent calc(var(--reveal) + 8%));
-  mask-image: linear-gradient(90deg, #000 var(--reveal), transparent calc(var(--reveal) + 8%));
-}
-.ob-write--small { font-size: 5cqw; margin-left: 2cqw; }
-.ob-write--big { font-size: 9cqw; }
-.ob-write--big + .ob-write--big { margin-left: 7cqw; margin-top: -1cqw; }
+.ob-write { margin: 0; font-family: var(--font-script), cursive; line-height: 1.1; white-space: nowrap; }
+.ob-write--small { font-size: 4.8cqw; margin-left: 1cqw; }
+.ob-write--big { font-size: 8cqw; }
+.ob-write--big + .ob-write--big { margin-left: 6cqw; }
 .ob-flourish-svg { display: block; width: 62%; margin: 0.6cqw 0 0 6cqw; color: var(--ink); opacity: 0.85; }
 .ob-to { margin: 1.5cqw 0 0 7cqw; font-style: italic; font-size: 3.1cqw; color: var(--ink-soft); }
 .ob-stamp { position: absolute; right: 6%; top: 8%; width: 13cqw; rotate: 4deg; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
@@ -156,13 +151,22 @@
 .ob-letter__panel--bottom .ob-letter__face:not(.ob-letter__face--back) { border-radius: 0 0 2px 2px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); }
 .ob-letter__shade { position: absolute; inset: 0; background: #1a0f06; opacity: 0; pointer-events: none; }
 .ob-letter__frame { position: absolute; inset: 0.85rem; border: 1px solid rgba(110,72,32,0.45); outline: 1px solid rgba(110,72,32,0.25); outline-offset: 3px; pointer-events: none; }
+.ob-letter__crest { position: absolute; top: 0.55rem; left: 0.55rem; width: clamp(2.6rem, 11vw, 4.4rem); aspect-ratio: 256 / 245; filter: drop-shadow(0 2px 2px rgba(60,30,0,0.4)) drop-shadow(0 0 1px rgba(60,30,0,0.5)); }
+.ob-letter__crest img { display: block; width: 100%; height: 100%; }
+.ob-letter__crest-shine {
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,250,220,0.85) 50%, transparent 60%) 130% 0 / 250% 100% no-repeat;
+  mask-size: contain; -webkit-mask-size: contain; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat;
+  mix-blend-mode: screen;
+}
+@media (max-width: 640px) { .ob-letter__head { padding-inline: 2.4rem; } }
 .ob-letter__content { position: relative; padding: clamp(1.75rem, 6vw, 2.75rem) clamp(1.5rem, 6vw, 3rem); }
 .ob-letter__page form { display: flex; flex-direction: column; gap: 0.95rem; }
 .ob-letter__page { display: flex; flex-direction: column; gap: 0.95rem; }
 
 .ob-letter__head { text-align: center; margin-bottom: 0.25rem; }
 .ob-kicker { margin: 0; font-family: var(--font-cinzel), serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3em; text-indent: 0.3em; text-transform: uppercase; color: var(--ink-soft); }
-.ob-heading { margin: 0.1rem 0 0; font-family: var(--font-pinyon), cursive; font-weight: 400; font-size: clamp(2.2rem, 9vw, 3.1rem); line-height: 1.15; color: var(--ink); }
+.ob-heading { margin: 0.1rem 0 0; font-family: var(--font-script), cursive; font-weight: 400; font-size: clamp(1.9rem, 7.5vw, 2.6rem); line-height: 1.15; color: var(--ink); }
 .ob-letter__text { margin: 0; text-align: center; font-style: italic; font-size: 1.05rem; color: var(--ink-soft); }
 .ob-letter__text b { font-style: normal; color: var(--ink); }
 

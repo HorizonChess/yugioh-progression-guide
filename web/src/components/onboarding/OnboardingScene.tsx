@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Cinzel, IM_Fell_English, Pinyon_Script } from "next/font/google";
+import { Cinzel, Felipa, IM_Fell_English } from "next/font/google";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useAuth } from "@/context/AuthContext";
@@ -16,7 +16,7 @@ import "./onboarding.css";
 
 gsap.registerPlugin(useGSAP);
 
-const pinyon = Pinyon_Script({ weight: "400", subsets: ["latin"], variable: "--font-pinyon" });
+const script = Felipa({ weight: "400", subsets: ["latin"], variable: "--font-script" });
 const fell = IM_Fell_English({ weight: "400", style: ["normal", "italic"], subsets: ["latin"], variable: "--font-fell" });
 const cinzel = Cinzel({ weight: ["400", "700"], subsets: ["latin"], variable: "--font-cinzel" });
 
@@ -95,7 +95,7 @@ export default function OnboardingScene() {
     };
 
     return (
-        <div ref={root} className={`ob-scene ${pinyon.variable} ${fell.variable} ${cinzel.variable}`} style={textures}>
+        <div ref={root} className={`ob-scene ${script.variable} ${fell.variable} ${cinzel.variable}`} style={textures}>
             <Desk />
             {scene?.title && (
                 <div className="ob-stage ob-title" onClick={start}>

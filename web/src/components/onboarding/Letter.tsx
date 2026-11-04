@@ -2,6 +2,9 @@
 
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 import gsap from "gsap";
+import { asset } from "@/lib/utils";
+
+const EYE = asset("/ui/millennium-eye.webp");
 
 /**
  * A tri-folded letter: it arrives folded (from `from`, the letter's box as it left the envelope,
@@ -44,8 +47,10 @@ export default function Letter({ from, reduce, children }: { from: DOMRect | "be
                 .to(".ob-letter__shadow", { bottom: "-1%", duration: 0.6, ease: "power2.inOut" }, "<")
                 .set(el, { transformStyle: "flat", clearProps: "transform" })
                 .to(".ob-letter__frame, .ob-letter__content", { autoAlpha: 1, duration: 0.3 })
-                .fromTo(".ob-letter__content .ob-ink", { autoAlpha: 0, y: 6, filter: "blur(3px)" }, { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45, stagger: 0.06, ease: "power2.out", clearProps: "filter" }, "<");
+                .fromTo(".ob-letter__content .ob-ink", { autoAlpha: 0, y: 6, filter: "blur(3px)" }, { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.45, stagger: 0.06, ease: "power2.out", clearProps: "filter" }, "<")
+                .fromTo(".ob-letter__crest-shine", { backgroundPositionX: "130%" }, { backgroundPositionX: "-30%", duration: 1.1, ease: "power2.inOut" }, "<0.3");
             if (reduce) tl.progress(1);
+            else gsap.to(".ob-letter__crest-shine", { backgroundPositionX: "-30%", startAt: { backgroundPositionX: "130%" }, duration: 1.1, ease: "power2.inOut", repeat: -1, repeatDelay: 6, delay: tl.duration() + 6 });
         }, el);
         return () => ctx.revert();
         // The letter animates in once; later content changes ink in on their own.
@@ -72,7 +77,13 @@ export default function Letter({ from, reduce, children }: { from: DOMRect | "be
                 {panel("mid")}
                 {panel("bottom")}
                 {panel("top")}
-                <div className="ob-letter__frame" />
+                <div className="ob-letter__frame">
+                    <div className="ob-letter__crest" aria-hidden>
+                        <img src={EYE} alt="" />
+                        {/* A glint that only shows on the gold: the eye image is its mask. */}
+                        <span className="ob-letter__crest-shine" style={{ maskImage: `url(${EYE})`, WebkitMaskImage: `url(${EYE})` }} />
+                    </div>
+                </div>
                 <div className="ob-letter__content">{children}</div>
             </div>
         </div>

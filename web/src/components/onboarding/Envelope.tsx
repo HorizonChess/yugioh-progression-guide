@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 import WaxSeal from "./WaxSeal";
+import { handwrite } from "./handwriting";
 import { burst, rasterize } from "./shards";
 
 gsap.registerPlugin(useGSAP, DrawSVGPlugin);
@@ -85,12 +86,10 @@ export default function Envelope({ reduce, onLetterOut, onSignIn, onGuest }: { r
                 .from(".ob-env__shadow", { opacity: 0, x: 60, y: 90, scale: 1.25, duration: 1.15, ease: "power3.out" }, "<")
                 .to(".ob-env", { scale: 0.985, duration: 0.1, yoyo: true, repeat: 1, ease: "power1.inOut" })
                 .from(".ob-env-links", { autoAlpha: 0, y: 12, duration: 0.5 }, "<");
-            gsap.utils.toArray<HTMLElement>(".ob-write").forEach((line, i) => {
-                tl.fromTo(line, { "--reveal": "-8%" }, { "--reveal": "108%", duration: [0.9, 0.8, 1.1][i] ?? 0.8, ease: "power1.inOut" }, i ? ">-0.1" : ">-0.2");
-            });
-            tl.fromTo(".ob-flourish", { drawSVG: "0%" }, { drawSVG: "100%", duration: 0.6, ease: "power2.inOut" })
-                .from(".ob-to", { autoAlpha: 0, duration: 0.5 }, "<0.2")
-                .addLabel("flip", "+=0.7")
+            const greeting = handwrite(tl, gsap.utils.toArray<HTMLElement>(".ob-write"), tl.duration() - 0.25);
+            tl.fromTo(".ob-flourish", { drawSVG: "0%" }, { drawSVG: "100%", duration: 0.5, ease: "power1.inOut" }, greeting + gsap.utils.random(0.1, 0.2));
+            const signed = handwrite(tl, gsap.utils.toArray<HTMLElement>(".ob-to"), greeting + gsap.utils.random(0.45, 0.6), 0.65);
+            tl.addLabel("flip", signed + 0.5)
                 .to(".ob-env__body", { rotationY: 180, duration: 0.95, ease: "power2.inOut" }, "flip")
                 .to(".ob-env", { y: -14, duration: 0.475, yoyo: true, repeat: 1, ease: "sine.inOut" }, "flip")
                 .to(".ob-env__shadow", { scaleX: 0.55, opacity: 0.6, duration: 0.475, yoyo: true, repeat: 1, ease: "sine.inOut" }, "flip")
