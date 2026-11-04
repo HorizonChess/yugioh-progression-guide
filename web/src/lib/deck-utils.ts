@@ -37,12 +37,7 @@ export function parseDragPayload(dataTransfer: DataTransfer): DragPayload | null
 /**
  * Checks if a card belongs in the Extra Deck (Fusion, Synchro, XYZ, Link).
  */
-export function isExtraDeckCard(card: Card): boolean {
-    return card.type.includes("Fusion") ||
-           card.type.includes("Synchro") ||
-           card.type.includes("XYZ") ||
-           card.type.includes("Link");
-}
+export { isExtraDeckCard } from "@ygo/shared";
 
 /**
  * Removes a card from a deck array at the given index and returns the new array.

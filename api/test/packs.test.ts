@@ -182,6 +182,47 @@ describe('reward claims', () => {
     });
 });
 
+describe('decks and collection import', () => {
+    async function setup() {
+        const s = await newSeries();
+        const send = (method: 'PUT' | 'POST' | 'DELETE', path: string, payload?: object) =>
+            app.inject({ method, url: `/api/series/${s.id}${path}`, headers: { cookie: s.cookie }, ...(payload ? { payload } : {}) });
+        const player = async () => (await seriesPlayersCollection(app.db).findOne({}))!;
+        return { send, player };
+    }
+    const deck = (mainDeck: number[]) => ({ name: 'Beatdown', mainDeck, extraDeck: [], sideDeck: [] });
+
+    it('saves only decks built from owned, unbanned cards, and updates or deletes by id', async () => {
+        const { send, player } = await setup();
+        expect((await send('POST', '/collection/import', { cardIds: [100, 100, 101, 102], mode: 'add' })).statusCode).toBe(204);
+        expect((await send('PUT', '/decks/d1', deck([100, 100, 100]))).json().error).toMatch(/own enough/);
+        expect((await send('PUT', '/decks/d1', deck([9999]))).json().error).toMatch(/Unknown/);
+        expect((await send('PUT', '/decks/d1', deck([100, 100, 101]))).statusCode).toBe(200);
+        expect((await send('PUT', '/decks/d1', deck([102]))).statusCode).toBe(200);
+        expect((await player()).savedDecks.map((d) => d.mainDeck)).toEqual([[102]]);
+
+        await seriesCollection(app.db).updateOne({}, { $set: { bannedCardIds: [101] } });
+        expect((await send('PUT', '/decks/d2', deck([101]))).json().error).toMatch(/banned/);
+        expect((await send('DELETE', '/decks/d1')).statusCode).toBe(204);
+        expect((await player()).savedDecks).toEqual([]);
+    });
+
+    it('imports anytime in solo, but only once in a duo series that skipped early sets', async () => {
+        const { send, player } = await setup();
+        await send('POST', '/collection/import', { cardIds: [100], mode: 'add' });
+        expect((await send('POST', '/collection/import', { cardIds: [101, 101], mode: 'replace' })).statusCode).toBe(204);
+        expect(Object.values((await player()).collection)).toEqual([2]);
+        expect((await send('POST', '/collection/import', { cardIds: [9999], mode: 'add' })).statusCode).toBe(400);
+
+        await seriesCollection(app.db).updateOne({}, { $set: { mode: 'duo' } });
+        await seriesPlayersCollection(app.db).updateOne({}, { $set: { ydkImportUsed: false } });
+        expect((await send('POST', '/collection/import', { cardIds: [100], mode: 'add' })).json().error).toMatch(/first set/);
+        await seriesCollection(app.db).updateOne({}, { $set: { 'rules.startSetIndex': 1 } });
+        expect((await send('POST', '/collection/import', { cardIds: [100], mode: 'add' })).statusCode).toBe(204);
+        expect((await send('POST', '/collection/import', { cardIds: [100], mode: 'add' })).statusCode).toBe(409);
+    });
+});
+
 describe('match reports and the wheel', () => {
     const report = (s: { id: string; cookie: string }, result: string) =>
         app.inject({ method: 'POST', url: `/api/series/${s.id}/matches`, headers: { cookie: s.cookie }, payload: { result } });

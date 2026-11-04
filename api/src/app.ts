@@ -20,6 +20,7 @@ import { createMailer, type Mailer } from './mail/mailer';
 import { cors } from './middleware/cors';
 import { originCheck } from './middleware/originCheck';
 import { authRoutes } from './routes/auth';
+import { deckRoutes } from './routes/decks';
 import { googleRoutes } from './routes/google';
 import { healthRoutes } from './routes/health';
 import { matchRoutes } from './routes/matches';
@@ -112,6 +113,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
         await api.register(seriesRoutes, { prefix: '/series', catalog: app.catalog });
         await api.register(packRoutes, { prefix: '/series/:seriesId/packs' });
         await api.register(matchRoutes, { prefix: '/series/:seriesId' });
+        await api.register(deckRoutes, { prefix: '/series/:seriesId' });
         if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
             await api.register(googleRoutes, {
                 prefix: '/auth/google',

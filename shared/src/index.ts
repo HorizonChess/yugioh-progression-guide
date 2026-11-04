@@ -7,4 +7,5 @@ export * from './rng';
 export * from './schemas/ygoprodeck';
 export * from './schemas/auth';
 export * from './rules';
+export * from './decks';
 export * from './schemas/series';
