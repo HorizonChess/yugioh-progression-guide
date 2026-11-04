@@ -1,10 +1,15 @@
 import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
+import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
+import { ensureSessionIndexes } from './auth/sessions';
+import { ensureUserIndexes } from './auth/users';
 import type { Config } from './config';
 import { connectDb } from './db';
+import { originCheck } from './middleware/originCheck';
+import { authRoutes } from './routes/auth';
 import { healthRoutes } from './routes/health';
 import { nextSegmentRewrite } from './static-site';
 
@@ -54,11 +59,17 @@ export async function buildApp({ config, logger }: AppOptions): Promise<FastifyI
     });
 
     await connectDb(app, config);
+    await ensureUserIndexes(app.db);
+    await ensureSessionIndexes(app.db);
 
     // Rate limits cover the API only: a single page load fetches dozens of static chunks.
     await app.register(async (api) => {
+        await api.register(cookie);
+        api.decorateRequest('user', null);
+        api.addHook('onRequest', originCheck(config.ALLOWED_ORIGINS));
         await api.register(rateLimit, { max: 300, timeWindow: '1 minute' });
         await api.register(healthRoutes);
+        await api.register(authRoutes, { prefix: '/auth', secureCookies: config.NODE_ENV === 'production' });
     }, { prefix: '/api' });
 
     if (config.WEB_DIST) {

@@ -15,6 +15,15 @@ const EnvSchema = z.object({
     WEB_DIST: z.string().min(1).optional(),
     /** Public R2 bucket serving card art; allowed as an image source by the CSP. */
     IMAGE_HOST: z.url().optional(),
+    /**
+     * Extra origins allowed to make state-changing requests, comma-separated
+     * (e.g. `http://localhost:3000` when the Next dev server calls the API).
+     * The server's own origin is always allowed.
+     */
+    ALLOWED_ORIGINS: z
+        .string()
+        .default('')
+        .transform(value => value.split(',').map(origin => origin.trim()).filter(Boolean)),
 });
 
 export type Config = z.infer<typeof EnvSchema>;
