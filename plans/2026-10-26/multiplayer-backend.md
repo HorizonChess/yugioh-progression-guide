@@ -319,6 +319,8 @@ Done:
 - Google sign-in (`api/src/auth/google/`, self-contained): authorization-code flow with PKCE, a browser-bound `state`, a nonce and single-use flow records. A returning Google account signs in, a verified matching email is linked, and a first-time account claims a duelist name. Linking onto an unverified pre-registered email drops that password and ends its sessions.
 - Email verification and password reset over SMTP (Gmail app password). Links carry a one-time token to `/menu/?verify=…` or `?reset=…`; only hashes are stored, links expire (24 h / 1 h), and a new link cancels the old. Resetting signs out every session. Mail is sent in the background so "forgot password" answers identically, and as fast, for unknown emails.
 
-Still to do: `promote-admin` script, the plain test sign-in/up form (including the `?verify=`, `?reset=` and `?google=` landings), and a real-world check of Google sign-in and a delivered email.
+- `npm run promote-admin -w @ygo/api -- <email or duelist name> [--demote] [--allow-unverified]` is the only way to become an admin (no HTTP route). It refuses unconfirmed emails unless told otherwise and writes each change to `auditLog`.
+
+Still to do: the plain test sign-in/up form (including the `?verify=`, `?reset=` and `?google=` landings), and a real-world check of Google sign-in and a delivered email.
 
 Known: sign-up answers 409 for a taken email, so it can reveal that an email is registered. Reset and verify will not.

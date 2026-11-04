@@ -10,7 +10,8 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "sync-cards": "tsx --env-file-if-exists=.env scripts/sync-cards.ts"
+    "sync-cards": "tsx --env-file-if-exists=.env scripts/sync-cards.ts",
+    "promote-admin": "tsx --env-file-if-exists=.env scripts/promote-admin.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.5",
