@@ -18,6 +18,8 @@ export interface PackSessionDoc {
     setIndex: number;
     setName: string;
     source: 'set' | 'pity' | 'tournament';
+    /** The reward a pity or tournament opening was claimed from. */
+    rewardId?: string;
     packs: Pull[][];
     /** Flat indexes (pack * 100 + card) of flipped cards, so a reload resumes. */
     flipped: number[];
@@ -104,15 +106,19 @@ export async function rerollSession(
  * Moves a session's cards into the player's collection, once. The stage check
  * inside the transaction makes a double "save" a no-op instead of double cards.
  */
-export async function saveSession(mongo: MongoClient, db: Db, session: PackSessionDoc): Promise<boolean> {
+export function collectionInc(pulls: readonly Pull[]): Record<string, number> {
     const inc: Record<string, number> = {};
-    for (const p of session.packs.flat()) {
+    for (const p of pulls) {
         const key = collectionKey(p.id, p.setCode, p.rarity);
         // Keys become field names; a "." or "$" would corrupt the update.
         if (/[.$]/.test(key)) throw new Error(`unsafe collection key ${key}`);
         inc[`collection.${key}`] = (inc[`collection.${key}`] ?? 0) + 1;
     }
+    return inc;
+}
 
+export async function saveSession(mongo: MongoClient, db: Db, session: PackSessionDoc): Promise<boolean> {
+    const inc = collectionInc(session.packs.flat());
     const tx = mongo.startSession();
     try {
         return await tx.withTransaction(async () => {

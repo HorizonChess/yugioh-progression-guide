@@ -126,6 +126,62 @@ describe('pack sessions', () => {
     });
 });
 
+describe('reward claims', () => {
+    async function setup() {
+        const s = await newSeries();
+        const give = async (prizeId: string, wonFromPackName = LOB.set_name) => {
+            const id = `${prizeId}-${Math.random()}`;
+            await seriesPlayersCollection(app.db).updateOne({}, { $push: { rewards: { id, prizeId, wonFromPackName, wonFromSetIndex: 0, wonDate: '', status: 'available' } as never } });
+            return (payload: object = {}) =>
+                app.inject({ method: 'POST', url: `/api/series/${s.id}/rewards/${id}/claim`, headers: { cookie: s.cookie }, payload });
+        };
+        const player = async () => (await seriesPlayersCollection(app.db).findOne({}))!;
+        const banned = async () => (await seriesCollection(app.db).findOne({}))!.bannedCardIds;
+        return { ...s, give, player, banned };
+    }
+    const total = (c: Record<string, number>) => Object.values(c).reduce((a, b) => a + b, 0);
+
+    it('grants a wildcard card only from the won set at or below its rarity, once', async () => {
+        const r = await setup();
+        const claim = await r.give('wildcard-rare');
+        expect((await claim({ cardId: 106 })).statusCode).toBe(400); // Ultra Rare
+        expect((await claim({ cardId: 104 })).statusCode).toBe(201);
+        const player = await r.player();
+        expect(total(player.collection)).toBe(1);
+        expect(player.rewards[0]).toMatchObject({ status: 'claimed', grantedCardId: 104 });
+        expect((await claim({ cardId: 100 })).statusCode).toBe(409);
+    });
+
+    it('grants a starlight only for cards released before the won set', async () => {
+        const r = await setup();
+        expect((await (await r.give('wildcard-starlight'))({ cardId: 100 })).statusCode).toBe(400);
+        expect((await (await r.give('wildcard-starlight', MRD.set_name))({ cardId: 100 })).statusCode).toBe(201);
+    });
+
+    it('bans any card and unbans only banned ones', async () => {
+        const r = await setup();
+        expect((await (await r.give('ban'))({ cardId: 100 })).statusCode).toBe(201);
+        expect(await r.banned()).toEqual([100]);
+        const unban = await r.give('unban');
+        expect((await unban({ cardId: 101 })).statusCode).toBe(400);
+        expect((await unban({ cardId: 100 })).statusCode).toBe(201);
+        expect(await r.banned()).toEqual([]);
+    });
+
+    it('opens pity packs as a resumable session, and refuses unspun or unknown rewards', async () => {
+        const r = await setup();
+        const { session } = (await (await r.give('pity-packs'))()).json();
+        expect(session).toMatchObject({ source: 'pity', setName: LOB.set_name });
+        expect(session.packs).toHaveLength(3);
+        expect((await r.call('POST', `/${session.id}/save`)).statusCode).toBe(204);
+        expect(total((await r.player()).collection)).toBe(27);
+
+        expect((await (await r.give('wheel-spin'))()).json().error).toMatch(/Spin/);
+        const unknown = await app.inject({ method: 'POST', url: `/api/series/${r.id}/rewards/nope/claim`, headers: { cookie: r.cookie }, payload: {} });
+        expect(unknown.statusCode).toBe(404);
+    });
+});
+
 describe('match reports and the wheel', () => {
     const report = (s: { id: string; cookie: string }, result: string) =>
         app.inject({ method: 'POST', url: `/api/series/${s.id}/matches`, headers: { cookie: s.cookie }, payload: { result } });
