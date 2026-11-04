@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ProgressionProvider } from "@/context/ProgressionContext";
 import GlobalBackground from "@/components/layout/GlobalBackground";
 import AppNav from "@/components/layout/AppNav";
+import SeriesGate from "@/components/layout/SeriesGate";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
@@ -36,7 +37,7 @@ export default function RootLayout({
           {/* Row 2 (1fr): the routed page. min-h-0/min-w-0 let a page's own
               inner scroll containers work; relative anchors deck-builder's
               absolutely-positioned ScaleWrapper to this row (below the nav). */}
-          <main className="relative min-h-0 min-w-0">{children}</main>
+          <main className="relative min-h-0 min-w-0"><SeriesGate>{children}</SeriesGate></main>
         </ProgressionProvider>
         </AuthProvider>
       </body>

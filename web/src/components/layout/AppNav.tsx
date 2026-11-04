@@ -14,7 +14,7 @@ import { asset } from '@/lib/utils';
 
    It's a client component, so it can vary itself per route via `usePathname()`
    (e.g. the active-link highlight below) without breaking that persistence. */
-const NAV_ROUTES = new Set(["/timeline", "/collection", "/deck-builder", "/packs", "/record-match", "/rewards"]);
+export const NAV_ROUTES = new Set(["/timeline", "/collection", "/deck-builder", "/packs", "/record-match", "/rewards"]);
 
 const NAV_LINKS = [
     { href: "/timeline", label: "CAMPAIGN" },
@@ -27,7 +27,7 @@ const NAV_LINKS = [
 export default function AppNav() {
     // trailingSlash (for static hosting) makes this "/timeline/"; strip it so route lookups match
     const pathname = usePathname().replace(/(.)\/$/, "$1");
-    const { isGuideVisible, toggleGuide, duelistName } = useProgression();
+    const { isGuideVisible, toggleGuide, duelistName, activeSeriesId } = useProgression();
 
     if (!NAV_ROUTES.has(pathname)) return null;
 
@@ -60,7 +60,11 @@ export default function AppNav() {
 
             <div className="flex items-center gap-6">
                 <div className="hidden md:flex gap-4 text-xs font-bold tracking-widest text-gray-500">
-                    {NAV_LINKS.map(({ href, label }) => (
+                    {NAV_LINKS.map(({ href, label }) => !activeSeriesId && href !== "/menu" ? (
+                        <span key={href} aria-disabled="true" title="Pick a save first" className="topbar-nav-link opacity-40 cursor-not-allowed">
+                            {label}
+                        </span>
+                    ) : (
                         <Link
                             key={href}
                             href={href}

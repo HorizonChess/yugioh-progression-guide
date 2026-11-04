@@ -166,7 +166,7 @@ export class LocalRepo implements GameRepository {
 
     async reroll(id: string, openingId: string) {
         const old = this.opening(id, openingId);
-        let fresh: Opening | null = null;
+        let fresh = null as Opening | null;
         await this.update(id, async (save, timeline) => {
             const ticket = save.rewards.find((r) => r.prizeId === "redoer-ticket" && r.status === "available");
             if (!ticket) throw new RepoError("You have no Redoer Ticket");
@@ -180,7 +180,7 @@ export class LocalRepo implements GameRepository {
     }
 
     async reportMatch(id: string, won: boolean) {
-        let reward: RewardEntry | null = null;
+        let reward = null as RewardEntry | null;
         await this.update(id, (save, timeline) => {
             const index = resolveSetIndex(timeline, save.currentSetName, save.currentSetIndex);
             const set = timeline[index];
@@ -222,7 +222,7 @@ export class LocalRepo implements GameRepository {
     }
 
     async claimReward(id: string, rewardId: string, cardId?: number) {
-        let opened: Opening | null = null;
+        let opened = null as Opening | null;
         await this.update(id, async (save, timeline) => {
             const reward = save.rewards.find((r) => r.id === rewardId);
             if (!reward || reward.status !== "available") throw new RepoError("This reward was already claimed");

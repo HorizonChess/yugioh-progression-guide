@@ -308,6 +308,7 @@ export default function AuthPlayground() {
         <div className="h-full overflow-y-auto bg-black px-4 py-8 text-white">
             <div className="mx-auto max-w-md space-y-6">
                 <header>
+                    <a href="/menu/" className="text-sm text-gray-400 hover:text-white">◀ Back to the menu</a>
                     <h1 className="text-2xl font-black">Account test page</h1>
                     <p className="text-sm text-gray-400">A plain form for trying accounts. The real sign-up arrives in a later phase.</p>
                 </header>
