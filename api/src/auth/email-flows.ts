@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Mailer } from '../mail/mailer';
 import { passwordResetEmail, verificationEmail } from '../mail/messages';
+import { AUTH_PAGE_PATH } from './landing';
 import { issueToken, type TokenKind } from './tokens';
 import { findUserByEmail, type UserDoc } from './users';
 
@@ -14,12 +15,12 @@ export interface EmailFlows {
 /**
  * The emails behind verification and password reset. Everything runs in the
  * background so a request takes the same time whether or not an account exists.
- * The link lands on the web app's menu with the token in the query string,
+ * The link lands on the web app's auth page with the token in the query string,
  * since the static export has no per-token pages; the page posts it back.
  */
 export function createEmailFlows(app: FastifyInstance, mailer: Mailer, webBase: string): EmailFlows {
     const linkTo = (param: TokenKind, token: string) => {
-        const url = new URL('/menu/', webBase);
+        const url = new URL(AUTH_PAGE_PATH, webBase);
         url.searchParams.set(param, token);
         return url.toString();
     };

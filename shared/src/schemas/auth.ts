@@ -39,12 +39,14 @@ export function duelistNameKey(name: string): string {
 }
 
 /** What the API returns about the signed-in user. */
-export interface PublicUser {
-    id: string;
-    email: string;
-    emailVerified: boolean;
-    duelistName: string;
-    role: 'user' | 'admin';
-    hasPassword: boolean;
-    hasGoogle: boolean;
-}
+export const PublicUserSchema = z.object({
+    id: z.string(),
+    email: z.string(),
+    emailVerified: z.boolean(),
+    duelistName: z.string(),
+    role: z.enum(['user', 'admin']),
+    hasPassword: z.boolean(),
+    hasGoogle: z.boolean(),
+});
+
+export type PublicUser = z.infer<typeof PublicUserSchema>;

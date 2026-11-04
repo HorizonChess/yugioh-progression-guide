@@ -5,6 +5,7 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import { createEmailFlows } from './auth/email-flows';
+import { AUTH_PAGE_PATH } from './auth/landing';
 import { ensureGoogleIndexes } from './auth/google/pending';
 import { ensureSessionIndexes } from './auth/sessions';
 import { ensureTokenIndexes } from './auth/tokens';
@@ -13,6 +14,7 @@ import { registerBackground } from './background';
 import type { Config } from './config';
 import { connectDb } from './db';
 import { createMailer, type Mailer } from './mail/mailer';
+import { cors } from './middleware/cors';
 import { originCheck } from './middleware/originCheck';
 import { authRoutes } from './routes/auth';
 import { googleRoutes } from './routes/google';
@@ -82,7 +84,10 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
     await app.register(async (api) => {
         await api.register(cookie);
         api.decorateRequest('user', null);
+        api.addHook('onRequest', cors(config.ALLOWED_ORIGINS));
         api.addHook('onRequest', originCheck(config.ALLOWED_ORIGINS));
+        // Scoped hooks only run for routes that exist; this gives CORS preflights one to hit.
+        api.options('/*', async (_request, reply) => reply.code(204).send());
         await api.register(rateLimit, { max: 300, timeWindow: '1 minute' });
         await api.register(healthRoutes);
         const secureCookies = config.NODE_ENV === 'production';
@@ -95,7 +100,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
                     clientSecret: config.GOOGLE_CLIENT_SECRET,
                     redirectUri: new URL('/api/auth/google/callback', publicUrl).toString(),
                 },
-                landingUrl: new URL('/menu/', config.WEB_URL ?? publicUrl).toString(),
+                landingUrl: new URL(AUTH_PAGE_PATH, config.WEB_URL ?? publicUrl).toString(),
                 secureCookies,
                 ...(googleFetch ? { fetchImpl: googleFetch } : {}),
             });
