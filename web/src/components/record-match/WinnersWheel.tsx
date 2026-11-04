@@ -3,9 +3,14 @@
 import React, { useMemo, useState } from 'react';
 import FrameButton from '@/components/ui/FrameButton';
 import { WheelRim, WheelHub } from '@/components/record-match/WheelDecor';
-import { WHEEL_PRIZES, WheelPrize } from '@/lib/rewards';
+import { alertRepoError } from '@/context/ProgressionContext';
+import { WheelPrize } from '@/lib/rewards';
 
 interface WinnersWheelProps {
+    /** The wedges, in order: the series' wheel. */
+    prizes: readonly WheelPrize[];
+    /** Asks the repository for the prize; the wheel animates to it. */
+    spin: () => Promise<WheelPrize>;
     /** Fired once the spin animation settles on a prize. */
     onSpinComplete?: (prize: WheelPrize) => void;
     /** Fired when the player claims the revealed prize. */
@@ -15,7 +20,6 @@ interface WinnersWheelProps {
 }
 
 const SPIN_MS = 3600;              // wheel-settle duration
-const SLICE = 360 / WHEEL_PRIZES.length;
 
 /**
  * WinnersWheel — the "you won, spin for a prize" CONTENT (win path only).
@@ -29,9 +33,10 @@ const SLICE = 360 / WHEEL_PRIZES.length;
  * Presentational: an actual segmented wheel that spins to a random prize, reveals
  * it, then hands claiming back to the parent via onClaim. Built from tokens +
  * FrameButton so it matches the app and re-themes with --primary. Prize list is
- * the shared WHEEL_PRIZES.
+ * the series' wheel (`wheelPrizesFor`), and the repository picks where it lands.
  */
-export default function WinnersWheel({ onSpinComplete, onClaim, onBackToCampaign }: WinnersWheelProps) {
+export default function WinnersWheel({ prizes, spin, onSpinComplete, onClaim, onBackToCampaign }: WinnersWheelProps) {
+    const SLICE = 360 / prizes.length;
     const [spinning, setSpinning] = useState(false);
     const [rotation, setRotation] = useState(0);
     const [result, setResult] = useState<WheelPrize | null>(null);
@@ -41,22 +46,26 @@ export default function WinnersWheel({ onSpinComplete, onClaim, onBackToCampaign
     // the whole face. Hard stops at each slice keep crisp wedge edges; a separate
     // radial overlay (CSS) adds the domed sheen so it isn't a flat pie.
     const wheelBackground = useMemo(() => {
-        const stops = WHEEL_PRIZES.map((_, i) => {
+        const stops = prizes.map((_, i) => {
             const from = i * SLICE;
             const to = (i + 1) * SLICE;
             const color = i % 2 === 0 ? 'var(--wheel-wedge-light)' : 'var(--wheel-wedge-dark)';
             return `${color} ${from}deg ${to}deg`;
         }).join(', ');
         return `conic-gradient(from -${SLICE / 2}deg, ${stops})`;
-    }, []);
+    }, [prizes, SLICE]);
 
-    const handleSpin = () => {
+    const handleSpin = async () => {
         if (spinning || result) return;
-
-        const index = Math.floor(Math.random() * WHEEL_PRIZES.length);
-        const prize = WHEEL_PRIZES[index];
-        if (!prize) return;
         setSpinning(true);
+        let prize: WheelPrize;
+        try {
+            prize = await spin();
+        } catch (error) {
+            setSpinning(false);
+            return alertRepoError(error);
+        }
+        const index = Math.max(0, prizes.findIndex((p) => p.id === prize.id));
 
         // Land the chosen wedge under the LEFT pointer (9 o'clock). In the top-
         // clockwise frame the left is 270deg, so rotating wedge i's CENTER (at
@@ -120,12 +129,12 @@ export default function WinnersWheel({ onSpinComplete, onClaim, onBackToCampaign
                 {/* Rim + studs — SPIN WITH the wheel (they're the wheel's body, not a
                     static frame; a still rim would look like a picture frame). */}
                 <div className="wheel__rim" aria-hidden style={spinStyle}>
-                    <WheelRim segments={WHEEL_PRIZES.length} />
+                    <WheelRim segments={prizes.length} />
                 </div>
 
                 {/* Label layer — spins WITH the disc so labels track their wedges */}
                 <div className="wheel__labels" aria-hidden style={spinStyle}>
-                    {WHEEL_PRIZES.map((prize, i) => {
+                    {prizes.map((prize, i) => {
                         // Wedge i's mid-angle, 0deg = top, clockwise. The label strip is
                         // anchored at the hub and rotated by (i*SLICE - 90) to lie along
                         // wedge i. Orientation is STATIC (painted on the wheel), so labels

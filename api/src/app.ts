@@ -11,14 +11,21 @@ import { ensureSessionIndexes } from './auth/sessions';
 import { ensureTokenIndexes } from './auth/tokens';
 import { ensureUserIndexes } from './auth/users';
 import { registerBackground } from './background';
+import { createCardCatalog, type CardCatalog } from './cards/catalog';
 import type { Config } from './config';
 import { connectDb } from './db';
+import { ensurePackIndexes } from './game/packs';
+import { ensureSeriesIndexes } from './game/series';
 import { createMailer, type Mailer } from './mail/mailer';
 import { cors } from './middleware/cors';
 import { originCheck } from './middleware/originCheck';
 import { authRoutes } from './routes/auth';
+import { deckRoutes } from './routes/decks';
 import { googleRoutes } from './routes/google';
 import { healthRoutes } from './routes/health';
+import { matchRoutes } from './routes/matches';
+import { packRoutes } from './routes/packs';
+import { seriesRoutes } from './routes/series';
 import { nextSegmentRewrite } from './static-site';
 
 /** Origins the web app loads from besides its own: card data, pack art, card art. */
@@ -33,6 +40,13 @@ export interface AppOptions {
     googleFetch?: typeof fetch;
     /** Delivers verification and reset emails. Defaults to SMTP from the config. */
     mailer?: Mailer;
+}
+
+declare module 'fastify' {
+    interface FastifyInstance {
+        /** The synced card data, read and cached for game rules. */
+        catalog: CardCatalog;
+    }
 }
 
 /**
@@ -75,6 +89,9 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
     await ensureSessionIndexes(app.db);
     await ensureGoogleIndexes(app.db);
     await ensureTokenIndexes(app.db);
+    await ensureSeriesIndexes(app.db);
+    await ensurePackIndexes(app.db);
+    app.decorate('catalog', createCardCatalog(app.db));
     registerBackground(app);
 
     const publicUrl = config.PUBLIC_URL ?? `http://localhost:${config.PORT}`;
@@ -84,6 +101,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
     await app.register(async (api) => {
         await api.register(cookie);
         api.decorateRequest('user', null);
+        api.decorateRequest('series', null);
         api.addHook('onRequest', cors(config.ALLOWED_ORIGINS));
         api.addHook('onRequest', originCheck(config.ALLOWED_ORIGINS));
         // Scoped hooks only run for routes that exist; this gives CORS preflights one to hit.
@@ -92,6 +110,10 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
         await api.register(healthRoutes);
         const secureCookies = config.NODE_ENV === 'production';
         await api.register(authRoutes, { prefix: '/auth', secureCookies, emailFlows });
+        await api.register(seriesRoutes, { prefix: '/series', catalog: app.catalog });
+        await api.register(packRoutes, { prefix: '/series/:seriesId/packs' });
+        await api.register(matchRoutes, { prefix: '/series/:seriesId' });
+        await api.register(deckRoutes, { prefix: '/series/:seriesId' });
         if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
             await api.register(googleRoutes, {
                 prefix: '/auth/google',

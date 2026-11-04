@@ -15,7 +15,7 @@ import {
     setPasswordAfterReset,
     toPublicUser,
 } from '../auth/users';
-import { requireAuth } from '../middleware/requireAuth';
+import { loadUser, requireAuth } from '../middleware/requireAuth';
 
 /** Per-route limit for endpoints an attacker can hammer: password guesses, sign-up spam. */
 const STRICT_LIMIT = { rateLimit: { max: 10, timeWindow: '1 minute' } };
@@ -86,8 +86,9 @@ export async function authRoutes(app: FastifyInstance, options: { secureCookies:
         return reply.code(204).send();
     });
 
-    app.get('/me', { preHandler: requireAuth }, async (request) => {
-        return { user: toPublicUser(request.user!) };
+    // Every page asks on load, so a guest gets a plain null rather than an error status.
+    app.get('/me', { preHandler: loadUser }, async (request) => {
+        return { user: request.user ? toPublicUser(request.user) : null };
     });
 
     /** Live check for the sign-up form. Rate-limited, since it reveals which names are taken. */

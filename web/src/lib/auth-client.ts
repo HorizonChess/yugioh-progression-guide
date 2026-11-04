@@ -8,7 +8,7 @@ import { PublicUserSchema, type PublicUser } from "@ygo/shared";
  * server runs on :3000); the API's ALLOWED_ORIGINS must then list this origin.
  * The session lives in an httpOnly cookie, so every call sends credentials.
  */
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 /** Where Google sign-in starts; a full-page navigation, not a fetch. */
 export const GOOGLE_START_URL = `${API_BASE}/api/auth/google/start`;
@@ -80,8 +80,9 @@ const parseNothing = (): true => true;
 
 /** The signed-in user, or null when signed out. */
 export async function getMe(): Promise<PublicUser | null> {
-    const result = await call("/me", "GET", undefined, parseUser);
-    return result.ok ? result.data : null;
+    // `false` marks a clean "signed out", which isn't a parse failure.
+    const result = await call("/me", "GET", undefined, (body) => (isRecord(body) && body.user === null ? false : parseUser(body)));
+    return result.ok && result.data ? result.data : null;
 }
 
 export const signUp = (input: { email: string; password: string; duelistName: string }) => call("/signup", "POST", input, parseUser);

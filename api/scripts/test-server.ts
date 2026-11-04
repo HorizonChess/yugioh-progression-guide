@@ -6,12 +6,16 @@
 //
 // Captured email is readable at GET /__test/mail (cleared by DELETE /__test/mail).
 // Start the web dev server pointing at it:  NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web
+//
+// When api/.env has MONGODB_URI, the synced card data is copied (read-only) from
+// that database, so packs and rewards work; nothing is ever written back to it.
+import { MongoClient } from 'mongodb';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { buildApp } from '../src/app';
 import { loadConfig } from '../src/config';
 import type { Mail } from '../src/mail/mailer';
 
-const port = Number(process.env.PORT ?? 4100);
+const port = Number(process.env.TEST_PORT ?? 4100);
 const webOrigin = process.env.WEB_URL ?? 'http://localhost:3000';
 
 const mongo = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: 'wiredTiger' } });
@@ -36,6 +40,17 @@ const app = await buildApp({
         },
     },
 });
+
+if (process.env.MONGODB_URI) {
+    const source = await new MongoClient(process.env.MONGODB_URI).connect();
+    const from = source.db(process.env.MONGODB_DB ?? 'ygo-progression');
+    for (const name of ['cardSets', 'cards']) {
+        const docs = await from.collection(name).find().toArray();
+        if (docs.length) await app.db.collection(name).insertMany(docs);
+        console.log(`Copied ${docs.length} ${name}`);
+    }
+    await source.close();
+}
 
 app.get('/__test/mail', async () => sent);
 app.delete('/__test/mail', async (_request, reply) => {

@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "sync-cards": "tsx --env-file-if-exists=.env scripts/sync-cards.ts",
-    "test-server": "tsx scripts/test-server.ts",
+    "test-server": "tsx --env-file-if-exists=.env scripts/test-server.ts",
     "promote-admin":"tsx --env-file-if-exists=.env scripts/promote-admin.ts"
   },
   "dependencies": {

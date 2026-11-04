@@ -328,3 +328,29 @@ Done:
 Verified by hand on 2026-11-04 against Atlas and real Google: Google sign-in with the duelist-name step, Gmail delivery, and `promote-admin` (the account `HorizonDev` is the user's admin test account; keep it). Before inviting other players: publish the Google app out of Testing mode, since only listed test users can sign in until then.
 
 Known: sign-up answers 409 for a taken email, so it can reveal that an email is registered. Reset and verify will not.
+
+### Phase 3: server solo series (in progress, branch `feat/server-solo-series`)
+Broken into small commits, each tested on its own:
+1. **Shared rules and series input** (`shared/src/rules.ts`, `schemas/series.ts`): packs per set {12, 24, 30}, the series-creation rules, and the "can these packs be opened" gate.
+2. **Card catalog on the server**: the timeline and tournament sets computed from the synced `cardSets` (the same `timelineSets` the web uses, so set indexes match), cards by set, and a crypto RNG (48 random bits per draw, under `crypto.randomInt`'s cap).
+3. **Solo series**: create, list and read your own series; `requireSeriesMember`. Each series stores its rules, set index, banlist and match history; each player's collection, decks and reward ledger live in `seriesPlayers`.
+4. **Pack sessions**: open once for the current set, persist flips, resume after a reload, save into the collection (transaction), and reroll with a Redoer Ticket.
+5. **Match results and the wheel**: solo reports apply at once, and only after the current set's opening is saved. A win creates a wheel-spin reward and a loss creates pity packs, and the set advances. `POST /rewards/:id/spin` picks the prize on the server. Redoer Ticket joins the wheel here.
+6. **Reward claims**: wildcard, starlight, tournament and pity (as pack sessions), ban and unban, Redoer Ticket. Every eligibility rule the browser used to check is re-checked on the server.
+7. **Decks and YDK import**: server-side deck save and validation (owned cards only), and the collection import at creation, or anytime in solo.
+8. **Web**: a `GameRepository` with `LocalRepo` (today's localStorage behaviour, for guests) and `RemoteRepo`; `ProgressionContext` becomes async commands; the pages call it; `WinnersWheel` lands on the server's prize. Playwright `pack-session.mjs`, and `smoke.mjs` updated.
+
+Step 8 as built:
+- `web/src/lib/repo/` holds `GameRepository` (types.ts), `RemoteRepo` and `LocalRepo`. `reportMatch` already returns `applied | pending`, so duo reports (Phase 4) fit without changing callers; Snatch Steal will be one more `claimReward` kind.
+- `AuthContext` (user, loading, refresh) picks the repo. Phase 5 adds sign-in and sign-out to it.
+- `ProgressionContext` exposes `series` / `me` and async commands; refusals are `RepoError`s that pages show with `alertRepoError`.
+- Until Phase 5's campaign menu, the existing save list is the series picker (signed in, it lists server series).
+- Guests keep free pack opening (any count, earlier sets), now through `LocalRepo`. A won match books a wheel spin that can be spun later from Rewards (`/record-match?spin=<id>`), for guests too.
+- Reward-claim rules live in `@ygo/shared` `claims.ts`, used by the server and `LocalRepo`.
+- Server additions: `DELETE /api/series/:id` (solo), `GET …/packs/active?kind=set|reward`, an empty collection replace clears it, and `GET /api/auth/me` answers `{ user: null }` for guests instead of 401.
+- `npm run test-server -w @ygo/api` copies the card data (read-only) from api/.env's database. `web/scripts/drivers/pack-session.mjs` covers create, open, reload-resume, save, the once-per-set refusal, and win → server spin.
+
+Decided with the user (2026-11-04):
+- Snatch Steal is left off the wheel in solo series; there's no rival to steal from. The wheel the server spins depends on the series mode (step 5).
+- A saved position keeps the set's name as well as its index, on series (server) and guest saves (web), and the name wins when the two disagree. Guest saves written before this are translated once using the old date-only order, so they stay on the set they meant.
+- The 50-series cap is per player (how many runs one account can have), a guard against scripted creation; reads aren't limited beyond the normal rate limit.

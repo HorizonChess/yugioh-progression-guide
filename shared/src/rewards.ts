@@ -28,7 +28,16 @@ export const WHEEL_PRIZES = [
     { id: "ban", label: "Ban a Card", short: "Ban" },
     { id: "unban", label: "Unban a Card", short: "Unban" },
     { id: "snatch-steal", label: "Snatch Steal", short: "Snatch Steal" },
+    { id: "redoer-ticket", label: "Redoer Ticket", short: "Redoer" },
 ] as const satisfies readonly PrizeDef[];
+
+/** Snatch Steal needs a rival, so solo wheels leave it off. */
+export function wheelPrizesFor(mode: "solo" | "duo"): readonly WheelPrize[] {
+    return mode === "solo" ? WHEEL_PRIZES.filter((p) => p.id !== "snatch-steal") : WHEEL_PRIZES;
+}
+
+/** A won match's reward before the server spins the wheel for it. */
+export const SPIN_PRIZE = { id: "wheel-spin", label: "Wheel Spin", short: "Spin" } as const satisfies PrizeDef;
 
 /**
  * The Defeat (loss) reward. NOT a wheel prize — the wheel is win-only — so it's
@@ -43,13 +52,13 @@ export const PITY_PRIZE = {
 } as const satisfies PrizeDef;
 
 /** Every prize a reward can carry: the wheel prizes plus the pity prize. */
-export type PrizeId = (typeof WHEEL_PRIZES)[number]["id"] | typeof PITY_PRIZE.id;
+export type PrizeId = (typeof WHEEL_PRIZES)[number]["id"] | typeof PITY_PRIZE.id | typeof SPIN_PRIZE.id;
 
 export interface WheelPrize extends PrizeDef {
     id: PrizeId;
 }
 
-const ALL_PRIZES: readonly WheelPrize[] = [...WHEEL_PRIZES, PITY_PRIZE];
+const ALL_PRIZES: readonly WheelPrize[] = [...WHEEL_PRIZES, PITY_PRIZE, SPIN_PRIZE];
 
 export function isPrizeId(value: unknown): value is PrizeId {
     return ALL_PRIZES.some((p) => p.id === value);
@@ -104,7 +113,9 @@ export type PrizeKind =
     | "pity"
     | "ban"
     | "unban"
-    | "snatch";
+    | "snatch"
+    | "redoer"
+    | "spin";
 
 const PRIZE_KIND: Record<PrizeId, PrizeKind> = {
     "wildcard-common": "wildcard",
@@ -118,6 +129,8 @@ const PRIZE_KIND: Record<PrizeId, PrizeKind> = {
     ban: "ban",
     unban: "unban",
     "snatch-steal": "snatch",
+    "redoer-ticket": "redoer",
+    "wheel-spin": "spin",
 };
 
 /** Map a prizeId to the claim flow that resolves it. */

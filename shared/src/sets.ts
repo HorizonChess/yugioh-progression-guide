@@ -43,7 +43,14 @@ export const TOURNAMENT_KEYWORDS = [
     "Astral Pack",
 ] as const;
 
-const byDate = (a: CardSet, b: CardSet) => new Date(a.tcg_date).getTime() - new Date(b.tcg_date).getTime();
+/**
+ * Release date, then name. The name tiebreak makes the order independent of
+ * the order sets arrive in (YGOPRODeck's response vs. MongoDB's), so a set
+ * index means the same set in the browser and on the server. Two pairs of
+ * timeline sets share a release date.
+ */
+const byDate = (a: CardSet, b: CardSet) =>
+    new Date(a.tcg_date).getTime() - new Date(b.tcg_date).getTime() || (a.set_name < b.set_name ? -1 : a.set_name > b.set_name ? 1 : 0);
 
 /** True if `set` belongs on the progression timeline (dated, pre-cutoff, a real booster, not a side product). */
 export function isTimelineSet(set: CardSet): boolean {
@@ -63,6 +70,19 @@ export function isTournamentSet(set: CardSet): boolean {
 /** The progression timeline: `currentSetIndex` is an index into this list. */
 export function timelineSets(rawSets: readonly CardSet[]): CardSet[] {
     return rawSets.filter(isTimelineSet).sort(byDate);
+}
+
+/**
+ * Where the set called `setName` sits on `timeline`. A saved position is
+ * remembered by name as well as by index because the index alone can drift:
+ * a re-sync that adds a set shifts every later index, and sets released on
+ * the same day once sorted differently. The name wins whenever the two
+ * disagree; `fallbackIndex` is used only if the name is unknown (or missing).
+ */
+export function resolveSetIndex(timeline: readonly CardSet[], setName: string | undefined, fallbackIndex: number): number {
+    if (setName === undefined || timeline[fallbackIndex]?.set_name === setName) return fallbackIndex;
+    const found = timeline.findIndex((set) => set.set_name === setName);
+    return found === -1 ? fallbackIndex : found;
 }
 
 /** The tournament-pack pool, ascending by date. */

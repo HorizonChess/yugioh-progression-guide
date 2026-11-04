@@ -1,13 +1,15 @@
 "use client";
 
-import { useProgression } from "@/context/ProgressionContext";
-import { fetchAllSets, fetchTournamentSets, fetchCardsInSet, fetchCardsByIds, Card, PulledCard } from "@/lib/api";
+import { alertRepoError, useProgression } from "@/context/ProgressionContext";
+import { fetchCardsByIds, Card } from "@/lib/api";
+import type { Opening } from "@/lib/repo/types";
+import { useRouter } from "next/navigation";
 import { RewardEntry, resolvePrizeKind, claimedCardId } from "@/lib/rewards";
 import { useEffect, useMemo, useState } from "react";
 import StonePanel from "@/components/ui/StonePanel";
 import GuideSprite from "@/components/layout/GuideSprite";
 import RewardCard from "@/components/rewards/RewardCard";
-import PackRevealModal, { RevealSource } from "@/components/rewards/PackRevealModal";
+import PackRevealModal from "@/components/rewards/PackRevealModal";
 import WildcardModal from "@/components/rewards/WildcardModal";
 import StarlightSearchModal from "@/components/rewards/StarlightSearchModal";
 import BanInput from "@/components/rewards/BanInput";
@@ -38,11 +40,13 @@ import CardDetailModal from "@/components/card/CardDetailModal";
 
 /** Shown on prizes whose claim flow isn't built yet (snatch-steal). */
 const LOCKED_NOTE = "Requires multiplayer — coming soon";
+const REDOER_NOTE = "Spend it from the pack summary to reroll an opening";
 
 export default function RewardsPage() {
-    const { rewards, claimRewardEntry, addToCollection, banCard, unbanCard, bannedCardIds } = useProgression();
-    /** The reward whose 3-pack reveal modal is open (pity or tournament), if any. */
-    const [revealEntry, setRevealEntry] = useState<RewardEntry | null>(null);
+    const { rewards, bannedCardIds, hasLoaded, claimReward, activeOpening, flip, saveOpening } = useProgression();
+    const router = useRouter();
+    /** The pity or tournament packs being opened, if any. */
+    const [revealOpening, setRevealOpening] = useState<Opening | null>(null);
     /** The reward whose wildcard card-picker modal is open, if any. */
     const [wildcardEntry, setWildcardEntry] = useState<RewardEntry | null>(null);
     /** The reward whose starlight full-catalog search modal is open, if any. */
@@ -95,70 +99,41 @@ export default function RewardsPage() {
         };
     };
 
-    // Which set a reward's 3 packs open from — the only thing that differs
-    // between pity and tournament. Passed to the shared PackRevealModal.
-    const resolveSource = async (entry: RewardEntry): Promise<RevealSource> => {
-        const kind = resolvePrizeKind(entry.prizeId);
-        if (kind === "tournament") {
-            const [sets, tournamentSets] = await Promise.all([fetchAllSets(), fetchTournamentSets()]);
-            const anchorDate = sets[entry.wonFromSetIndex]?.tcg_date;
-            // Latest tournament set released before the won pack (fall back to the
-            // latest available if the anchor date can't be resolved).
-            const eligible = anchorDate
-                ? tournamentSets.filter((s) => s.tcg_date < anchorDate)
-                : tournamentSets;
-            const set = (eligible.length ? eligible : tournamentSets).at(-1) ?? null;
-            const cards = set ? await fetchCardsInSet(set.set_name) : [];
-            return { set, cards };
+    // A reload mid-reveal comes back to the same packs.
+    useEffect(() => {
+        if (!hasLoaded) return;
+        activeOpening("reward").then((o) => o && setRevealOpening(o)).catch(() => undefined);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- once after loading
+    }, [hasLoaded]);
+
+    /** Claims `entry` (with a picked card for single-card prizes) and closes its modal. */
+    const claim = async (entry: RewardEntry, cardId: number | undefined, close: () => void) => {
+        try {
+            const opening = await claimReward(entry.id, cardId);
+            close();
+            if (opening) setRevealOpening(opening);
+        } catch (error) {
+            alertRepoError(error);
         }
-        // pity → the just-finished CORE set the match was lost against.
-        const sets = await fetchAllSets();
-        const set = sets[entry.wonFromSetIndex] ?? null;
-        const cards = set ? await fetchCardsInSet(set.set_name) : [];
-        return { set, cards };
     };
 
-    // --- Collect the opened packs (pity or tournament) and claim the reward ---
-    const collectReveal = (cards: PulledCard[]) => {
-        if (!revealEntry) return;
-        addToCollection(cards);
-        claimRewardEntry(revealEntry.id, { grantedCardIds: cards.map((c) => c.id) });
-        setRevealEntry(null);
+    const collectReveal = async () => {
+        if (!revealOpening) return;
+        try {
+            await saveOpening(revealOpening.id);
+            setRevealOpening(null);
+        } catch (error) {
+            alertRepoError(error);
+        }
     };
 
-    // --- Wildcard: grant the single chosen card and claim the reward ---
-    const chooseWildcard = (card: PulledCard) => {
-        if (!wildcardEntry) return;
-        addToCollection([card]);
-        claimRewardEntry(wildcardEntry.id, { grantedCardId: card.id });
-        setWildcardEntry(null);
-    };
-
-    // --- Starlight: grant the single searched card and claim the reward ---
-    const chooseStarlight = (card: PulledCard) => {
-        if (!starlightEntry) return;
-        addToCollection([card]);
-        claimRewardEntry(starlightEntry.id, { grantedCardId: card.id });
-        setStarlightEntry(null);
-    };
-
-    // --- Ban / Unban: mark (or unmark) the card cosmetically and claim ---
-    const pickBanTarget = (card: Card) => {
-        if (!banEntry) return;
-        const kind = resolvePrizeKind(banEntry.prizeId);
-        if (kind === "ban") banCard(card.id);
-        else unbanCard(card.id);
-        claimRewardEntry(banEntry.id, { bannedCardId: card.id });
-        setBanEntry(null);
-    };
-
-    // The claim button for an available entry, by prize kind; null = still locked.
+    // The claim button for an available entry, by prize kind; null = locked.
     const claimAction = (entry: RewardEntry): { label: string; onClick: () => void } | null => {
         const kind = resolvePrizeKind(entry.prizeId);
         switch (kind) {
             case "pity":
             case "tournament":
-                return { label: "Open 3 Packs", onClick: () => setRevealEntry(entry) };
+                return { label: "Open 3 Packs", onClick: () => claim(entry, undefined, () => undefined) };
             case "wildcard":
                 return { label: "Choose Card", onClick: () => setWildcardEntry(entry) };
             case "starlight":
@@ -166,17 +141,21 @@ export default function RewardsPage() {
             case "ban":
             case "unban":
                 return { label: kind === "ban" ? "Ban a Card" : "Unban a Card", onClick: () => setBanEntry(entry) };
+            case "spin":
+                return { label: "Spin the Wheel", onClick: () => router.push(`/record-match?spin=${entry.id}`) };
             case "snatch":
+            case "redoer":
                 return null;
         }
     };
 
     const renderAvailable = (entry: RewardEntry) => {
         const action = claimAction(entry);
+        const note = resolvePrizeKind(entry.prizeId) === "redoer" ? REDOER_NOTE : LOCKED_NOTE;
         return action ? (
             <RewardCard key={entry.id} entry={entry} actionLabel={action.label} onAction={action.onClick} />
         ) : (
-            <RewardCard key={entry.id} entry={entry} locked lockedNote={LOCKED_NOTE} />
+            <RewardCard key={entry.id} entry={entry} locked lockedNote={note} />
         );
     };
 
@@ -229,19 +208,19 @@ export default function RewardsPage() {
 
             <GuideSprite />
 
-            {revealEntry && (
+            {revealOpening && (
                 <PackRevealModal
-                    entry={revealEntry}
-                    resolveSource={resolveSource}
+                    opening={revealOpening}
+                    onFlip={(flipped) => void flip(revealOpening.id, flipped).catch(() => undefined)}
                     onCollect={collectReveal}
-                    onClose={() => setRevealEntry(null)}
+                    onClose={() => setRevealOpening(null)}
                 />
             )}
 
             {wildcardEntry && (
                 <WildcardModal
                     entry={wildcardEntry}
-                    onChoose={chooseWildcard}
+                    onChoose={(card) => claim(wildcardEntry, card.id, () => setWildcardEntry(null))}
                     onClose={() => setWildcardEntry(null)}
                 />
             )}
@@ -249,7 +228,7 @@ export default function RewardsPage() {
             {starlightEntry && (
                 <StarlightSearchModal
                     entry={starlightEntry}
-                    onChoose={chooseStarlight}
+                    onChoose={(card) => claim(starlightEntry, card.id, () => setStarlightEntry(null))}
                     onClose={() => setStarlightEntry(null)}
                 />
             )}
@@ -258,7 +237,7 @@ export default function RewardsPage() {
                 <BanInput
                     mode={resolvePrizeKind(banEntry.prizeId) === "unban" ? "unban" : "ban"}
                     bannedCardIds={bannedCardIds}
-                    onPick={pickBanTarget}
+                    onPick={(card) => claim(banEntry, card.id, () => setBanEntry(null))}
                     onClose={() => setBanEntry(null)}
                 />
             )}

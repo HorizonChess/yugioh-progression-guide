@@ -43,7 +43,7 @@ async function fetchCardInfo(query: string): Promise<Card[]> {
     return (body.data as Card[]).map(transformCardImages);
 }
 
-async function fetchRawSets(): Promise<CardSet[]> {
+export async function fetchRawSets(): Promise<CardSet[]> {
     if (!rawSetsPromise) {
         rawSetsPromise = (async () => {
             const response = await fetch(`${BASE_URL}/cardsets.php`);

@@ -226,7 +226,7 @@ describe('returning and linked sign-in', () => {
         const back = await callback(flow);
         expect(outcome(back)).toBe('ok');
 
-        expect((await app.inject({ url: '/api/auth/me', headers: { cookie: attackerCookie } })).statusCode).toBe(401);
+        expect((await app.inject({ url: '/api/auth/me', headers: { cookie: attackerCookie } })).json().user).toBeNull();
         const login = await app.inject({
             method: 'POST',
             url: '/api/auth/login',

@@ -1,6 +1,7 @@
 "use client";
 
-import { useProgression } from "@/context/ProgressionContext";
+import { alertRepoError, useProgression } from "@/context/ProgressionContext";
+import { RepoError } from "@/lib/repo/types";
 import { fetchAllSets, CardSet } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,7 @@ import RecordMatch from "@/components/record-match/RecordMatch";
 import WinnersWheel from "@/components/record-match/WinnersWheel";
 import DefeatAct from "@/components/record-match/DefeatAct";
 import GuideSprite from "@/components/layout/GuideSprite";
-import { WheelPrize, PITY_PRIZE, PrizeId } from "@/lib/rewards";
+import { wheelPrizesFor } from "@ygo/shared";
 
 /**
  * The Record Match screen (route: /record-match). Wraps the record-match
@@ -29,19 +30,20 @@ import { WheelPrize, PITY_PRIZE, PrizeId } from "@/lib/rewards";
  * is a stable stage and the acts change on it. Degrades to a plain cross-fade
  * under prefers-reduced-motion.
  *
- * Rewards are created when the outcome is CLAIMED (win → the spun WheelPrize,
- * loss → the PITY_PRIZE) and pushed onto the persisted ledger via addReward —
- * NOT in recordMatch (which is now append-only). See rewards-tab plan.
+ * Reporting the result books the reward (a wheel spin or pity packs) and
+ * advances the set; a spin left for later is resumed with ?spin=<rewardId>.
  */
 type Stage = "board" | "wheel" | "defeat";
 
 export default function RecordMatchPage() {
-    const { matchHistory, recordMatch, advanceSet, addReward, currentSetIndex } = useProgression();
+    const { matchHistory, reportMatch, spin, currentSetIndex, series } = useProgression();
     const router = useRouter();
     const reduceMotion = useReducedMotion();
     const [sets, setSets] = useState<CardSet[]>([]);
     const [loading, setLoading] = useState(true);
     const [stage, setStage] = useState<Stage>("board");
+    /** The unspun reward the wheel is for. */
+    const [spinRewardId, setSpinRewardId] = useState<string | null>(null);
 
     useEffect(() => {
         async function loadSets() {
@@ -50,6 +52,14 @@ export default function RecordMatchPage() {
             setLoading(false);
         }
         loadSets();
+        // /record-match?spin=<rewardId> comes back to spin a reward left unspun.
+        const pendingSpin = new URLSearchParams(window.location.search).get("spin");
+        if (pendingSpin) {
+            /* eslint-disable react-hooks/set-state-in-effect -- read once from the URL */
+            setSpinRewardId(pendingSpin);
+            setStage("wheel");
+            /* eslint-enable react-hooks/set-state-in-effect */
+        }
     }, []);
 
     // Win rate and current streak from match history
@@ -66,58 +76,20 @@ export default function RecordMatchPage() {
     }
     const streakDisplay = streak === 0 ? "--" : streak > 0 ? `+${streak}` : `${streak}`;
 
-    const handleRecordMatch = (winner: "player" | "opponent") => {
-        const currentSet = sets[currentSetIndex];
-        if (!currentSet) return;
-
-        // Append the match result (append-only; the reward is created on claim).
-        recordMatch({ winner, packName: currentSet.set_name, date: new Date().toISOString() });
-
-        // Swap the panel's CONTENTS: board vortexes out, the outcome act curtains
-        // in. Same persistent panel for both win and loss.
-        setStage(winner === "player" ? "wheel" : "defeat");
-    };
-
-    // The pack this match was played against — recorded on every reward so its
-    // claim flow can reference the source pack (details view, date gates).
-    const currentSetForRewards = sets[currentSetIndex];
-
-    // Push a won reward onto the ledger, then advance the set. Shared by the win
-    // (spun prize) and loss (pity) claim paths.
-    const grantReward = (prizeId: PrizeId) => {
-        if (currentSetForRewards) {
-            addReward({
-                prizeId,
-                wonFromPackName: currentSetForRewards.set_name,
-                wonFromSetIndex: currentSetIndex,
-            });
+    // Reporting advances the set and books the reward (a wheel spin or pity
+    // packs) at once; the act that follows only spends it.
+    const handleRecordMatch = async (winner: "player" | "opponent") => {
+        try {
+            const outcome = await reportMatch(winner === "player");
+            if (outcome.status === "applied") setSpinRewardId(outcome.reward.id);
+            setStage(winner === "player" ? "wheel" : "defeat");
+        } catch (error) {
+            alertRepoError(error);
         }
-        advanceSet();
     };
 
-    // WIN: the spun wheel prize is claimed → land it in the ledger → /rewards.
-    const handleClaimPrize = (prize: WheelPrize) => {
-        grantReward(prize.id);
-        router.push("/rewards");
-    };
-
-    // WIN: skip the ledger detour and head back to the map (set still advances).
-    const handleWinBackToCampaign = () => {
-        advanceSet();
-        router.push("/timeline");
-    };
-
-    // LOSS: claim the pity packs → land the pity reward in the ledger → /rewards.
-    const handleClaimPity = () => {
-        grantReward(PITY_PRIZE.id);
-        router.push("/rewards");
-    };
-
-    // LOSS: skip the pity reward for now, back to the map (set still advances).
-    const handleDefeatBackToCampaign = () => {
-        advanceSet();
-        router.push("/timeline");
-    };
+    const toRewards = () => router.push("/rewards");
+    const toTimeline = () => router.push("/timeline");
 
     if (loading) {
         return (
@@ -173,7 +145,12 @@ export default function RecordMatchPage() {
                                 animate={curtainsAnimate}
                                 transition={{ duration: reduceMotion ? 0.25 : 0.5, ease: "easeOut", delay: reduceMotion ? 0 : 0.05 }}
                             >
-                                <WinnersWheel onClaim={handleClaimPrize} onBackToCampaign={handleWinBackToCampaign} />
+                                <WinnersWheel
+                                    prizes={wheelPrizesFor(series?.mode ?? "solo")}
+                                    spin={() => (spinRewardId ? spin(spinRewardId) : Promise.reject(new RepoError("No reward to spin")))}
+                                    onClaim={toRewards}
+                                    onBackToCampaign={toTimeline}
+                                />
                             </motion.div>
                         )}
 
@@ -185,7 +162,7 @@ export default function RecordMatchPage() {
                                 animate={curtainsAnimate}
                                 transition={{ duration: reduceMotion ? 0.25 : 0.5, ease: "easeOut", delay: reduceMotion ? 0 : 0.05 }}
                             >
-                                <DefeatAct onClaimPity={handleClaimPity} onBackToCampaign={handleDefeatBackToCampaign} />
+                                <DefeatAct onClaimPity={toRewards} onBackToCampaign={toTimeline} />
                             </motion.div>
                         )}
                     </AnimatePresence>

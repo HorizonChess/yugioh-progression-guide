@@ -1,6 +1,6 @@
 "use client";
 
-import { useProgression, SavedDeck } from "@/context/ProgressionContext";
+import { alertRepoError, useProgression, SavedDeck } from "@/context/ProgressionContext";
 import GuideSprite from "@/components/layout/GuideSprite";
 import ScaleWrapper from "@/components/deck-builder/ScaleWrapper";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -120,7 +120,7 @@ export default function DeckBuilder() {
     }, [mainDeck]);
 
     // --- Actions ---
-    const handleSaveDeck = () => {
+    const handleSaveDeck = async () => {
         if (!deckName.trim()) return alert("Please enter a deck name.");
         if (mainDeck.length < 40) {
             if (!confirm("Main Deck is under 40 cards. Save anyway?")) return;
@@ -141,8 +141,12 @@ export default function DeckBuilder() {
             deckData.id = existing.id;
         }
 
-        saveDeck(deckData);
-        alert("Deck Saved!");
+        try {
+            await saveDeck(deckData);
+            alert("Deck Saved!");
+        } catch (error) {
+            alertRepoError(error);
+        }
     };
 
     const handleLoadDeck = async (deck: SavedDeck) => {
@@ -173,7 +177,7 @@ export default function DeckBuilder() {
     };
 
     const handleDeleteDeck = (id: string) => {
-        if (confirm("Delete this deck?")) deleteDeck(id);
+        if (confirm("Delete this deck?")) deleteDeck(id).catch(alertRepoError);
     };
 
     const handleClearDeck = () => {

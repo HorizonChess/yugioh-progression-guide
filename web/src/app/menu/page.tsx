@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { asset } from '@/lib/utils';
 import SaveSlotList from "@/components/layout/SaveSlotList";
+import { useAuth } from "@/context/AuthContext";
+import { useProgression } from "@/context/ProgressionContext";
 import MenuItem, { MenuItemData } from "@/components/menu/MenuItem";
 
 /**
@@ -13,11 +15,24 @@ import MenuItem, { MenuItemData } from "@/components/menu/MenuItem";
  */
 export default function Menu() {
     const [view, setView] = useState<"menu" | "saves">("menu");
+    const { activeSeriesId } = useProgression();
+    const { user, loading, signOut } = useAuth();
 
     const menuItems: MenuItemData[] = [
         { label: "CAMPAIGN MODE", action: () => setView("saves"), description: "Continue your progression journey" },
-        { label: "CARD COLLECTION", href: "/collection", description: "View your acquired cards" },
+        {
+            label: "CARD COLLECTION",
+            href: "/collection",
+            description: activeSeriesId ? "View your acquired cards" : "Pick a save in Campaign Mode first",
+            disabled: !activeSeriesId,
+        },
         { label: "OPTIONS", href: "#", description: "Configure game settings", disabled: true },
+        // Plain account entries until the Duelist Kingdom invitation (Phase 5) replaces the sign-in page.
+        ...(loading
+            ? []
+            : user
+              ? [{ label: "SIGN OUT", action: () => void signOut(), description: `Signed in as ${user.duelistName}` }]
+              : [{ label: "SIGN IN", href: "/dev/auth/", description: "Sign in or create an account to play online" }]),
         { label: "EXIT GAME", href: "/", description: "Return to title screen" },
     ];
 

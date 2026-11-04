@@ -12,6 +12,7 @@ export default function StoreView({
     set,
     cardCount,
     isLocked,
+    lockedMessage = "You must complete previous sets to unlock pack opening for this set.",
     quantity,
     setQuantity,
     onOpen,
@@ -21,8 +22,10 @@ export default function StoreView({
     set: CardSet;
     cardCount: number;
     isLocked: boolean;
+    lockedMessage?: string;
     quantity: number;
-    setQuantity: (n: number) => void;
+    /** Omitted when the pack count is fixed (server series). */
+    setQuantity?: (n: number) => void;
     onOpen: () => void;
     onViewDetails: () => void;
     onBack: () => void;
@@ -78,7 +81,7 @@ export default function StoreView({
 
                 {isLocked ? (
                     <div className="p-6 stone-panel text-center">
-                        <p className="text-gray-400 mb-6">You must complete previous sets to unlock pack opening for this set.</p>
+                        <p className="text-gray-400 mb-6">{lockedMessage}</p>
                         <button
                             onClick={onViewDetails}
                             className="w-full px-6 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all flex items-center justify-center gap-2"
@@ -89,8 +92,16 @@ export default function StoreView({
                     </div>
                 ) : (
                     <div className="p-6 stone-panel">
-                        <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4 drop-shadow-md">Select Quantity</h3>
-                        <QuantitySelector quantity={quantity} setQuantity={setQuantity} onOpen={onOpen} />
+                        {setQuantity ? (
+                            <>
+                                <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4 drop-shadow-md">Select Quantity</h3>
+                                <QuantitySelector quantity={quantity} setQuantity={setQuantity} onOpen={onOpen} />
+                            </>
+                        ) : (
+                            <button onClick={onOpen} className="w-full px-6 py-4 bg-primary text-black font-black rounded-xl uppercase tracking-widest hover:brightness-110 transition-all">
+                                Open {quantity} Packs
+                            </button>
+                        )}
                     </div>
                 )}
 

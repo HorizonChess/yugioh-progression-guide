@@ -141,8 +141,8 @@ describe('password reset', () => {
         const reset = await post('/api/auth/password/reset', { token, password: 'a brand new password' });
         expect(reset.statusCode).toBe(204);
 
-        expect((await me(cookie)).statusCode).toBe(401);
-        expect((await me(otherCookie)).statusCode).toBe(401);
+        expect((await me(cookie)).json().user).toBeNull();
+        expect((await me(otherCookie)).json().user).toBeNull();
         expect((await post('/api/auth/login', { identifier: 'yami', password: yami.password })).statusCode).toBe(401);
         const login = await post('/api/auth/login', { identifier: 'yami', password: 'a brand new password' });
         expect(login.statusCode).toBe(200);
