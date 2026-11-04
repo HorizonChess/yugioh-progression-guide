@@ -321,6 +321,10 @@ Done:
 
 - `npm run promote-admin -w @ygo/api -- <email or duelist name> [--demote] [--allow-unverified]` is the only way to become an admin (no HTTP route). It refuses unconfirmed emails unless told otherwise and writes each change to `auditLog`.
 
-Still to do: the plain test sign-in/up form (including the `?verify=`, `?reset=` and `?google=` landings), and a real-world check of Google sign-in and a delivered email.
+- Plain test page at `/dev/auth/` (web), which is also where email links and the Google redirect land (`AUTH_PAGE_PATH` in `api/src/auth/landing.ts`; Phase 5 moves it to `/menu/`). `ALLOWED_ORIGINS` also enables CORS for the Next dev server.
+- `npm run test-server -w @ygo/api` runs the API on an in-memory database with captured email, and `web/scripts/drivers/auth.mjs` drives sign-up, confirmation, sign-in, and reset through it in a real browser.
+- Verified: lint, typecheck, 27 shared + 70 API + 36 web tests, the build, the auth driver (26 checks) and the existing smoke driver. A real test email was accepted by Gmail.
+
+Still to do before merging Phase 2: the user's own real Google sign-in click-through (`http://localhost:4000/api/auth/google/start`), and promoting their account with `promote-admin` once it exists in Atlas. Before inviting other players: publish the Google app out of Testing mode (only listed test users can sign in until then).
 
 Known: sign-up answers 409 for a taken email, so it can reveal that an email is registered. Reset and verify will not.
