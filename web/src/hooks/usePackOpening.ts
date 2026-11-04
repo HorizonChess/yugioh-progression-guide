@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { Card, CardSet, PulledCard } from "@/lib/api";
-import { generateBoosterPack } from "@/lib/pack-logic";
+import { Card, PulledCard } from "@/lib/api";
+import { flatIndex } from "@/lib/repo/types";
 
 /**
- * Pack-opener orchestration extracted from the /packs page: the reveal
- * lifecycle (generate N packs → flip cards → advance packs → summary) and the
- * accumulated `allOpenedCards`. UI concerns stay in the caller — the card-detail
- * modal (opened via `onAlreadyFlipped`) and which shell to render (`isOpening` /
- * `showSummary`). Shared by /packs and the tournament-packs reward modal.
+ * The pack reveal lifecycle (flip cards → advance packs → summary) and the
+ * accumulated `allOpenedCards`, for packs rolled by the repository. `onFlip`
+ * hears each newly face-up card (as flat indexes) so the opening can resume.
+ * Shared by /packs and the reward pack reveal.
  */
-export function usePackOpening() {
+export function usePackOpening(onFlip?: (flipped: number[]) => void) {
     const [packsToOpen, setPacksToOpen] = useState<PulledCard[][]>([]);
     const [currentPackIndex, setCurrentPackIndex] = useState(0);
     const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
@@ -17,45 +16,41 @@ export function usePackOpening() {
     const [isOpening, setIsOpening] = useState(false);
     const [showSummary, setShowSummary] = useState(false);
 
-    /** Generate `count` booster packs from `setCards`/`set` and enter the reveal. */
-    const openPacks = (setCards: Card[], set: CardSet | null, count: number) => {
-        if (!setCards.length || count <= 0 || !set) return;
-
-        const newPacks: PulledCard[][] = [];
-        for (let i = 0; i < count; i++) {
-            newPacks.push(generateBoosterPack(setCards, set));
-        }
-
-        setPacksToOpen(newPacks);
-        setCurrentPackIndex(0);
-        setFlippedCards(new Set());
-        setAllOpenedCards([]);
+    /** Enter the reveal for `packs`, resuming at the last pack with a face-up card. */
+    const start = (packs: PulledCard[][], flipped: readonly number[] = []) => {
+        if (!packs.length) return;
+        const resumeAt = flipped.length ? Math.min(Math.max(...flipped.map((i) => Math.floor(i / 100))), packs.length - 1) : 0;
+        setPacksToOpen(packs);
+        setCurrentPackIndex(resumeAt);
+        setFlippedCards(new Set(flipped.filter((i) => Math.floor(i / 100) === resumeAt).map((i) => i % 100)));
+        setAllOpenedCards(packs.slice(0, resumeAt).flat());
         setShowSummary(false);
         setIsOpening(true);
     };
 
+    const flip = (indexes: number[]) => {
+        const fresh = indexes.filter((i) => !flippedCards.has(i));
+        if (!fresh.length) return;
+        setFlippedCards(new Set([...flippedCards, ...fresh]));
+        onFlip?.(fresh.map((i) => flatIndex(currentPackIndex, i)));
+    };
+
     /** Flip a card; if it's already flipped, hand it back for a detail view. */
-    const handleCardClick = (
-        index: number,
-        card: Card,
-        onAlreadyFlipped?: (card: Card) => void
-    ) => {
+    const handleCardClick = (index: number, card: Card, onAlreadyFlipped?: (card: Card) => void) => {
         if (flippedCards.has(index)) {
             onAlreadyFlipped?.(card);
             return;
         }
-        setFlippedCards(new Set(flippedCards).add(index));
+        flip([index]);
     };
 
     const handleFlipAll = () => {
         const currentPack = packsToOpen[currentPackIndex];
-        if (!currentPack) return;
-        setFlippedCards(new Set(currentPack.map((_, idx) => idx)));
+        if (currentPack) flip(currentPack.map((_, idx) => idx));
     };
 
     const handleOpenAll = () => {
-        const newCards = packsToOpen.slice(currentPackIndex).flat();
-        setAllOpenedCards((prev) => [...prev, ...newCards]);
+        setAllOpenedCards((prev) => [...prev, ...packsToOpen.slice(currentPackIndex).flat()]);
         setShowSummary(true);
     };
 
@@ -85,7 +80,6 @@ export function usePackOpening() {
     const isPackFullyOpened = !!currentPack && flippedCards.size === currentPack.length;
 
     return {
-        // state
         packsToOpen,
         currentPackIndex,
         flippedCards,
@@ -94,8 +88,7 @@ export function usePackOpening() {
         showSummary,
         currentPack,
         isPackFullyOpened,
-        // actions
-        openPacks,
+        start,
         handleCardClick,
         handleFlipAll,
         handleOpenAll,

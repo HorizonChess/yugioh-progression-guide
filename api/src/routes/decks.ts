@@ -15,7 +15,8 @@ const DeckBodySchema = z.strictObject({
     extraDeck: cardIds(DECK_LIMITS.extra),
     sideDeck: cardIds(DECK_LIMITS.side),
 });
-const ImportBodySchema = z.strictObject({ cardIds: cardIds(MAX_IMPORT).min(1), mode: z.enum(['add', 'replace']) });
+// An empty replace clears the collection.
+const ImportBodySchema = z.strictObject({ cardIds: cardIds(MAX_IMPORT), mode: z.enum(['add', 'replace']) });
 const DECK_ID = /^[\w-]{1,64}$/;
 
 /** `/api/series/:seriesId`: PUT|DELETE /decks/:deckId, POST /collection/import */

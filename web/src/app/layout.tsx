@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Outfit, Russo_One } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 import { ProgressionProvider } from "@/context/ProgressionContext";
 import GlobalBackground from "@/components/layout/GlobalBackground";
 import AppNav from "@/components/layout/AppNav";
@@ -25,6 +26,7 @@ export default function RootLayout({
         className={`${inter.variable} ${outfit.variable} ${russo.variable} h-screen overflow-hidden grid grid-rows-[auto_1fr]`}
         suppressHydrationWarning
       >
+        <AuthProvider>
         <ProgressionProvider>
           <GlobalBackground />
           {/* Row 1 (auto): the ONE persistent nav. AppNav shows it only on the
@@ -36,6 +38,7 @@ export default function RootLayout({
               absolutely-positioned ScaleWrapper to this row (below the nav). */}
           <main className="relative min-h-0 min-w-0">{children}</main>
         </ProgressionProvider>
+        </AuthProvider>
       </body>
     </html>
   );

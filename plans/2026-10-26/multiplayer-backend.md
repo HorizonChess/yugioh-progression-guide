@@ -340,6 +340,16 @@ Broken into small commits, each tested on its own:
 7. **Decks and YDK import**: server-side deck save and validation (owned cards only), and the collection import at creation, or anytime in solo.
 8. **Web**: a `GameRepository` with `LocalRepo` (today's localStorage behaviour, for guests) and `RemoteRepo`; `ProgressionContext` becomes async commands; the pages call it; `WinnersWheel` lands on the server's prize. Playwright `pack-session.mjs`, and `smoke.mjs` updated.
 
+Step 8 as built:
+- `web/src/lib/repo/` holds `GameRepository` (types.ts), `RemoteRepo` and `LocalRepo`. `reportMatch` already returns `applied | pending`, so duo reports (Phase 4) fit without changing callers; Snatch Steal will be one more `claimReward` kind.
+- `AuthContext` (user, loading, refresh) picks the repo. Phase 5 adds sign-in and sign-out to it.
+- `ProgressionContext` exposes `series` / `me` and async commands; refusals are `RepoError`s that pages show with `alertRepoError`.
+- Until Phase 5's campaign menu, the existing save list is the series picker (signed in, it lists server series).
+- Guests keep free pack opening (any count, earlier sets), now through `LocalRepo`. A won match books a wheel spin that can be spun later from Rewards (`/record-match?spin=<id>`), for guests too.
+- Reward-claim rules live in `@ygo/shared` `claims.ts`, used by the server and `LocalRepo`.
+- Server additions: `DELETE /api/series/:id` (solo), `GET …/packs/active?kind=set|reward`, an empty collection replace clears it, and `GET /api/auth/me` answers `{ user: null }` for guests instead of 401.
+- `npm run test-server -w @ygo/api` copies the card data (read-only) from api/.env's database. `web/scripts/drivers/pack-session.mjs` covers create, open, reload-resume, save, the once-per-set refusal, and win → server spin.
+
 Decided with the user (2026-11-04):
 - Snatch Steal is left off the wheel in solo series; there's no rival to steal from. The wheel the server spins depends on the series mode (step 5).
 - A saved position keeps the set's name as well as its index, on series (server) and guest saves (web), and the name wins when the two disagree. Guest saves written before this are translated once using the old date-only order, so they stay on the set they meant.

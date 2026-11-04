@@ -1,6 +1,7 @@
 "use client";
 
-import { useProgression } from "@/context/ProgressionContext";
+import { alertRepoError, useProgression } from "@/context/ProgressionContext";
+import { PACKS_PER_SET_OPTIONS } from "@ygo/shared";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { fetchAllSets, CardSet } from "@/lib/api";
@@ -10,28 +11,33 @@ interface SaveSlotListProps {
 }
 
 export default function SaveSlotList({ onSaveSelect }: SaveSlotListProps) {
-    const { saves, createSave, loadSave, deleteSave } = useProgression();
+    const { seriesList: saves, createSeries, loadSeries, deleteSeries, repo } = useProgression();
     const router = useRouter();
     const [isCreating, setIsCreating] = useState(false);
     const [newSaveName, setNewSaveName] = useState("");
     const [startSetIndex, setStartSetIndex] = useState(0);
+    const [packsPerSet, setPacksPerSet] = useState(24);
     const [sets, setSets] = useState<CardSet[]>([]);
 
     useEffect(() => {
         fetchAllSets().then(setSets);
     }, []);
 
-    const handleCreate = (e: React.FormEvent) => {
+    const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newSaveName.trim()) return;
-        createSave(newSaveName, startSetIndex);
+        try {
+            await createSeries({ name: newSaveName.trim(), startSetIndex, packsPerSet });
+        } catch (error) {
+            return alertRepoError(error);
+        }
         setNewSaveName("");
         setStartSetIndex(0);
         setIsCreating(false);
     };
 
-    const handleLoad = (id: string) => {
-        loadSave(id);
+    const handleLoad = async (id: string) => {
+        await loadSeries(id).catch(alertRepoError);
         if (onSaveSelect) {
             onSaveSelect(id);
         } else {
@@ -41,13 +47,13 @@ export default function SaveSlotList({ onSaveSelect }: SaveSlotListProps) {
 
     const handleDelete = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
-        if (confirm("Are you sure you want to delete this save file?")) deleteSave(id);
+        if (confirm("Are you sure you want to delete this save file?")) deleteSeries(id).catch(alertRepoError);
     };
 
     return (
         <div className="w-full max-w-md space-y-4">
             <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-white uppercase tracking-widest">Select Save File</h3>
+                <h3 className="text-xl font-bold text-white uppercase tracking-widest">{repo.kind === "remote" ? "Your Series" : "Select Save File"}</h3>
                 <button
                     onClick={() => setIsCreating(true)}
                     className="text-xs bg-[var(--primary)] text-black px-3 py-1 rounded font-bold hover:bg-yellow-400 transition-colors"
@@ -60,7 +66,7 @@ export default function SaveSlotList({ onSaveSelect }: SaveSlotListProps) {
                 <form onSubmit={handleCreate} className="bg-gray-900 p-4 rounded border border-[var(--primary)] mb-4 animate-in fade-in slide-in-from-top-2">
                     <div className="space-y-3">
                         <div>
-                            <label className="text-xs text-gray-500 uppercase font-bold block mb-1">Duelist Name</label>
+                            <label className="text-xs text-gray-500 uppercase font-bold block mb-1">Name</label>
                             <input
                                 type="text"
                                 value={newSaveName}
@@ -82,6 +88,19 @@ export default function SaveSlotList({ onSaveSelect }: SaveSlotListProps) {
                                     <option key={`${set.set_code}-${idx}`} value={idx}>
                                         {set.set_name} ({set.tcg_date})
                                     </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="text-xs text-gray-500 uppercase font-bold block mb-1">Packs per Set</label>
+                            <select
+                                value={packsPerSet}
+                                onChange={(e) => setPacksPerSet(Number(e.target.value))}
+                                className="w-full bg-black border border-gray-700 p-2 text-white text-sm focus:border-[var(--primary)] outline-none"
+                            >
+                                {PACKS_PER_SET_OPTIONS.map((n) => (
+                                    <option key={n} value={n}>{n}</option>
                                 ))}
                             </select>
                         </div>
@@ -124,7 +143,7 @@ export default function SaveSlotList({ onSaveSelect }: SaveSlotListProps) {
                             <div>
                                 <h4 className="font-bold text-[var(--primary)] text-lg">{save.name}</h4>
                                 <p className="text-xs text-gray-400">
-                                    Set: {sets[save.currentSetIndex]?.set_name || `Set ${save.currentSetIndex + 1}`}
+                                    Set: {save.currentSetName ?? sets[save.currentSetIndex]?.set_name ?? "Finished"}
                                 </p>
                                 <p className="text-[10px] text-gray-600 mt-1">
                                     Last Played: {new Date(save.lastPlayed).toLocaleDateString()}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useProgression } from "@/context/ProgressionContext";
+import { alertRepoError, useProgression } from "@/context/ProgressionContext";
 import { fetchCardsByIds, Card } from "@/lib/api";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
@@ -64,10 +64,13 @@ export default function Collection() {
             }
         }
 
-        importCollection(ids, mode);
-        alert(`Successfully imported ${ids.length} cards!`);
-
         if (fileInputRef.current) fileInputRef.current.value = "";
+        try {
+            await importCollection(ids, mode);
+            alert(`Successfully imported ${ids.length} cards!`);
+        } catch (error) {
+            alertRepoError(error);
+        }
     };
 
     const handleExportClick = async () => {
@@ -248,7 +251,7 @@ export default function Collection() {
                         <ParchmentButton
                             onClick={() => {
                                 if (confirm("WARNING: This will PERMANENTLY DELETE your entire collection. This action cannot be undone. Are you sure?")) {
-                                    importCollection([], "replace");
+                                    importCollection([], "replace").catch(alertRepoError);
                                 }
                             }}
                             className="text-red-800 hover:text-red-600 border-red-800/50"

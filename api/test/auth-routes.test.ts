@@ -129,12 +129,15 @@ describe('POST /api/auth/logout and GET /api/auth/me', () => {
         expect(out.statusCode).toBe(204);
 
         const me = await app.inject({ url: '/api/auth/me', headers: { cookie: sid } });
-        expect(me.statusCode).toBe(401);
+        expect(me.json().user).toBeNull();
     });
 
-    it('me needs a valid session', async () => {
-        expect((await app.inject({ url: '/api/auth/me' })).statusCode).toBe(401);
-        expect((await app.inject({ url: '/api/auth/me', headers: { cookie: 'sid=forged' } })).statusCode).toBe(401);
+    it('me answers null without a valid session', async () => {
+        for (const headers of [{}, { cookie: 'sid=forged' }]) {
+            const res = await app.inject({ url: '/api/auth/me', headers });
+            expect(res.statusCode).toBe(200);
+            expect(res.json()).toEqual({ user: null });
+        }
     });
 });
 

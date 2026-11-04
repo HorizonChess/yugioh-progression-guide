@@ -2,7 +2,7 @@ import { MongoServerError, ObjectId } from 'mongodb';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { openPacksBlock, resolveSetIndex } from '@ygo/shared';
 import { z } from 'zod';
-import { flatIndex, hydrate, packSessions, rerollSession, rollPacks, saveSession } from '../game/packs';
+import { flatIndex, hydrate, packSessions, rerollSession, rollPacks, saveSession, type PackSessionDoc } from '../game/packs';
 import { requireAuth } from '../middleware/requireAuth';
 import { requireSeriesMember } from '../middleware/requireSeriesMember';
 
@@ -65,9 +65,12 @@ export async function packRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(201).send({ session: await hydrate(app.catalog, session) });
     });
 
+    // ?kind=set or ?kind=reward (pity and tournament) narrows which opening to resume.
     app.get('/active', guard, async (request) => {
+        const { kind } = request.query as { kind?: string };
+        const source = kind === 'set' ? 'set' : kind === 'reward' ? { $in: ['pity', 'tournament'] as PackSessionDoc['source'][] } : undefined;
         const session = await packSessions(app.db).findOne(
-            { seriesId: request.series!._id, userId: request.user!._id, stage: 'opening' },
+            { seriesId: request.series!._id, userId: request.user!._id, stage: 'opening', ...(source ? { source } : {}) },
             { sort: { createdAt: -1 } },
         );
         return { session: session ? await hydrate(app.catalog, session) : null };

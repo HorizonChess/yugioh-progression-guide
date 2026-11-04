@@ -173,6 +173,8 @@ describe('reward claims', () => {
         const { session } = (await (await r.give('pity-packs'))()).json();
         expect(session).toMatchObject({ source: 'pity', setName: LOB.set_name });
         expect(session.packs).toHaveLength(3);
+        expect((await r.call('GET', '/active?kind=reward')).json().session.id).toBe(session.id);
+        expect((await r.call('GET', '/active?kind=set')).json().session).toBeNull();
         expect((await r.call('POST', `/${session.id}/save`)).statusCode).toBe(204);
         expect(total((await r.player()).collection)).toBe(27);
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useProgression } from "@/context/ProgressionContext";
+import { alertRepoError, useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets, fetchCardsInSet, Card, CardSet } from "@/lib/api";
-import { useState, useEffect, Suspense } from "react";
+import type { Opening } from "@/lib/repo/types";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import GuideSprite from "@/components/layout/GuideSprite";
 import CardDetailModal from "@/components/card/CardDetailModal";
@@ -29,7 +30,7 @@ import { usePackOpening } from "@/hooks/usePackOpening";
  * scrollable shell. The reveal lifecycle lives in `usePackOpening`.
  */
 function PacksPageContent() {
-    const { currentSetIndex, addToCollection } = useProgression();
+    const { currentSetIndex, series, rewards, repo, hasLoaded, openPacks, activeOpening, flip, saveOpening, reroll } = useProgression();
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -41,38 +42,89 @@ function PacksPageContent() {
     const [selectedCard, setSelectedCard] = useState<Card | null>(null);
     const [viewDetails, setViewDetails] = useState(false);
 
-    const pack = usePackOpening();
+    // Flips are sent in small batches so a reload resumes the reveal.
+    const openingId = useRef<string | null>(null);
+    const pendingFlips = useRef<number[]>([]);
+    const flipTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const flushFlips = () => {
+        clearTimeout(flipTimer.current);
+        const batch = pendingFlips.current;
+        pendingFlips.current = [];
+        if (openingId.current && batch.length) return flip(openingId.current, batch).catch(() => undefined);
+    };
+    const pack = usePackOpening((flipped) => {
+        pendingFlips.current.push(...flipped);
+        clearTimeout(flipTimer.current);
+        flipTimer.current = setTimeout(flushFlips, 600);
+    });
     const { hoveredCard, tooltipPosition, onHover, onLeave } = useCardTooltip();
 
+    const startReveal = (opening: Opening) => {
+        openingId.current = opening.id;
+        pack.start(opening.packs, opening.flipped);
+    };
+
+    // Guests may revisit earlier sets; a server series only opens its current one.
     const setParam = searchParams.get("set");
-    const targetSetIndex = setParam ? parseInt(setParam) : currentSetIndex;
+    const targetSetIndex = repo.freePacks && setParam ? parseInt(setParam) : currentSetIndex;
     const isLocked = targetSetIndex > currentSetIndex;
+    const hasTicket = rewards.some((r) => r.prizeId === "redoer-ticket" && r.status === "available");
 
     useEffect(() => {
+        if (!hasLoaded) return;
         async function loadData() {
             try {
                 const sets = await fetchAllSets();
                 const set = sets[targetSetIndex];
                 if (set) {
                     setCurrentSet(set);
-                    const cards = await fetchCardsInSet(set.set_name);
-                    setSetCards(cards);
+                    setSetCards(await fetchCardsInSet(set.set_name));
                 }
+                const unsaved = await activeOpening("set");
+                if (unsaved) startReveal(unsaved);
             } catch (e) {
                 console.error("Error loading data:", e);
             }
             setLoading(false);
         }
         loadData();
-    }, [targetSetIndex]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per set
+    }, [targetSetIndex, hasLoaded]);
 
-    const handleSaveAndContinue = () => {
-        addToCollection(pack.allOpenedCards);
-        router.push("/collection");
+    const handleOpen = async () => {
+        try {
+            startReveal(await openPacks(repo.freePacks ? { quantity: customQuantity, setIndex: targetSetIndex } : undefined));
+        } catch (error) {
+            alertRepoError(error);
+        }
+    };
+
+    const handleSaveAndContinue = async () => {
+        if (!openingId.current) return;
+        try {
+            await flushFlips();
+            await saveOpening(openingId.current);
+            openingId.current = null;
+            router.push("/collection");
+        } catch (error) {
+            alertRepoError(error);
+        }
+    };
+
+    const handleReroll = async () => {
+        if (!openingId.current || !confirm("Spend a Redoer Ticket to reroll all of these packs?")) return;
+        try {
+            startReveal(await reroll(openingId.current));
+        } catch (error) {
+            alertRepoError(error);
+        }
     };
 
     const handleDiscardAndExit = () => {
-        if (confirm("Are you sure? All opened cards will be lost.")) {
+        if (!repo.freePacks) {
+            void flushFlips();
+            router.push("/timeline");
+        } else if (confirm("Are you sure? All opened cards will be lost.")) {
             router.push("/timeline");
         }
     };
@@ -128,9 +180,9 @@ function PacksPageContent() {
                     set={currentSet}
                     cardCount={setCards.length}
                     isLocked={isLocked}
-                    quantity={customQuantity}
-                    setQuantity={setCustomQuantity}
-                    onOpen={() => pack.openPacks(setCards, currentSet, customQuantity)}
+                    quantity={repo.freePacks ? customQuantity : series?.rules.packsPerSet ?? 0}
+                    setQuantity={repo.freePacks ? setCustomQuantity : undefined}
+                    onOpen={handleOpen}
                     onViewDetails={() => setViewDetails(true)}
                     onBack={() => router.push("/timeline")}
                 />
@@ -179,9 +231,12 @@ function PacksPageContent() {
                     </div>
                     <div className="flex gap-4">
                         <button onClick={handleDiscardAndExit} className="pack-exit-btn">Back to Campaign</button>
-                        <ParchmentButton onClick={pack.reset}>
-                            Open More
-                        </ParchmentButton>
+                        {repo.freePacks && (
+                            <ParchmentButton onClick={pack.reset}>
+                                Open More
+                            </ParchmentButton>
+                        )}
+                        {hasTicket && <ParchmentButton onClick={handleReroll}>Reroll (Redoer Ticket)</ParchmentButton>}
                         <ParchmentButton onClick={handleSaveAndContinue} className="text-green-900 border-green-800 hover:bg-green-50">
                             Done &amp; Save
                         </ParchmentButton>
