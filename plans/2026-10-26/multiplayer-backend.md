@@ -215,7 +215,7 @@ Revised with the user on 2026-11-04: the onboarding has its own look, unlike the
    - Server-side report and wheel spin, every reward claim, server-side deck save and validation, and the creation-time and solo YDK collection import.
    - Wire `RemoteRepo` and the context refactor.
    - Add Redoer Ticket to `WHEEL_PRIZES`.
-3b. **`feat/dev-mode`**
+3b. **`feat/dev-mode`** (skipped 2026-11-04; may come back later if it's needed. Admins can already open any set's packs, from Phase 3.)
    - The `/api/dev/*` routes (set index, rules, grant cards/rewards/tickets, reset sessions, force or void results), with an audit log.
    - A dev panel toggle in the UI, shown to admins only.
 4. **`feat/duo-series`**
@@ -232,12 +232,12 @@ Revised with the user on 2026-11-04: the onboarding has its own look, unlike the
    - One-time import of local saves as `legacy` solo series.
    - Fix the stray `admin@ygoprog.com` line in `pack_opening_rules.md`.
    - Update the READMEs per `.agent/rules/documentation.md`.
-7. **`feat/mobile-redesign`** (added 2026-10-28)
+7. **`feat/mobile-redesign`** (added 2026-10-28; the UI do-over below happens in this phase)
    - The mobile version looks bad and barely works (packs can't even be opened on a phone).
    - Redesign it so every flow works on a phone, with great UX that keeps the app's 90s Yu-Gi-Oh! look and feel. This includes the parked items: GuideSprite overlapping the VICTORY/DEFEAT buttons, and the mobile deck builder.
    - Verify every route and flow at phone widths with the Playwright drivers.
 
-**Coming soon (noted 2026-11-04):** the whole app gets a UI do-over: art, animation and layout on every screen, keeping the 90s Yu-Gi-Oh! vibe. The onboarding scene (Phase 5) and the physics chains (`feat/physics-chain`) are the first pieces in the new style. The do-over and Phase 7 touch the same screens, so they're expected to go together.
+**UI do-over (decided 2026-11-04):** the whole app gets a UI do-over: art, animation and layout on every screen, keeping the 90s Yu-Gi-Oh! vibe. It's done together with Phase 7, since both touch every screen. The onboarding scene (Phase 5) and the physics chains (`feat/physics-chain`) are the first pieces in the new style. Until then, new screens in Phases 4 and 6 stay plain and functional.
 
 The plan also gets copied into the repo at `plans/2026-10-26/multiplayer-backend.md`, per the plans convention.
 
@@ -348,14 +348,16 @@ Step 8 as built:
 
 Merged into `main` on 2026-11-04 after the user tested it by hand; not pushed.
 
-### Phase 5: Duelist Kingdom onboarding (in progress, branch `feat/duelist-kingdom-onboarding`)
+### Phase 5: Duelist Kingdom onboarding (done 2026-11-04, branch `feat/duelist-kingdom-onboarding`)
 Moved ahead of Phase 4 by the user (2026-11-04): signing in and out from the menu matters for all further testing.
 - First version: the account flows in the menu's left column. The user found its art and motion too plain and wanted the onboarding as its own scene, so it was rebuilt as described under "Duelist Kingdom onboarding" above.
-- Menu items follow the account: CAMPAIGN MODE / CARD COLLECTION / OPTIONS, then signed in DEV MODE (admins; disabled until 3b) / SIGN OUT, or for guests SIGN IN, then EXIT GAME. SIGN OUT and EXIT GAME return to the title screen.
+- Menu items follow the account: CAMPAIGN MODE / CARD COLLECTION / OPTIONS, then signed in DEV MODE (admins; a disabled "Coming soon" placeholder while 3b is skipped) / SIGN OUT, or for guests SIGN IN, then EXIT GAME. SIGN OUT and EXIT GAME return to the title screen.
 - `/onboarding`, the stored `duelistName` and `/dev/auth` are gone. Guests are named "Guest" in the nav.
 - The "import local saves" step waits for Phase 6.
 - `auth.mjs` drives all of it through the title screen (31 checks); `smoke.mjs` covers the guest path and EXIT GAME.
-- Visual makeover of the rest of the app: planned to pair with Phase 7 (mobile redesign), since both touch every screen. The first piece, physics chains between timeline packs, is on `feat/physics-chain`.
+- Visual makeover of the rest of the app: done with Phase 7 (mobile redesign), since both touch every screen. The first piece, physics chains between timeline packs, is on `feat/physics-chain`.
+
+Merged into `main` on 2026-11-04 after the user's go-ahead; not pushed. Phase 3b was skipped at the same time, so Phase 4 is next.
 
 Decided with the user (2026-11-04):
 - Snatch Steal is left off the wheel in solo series; there's no rival to steal from. The wheel the server spins depends on the series mode (step 5).
