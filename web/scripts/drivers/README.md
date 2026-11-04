@@ -40,5 +40,12 @@ reports the assertions each driver checks.
   released before the won pack), confirm-in-details, and the granted card landing
   in the collection at Starlight Rare.
 
+- `auth.mjs` — accounts end to end: sign-up with the live name check, the
+  confirmation and password-reset email links, sign in by name and by email, and
+  bad-link handling. Needs the in-memory test API and a web dev server pointed at
+  it (see the header of the script, or `npm run test-server -w @ygo/api`); it does
+  not touch your real database and sends no email. Google sign-in needs a real
+  Google account, so the API tests cover it with a fake instead.
+
 Extend these rather than writing throwaway drivers. Keep the scripts checked in;
 keep generated images out of git.

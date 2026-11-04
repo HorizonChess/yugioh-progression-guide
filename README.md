@@ -48,6 +48,25 @@ npm run sync-cards -w @ygo/api   # mirror YGOPRODeck sets and cards into MongoDB
 npm run dev -w @ygo/api          # the API at http://localhost:4000
 ```
 
+Accounts (sign-up, sign-in, Google, email confirmation, password reset) are in
+the API; the plain test page is at `/dev/auth/`. Google sign-in and outgoing
+email are optional and switched on by the `GOOGLE_*` and `SMTP_*` settings in
+`api/.env.example`. To make yourself an admin (dev mode), sign up, then:
+
+```bash
+npm run promote-admin -w @ygo/api -- <your email or duelist name>
+```
+
+To try accounts in a browser without touching your real database or sending any
+email, run the API on a throwaway in-memory database with captured mail, then
+the web app pointed at it:
+
+```bash
+npm run test-server -w @ygo/api                                   # http://localhost:4100
+NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web      # then open /dev/auth/
+node web/scripts/drivers/auth.mjs                                 # (from web/) drives it end to end
+```
+
 More detail on the architecture, pack logic and design system is in
 [web/README.md](web/README.md) and
 [web/src/data/pack_opening_rules.md](web/src/data/pack_opening_rules.md).
