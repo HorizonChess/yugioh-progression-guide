@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets, fetchCardsInSet, Card, CardSet } from "@/lib/api";
 import type { Opening } from "@/lib/repo/types";
@@ -31,6 +32,7 @@ import { usePackOpening } from "@/hooks/usePackOpening";
  */
 function PacksPageContent() {
     const { currentSetIndex, series, rewards, repo, hasLoaded, openPacks, activeOpening, flip, saveOpening, reroll } = useProgression();
+    const { user } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -64,10 +66,16 @@ function PacksPageContent() {
         pack.start(opening.packs, opening.flipped);
     };
 
-    // Guests may revisit earlier sets; a server series only opens its current one.
-    const setParam = searchParams.get("set");
-    const targetSetIndex = repo.freePacks && setParam ? parseInt(setParam) : currentSetIndex;
-    const isLocked = targetSetIndex > currentSetIndex;
+    // Any set can be viewed. Guests may open up to the current set; a server
+    // series opens only its current set, except for admins.
+    const setParam = Number.parseInt(searchParams.get("set") ?? "", 10);
+    const targetSetIndex = Number.isNaN(setParam) ? currentSetIndex : setParam;
+    const isAdmin = user?.role === "admin";
+    const canOpen = repo.freePacks ? targetSetIndex <= currentSetIndex : targetSetIndex === currentSetIndex || isAdmin;
+    const lockedMessage =
+        targetSetIndex < currentSetIndex
+            ? "Earlier sets come back only as reward packs (pity and tournament)."
+            : "You must complete previous sets to unlock pack opening for this set.";
     const hasTicket = rewards.some((r) => r.prizeId === "redoer-ticket" && r.status === "available");
 
     useEffect(() => {
@@ -81,7 +89,7 @@ function PacksPageContent() {
                     setSetCards(await fetchCardsInSet(set.set_name));
                 }
                 const unsaved = await activeOpening("set");
-                if (unsaved) startReveal(unsaved);
+                if (unsaved && unsaved.setName === set?.set_name) startReveal(unsaved);
             } catch (e) {
                 console.error("Error loading data:", e);
             }
@@ -93,7 +101,7 @@ function PacksPageContent() {
 
     const handleOpen = async () => {
         try {
-            startReveal(await openPacks(repo.freePacks ? { quantity: customQuantity, setIndex: targetSetIndex } : undefined));
+            startReveal(await openPacks({ setIndex: targetSetIndex, ...(repo.freePacks ? { quantity: customQuantity } : {}) }));
         } catch (error) {
             alertRepoError(error);
         }
@@ -179,7 +187,8 @@ function PacksPageContent() {
                 <StoreView
                     set={currentSet}
                     cardCount={setCards.length}
-                    isLocked={isLocked}
+                    isLocked={!canOpen}
+                    lockedMessage={lockedMessage}
                     quantity={repo.freePacks ? customQuantity : series?.rules.packsPerSet ?? 0}
                     setQuantity={repo.freePacks ? setCustomQuantity : undefined}
                     onOpen={handleOpen}

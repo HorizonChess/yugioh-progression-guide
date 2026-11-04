@@ -109,6 +109,15 @@ describe('pack sessions', () => {
         expect((await call('POST', '/open')).json().error).toMatch(/every set/);
     });
 
+    it('lets only admins open a set other than the current one, still once', async () => {
+        const { call } = await newSeries();
+        expect((await call('POST', '/open', { setIndex: 1 })).json().error).toMatch(/current set/);
+        await app.db.collection('users').updateOne({}, { $set: { role: 'admin' } });
+        expect((await call('POST', '/open', { setIndex: 1 })).json().session.setName).toBe(MRD.set_name);
+        expect((await call('POST', '/open', { setIndex: 1 })).statusCode).toBe(409);
+        expect((await call('POST', '/open', { setIndex: 2 })).json().error).toMatch(/every set/);
+    });
+
     it('rerolls an unsaved opening only by spending a Redoer Ticket', async () => {
         const { call } = await newSeries();
         const { session } = (await call('POST', '/open')).json();

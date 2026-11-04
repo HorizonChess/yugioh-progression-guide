@@ -1,7 +1,7 @@
 import { API_BASE } from "@/lib/auth-client";
 import type { RewardEntry, WheelPrize } from "@/lib/rewards";
 import type { SavedDeck } from "@/lib/storage";
-import { RepoError, type GameRepository, type Opening, type PlayerView, type SeriesView } from "./types";
+import { RepoError, type GameRepository, type Opening, type OpenOptions, type PlayerView, type SeriesView } from "./types";
 
 interface ServerSeries {
     id: string;
@@ -99,8 +99,9 @@ export class RemoteRepo implements GameRepository {
         }
     }
 
-    async openPacks(id: string) {
-        return toOpening((await api<{ session: Opening }>("POST", `/${id}/packs/open`)).session);
+    /** The server opens the current set; other sets only for admins. */
+    async openPacks(id: string, { setIndex }: OpenOptions = {}) {
+        return toOpening((await api<{ session: Opening }>("POST", `/${id}/packs/open`, setIndex === undefined ? {} : { setIndex })).session);
     }
 
     async activeOpening(id: string, kind: "set" | "reward") {

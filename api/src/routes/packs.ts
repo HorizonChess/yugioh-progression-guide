@@ -6,7 +6,8 @@ import { flatIndex, hydrate, packSessions, rerollSession, rollPacks, saveSession
 import { requireAuth } from '../middleware/requireAuth';
 import { requireSeriesMember } from '../middleware/requireSeriesMember';
 
-const FlipsBodySchema = z.strictObject({ flipped: z.array(z.number().int().min(0)).max(3000) });
+const OpenBodySchema = z.strictObject({ setIndex: z.number().int().min(0).optional() });
+const FlipsBodySchema =z.strictObject({ flipped: z.array(z.number().int().min(0)).max(3000) });
 
 const BLOCK_MESSAGES = {
     'unknown-set': 'This series has played every set',
@@ -33,12 +34,21 @@ export async function packRoutes(app: FastifyInstance): Promise<void> {
     };
 
     app.post('/open', { ...guard, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
+        const body = OpenBodySchema.safeParse(request.body ?? {});
+        if (!body.success) return reply.code(400).send({ error: 'Invalid input' });
         const series = request.series!;
         const userId = request.user!._id;
         const timeline = await app.catalog.timeline();
-        const setIndex = resolveSetIndex(timeline, series.currentSetName, series.currentSetIndex);
+        const currentSetIndex = resolveSetIndex(timeline, series.currentSetName, series.currentSetIndex);
+        const setIndex = body.data.setIndex ?? currentSetIndex;
         const opened = await packSessions(app.db).countDocuments({ seriesId: series._id, userId, setIndex, source: 'set', active: true });
-        const block = openPacksBlock({ setIndex, currentSetIndex: setIndex, setCount: timeline.length, alreadyOpened: opened > 0 });
+        // Admins may open any set, still once each.
+        const block = openPacksBlock({
+            setIndex,
+            currentSetIndex: request.user!.role === 'admin' ? setIndex : currentSetIndex,
+            setCount: timeline.length,
+            alreadyOpened: opened > 0,
+        });
         if (block) return reply.code(409).send({ error: BLOCK_MESSAGES[block] });
 
         const set = timeline[setIndex]!;

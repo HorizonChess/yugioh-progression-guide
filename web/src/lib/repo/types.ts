@@ -53,8 +53,9 @@ export interface CreateSeriesInput {
 }
 
 export interface OpenOptions {
-    /** Guests only: how many packs, and from which set. */
+    /** Guests only: how many packs. */
     quantity?: number;
+    /** Guests may pick any set up to the current one; on the server, only admins may pick. */
     setIndex?: number;
 }
 

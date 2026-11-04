@@ -12,6 +12,7 @@ export default function StoreView({
     set,
     cardCount,
     isLocked,
+    lockedMessage = "You must complete previous sets to unlock pack opening for this set.",
     quantity,
     setQuantity,
     onOpen,
@@ -21,6 +22,7 @@ export default function StoreView({
     set: CardSet;
     cardCount: number;
     isLocked: boolean;
+    lockedMessage?: string;
     quantity: number;
     /** Omitted when the pack count is fixed (server series). */
     setQuantity?: (n: number) => void;
@@ -79,7 +81,7 @@ export default function StoreView({
 
                 {isLocked ? (
                     <div className="p-6 stone-panel text-center">
-                        <p className="text-gray-400 mb-6">You must complete previous sets to unlock pack opening for this set.</p>
+                        <p className="text-gray-400 mb-6">{lockedMessage}</p>
                         <button
                             onClick={onViewDetails}
                             className="w-full px-6 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all flex items-center justify-center gap-2"
