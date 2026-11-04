@@ -9,6 +9,8 @@ interface AuthContextType {
     /** The signed-in account, or null for a guest. */
     user: PublicUser | null;
     loading: boolean;
+    /** Records an account the sign-in forms just signed into. */
+    signedIn: (user: PublicUser) => void;
     signOut: () => Promise<void>;
 }
 
@@ -37,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
     };
 
-    return <AuthContext.Provider value={{ user, loading, signOut }}>{children}</AuthContext.Provider>;
+    return <AuthContext.Provider value={{ user, loading, signedIn: setUser, signOut }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

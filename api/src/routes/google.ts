@@ -27,7 +27,7 @@ const CLAIM_COOKIE = 'g_claim';
 
 export interface GoogleRouteOptions {
     client: GoogleClient;
-    /** Where the browser lands afterwards, e.g. `https://app.example/dev/auth/`. */
+    /** Where the browser lands afterwards, e.g. `https://app.example/menu/`. */
     landingUrl: string;
     secureCookies: boolean;
     /** Injectable for tests. */

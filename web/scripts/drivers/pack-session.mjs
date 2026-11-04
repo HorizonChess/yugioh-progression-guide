@@ -6,7 +6,7 @@
 //   NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web
 //   node web/scripts/drivers/pack-session.mjs
 
-import { BASE, launchBrowser, outPath, seedStorage } from "./_lib.mjs";
+import { BASE, launchBrowser, outPath } from "./_lib.mjs";
 
 const API = process.env.API_BASE || "http://localhost:4100";
 let failures = 0;
@@ -33,8 +33,6 @@ page.on("dialog", (d) => {
 const api = async (path) => (await context.request.get(`${API}/api/series${path}`)).json();
 
 try {
-    // The duelist name skips today's onboarding page (Phase 5 removes it).
-    await seedStorage(page, { duelistName: NAME });
     const signup = await context.request.post(`${API}/api/auth/signup`, {
         headers: { origin: BASE },
         data: { email: `${NAME.toLowerCase()}@example.com`, password: "heart of the cards", duelistName: NAME },
@@ -42,7 +40,7 @@ try {
     check(signup.ok(), "signed up through the API");
 
     await page.goto(`${BASE}/menu/`, { waitUntil: "networkidle" });
-    await page.getByText("CAMPAIGN MODE").click();
+    await page.getByRole("button", { name: /^CAMPAIGN MODE/ }).click();
     check(await page.getByText("Your Series").isVisible(), "signed in: the save list shows server series");
     await page.getByRole("button", { name: "+ NEW GAME" }).click();
     await page.getByPlaceholder("Enter Name...").fill("Driver Run");

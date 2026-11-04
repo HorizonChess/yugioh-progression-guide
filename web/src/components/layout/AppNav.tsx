@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { useProgression } from "@/context/ProgressionContext";
 import { asset } from '@/lib/utils';
 
@@ -10,7 +11,7 @@ import { asset } from '@/lib/utils';
    template, so it never unmounts or animates on navigation and sits pixel-
    identically across pages. It shows only on the "app main zone" routes that opted
    in (an explicit allow-list, not an opt-out list) and returns null everywhere else
-   — onboarding/root/menu have no nav.
+   — root/menu have no nav.
 
    It's a client component, so it can vary itself per route via `usePathname()`
    (e.g. the active-link highlight below) without breaking that persistence. */
@@ -27,7 +28,8 @@ const NAV_LINKS = [
 export default function AppNav() {
     // trailingSlash (for static hosting) makes this "/timeline/"; strip it so route lookups match
     const pathname = usePathname().replace(/(.)\/$/, "$1");
-    const { isGuideVisible, toggleGuide, duelistName, activeSeriesId } = useProgression();
+    const { isGuideVisible, toggleGuide, activeSeriesId } = useProgression();
+    const duelistName = useAuth().user?.duelistName ?? "Guest";
 
     if (!NAV_ROUTES.has(pathname)) return null;
 
@@ -36,7 +38,7 @@ export default function AppNav() {
             <div className="flex items-center gap-4">
                 <Link href="/menu" className="group flex items-center gap-4 hover:opacity-80 transition-opacity">
                     <div>
-                        <h2 className="text-primary font-bold text-lg tracking-wider uppercase leading-none">{duelistName ?? "Duelist"}</h2>
+                        <h2 className="text-primary font-bold text-lg tracking-wider uppercase leading-none">{duelistName}</h2>
                         <p className="text-[10px] text-gray-500 font-mono">ID: 8492-001</p>
                     </div>
                 </Link>
