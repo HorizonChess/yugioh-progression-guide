@@ -117,7 +117,7 @@ describe('first-time sign-in', () => {
 
         const back = await callback(flow);
         expect(back.statusCode).toBe(302);
-        expect(String(back.headers.location)).toBe('http://localhost:3000/dev/auth/?google=claim');
+        expect(String(back.headers.location)).toBe('http://localhost:3000/?google=claim');
         expect(back.cookies.find(c => c.name === 'sid')).toBeUndefined();
 
         const sent = google.requests[0]!;

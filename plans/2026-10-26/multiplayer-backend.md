@@ -185,22 +185,16 @@ Multi-document mutations (confirming a result, snatch-steal, saving a session, a
 - **Removals.** `/onboarding`, `duelistName` in localStorage and the duplicate name input in `SaveSlotList` are removed. The root `/` goes straight to `/menu`.
 - **Join links.** `/join?code=…` uses a query param because static export can't do dynamic segments. Signed out, it shows the invitation and then sign-in or sign-up, then joins.
 
-### Duelist Kingdom onboarding (in-place in the menu)
-- **Where it renders.** The left column of the menu swaps its `MenuItem` list for the onboarding panel using the existing Framer Motion slide. The Yugi art, `.menu-grid-bg` and gold glow stay exactly as they are.
+### Duelist Kingdom onboarding (its own scene, at `/`)
+Revised with the user on 2026-11-04: the onboarding has its own look, unlike the menu, and the letter theme runs through all of it. The first version (panels in the menu's left column) was replaced.
+- **Title screen (`/`).** A candlelit desk with the logo and PRESS START. Signed in, it greets the duelist and goes to the menu. Signing out and EXIT GAME come back here, and email links and the Google redirect land here (`AUTH_PAGE_PATH = '/'`).
 - **Sign-up**
-  1. A sealed envelope with a wax seal. Clicking cracks the seal.
-  2. The letter unfolds into a parchment form ("YOU ARE CORDIALLY INVITED TO DUELIST KINGDOM").
-  3. Fields: **duelist name** (debounced live availability check), **email** and **password** (with a strength meter).
-  4. Four **star chips** act as the step indicators and light up as each field validates.
-  5. **ACCEPT THE INVITATION** sends the chips flying into a duelist glove.
-  6. A "check your email" verification notice, then the **import local saves** step if any local saves exist, then back to the menu signed in.
-- **Sign-in:** "PRESENT YOUR INVITATION". A parchment card with email and password, a Google button and a forgot-password link.
-  - A first-time Google sign-in gets one extra step to claim a duelist name.
-- **Art and motion**
-  - All art is built from SVG and CSS on the existing tokens: `.parchment-bg`, `--primary`, `--wood-*` and FrameButton.
-  - This follows the `WheelDecor` precedent, so no new raster asset pipeline is needed.
-  - It respects `prefers-reduced-motion`.
-  - Components live in `web/src/components/onboarding/` (`InvitationEnvelope`, `InvitationForm`, `StarChips`, `SignInCard`, `ClaimDuelistName`, `ImportLocalSaves`).
+  1. A sealed envelope lands on the desk front up and writes "Welcome to the Yu-Gi-Oh! Progression Series" on itself, then turns over.
+  2. Breaking the wax seal shatters it into pieces that skid across the desk. The flap opens and the letter slides out and unfolds (tri-fold).
+  3. The letter: "You are cordially invited to Duelist Kingdom", duelist name (live check), email, password with a strength meter, and four star chips that light up as each validates.
+  4. ACCEPT THE INVITATION drops the chips into a leather cuff, says to check email, then ENTER THE KINGDOM goes to the menu. The **import local saves** step slots in here in Phase 6.
+- **Sign-in:** "I already have an invitation" brings the letter up as "Present your invitation", with Google and forgot password. A first-time Google sign-in claims a duelist name on the letter. "Play as a guest" goes to the menu, whose guest list adds SIGN IN.
+- **How it's made (2.5D):** GSAP timelines, real CSS 3D for the flip, flap and folds, SVG filter lighting for the paper, wood, leather and wax, and a canvas for the dust and the seal's shards. It honours `prefers-reduced-motion` (every animation jumps to its end). Code in `web/src/components/onboarding/` with its own `onboarding.css` and fonts, loaded only on `/`.
 
 ## Phases (each on its own branch, small verified commits, user check-in before merge)
 
@@ -221,7 +215,7 @@ Multi-document mutations (confirming a result, snatch-steal, saving a session, a
    - Server-side report and wheel spin, every reward claim, server-side deck save and validation, and the creation-time and solo YDK collection import.
    - Wire `RemoteRepo` and the context refactor.
    - Add Redoer Ticket to `WHEEL_PRIZES`.
-3b. **`feat/dev-mode`**
+3b. **`feat/dev-mode`** (skipped 2026-11-04; may come back later if it's needed. Admins can already open any set's packs, from Phase 3.)
    - The `/api/dev/*` routes (set index, rules, grant cards/rewards/tickets, reset sessions, force or void results), with an audit log.
    - A dev panel toggle in the UI, shown to admins only.
 4. **`feat/duo-series`**
@@ -230,7 +224,7 @@ Multi-document mutations (confirming a result, snatch-steal, saving a session, a
    - The notifications collection, the WS plugin and client, and the AppNav bell.
    - The series-wide banlist and snatch-steal.
 5. **`feat/duelist-kingdom-onboarding`**
-   - The invitation sign-up and sign-in in place in the menu.
+   - The title screen and onboarding scene at `/`: the invitation sign-up, sign-in, reset and Google name claim, written on the letter.
    - The signed-in and signed-out menu items.
    - Remove `/onboarding` and `duelistName`.
 6. **`feat/guest-and-import`**
@@ -238,10 +232,12 @@ Multi-document mutations (confirming a result, snatch-steal, saving a session, a
    - One-time import of local saves as `legacy` solo series.
    - Fix the stray `admin@ygoprog.com` line in `pack_opening_rules.md`.
    - Update the READMEs per `.agent/rules/documentation.md`.
-7. **`feat/mobile-redesign`** (added 2026-10-28)
+7. **`feat/mobile-redesign`** (added 2026-10-28; the UI do-over below happens in this phase)
    - The mobile version looks bad and barely works (packs can't even be opened on a phone).
    - Redesign it so every flow works on a phone, with great UX that keeps the app's 90s Yu-Gi-Oh! look and feel. This includes the parked items: GuideSprite overlapping the VICTORY/DEFEAT buttons, and the mobile deck builder.
    - Verify every route and flow at phone widths with the Playwright drivers.
+
+**UI do-over (decided 2026-11-04):** the whole app gets a UI do-over: art, animation and layout on every screen, keeping the 90s Yu-Gi-Oh! vibe. It's done together with Phase 7, since both touch every screen. The onboarding scene (Phase 5) and the physics chains (`feat/physics-chain`) are the first pieces in the new style. Until then, new screens in Phases 4 and 6 stay plain and functional.
 
 The plan also gets copied into the repo at `plans/2026-10-26/multiplayer-backend.md`, per the plans convention.
 
@@ -321,7 +317,7 @@ Done:
 
 - `npm run promote-admin -w @ygo/api -- <email or duelist name> [--demote] [--allow-unverified]` is the only way to become an admin (no HTTP route). It refuses unconfirmed emails unless told otherwise and writes each change to `auditLog`.
 
-- Plain test page at `/dev/auth/` (web), which is also where email links and the Google redirect land (`AUTH_PAGE_PATH` in `api/src/auth/landing.ts`; Phase 5 moves it to `/menu/`). `ALLOWED_ORIGINS` also enables CORS for the Next dev server.
+- Plain test page at `/dev/auth/` (web), which is also where email links and the Google redirect land (`AUTH_PAGE_PATH` in `api/src/auth/landing.ts`; Phase 5 moves it to `/`). `ALLOWED_ORIGINS` also enables CORS for the Next dev server.
 - `npm run test-server -w @ygo/api` runs the API on an in-memory database with captured email, and `web/scripts/drivers/auth.mjs` drives sign-up, confirmation, sign-in, and reset through it in a real browser.
 - Verified: lint, typecheck, 27 shared + 70 API + 36 web tests, the build, the auth driver (26 checks) and the existing smoke driver. A real test email was accepted by Gmail.
 
@@ -329,7 +325,7 @@ Verified by hand on 2026-11-04 against Atlas and real Google: Google sign-in wit
 
 Known: sign-up answers 409 for a taken email, so it can reveal that an email is registered. Reset and verify will not.
 
-### Phase 3: server solo series (in progress, branch `feat/server-solo-series`)
+### Phase 3: server solo series (done 2026-11-04, branch `feat/server-solo-series`)
 Broken into small commits, each tested on its own:
 1. **Shared rules and series input** (`shared/src/rules.ts`, `schemas/series.ts`): packs per set {12, 24, 30}, the series-creation rules, and the "can these packs be opened" gate.
 2. **Card catalog on the server**: the timeline and tournament sets computed from the synced `cardSets` (the same `timelineSets` the web uses, so set indexes match), cards by set, and a crypto RNG (48 random bits per draw, under `crypto.randomInt`'s cap).
@@ -349,6 +345,19 @@ Step 8 as built:
 - Reward-claim rules live in `@ygo/shared` `claims.ts`, used by the server and `LocalRepo`.
 - Server additions: `DELETE /api/series/:id` (solo), `GET …/packs/active?kind=set|reward`, an empty collection replace clears it, and `GET /api/auth/me` answers `{ user: null }` for guests instead of 401.
 - `npm run test-server -w @ygo/api` copies the card data (read-only) from api/.env's database. `web/scripts/drivers/pack-session.mjs` covers create, open, reload-resume, save, the once-per-set refusal, and win → server spin.
+
+Merged into `main` on 2026-11-04 after the user tested it by hand; not pushed.
+
+### Phase 5: Duelist Kingdom onboarding (done 2026-11-04, branch `feat/duelist-kingdom-onboarding`)
+Moved ahead of Phase 4 by the user (2026-11-04): signing in and out from the menu matters for all further testing.
+- First version: the account flows in the menu's left column. The user found its art and motion too plain and wanted the onboarding as its own scene, so it was rebuilt as described under "Duelist Kingdom onboarding" above.
+- Menu items follow the account: CAMPAIGN MODE / CARD COLLECTION / OPTIONS, then signed in DEV MODE (admins; a disabled "Coming soon" placeholder while 3b is skipped) / SIGN OUT, or for guests SIGN IN, then EXIT GAME. SIGN OUT and EXIT GAME return to the title screen.
+- `/onboarding`, the stored `duelistName` and `/dev/auth` are gone. Guests are named "Guest" in the nav.
+- The "import local saves" step waits for Phase 6.
+- `auth.mjs` drives all of it through the title screen (31 checks); `smoke.mjs` covers the guest path and EXIT GAME.
+- Visual makeover of the rest of the app: done with Phase 7 (mobile redesign), since both touch every screen. The first piece, physics chains between timeline packs, is on `feat/physics-chain`.
+
+Merged into `main` on 2026-11-04 after the user's go-ahead; not pushed. Phase 3b was skipped at the same time, so Phase 4 is next.
 
 Decided with the user (2026-11-04):
 - Snatch Steal is left off the wheel in solo series; there's no rival to steal from. The wheel the server spins depends on the series mode (step 5).

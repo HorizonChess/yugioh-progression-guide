@@ -17,16 +17,13 @@ import {
     type SeriesView,
 } from '@/lib/repo/types';
 import { RewardEntry, WheelPrize } from '@/lib/rewards';
-import { MatchResult, SavedDeck, loadDuelistName, persistDuelistName } from '@/lib/storage';
+import { MatchResult, SavedDeck } from '@/lib/storage';
 
 export type { MatchResult, SavedDeck } from '@/lib/storage';
 
 interface ProgressionContextType {
     repo: GameRepository;
     hasLoaded: boolean;
-    /** The player's name from onboarding; null until they've entered one. */
-    duelistName: string | null;
-    setDuelistName: (name: string) => void;
 
     seriesList: SeriesSummary[];
     activeSeriesId: string | null;
@@ -77,7 +74,6 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     const [activeSeriesId, setActiveSeriesId] = useState<string | null>(null);
     const [active, setActive] = useState<{ series: SeriesView; me: PlayerView } | null>(null);
     const [hasLoaded, setHasLoaded] = useState(false);
-    const [duelistName, setDuelistNameState] = useState<string | null>(null);
 
     const reloadActive = useCallback(async (id: string | null) => {
         setActive(id ? await repo.loadSeries(id) : null);
@@ -96,18 +92,12 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             setSeriesList(list);
             setActiveSeriesId(loaded ? id : null);
             setActive(loaded);
-            setDuelistNameState(loadDuelistName());
             setHasLoaded(true);
         })();
         return () => {
             cancelled = true;
         };
     }, [repo, authLoading]);
-
-    const setDuelistName = (name: string) => {
-        persistDuelistName(name);
-        setDuelistNameState(name);
-    };
 
     const refreshList = async () => setSeriesList(await repo.listSeries());
 
@@ -147,8 +137,6 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         <ProgressionContext.Provider value={{
             repo,
             hasLoaded,
-            duelistName,
-            setDuelistName,
 
             seriesList,
             activeSeriesId,

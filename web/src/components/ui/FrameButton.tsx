@@ -10,6 +10,8 @@ interface FrameButtonProps {
     /** Extra classes for the inner text (size, tracking, etc.) */
     textClassName?: string;
     "aria-label"?: string;
+    type?: "button" | "submit";
+    disabled?: boolean;
 }
 
 /**
@@ -31,6 +33,8 @@ export default function FrameButton({
     className = "",
     textClassName = "",
     "aria-label": ariaLabel,
+    type = "button",
+    disabled = false,
 }: FrameButtonProps) {
     // Single continuous fill + a frame ring on top, so there is no seam:
     //  - CSS stone gradient fills the WHOLE box (background-clip: border-box),
@@ -81,7 +85,14 @@ export default function FrameButton({
     }
 
     return (
-        <button onClick={onClick} className={base} style={frameStyle} aria-label={ariaLabel}>
+        <button
+            type={type}
+            onClick={onClick}
+            disabled={disabled}
+            className={`${base} disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed`}
+            style={frameStyle}
+            aria-label={ariaLabel}
+        >
             {label}
         </button>
     );

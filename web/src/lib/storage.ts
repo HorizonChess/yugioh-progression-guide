@@ -59,7 +59,6 @@ export interface PersistedState {
 
 const STORAGE_KEY = 'yugioh-progression-saves-v2';
 const LEGACY_KEY = 'yugioh-progression-save';
-const DUELIST_NAME_KEY = 'duelistName';
 
 export const DEFAULT_PACKS_PER_ROUND = 24;
 
@@ -194,12 +193,4 @@ export function loadPersistedState(): PersistedState {
 
 export function persistState(state: PersistedState): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-export function loadDuelistName(): string | null {
-    return localStorage.getItem(DUELIST_NAME_KEY);
-}
-
-export function persistDuelistName(name: string): void {
-    localStorage.setItem(DUELIST_NAME_KEY, name);
 }

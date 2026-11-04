@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { asset } from '@/lib/utils';
 import SaveSlotList from "@/components/layout/SaveSlotList";
 import { useAuth } from "@/context/AuthContext";
@@ -11,36 +12,41 @@ import MenuItem, { MenuItemData } from "@/components/menu/MenuItem";
 /**
  * The main MENU (route: /menu). A retro terminal-styled screen: skewed menu
  * entries on the left (Campaign flips to the save-slot list), character art on
- * the right, and a status footer.
+ * the right, and a status footer. Signing in, signing out and EXIT GAME go to
+ * the title screen (/).
  */
 export default function Menu() {
     const [view, setView] = useState<"menu" | "saves">("menu");
     const { activeSeriesId } = useProgression();
     const { user, loading, signOut } = useAuth();
+    const router = useRouter();
 
-    const menuItems: MenuItemData[] = [
-        { label: "CAMPAIGN MODE", action: () => setView("saves"), description: "Continue your progression journey" },
-        {
-            label: "CARD COLLECTION",
-            href: "/collection",
-            description: activeSeriesId ? "View your acquired cards" : "Pick a save in Campaign Mode first",
-            disabled: !activeSeriesId,
-        },
-        { label: "OPTIONS", href: "#", description: "Configure game settings", disabled: true },
-        // Plain account entries until the Duelist Kingdom invitation (Phase 5) replaces the sign-in page.
-        ...(loading
-            ? []
-            : user
-              ? [{ label: "SIGN OUT", action: () => void signOut(), description: `Signed in as ${user.duelistName}` }]
-              : [{ label: "SIGN IN", href: "/dev/auth/", description: "Sign in or create an account to play online" }]),
-        { label: "EXIT GAME", href: "/", description: "Return to title screen" },
-    ];
+    const account: MenuItemData[] = !user
+        ? [{ label: "SIGN IN", href: "/?invite", description: "Keep your progress in an account" }]
+        : [
+              ...(user.role === "admin" ? [{ label: "DEV MODE", href: "#", description: "Coming soon", disabled: true }] : []),
+              { label: "SIGN OUT", action: () => void signOut().then(() => router.push("/")), description: `Signed in as ${user.duelistName}` },
+          ];
+    const menuItems: MenuItemData[] = loading
+        ? []
+        : [
+              { label: "CAMPAIGN MODE", action: () => setView("saves"), description: user ? "Continue your progression journey" : "Playing as a guest, on this device" },
+              {
+                  label: "CARD COLLECTION",
+                  href: "/collection",
+                  description: activeSeriesId ? "View your acquired cards" : "Pick a save in Campaign Mode first",
+                  disabled: !activeSeriesId,
+              },
+              { label: "OPTIONS", href: "#", description: "Configure game settings", disabled: true },
+              ...account,
+              { label: "EXIT GAME", href: "/", description: "Return to title screen" },
+          ];
 
     return (
         <main className="min-h-screen bg-black text-white grid grid-rows-[1fr_auto] relative overflow-hidden font-mono">
             <div className="menu-grid-bg" />
 
-            {/* No nav here — the menu is a front-end screen, like onboarding. */}
+            {/* No nav here: the menu is a front-end screen. */}
             <div className="relative z-10 flex items-center justify-center p-8">
                 <div className="flex gap-12 w-full max-w-6xl items-center">
                     {/* Left: menu, or the save-slot list once Campaign is chosen */}

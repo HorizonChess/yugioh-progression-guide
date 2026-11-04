@@ -1,6 +1,7 @@
 // App-wide smoke test: every route renders without uncaught errors, the nav
-// highlights the right tab, removed routes 404, the root redirect follows the
-// duelist name, and the deck builder's add / drag / drag-to-remove still work.
+// highlights the right tab, removed routes 404, the title screen leads a guest to
+// the menu and EXIT GAME back, and
+// the deck builder's add / drag / drag-to-remove still work.
 //
 // The seeded save is deliberately PARTIAL (no matchHistory/settings, collection
 // as an array) to prove old or hand-edited saves load with defaults.
@@ -34,21 +35,18 @@ const check = (ok, label) => {
 
 const browser = await launchBrowser();
 
-async function seededPage(seed = save, duelistName = "Tester") {
+async function seededPage(seed = save) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 950 } });
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    await seedStorage(page, {
-        [STORE_KEY]: seed && JSON.stringify({ saves: [seed], activeSaveId: seed.id }),
-        duelistName,
-    });
+    await seedStorage(page, { [STORE_KEY]: seed && JSON.stringify({ saves: [seed], activeSaveId: seed.id }) });
     return { page, errors };
 }
 
 // 1. Every route renders; nav tab highlight.
 {
     const { page, errors } = await seededPage();
-    for (const route of [...Object.keys(NAV_ROUTES), "/menu", "/onboarding"]) {
+    for (const route of [...Object.keys(NAV_ROUTES), "/menu"]) {
         errors.length = 0;
         await page.goto(`${BASE}${route}/`, { waitUntil: "networkidle" });
         await page.waitForTimeout(500);
@@ -62,32 +60,29 @@ async function seededPage(seed = save, duelistName = "Tester") {
     const navName = await page.goto(`${BASE}/timeline/`, { waitUntil: "networkidle" }).then(() =>
         page.locator("h2.text-primary").first().innerText()
     );
-    check(navName.trim().toUpperCase() === "TESTER", `nav shows duelist name (got "${navName.trim()}")`);
+    check(navName.trim().toUpperCase() === "GUEST", `nav names a signed-out player Guest (got "${navName.trim()}")`);
     await page.close();
 }
 
-// 2. Removed routes 404; root redirect follows the duelist name.
+// 2. Removed routes 404; a guest goes title → envelope → menu, and EXIT GAME comes back.
 {
-    const { page } = await seededPage();
-    for (const route of ["/map", "/start"]) {
+    const { page, errors } = await seededPage(null);
+    for (const route of ["/map", "/start", "/onboarding", "/dev/auth"]) {
         const res = await page.goto(`${BASE}${route}/`, { waitUntil: "domcontentloaded" });
         check(res?.status() === 404, `${route} is gone (status ${res?.status()})`);
     }
-    await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-    await page.waitForURL(/\/menu\/?$/, { timeout: 8000 }).catch(() => {});
-    check(/\/menu\/?$/.test(page.url()), `/ with a name → /menu (at ${page.url()})`);
+    errors.length = 0;
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Press Start" }).click();
+    await page.getByRole("button", { name: "Play as a guest" }).click();
+    await page.waitForURL(/\/menu\/?$/, { timeout: 8000 });
+    const item = (label) => page.getByRole("button", { name: new RegExp(`^${label}`) }).or(page.getByRole("link", { name: new RegExp(`^${label}`) }));
+    check((await item("CAMPAIGN MODE").isVisible()) && (await item("SIGN IN").isVisible()), "a guest reaches the menu, with Campaign Mode and Sign In");
+    await item("EXIT GAME").click();
+    await page.getByRole("button", { name: "Press Start" }).waitFor({ timeout: 8000 });
+    check(new URL(page.url()).pathname === "/", `EXIT GAME returns to the title screen (at ${page.url()})`);
+    check(errors.length === 0, `the title and envelope raised no page errors ${errors.join(" | ")}`);
     await page.close();
-
-    const fresh = await seededPage(null, null);
-    await fresh.page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-    await fresh.page.waitForURL(/\/onboarding\/?$/, { timeout: 8000 }).catch(() => {});
-    check(/\/onboarding\/?$/.test(fresh.page.url()), `/ without a name → /onboarding (at ${fresh.page.url()})`);
-    await fresh.page.getByPlaceholder("e.g. Seto Kaiba").fill("Yami");
-    await fresh.page.getByRole("button", { name: "START JOURNEY" }).click();
-    await fresh.page.waitForURL(/\/menu\/?$/, { timeout: 8000 }).catch(() => {});
-    const stored = await fresh.page.evaluate(() => localStorage.getItem("duelistName"));
-    check(stored === "Yami", `onboarding stores the duelist name (got ${stored})`);
-    await fresh.page.close();
 }
 
 // 3. Deck builder: double-click add, drag search → deck, drag-to-remove.
