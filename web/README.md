@@ -193,7 +193,7 @@ export default function MyPage() {
 
 ### Project layout
 -   `src/app/<route>/page.tsx`: each route's page component (state, data loading, handlers).
--   `src/components/<feature>/`: components for one feature (`deck-builder`, `packs`, `rewards`, ...); `ui/`, `card/` and `layout/` are shared.
+-   `src/components/<feature>/`: components for one feature (`deck-builder`, `packs`, `rewards`, ...); `ui/`, `card/` and `layout/` are shared; `dev/` holds the temporary account test page.
 -   `src/lib/`: pure logic and API access; `src/hooks/`: shared hooks; `src/context/`: the save-state provider.
 
 ### `src/app` (Routes)
@@ -217,6 +217,8 @@ export default function MyPage() {
     -   **Deck Management**: Save/Load/Delete functionality persisted via `ProgressionContext`.
     -   **Card Info Panel**: Left-side panel displaying full card image and scrollable description text for long card effects.
     -   **Double-Click to Add**: Quickly add cards to deck by double-clicking in the search panel.
+
+-   **`/dev/auth`**: A deliberately plain account test page (sign up, sign in, Google, email confirmation, password reset). It is also where emailed links and the Google redirect land (`?verify=`, `?reset=`, `?google=`). It is temporary: the styled Duelist Kingdom sign-up replaces it in a later phase. It talks to the API through `src/lib/auth-client.ts`; set `NEXT_PUBLIC_API_URL` (e.g. `http://localhost:4100`) when the API is on another origin, and list the web origin in the API's `ALLOWED_ORIGINS`.
 
 ### `src/context`
 -   **`ProgressionContext`**: Global state manager.

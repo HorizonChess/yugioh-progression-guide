@@ -23,7 +23,9 @@ Today the app is a static Next.js export on GitHub Pages. Every rule lives in th
   - The "CLI from npm" they asked about is the `mongodb` driver package that the API imports. The Atlas CLI isn't on npm.
 
 **Auth and admin**
-- Email and password (argon2id, with email verification and password reset) **plus Discord OAuth**.
+- Email and password (argon2id, with email verification and password reset) **plus Google sign-in** (changed from Discord on 2026-10-28).
+  - Google uses the server-side OAuth code flow with PKCE, in our own module (not Supabase), written as a self-contained folder so it can be copied into the user's other Node apps.
+  - Google's OAuth client can only be created by hand in the Cloud Console; there's no API or gcloud command for standard web clients.
 - Email is sent through **Gmail SMTP with an app password** (nodemailer), because there's no domain.
 - **Admin = dev mode** for the developer: a toggle that bypasses game rules for testing (edit rules, grant items, set the set index, override results). It's not a tool for moderating users. Every dev-mode action is audit-logged.
 
@@ -147,7 +149,7 @@ Multi-document mutations (confirming a result, snatch-steal, saving a session, a
   - `requireAdmin` guards `/api/dev/*`.
   - The client never sends outcomes, only *intents*: "open packs", "spin", "claim reward X with choice Y". The server computes the results.
 - **Headers:** `@fastify/helmet` with a CSP that allows only self, the R2 image host and the YGOPRODeck API.
-- **Secrets** (Mongo URI, Discord secret, SMTP app password) live only in Render env and a gitignored `api/.env`.
+- **Secrets** (Mongo URI, Google client secret, SMTP app password) live only in Render env and a gitignored `api/.env`.
 - Atlas network access is `0.0.0.0/0`, because Render free has no static IP. That's mitigated by a strong DB user password and a least-privilege role.
 
 ### Game flow (server-authoritative)
@@ -192,8 +194,8 @@ Multi-document mutations (confirming a result, snatch-steal, saving a session, a
   4. Four **star chips** act as the step indicators and light up as each field validates.
   5. **ACCEPT THE INVITATION** sends the chips flying into a duelist glove.
   6. A "check your email" verification notice, then the **import local saves** step if any local saves exist, then back to the menu signed in.
-- **Sign-in:** "PRESENT YOUR INVITATION". A parchment card with email and password, a Discord button and a forgot-password link.
-  - A first-time Discord login gets one extra step to claim a duelist name.
+- **Sign-in:** "PRESENT YOUR INVITATION". A parchment card with email and password, a Google button and a forgot-password link.
+  - A first-time Google sign-in gets one extra step to claim a duelist name.
 - **Art and motion**
   - All art is built from SVG and CSS on the existing tokens: `.parchment-bg`, `--primary`, `--wood-*` and FrameButton.
   - This follows the `WheelDecor` precedent, so no new raster asset pipeline is needed.
@@ -210,7 +212,7 @@ Multi-document mutations (confirming a result, snatch-steal, saving a session, a
    - Add `render.yaml` and a CI workflow (lint, typecheck and tests for every workspace), and retire the Pages deploy.
    - Install `mongodb`, `fastify` and the `@fastify/*` plugins, plus `zod`, `argon2`, `nodemailer`, `mongodb-memory-server` (dev) and an OAuth helper (`arctic`).
 2. **`feat/auth`**
-   - Users and sessions, signup, login and logout, email verify and reset over Gmail SMTP, Discord OAuth.
+   - Users and sessions, signup, login and logout, email verify and reset over Gmail SMTP, Google sign-in.
    - The `requireAuth` and `requireAdmin` middleware and the `promote-admin` script.
    - Ships with a *plain* sign-in/up form for testing; the redesign lands in phase 5.
 3. **`feat/server-solo-series`**
@@ -236,13 +238,17 @@ Multi-document mutations (confirming a result, snatch-steal, saving a session, a
    - One-time import of local saves as `legacy` solo series.
    - Fix the stray `admin@ygoprog.com` line in `pack_opening_rules.md`.
    - Update the READMEs per `.agent/rules/documentation.md`.
+7. **`feat/mobile-redesign`** (added 2026-10-28)
+   - The mobile version looks bad and barely works (packs can't even be opened on a phone).
+   - Redesign it so every flow works on a phone, with great UX that keeps the app's 90s Yu-Gi-Oh! look and feel. This includes the parked items: GuideSprite overlapping the VICTORY/DEFEAT buttons, and the mobile deck builder.
+   - Verify every route and flow at phone widths with the Playwright drivers.
 
 The plan also gets copied into the repo at `plans/2026-10-26/multiplayer-backend.md`, per the plans convention.
 
 ## User setup tasks (I'll prompt for these when each phase needs them)
 - **Atlas:** create an M0 cluster and a DB user, allow network access from `0.0.0.0/0`, and give me the connection string. It goes in `api/.env` and Render env.
 - **Gmail:** create an app password, which needs 2FA on the account.
-- **Discord Developer Portal:** create an application and set the redirect `https://<render-app>.onrender.com/api/auth/discord/callback` (plus a localhost one).
+- **Google Cloud Console:** create a project, set up the OAuth consent screen, and create a "Web application" OAuth client with redirects `http://localhost:4000/api/auth/google/callback` and `https://<render-app>.onrender.com/api/auth/google/callback`. The client ID and secret go in `api/.env` and Render env.
 - **Render:** create the web service from `render.yaml` and paste the env vars.
 
 ## Verification
@@ -292,4 +298,33 @@ The plan also gets copied into the repo at `plans/2026-10-26/multiplayer-backend
 - Known, not yet fixed: `/bg/fabric_pattern.png` (deck builder grid background) was never committed, and `npm audit` flags the image-tooling dependencies. Both go on a housekeeping branch.
 - `crypto.randomInt` caps its range below 2^48. The server's crypto RNG (Phase 3) must respect that.
 
-**Before Phase 2:** the user creates the Render service from `render.yaml` (region close to the Atlas cluster), plus the Gmail app password and Discord app when auth needs them.
+**Before Phase 2:** the user creates the Render service from `render.yaml` (region close to the Atlas cluster), plus the Gmail app password and Google OAuth client when auth needs them.
+
+Merged into `main` with `chore/housekeeping` (the dead `fabric_pattern.png` reference) on 2026-10-28 and pushed by the user; CI and the Pages deploy passed. Atlas is in Frankfurt, matching `render.yaml`.
+
+### Decisions 2026-10-28
+- Google sign-in replaces Discord. Accounts keep email (for self-service resets).
+- Auth is our own module, not Supabase like Lesson Manager (that app has no server auth code to reuse).
+- Mobile redesign added as Phase 7.
+- GitHub's built-in "pages build and deployment" (Jekyll) job fails on every push. That predates this project and doesn't affect the site, which is published by `deploy.yml`; switching the repo's Pages source to "GitHub Actions" stops it.
+
+### Phase 2: auth (done 2026-11-04, branch `feat/auth`)
+Done:
+- Shared account input rules (`@ygo/shared` `schemas/auth.ts`).
+- Storage: argon2id passwords with a timing-equalising dummy check, users unique by email / duelist name / Google id, hashed-token sessions with a sliding 30-day expiry and TTL index.
+- `/api/auth/{signup,login,logout,me,duelist-name-available}`. Login takes an email or a duelist name and gives one identical 401 for every failure. Signup and login are limited to 10 per minute per IP, the name check to 30.
+- Session cookie: `sid`, `httpOnly`, `SameSite=Lax`, `Secure` in production, 30 days.
+- `requireAuth` / `requireAdmin` middleware and an `Origin` check on every non-GET `/api` request (own origin plus `ALLOWED_ORIGINS`).
+
+- Google sign-in (`api/src/auth/google/`, self-contained): authorization-code flow with PKCE, a browser-bound `state`, a nonce and single-use flow records. A returning Google account signs in, a verified matching email is linked, and a first-time account claims a duelist name. Linking onto an unverified pre-registered email drops that password and ends its sessions.
+- Email verification and password reset over SMTP (Gmail app password). Links carry a one-time token to `/menu/?verify=…` or `?reset=…`; only hashes are stored, links expire (24 h / 1 h), and a new link cancels the old. Resetting signs out every session. Mail is sent in the background so "forgot password" answers identically, and as fast, for unknown emails.
+
+- `npm run promote-admin -w @ygo/api -- <email or duelist name> [--demote] [--allow-unverified]` is the only way to become an admin (no HTTP route). It refuses unconfirmed emails unless told otherwise and writes each change to `auditLog`.
+
+- Plain test page at `/dev/auth/` (web), which is also where email links and the Google redirect land (`AUTH_PAGE_PATH` in `api/src/auth/landing.ts`; Phase 5 moves it to `/menu/`). `ALLOWED_ORIGINS` also enables CORS for the Next dev server.
+- `npm run test-server -w @ygo/api` runs the API on an in-memory database with captured email, and `web/scripts/drivers/auth.mjs` drives sign-up, confirmation, sign-in, and reset through it in a real browser.
+- Verified: lint, typecheck, 27 shared + 70 API + 36 web tests, the build, the auth driver (26 checks) and the existing smoke driver. A real test email was accepted by Gmail.
+
+Verified by hand on 2026-11-04 against Atlas and real Google: Google sign-in with the duelist-name step, Gmail delivery, and `promote-admin` (the account `HorizonDev` is the user's admin test account; keep it). Before inviting other players: publish the Google app out of Testing mode, since only listed test users can sign in until then.
+
+Known: sign-up answers 409 for a taken email, so it can reveal that an email is registered. Reset and verify will not.

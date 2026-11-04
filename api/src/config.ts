@@ -15,6 +15,30 @@ const EnvSchema = z.object({
     WEB_DIST: z.string().min(1).optional(),
     /** Public R2 bucket serving card art; allowed as an image source by the CSP. */
     IMAGE_HOST: z.url().optional(),
+    /**
+     * Extra origins allowed to make state-changing requests, comma-separated
+     * (e.g. `http://localhost:3000` when the Next dev server calls the API).
+     * The server's own origin is always allowed.
+     */
+    ALLOWED_ORIGINS: z
+        .string()
+        .default('')
+        .transform(value => value.split(',').map(origin => origin.trim()).filter(Boolean)),
+    /** Google sign-in is switched on only when both of these are set. */
+    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+    /** The API's public origin, used to build the Google redirect URI. Defaults to `http://localhost:<PORT>`. */
+    PUBLIC_URL: z.url().optional(),
+    /** Outgoing mail over SMTP (Gmail by default). Verification and reset emails need `SMTP_USER` and `SMTP_PASSWORD`. */
+    SMTP_HOST: z.string().min(1).default('smtp.gmail.com'),
+    SMTP_PORT: z.coerce.number().int().positive().default(465),
+    SMTP_USER: z.string().min(1).optional(),
+    /** A Gmail app password. Google displays it in groups of four; the spaces aren't part of it. */
+    SMTP_PASSWORD: z.string().min(1).transform(value => value.replace(/\s+/g, '')).optional(),
+    /** The From header, e.g. `Yu-Gi-Oh Progression Guide <me@gmail.com>`. Defaults to `SMTP_USER`. */
+    MAIL_FROM: z.string().min(1).optional(),
+    /** Where the browser lands after Google sign-in. Defaults to PUBLIC_URL; set to the Next dev server locally. */
+    WEB_URL: z.url().optional(),
 });
 
 export type Config = z.infer<typeof EnvSchema>;
