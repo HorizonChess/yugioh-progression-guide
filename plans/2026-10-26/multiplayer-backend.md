@@ -316,6 +316,9 @@ Done:
 - Session cookie: `sid`, `httpOnly`, `SameSite=Lax`, `Secure` in production, 30 days.
 - `requireAuth` / `requireAdmin` middleware and an `Origin` check on every non-GET `/api` request (own origin plus `ALLOWED_ORIGINS`).
 
-Still to do: email verification and password reset over Gmail SMTP, Google sign-in, `promote-admin` script, the plain test sign-in/up form.
+- Google sign-in (`api/src/auth/google/`, self-contained): authorization-code flow with PKCE, a browser-bound `state`, a nonce and single-use flow records. A returning Google account signs in, a verified matching email is linked, and a first-time account claims a duelist name. Linking onto an unverified pre-registered email drops that password and ends its sessions.
+- Email verification and password reset over SMTP (Gmail app password). Links carry a one-time token to `/menu/?verify=…` or `?reset=…`; only hashes are stored, links expire (24 h / 1 h), and a new link cancels the old. Resetting signs out every session. Mail is sent in the background so "forgot password" answers identically, and as fast, for unknown emails.
+
+Still to do: `promote-admin` script, the plain test sign-in/up form (including the `?verify=`, `?reset=` and `?google=` landings), and a real-world check of Google sign-in and a delivered email.
 
 Known: sign-up answers 409 for a taken email, so it can reveal that an email is registered. Reset and verify will not.

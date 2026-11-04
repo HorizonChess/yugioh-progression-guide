@@ -4,11 +4,15 @@ import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
+import { createEmailFlows } from './auth/email-flows';
 import { ensureGoogleIndexes } from './auth/google/pending';
 import { ensureSessionIndexes } from './auth/sessions';
+import { ensureTokenIndexes } from './auth/tokens';
 import { ensureUserIndexes } from './auth/users';
+import { registerBackground } from './background';
 import type { Config } from './config';
 import { connectDb } from './db';
+import { createMailer, type Mailer } from './mail/mailer';
 import { originCheck } from './middleware/originCheck';
 import { authRoutes } from './routes/auth';
 import { googleRoutes } from './routes/google';
@@ -25,6 +29,8 @@ export interface AppOptions {
     logger?: boolean;
     /** The `fetch` used to reach Google's token endpoint. Tests substitute a fake. */
     googleFetch?: typeof fetch;
+    /** Delivers verification and reset emails. Defaults to SMTP from the config. */
+    mailer?: Mailer;
 }
 
 /**
@@ -32,7 +38,7 @@ export interface AppOptions {
  * routes and (when `WEB_DIST` is set) the static site, all from one origin so
  * session cookies can stay same-site.
  */
-export async function buildApp({ config, logger, googleFetch }: AppOptions): Promise<FastifyInstance> {
+export async function buildApp({ config, logger, googleFetch, mailer }: AppOptions): Promise<FastifyInstance> {
     const rewriteSegment = config.WEB_DIST ? nextSegmentRewrite(config.WEB_DIST) : null;
     const app = Fastify({
         logger: logger ?? config.NODE_ENV !== 'test',
@@ -66,6 +72,11 @@ export async function buildApp({ config, logger, googleFetch }: AppOptions): Pro
     await ensureUserIndexes(app.db);
     await ensureSessionIndexes(app.db);
     await ensureGoogleIndexes(app.db);
+    await ensureTokenIndexes(app.db);
+    registerBackground(app);
+
+    const publicUrl = config.PUBLIC_URL ?? `http://localhost:${config.PORT}`;
+    const emailFlows = createEmailFlows(app, mailer ?? createMailer(config, app.log), config.WEB_URL ?? publicUrl);
 
     // Rate limits cover the API only: a single page load fetches dozens of static chunks.
     await app.register(async (api) => {
@@ -75,9 +86,8 @@ export async function buildApp({ config, logger, googleFetch }: AppOptions): Pro
         await api.register(rateLimit, { max: 300, timeWindow: '1 minute' });
         await api.register(healthRoutes);
         const secureCookies = config.NODE_ENV === 'production';
-        await api.register(authRoutes, { prefix: '/auth', secureCookies });
+        await api.register(authRoutes, { prefix: '/auth', secureCookies, emailFlows });
         if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
-            const publicUrl = config.PUBLIC_URL ?? `http://localhost:${config.PORT}`;
             await api.register(googleRoutes, {
                 prefix: '/auth/google',
                 client: {

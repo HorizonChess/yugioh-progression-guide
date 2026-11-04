@@ -65,6 +65,24 @@ export function findUserByDuelistName(db: Db, name: string) {
     return usersCollection(db).findOne({ duelistNameKey: duelistNameKey(name) });
 }
 
+/**
+ * Marks an email as confirmed, but only while the account still has that address.
+ * Returns false if no such account exists any more.
+ */
+export async function markEmailVerified(db: Db, userId: ObjectId, email: string): Promise<boolean> {
+    const result = await usersCollection(db).updateOne({ _id: userId, email }, { $set: { emailVerified: true } });
+    return result.matchedCount === 1;
+}
+
+/**
+ * Sets a new password after a reset. Following the emailed link also proves the
+ * address is theirs, so it counts as verified. Returns false if the account is gone.
+ */
+export async function setPasswordAfterReset(db: Db, userId: ObjectId, email: string, passwordHash: string): Promise<boolean> {
+    const result = await usersCollection(db).updateOne({ _id: userId, email }, { $set: { passwordHash, emailVerified: true } });
+    return result.matchedCount === 1;
+}
+
 export function findUserByGoogleSub(db: Db, sub: string) {
     return usersCollection(db).findOne({ googleSub: sub });
 }

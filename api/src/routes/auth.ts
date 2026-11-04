@@ -1,10 +1,20 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import type { z } from 'zod';
-import { DuelistNameSchema, LoginBodySchema, SignupBodySchema } from '@ygo/shared';
+import { z } from 'zod';
+import { DuelistNameSchema, EmailSchema, LoginBodySchema, PasswordSchema, SignupBodySchema } from '@ygo/shared';
 import { clearSessionCookie, SESSION_COOKIE, setSessionCookie } from '../auth/cookie';
 import { burnPasswordCheck, hashPassword, verifyPassword } from '../auth/passwords';
-import { createSession, deleteSession } from '../auth/sessions';
-import { AccountTakenError, findUserByDuelistName, findUserByEmail, insertUser, toPublicUser } from '../auth/users';
+import type { EmailFlows } from '../auth/email-flows';
+import { createSession, deleteSession, deleteUserSessions } from '../auth/sessions';
+import { consumeToken } from '../auth/tokens';
+import {
+    AccountTakenError,
+    findUserByDuelistName,
+    findUserByEmail,
+    insertUser,
+    markEmailVerified,
+    setPasswordAfterReset,
+    toPublicUser,
+} from '../auth/users';
 import { requireAuth } from '../middleware/requireAuth';
 
 /** Per-route limit for endpoints an attacker can hammer: password guesses, sign-up spam. */
@@ -21,8 +31,13 @@ function parseOr400<T extends z.ZodType>(schema: T, data: unknown, reply: Fastif
     return null;
 }
 
-export async function authRoutes(app: FastifyInstance, options: { secureCookies: boolean }): Promise<void> {
-    const { secureCookies } = options;
+const BAD_LINK = { error: 'This link is invalid or has expired' };
+const TokenBodySchema = z.strictObject({ token: z.string().min(1).max(200) });
+const ForgotBodySchema = z.strictObject({ email: EmailSchema });
+const ResetBodySchema = z.strictObject({ token: z.string().min(1).max(200), password: PasswordSchema });
+
+export async function authRoutes(app: FastifyInstance, options: { secureCookies: boolean; emailFlows: EmailFlows }): Promise<void> {
+    const { secureCookies, emailFlows } = options;
 
     app.post('/signup', { config: STRICT_LIMIT }, async (request, reply) => {
         const body = parseOr400(SignupBodySchema, request.body, reply);
@@ -36,6 +51,7 @@ export async function authRoutes(app: FastifyInstance, options: { secureCookies:
                 passwordHash: await hashPassword(body.password),
             });
             setSessionCookie(reply, await createSession(app.db, user._id), secureCookies);
+            emailFlows.queueVerification(user);
             return reply.code(201).send({ user: toPublicUser(user) });
         } catch (error) {
             if (error instanceof AccountTakenError) {
@@ -83,5 +99,42 @@ export async function authRoutes(app: FastifyInstance, options: { secureCookies:
         }
         const taken = await findUserByDuelistName(app.db, parsed.data);
         return taken ? { available: false, reason: 'Already taken' } : { available: true };
+    });
+
+    /** Re-sends the confirmation email to the signed-in user. */
+    app.post('/verify/send', { preHandler: requireAuth, config: { rateLimit: { max: 3, timeWindow: '1 minute' } } }, async (request, reply) => {
+        if (!request.user!.emailVerified) emailFlows.queueVerification(request.user!);
+        return reply.code(204).send();
+    });
+
+    /** Confirms an address from the emailed link. The token is the proof, so no sign-in is needed. */
+    app.post('/verify', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
+        const body = parseOr400(TokenBodySchema, request.body, reply);
+        if (!body) return;
+        const spent = await consumeToken(app.db, body.token, 'verify');
+        if (!spent || !(await markEmailVerified(app.db, spent.userId, spent.email))) return reply.code(400).send(BAD_LINK);
+        return reply.code(204).send();
+    });
+
+    /** Always 204, whether or not the email has an account, so it can't be used to find out. */
+    app.post('/password/forgot', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
+        const body = parseOr400(ForgotBodySchema, request.body, reply);
+        if (!body) return;
+        emailFlows.queueReset(body.email);
+        return reply.code(204).send();
+    });
+
+    /** Sets a new password from the emailed link and signs the account out everywhere. */
+    app.post('/password/reset', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
+        // Validate the password first, so a typo doesn't burn the one-time link.
+        const body = parseOr400(ResetBodySchema, request.body, reply);
+        if (!body) return;
+        const spent = await consumeToken(app.db, body.token, 'reset');
+        if (!spent) return reply.code(400).send(BAD_LINK);
+        if (!(await setPasswordAfterReset(app.db, spent.userId, spent.email, await hashPassword(body.password)))) {
+            return reply.code(400).send(BAD_LINK);
+        }
+        await deleteUserSessions(app.db, spent.userId);
+        return reply.code(204).send();
     });
 }
