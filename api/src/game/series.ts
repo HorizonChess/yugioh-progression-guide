@@ -25,6 +25,11 @@ export interface SeriesDoc {
     status: 'active' | 'awaiting_rival' | 'paused';
     rules: SeriesRules;
     currentSetIndex: number;
+    /**
+     * The name of the set at `currentSetIndex`. The name is the truth: if a
+     * card re-sync shifts the timeline, the index is repaired from it on read.
+     */
+    currentSetName: string;
     /** The series-wide banlist (ban/unban rewards). */
     bannedCardIds: number[];
     matchHistory: MatchEntry[];
@@ -74,7 +79,7 @@ export class TooManySeriesError extends Error {}
 export async function createSoloSeries(
     mongo: MongoClient,
     db: Db,
-    input: { ownerId: ObjectId; name: string; rules: SeriesRules },
+    input: { ownerId: ObjectId; name: string; rules: SeriesRules; startSetName: string },
 ): Promise<{ series: SeriesDoc; player: SeriesPlayerDoc }> {
     const now = new Date();
     const series: SeriesDoc = {
@@ -86,6 +91,7 @@ export async function createSoloSeries(
         status: 'active',
         rules: input.rules,
         currentSetIndex: input.rules.startSetIndex,
+        currentSetName: input.startSetName,
         bannedCardIds: [],
         matchHistory: [],
         version: 1,

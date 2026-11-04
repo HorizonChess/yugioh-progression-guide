@@ -340,4 +340,7 @@ Broken into small commits, each tested on its own:
 7. **Decks and YDK import**: server-side deck save and validation (owned cards only), and the collection import at creation, or anytime in solo.
 8. **Web**: a `GameRepository` with `LocalRepo` (today's localStorage behaviour, for guests) and `RemoteRepo`; `ProgressionContext` becomes async commands; the pages call it; `WinnersWheel` lands on the server's prize. Playwright `pack-session.mjs`, and `smoke.mjs` updated.
 
-Open question for the user (default chosen, easy to flip in one place): Snatch Steal can't be used in a solo series, since there is no rival. The default keeps it on the wheel everywhere, matching the guest game, and a solo claim is refused with a clear message. The alternative is to leave it off the solo wheel.
+Decided with the user (2026-11-04):
+- Snatch Steal is left off the wheel in solo series; there's no rival to steal from. The wheel the server spins depends on the series mode (step 5).
+- A saved position keeps the set's name as well as its index, on series (server) and guest saves (web), and the name wins when the two disagree. Guest saves written before this are translated once using the old date-only order, so they stay on the set they meant.
+- The 50-series cap is per player (how many runs one account can have), a guard against scripted creation; reads aren't limited beyond the normal rate limit.

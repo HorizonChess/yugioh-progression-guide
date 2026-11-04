@@ -31,6 +31,13 @@ export interface SaveSlot {
 
     // Game state
     currentSetIndex: number;
+    /**
+     * The name of the set at `currentSetIndex`. The name is the truth: if the
+     * timeline order ever shifts, the index is repaired from it (lib/set-position).
+     */
+    currentSetName?: string;
+    /** 2 = the index was written under today's timeline order (name tiebreak). */
+    setOrder?: 2;
     collection: Collection;
     matchHistory: MatchResult[];
     /** Rewards ledger (available + claimed). */
@@ -115,6 +122,8 @@ function toSaveSlot(v: unknown): SaveSlot | null {
         createdAt: num(v.createdAt, now),
         lastPlayed: num(v.lastPlayed, now),
         currentSetIndex: num(v.currentSetIndex, 0),
+        ...(isString(v.currentSetName) ? { currentSetName: v.currentSetName } : {}),
+        ...(v.setOrder === 2 ? { setOrder: 2 as const } : {}),
         collection: toCollection(v.collection),
         matchHistory: list(v.matchHistory).filter(isMatchResult),
         rewards: list(v.rewards).filter(isRewardEntry),

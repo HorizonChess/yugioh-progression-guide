@@ -72,6 +72,19 @@ export function timelineSets(rawSets: readonly CardSet[]): CardSet[] {
     return rawSets.filter(isTimelineSet).sort(byDate);
 }
 
+/**
+ * Where the set called `setName` sits on `timeline`. A saved position is
+ * remembered by name as well as by index because the index alone can drift:
+ * a re-sync that adds a set shifts every later index, and sets released on
+ * the same day once sorted differently. The name wins whenever the two
+ * disagree; `fallbackIndex` is used only if the name is unknown (or missing).
+ */
+export function resolveSetIndex(timeline: readonly CardSet[], setName: string | undefined, fallbackIndex: number): number {
+    if (setName === undefined || timeline[fallbackIndex]?.set_name === setName) return fallbackIndex;
+    const found = timeline.findIndex((set) => set.set_name === setName);
+    return found === -1 ? fallbackIndex : found;
+}
+
 /** The tournament-pack pool, ascending by date. */
 export function tournamentSets(rawSets: readonly CardSet[]): CardSet[] {
     return rawSets.filter(isTournamentSet).sort(byDate);

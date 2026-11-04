@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { CreateSeriesBodySchema, seriesRulesProblem, type CardSet } from '@ygo/shared';
+import { CreateSeriesBodySchema, resolveSetIndex, seriesRulesProblem, type CardSet } from '@ygo/shared';
 import type { CardCatalog } from '../cards/catalog';
 import {
     TooManySeriesError,
@@ -15,16 +15,17 @@ import { requireSeriesMember } from '../middleware/requireSeriesMember';
 
 /** What any member may see about a series. */
 function publicSeries(series: SeriesDoc, timeline: readonly CardSet[]) {
+    const currentSetIndex = resolveSetIndex(timeline, series.currentSetName, series.currentSetIndex);
     return {
         id: series._id.toHexString(),
         name: series.name,
         mode: series.mode,
         status: series.status,
         rules: series.rules,
-        currentSetIndex: series.currentSetIndex,
-        currentSetName: timeline[series.currentSetIndex]?.set_name ?? null,
+        currentSetIndex,
+        currentSetName: timeline[currentSetIndex]?.set_name ?? null,
         /** True once the last set on the timeline has been played. */
-        finished: series.currentSetIndex >= timeline.length,
+        finished: currentSetIndex >= timeline.length,
         bannedCardIds: series.bannedCardIds,
         matchHistory: series.matchHistory.map((m) => ({
             setIndex: m.setIndex,
@@ -75,6 +76,7 @@ export async function seriesRoutes(app: FastifyInstance, options: { catalog: Car
                 ownerId: request.user!._id,
                 name: body.data.name,
                 rules,
+                startSetName: timeline[rules.startSetIndex]!.set_name,
             });
             return reply.code(201).send({ series: publicSeries(series, timeline), me: publicPlayer(player) });
         } catch (error) {

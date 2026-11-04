@@ -1,7 +1,9 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { PulledCard } from '@/lib/api';
+import { CardSet, PulledCard, fetchRawSets } from '@/lib/api';
+import { timelineSets } from '@ygo/shared';
+import { reconcileSaves } from '@/lib/set-position';
 import { RewardEntry } from '@/lib/rewards';
 import { Collection, collectionKey } from '@/lib/collection';
 import {
@@ -84,6 +86,26 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         /* eslint-enable react-hooks/set-state-in-effect */
     }, []);
 
+    // The raw set list, for keeping saves on the right set by name.
+    const [rawSets, setRawSets] = useState<CardSet[]>([]);
+    useEffect(() => {
+        let cancelled = false;
+        void fetchRawSets().then((sets) => {
+            if (!cancelled) setRawSets(sets);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+    const timeline = rawSets.length ? timelineSets(rawSets) : null;
+
+    // Once saves and sets are both loaded, point every save at its set by name.
+    useEffect(() => {
+        if (!hasLoaded || rawSets.length === 0) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- a one-off repair; reconcileSaves returns the same array when nothing changes
+        setSaves((prev) => reconcileSaves(prev, rawSets));
+    }, [hasLoaded, rawSets]);
+
     // Save to localStorage on change
     useEffect(() => {
         if (hasLoaded) persistState({ saves, activeSaveId });
@@ -111,6 +133,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             createdAt: Date.now(),
             lastPlayed: Date.now(),
             currentSetIndex: startSetIndex,
+            ...(timeline?.[startSetIndex] ? { currentSetName: timeline[startSetIndex].set_name } : {}),
+            setOrder: 2,
             collection: {},
             matchHistory: [],
             rewards: [],
@@ -157,10 +181,13 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
     };
 
     const advanceSet = () => {
-        updateActiveSave(save => ({
-            ...save,
-            currentSetIndex: save.currentSetIndex + 1
-        }));
+        updateActiveSave(save => {
+            const next = save.currentSetIndex + 1;
+            const nextName = timeline?.[next]?.set_name;
+            const { currentSetName: _previous, ...rest } = save;
+            void _previous;
+            return { ...rest, currentSetIndex: next, setOrder: 2, ...(nextName ? { currentSetName: nextName } : {}) };
+        });
     };
 
     // --- Rewards ledger ---

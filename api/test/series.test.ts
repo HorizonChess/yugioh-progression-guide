@@ -85,7 +85,7 @@ describe('POST /api/series', () => {
         await seriesCollection(app.db).insertMany(
             Array.from({ length: MAX_SERIES_PER_USER }, () => ({
                 name: 'x', mode: 'solo', ownerId: me!._id, memberIds: [me!._id], status: 'active',
-                rules: { startSetIndex: 0, packsPerSet: 24 }, currentSetIndex: 0, bannedCardIds: [], matchHistory: [],
+                rules: { startSetIndex: 0, packsPerSet: 24 }, currentSetIndex: 0, currentSetName: TIMELINE[0], bannedCardIds: [], matchHistory: [],
                 version: 1, createdAt: new Date(), updatedAt: new Date(),
             })) as never[],
         );
@@ -96,6 +96,18 @@ describe('POST /api/series', () => {
 });
 
 describe('reading series', () => {
+    it('stays on its set by name when a card re-sync shifts the timeline', async () => {
+        const yami = await player('Yami');
+        const id = (await create(yami, { startSetIndex: 2 })).json().series.id;
+
+        // A newly synced set released before everything else pushes every index up by one.
+        await cardSetsCollection(app.db).insertOne({ _id: 'Dawn of the Duelists', set_name: 'Dawn of the Duelists', set_code: 'DOD', num_of_cards: 100, tcg_date: '2001-01-01' } as never);
+        app.catalog.invalidate();
+
+        const { series } = (await get(yami, `/api/series/${id}`)).json();
+        expect(series).toMatchObject({ currentSetIndex: 3, currentSetName: 'Spell Ruler' });
+    });
+
     it('lists only your own series, newest first', async () => {
         const yami = await player('Yami');
         const kaiba = await player('Kaiba');
