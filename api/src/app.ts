@@ -14,6 +14,7 @@ import { registerBackground } from './background';
 import { createCardCatalog, type CardCatalog } from './cards/catalog';
 import type { Config } from './config';
 import { connectDb } from './db';
+import { ensurePackIndexes } from './game/packs';
 import { ensureSeriesIndexes } from './game/series';
 import { createMailer, type Mailer } from './mail/mailer';
 import { cors } from './middleware/cors';
@@ -21,6 +22,7 @@ import { originCheck } from './middleware/originCheck';
 import { authRoutes } from './routes/auth';
 import { googleRoutes } from './routes/google';
 import { healthRoutes } from './routes/health';
+import { packRoutes } from './routes/packs';
 import { seriesRoutes } from './routes/series';
 import { nextSegmentRewrite } from './static-site';
 
@@ -86,6 +88,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
     await ensureGoogleIndexes(app.db);
     await ensureTokenIndexes(app.db);
     await ensureSeriesIndexes(app.db);
+    await ensurePackIndexes(app.db);
     app.decorate('catalog', createCardCatalog(app.db));
     registerBackground(app);
 
@@ -106,6 +109,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
         const secureCookies = config.NODE_ENV === 'production';
         await api.register(authRoutes, { prefix: '/auth', secureCookies, emailFlows });
         await api.register(seriesRoutes, { prefix: '/series', catalog: app.catalog });
+        await api.register(packRoutes, { prefix: '/series/:seriesId/packs' });
         if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
             await api.register(googleRoutes, {
                 prefix: '/auth/google',
