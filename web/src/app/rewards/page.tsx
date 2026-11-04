@@ -167,6 +167,8 @@ export default function RewardsPage() {
             case "unban":
                 return { label: kind === "ban" ? "Ban a Card" : "Unban a Card", onClick: () => setBanEntry(entry) };
             case "snatch":
+            case "redoer":
+            case "spin":
                 return null;
         }
     };

@@ -108,4 +108,57 @@ describe('pack sessions', () => {
         await seriesCollection(app.db).updateOne({}, { $set: { currentSetIndex: 2, currentSetName: 'none' } });
         expect((await call('POST', '/open')).json().error).toMatch(/every set/);
     });
+
+    it('rerolls an unsaved opening only by spending a Redoer Ticket', async () => {
+        const { call } = await newSeries();
+        const { session } = (await call('POST', '/open')).json();
+        expect((await call('POST', `/${session.id}/reroll`)).json().error).toMatch(/Redoer/);
+
+        const ticket = { id: 't1', prizeId: 'redoer-ticket', wonFromPackName: LOB.set_name, wonFromSetIndex: 0, wonDate: '', status: 'available' };
+        await seriesPlayersCollection(app.db).updateOne({}, { $push: { rewards: ticket as never } });
+        const res = await call('POST', `/${session.id}/reroll`);
+        expect(res.statusCode).toBe(201);
+        const fresh = res.json().session;
+        expect(fresh.packs).toHaveLength(12);
+        expect((await call('GET', '/active')).json().session.id).toBe(fresh.id);
+        expect((await seriesPlayersCollection(app.db).findOne({}))!.rewards[0]!.status).toBe('claimed');
+        expect((await call('POST', `/${fresh.id}/reroll`)).statusCode).toBe(409);
+    });
+});
+
+describe('match reports and the wheel', () => {
+    const report = (s: { id: string; cookie: string }, result: string) =>
+        app.inject({ method: 'POST', url: `/api/series/${s.id}/matches`, headers: { cookie: s.cookie }, payload: { result } });
+    const spin = (s: { id: string; cookie: string }, rewardId: string) =>
+        app.inject({ method: 'POST', url: `/api/series/${s.id}/rewards/${rewardId}/spin`, headers: { cookie: s.cookie } });
+
+    it('needs the set saved, then a win advances the set and spins once on the server', async () => {
+        const s = await newSeries();
+        expect((await report(s, 'win')).json().error).toMatch(/Save/);
+        const { session } = (await s.call('POST', '/open')).json();
+        await s.call('POST', `/${session.id}/save`);
+
+        const res = await report(s, 'win');
+        expect(res.statusCode).toBe(201);
+        const { reward } = res.json();
+        expect(reward).toMatchObject({ prizeId: 'wheel-spin', wonFromPackName: LOB.set_name, status: 'available' });
+        expect(await seriesCollection(app.db).findOne({})).toMatchObject({ currentSetIndex: 1, currentSetName: MRD.set_name, version: 2 });
+        // The set moved on, so the same set can't be reported twice.
+        expect((await report(s, 'win')).statusCode).toBe(409);
+
+        const { prize } = (await spin(s, reward.id)).json();
+        expect(prize.id).not.toMatch(/snatch-steal|wheel-spin|pity/);
+        expect((await seriesPlayersCollection(app.db).findOne({}))!.rewards[0]!.prizeId).toBe(prize.id);
+        expect((await spin(s, reward.id)).statusCode).toBe(409);
+    });
+
+    it('gives pity packs for a loss, which cannot be spun', async () => {
+        const s = await newSeries();
+        const { session } = (await s.call('POST', '/open')).json();
+        await s.call('POST', `/${session.id}/save`);
+        const { reward } = (await report(s, 'loss')).json();
+        expect(reward.prizeId).toBe('pity-packs');
+        expect((await spin(s, reward.id)).statusCode).toBe(409);
+        expect((await report(s, 'draw')).statusCode).toBe(400);
+    });
 });

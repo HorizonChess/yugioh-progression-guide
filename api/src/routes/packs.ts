@@ -2,7 +2,7 @@ import { MongoServerError, ObjectId } from 'mongodb';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { openPacksBlock, resolveSetIndex } from '@ygo/shared';
 import { z } from 'zod';
-import { flatIndex, hydrate, packSessions, rollPacks, saveSession } from '../game/packs';
+import { flatIndex, hydrate, packSessions, rerollSession, rollPacks, saveSession } from '../game/packs';
 import { requireAuth } from '../middleware/requireAuth';
 import { requireSeriesMember } from '../middleware/requireSeriesMember';
 
@@ -20,6 +20,7 @@ const BLOCK_MESSAGES = {
  *   GET  /active               the unsaved opening, to resume after a reload
  *   PATCH /:sessionId/flips    remember which cards are face up
  *   POST /:sessionId/save      add the cards to your collection
+ *   POST /:sessionId/reroll    spend a Redoer Ticket on fresh packs
  */
 export async function packRoutes(app: FastifyInstance): Promise<void> {
     const guard = { preHandler: [requireAuth, requireSeriesMember] };
@@ -89,5 +90,18 @@ export async function packRoutes(app: FastifyInstance): Promise<void> {
         if (!session) return reply.code(404).send({ error: 'No such opening' });
         if (!(await saveSession(app.mongo, app.db, session))) return reply.code(409).send({ error: 'This opening was already saved' });
         return reply.code(204).send();
+    });
+
+    app.post('/:sessionId/reroll', { ...guard, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
+        const session = await ownSession(request);
+        if (!session || session.source !== 'set') return reply.code(404).send({ error: 'No such opening' });
+        const set = (await app.catalog.timeline()).find((s) => s.set_name === session.setName);
+        if (!set) return reply.code(409).send({ error: 'This set is no longer available' });
+
+        const packs = rollPacks(await app.catalog.cardsInSet(set.set_name), set, session.packs.length);
+        const result = await rerollSession(app.mongo, app.db, session, packs);
+        if (result === 'not-open') return reply.code(409).send({ error: 'Only an unsaved opening can be rerolled' });
+        if (result === 'no-ticket') return reply.code(409).send({ error: 'You have no Redoer Ticket' });
+        return reply.code(201).send({ session: await hydrate(app.catalog, result) });
     });
 }

@@ -22,6 +22,7 @@ import { originCheck } from './middleware/originCheck';
 import { authRoutes } from './routes/auth';
 import { googleRoutes } from './routes/google';
 import { healthRoutes } from './routes/health';
+import { matchRoutes } from './routes/matches';
 import { packRoutes } from './routes/packs';
 import { seriesRoutes } from './routes/series';
 import { nextSegmentRewrite } from './static-site';
@@ -110,6 +111,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
         await api.register(authRoutes, { prefix: '/auth', secureCookies, emailFlows });
         await api.register(seriesRoutes, { prefix: '/series', catalog: app.catalog });
         await api.register(packRoutes, { prefix: '/series/:seriesId/packs' });
+        await api.register(matchRoutes, { prefix: '/series/:seriesId' });
         if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
             await api.register(googleRoutes, {
                 prefix: '/auth/google',

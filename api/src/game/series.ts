@@ -11,7 +11,8 @@ import type { Collection, RewardEntry, SeriesRules } from '@ygo/shared';
 export interface MatchEntry {
     setIndex: number;
     setName: string;
-    winnerId: ObjectId;
+    /** Null on the side of a solo match the player's offline opponent took. */
+    winnerId: ObjectId | null;
     loserId: ObjectId | null;
     at: Date;
 }

@@ -30,7 +30,8 @@ function publicSeries(series: SeriesDoc, timeline: readonly CardSet[]) {
         matchHistory: series.matchHistory.map((m) => ({
             setIndex: m.setIndex,
             setName: m.setName,
-            winnerId: m.winnerId.toHexString(),
+            winnerId: m.winnerId?.toHexString() ?? null,
+            loserId: m.loserId?.toHexString() ?? null,
             at: m.at.toISOString(),
         })),
         memberIds: series.memberIds.map((id) => id.toHexString()),

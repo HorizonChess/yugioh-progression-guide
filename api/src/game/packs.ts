@@ -64,6 +64,42 @@ export async function hydrate(catalog: CardCatalog, session: PackSessionDoc) {
     };
 }
 
+class NoTicket extends Error {}
+
+/** Spends a Redoer Ticket to replace an unsaved opening with fresh packs. */
+export async function rerollSession(
+    mongo: MongoClient,
+    db: Db,
+    session: PackSessionDoc,
+    packs: Pull[][],
+): Promise<PackSessionDoc | 'not-open' | 'no-ticket'> {
+    const fresh: PackSessionDoc = { ...session, _id: new ObjectId(), packs, flipped: [], stage: 'opening', active: true, createdAt: new Date() };
+    const tx = mongo.startSession();
+    try {
+        return await tx.withTransaction(async () => {
+            const old = await packSessions(db).updateOne(
+                { _id: session._id, stage: 'opening', active: true },
+                { $set: { stage: 'rerolled', active: false } },
+                { session: tx },
+            );
+            if (!old.modifiedCount) return 'not-open' as const;
+            const ticket = await seriesPlayersCollection(db).updateOne(
+                { seriesId: session.seriesId, userId: session.userId, rewards: { $elemMatch: { prizeId: 'redoer-ticket', status: 'available' } } },
+                { $set: { 'rewards.$.status': 'claimed', 'rewards.$.claimedDate': new Date().toISOString() } },
+                { session: tx },
+            );
+            if (!ticket.modifiedCount) throw new NoTicket();
+            await packSessions(db).insertOne(fresh, { session: tx });
+            return fresh;
+        });
+    } catch (error) {
+        if (error instanceof NoTicket) return 'no-ticket';
+        throw error;
+    } finally {
+        await tx.endSession();
+    }
+}
+
 /**
  * Moves a session's cards into the player's collection, once. The stage check
  * inside the transaction makes a double "save" a no-op instead of double cards.
