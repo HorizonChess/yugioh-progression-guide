@@ -27,7 +27,15 @@ function Stamp() {
                 <rect width="100" height="120" fill="#f4ead2" />
                 <rect x="9" y="9" width="82" height="102" fill="#6d1416" />
                 <rect x="13" y="13" width="74" height="94" fill="none" stroke="#d9b45a" strokeWidth="1.2" />
-                <path d="M50 30 L56.5 47.3 L75 48.1 L60.5 59.6 L65.5 77.4 L50 67.2 L34.5 77.4 L39.5 59.6 L25 48.1 L43.5 47.3 Z" fill="#e3c063" />
+                {/* Pegasus's Millennium Eye: the eye of Wedjat inside the Millennium triangle. */}
+                <g fill="none" stroke="#e3c063" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M50 26 L77 78 L23 78 Z" strokeWidth="3" />
+                    <path d="M33 60 Q50 46 67 60 Q50 71 33 60 Z" strokeWidth="2.4" />
+                    <path d="M47.5 66.5 Q46 73 39 75.5" strokeWidth="2" />
+                    <path d="M56 66 L61.5 74.5" strokeWidth="2" />
+                </g>
+                <circle cx="50" cy="59.5" r="5" fill="#e3c063" />
+                <circle cx="50" cy="59.5" r="1.9" fill="#6d1416" />
                 <text x="50" y="96" textAnchor="middle" fontSize="8.5" letterSpacing="1.5" fill="#e3c063" fontFamily="serif">DUELIST</text>
                 <text x="50" y="104" textAnchor="middle" fontSize="6" letterSpacing="1.2" fill="#e3c063" fontFamily="serif">KINGDOM</text>
             </g>
