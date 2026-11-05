@@ -435,3 +435,11 @@ Timeline prototype (2026-11-05, `web/scripts/prototypes/timeline/`, its own priv
 - Stage objectives replacing the floating buttons: open packs, prepare deck, duel and record, with done, next and waiting-on-rival states.
 - A record panel with the rival in duo mode.
 - Yugi in his own corner with a contextual tip; on smaller screens he becomes a portrait beside the tip.
+
+Timeline feedback (user, 2026-11-05): the first prototype replaced the app's look with generic dark panels and buttons, and the user rejected that. The do-over stays loyal to the source assets and improves them in place, as the physics chain does for the chain: the hieroglyph wall, the gold `FrameButton`, the painted scoreboard (`stats_panel_cropped.png`, styled with care), the full Yugi sprite with its moods and the speech bubble. The guide giving step-by-step direction is good and becomes a general pattern, but through the full Yugi sprite, never cropped, not a small avatar. Pack spacing must be even. Replacing the wall or the buttons with better-quality versions is allowed, and outside assets can be looked up as needed.
+
+Timeline options on the original assets (same page):
+- A, faithful: today's layout with even gaps (a fixed slot per pack, the current one larger by height rather than a transform), the physics chain ported from `feat/physics-chain`, a padlock on locked sets, and Yugi with a tip that changes mood and words with the stage.
+- B, steps on the buttons: Open Packs, Prepare Deck and Record Match become numbered steps on the same frame buttons, with done ticks, notes underneath, a pulse on the next step and a waiting state in duo.
+- C, B plus living assets: the wall at full sharpness under flickering torchlight, a gold glint across the frame buttons on hover with a pressed state, glowing scoreboard gems, and WON/LOST as inked stamps.
+A wall photo that's sharper than `bg-stone.png` (1024 px) is still to find: candidates on Wikimedia Commons had stray labels or the wrong mood.
