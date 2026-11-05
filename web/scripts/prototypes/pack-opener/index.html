@@ -238,6 +238,10 @@ main {
 .banner.Ultra { background-image: linear-gradient(#fff6d0, #ffcc33 48%, #b07a1c); }
 .banner.Secret { background-image: linear-gradient(90deg, #ff6ad5, #ffe066, #5cf2ff, #a78bfa, #ff6ad5); background-size: 200% 100%; animation: shift 1.4s linear infinite; }
 @keyframes shift { to { background-position: 200% 0; } }
+.halo {
+    position: absolute; z-index: 1; opacity: 0; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(ellipse, rgba(255,204,51,.42), rgba(255,170,40,.12) 45%, transparent 70%);
+}
 #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 84; pointer-events: none; }
 
 /* bottom controls and hints */
@@ -270,6 +274,7 @@ main {
 <header>
     <div class="brand">Pack opener<small>Three directions to pick from</small></div>
     <nav role="tablist" aria-label="Prototype">
+        <button role="tab" data-view="chosen"><span class="long">★ Chosen</span><span class="short">★ Chosen</span></button>
         <button role="tab" data-view="tear"><span class="long">A · Booster tear</span><span class="short">A · Tear</span></button>
         <button role="tab" data-view="deal"><span class="long">B · Duel table</span><span class="short">B · Table</span></button>
         <button role="tab" data-view="altar"><span class="long">C · Millennium altar</span><span class="short">C · Altar</span></button>
@@ -396,7 +401,11 @@ const FX = (() => {
         g.globalAlpha = 1;
         raf = ps.length ? requestAnimationFrame(tick) : 0;
     }
-    return { burst };
+    function trail(x, y, c) {
+        ps.push({ x, y, vx: (Math.random() - .5) * .8, vy: (Math.random() - .5) * .8 - .4, life: .8, decay: .03 + Math.random() * .02, size: 1 + Math.random() * 2, c: c || PAL.Ultra[1 + Math.floor(Math.random() * 3)], spark: Math.random() < .2 });
+        if (!raf) raf = requestAnimationFrame(tick);
+    }
+    return { burst, trail };
 })();
 
 /* ---------- shared pieces ---------- */
@@ -537,12 +546,14 @@ function summary(stage, els, cw) {
     }, 700);
 }
 
-/* ---------- A · Booster tear ---------- */
-function tear(stage) {
-    const W = stage.clientWidth, H = stage.clientHeight, pack = newPack();
-    const packH = Math.min(H * .62, (W * .62) / PACK_ASPECT), packW = packH * PACK_ASPECT;
-    const cw = Math.min(W * .62, H * .52 * ASPECT, 330), ch = cw / ASPECT;
-    stage.innerHTML = `<div class="backdrop bg-tear"></div>` + packHTML("pack");
+/**
+ * A pack you tear by swiping across its top strip (a tap tears it too).
+ * `onRip` runs once the strip flies off.
+ */
+function tearable(stage, { heightShare = .62, onRip }) {
+    const W = stage.clientWidth, H = stage.clientHeight;
+    const packH = Math.min(H * heightShare, (W * .62) / PACK_ASPECT), packW = packH * PACK_ASPECT;
+    stage.insertAdjacentHTML("beforeend", packHTML("pack"));
     const pk = $(".pack", stage), strip = $(".pack-strip", pk);
     pk.insertAdjacentHTML("beforeend", `<div class="tear-line"><span></span></div>`);
     Object.assign(pk.style, { width: packW + "px", height: packH + "px", left: (W - packW) / 2 + "px", top: (H - packH) / 2 - 20 + "px" });
@@ -565,6 +576,21 @@ function tear(stage) {
         else gsap.to(strip, { y: 0, rotation: 0, duration: .3, ease: "back.out(2)" });
         s = null;
     });
+    function rip(dir) {
+        torn = true; idle.kill(); setHint(stage, "");
+        $(".tear-line", pk).remove();
+        ripStrip(strip, dir, W, H);
+        onRip({ pk, packW, packH, top: parseFloat(pk.style.top) });
+    }
+    return pk;
+}
+
+/* ---------- A · Booster tear ---------- */
+function tear(stage) {
+    const W = stage.clientWidth, H = stage.clientHeight, pack = newPack();
+    const cw = Math.min(W * .62, H * .52 * ASPECT, 330), ch = cw / ASPECT;
+    stage.innerHTML = `<div class="backdrop bg-tear"></div>`;
+    const pk = tearable(stage, { onRip: rip });
 
     const els = pack.map((c, i) => {
         const el = cardEl(c, cw);
@@ -574,10 +600,7 @@ function tear(stage) {
         return el;
     });
 
-    function rip(dir) {
-        torn = true; idle.kill(); setHint(stage, "");
-        $(".tear-line", pk).remove();
-        ripStrip(strip, dir, W, H);
+    function rip({ packW, packH }) {
         const cx = W / 2 - cw / 2, finalY = (H - ch) / 2 - H * .05, s0 = (packW * .86) / cw;
         els.forEach((el, i) => {
             el.style.visibility = "visible";
@@ -787,11 +810,50 @@ function altar(stage) {
     const bob = gsap.to(pk, { y: -10, yoyo: true, repeat: -1, duration: 1.6, ease: "sine.inOut" });
     setHint(stage, "Tap the pack on the altar");
 
+    let busy = false;
+    pk.addEventListener("click", () => {
+        if (busy) return;
+        busy = true; bob.kill(); setHint(stage, "");
+        eye.classList.add("awake");
+        Sfx.rumble(1.4);
+        gsap.to(pk, { x: "+=4", yoyo: true, repeat: 25, duration: .04, ease: "none" });
+        later(() => {
+            const c = centerOf(pk);
+            FX.burst(c.x, c.y, "Ultra", 70, true);
+            Sfx.reveal("Rare");
+            gsap.to(pk, { scale: 1.25, opacity: 0, filter: "brightness(4)", duration: .45, ease: "power2.in" });
+            ring(stage, pack, {
+                cw, R, ringY,
+                // The Eye sits where the banner usually goes; announce it over the altar instead.
+                bannerTop: () => stage.getBoundingClientRect().top + altarTop - 78,
+                enter: (els, pos) => els.forEach((el, i) => {
+                    const p = pos(i, 0);
+                    gsap.fromTo(el, { x: W / 2 - cw / 2, y: altarTop - ch * .4, scale: .15, opacity: 0 },
+                        { x: p.x, y: p.y, scale: p.scale, opacity: .35 + .65 * p.depth, duration: .85, delay: .35 + i * .17, ease: "power2.out",
+                          onStart: () => { Sfx.whoosh(); el.style.zIndex = Math.round(p.depth * 100); } });
+                }),
+                enterMs: 350 + n * 170 + 850,
+                onReady: () => eye.classList.remove("awake"),
+                onRareStart: () => eye.classList.add("awake"),
+                onRareEnd: () => eye.classList.remove("awake"),
+                onGather: () => gsap.to([eye, beam], { opacity: .25, duration: .5 }),
+            });
+        }, 1100);
+    });
+}
+
+/**
+ * The carousel the pack's cards orbit in: swipe or use the arrows to turn it,
+ * tap the front card to reveal it, gather them once all are face up.
+ * `enter(els, pos)` animates the cards onto the ring; the ring takes over after `enterMs`.
+ */
+function ring(stage, pack, { cw, R, ringY, bannerTop, enter, enterMs, onReady, onRareStart, onRareEnd, onGather }) {
+    const W = stage.clientWidth, H = stage.clientHeight, n = pack.length, step = (Math.PI * 2) / n, ch = cw / ASPECT;
     const state = { t: 0 };
-    let els = [], ready = false, busy = false, gathered = false;
-    const pos = (i, t) => {
+    let ready = false, busy = true, gathered = false;
+    const pos = (i, t, r = R) => {
         const a = i * step - t, depth = (Math.cos(a) + 1) / 2;
-        return { x: W / 2 + Math.sin(a) * R - cw / 2, y: ringY - (1 - depth) * H * .07 - ch / 2, scale: .48 + .52 * depth, depth };
+        return { x: W / 2 + Math.sin(a) * r - cw / 2, y: ringY - (1 - depth) * H * .07 - ch / 2, scale: .48 + .52 * depth, depth };
     };
     const render = () => {
         if (gathered) return;
@@ -809,39 +871,19 @@ function altar(stage) {
         setHint(stage, el.classList.contains("flipped") ? (els.every((e) => e.classList.contains("flipped")) ? "Every card is revealed" : "Swipe to turn the ring") : "Tap the front card to reveal it");
     };
 
-    pk.addEventListener("click", () => {
-        if (busy || ready) return;
-        busy = true; bob.kill(); setHint(stage, "");
-        eye.classList.add("awake");
-        Sfx.rumble(1.4);
-        gsap.to(pk, { x: "+=4", yoyo: true, repeat: 25, duration: .04, ease: "none" });
-        later(() => {
-            const c = centerOf(pk);
-            FX.burst(c.x, c.y, "Ultra", 70, true);
-            Sfx.reveal("Rare");
-            gsap.to(pk, { scale: 1.25, opacity: 0, filter: "brightness(4)", duration: .45, ease: "power2.in" });
-            rise();
-        }, 1100);
+    const els = pack.map((c) => {
+        const el = cardEl(c, cw);
+        if (c.rarity !== "Common") el.classList.add("glowing");
+        stage.appendChild(el);
+        return el;
     });
-
-    function rise() {
-        els = pack.map((c, i) => {
-            const el = cardEl(c, cw);
-            if (c.rarity !== "Common") el.classList.add("glowing");
-            stage.appendChild(el);
-            const p = pos(i, 0);
-            gsap.fromTo(el, { x: W / 2 - cw / 2, y: altarTop - ch * .4, scale: .15, opacity: 0 },
-                { x: p.x, y: p.y, scale: p.scale, opacity: .35 + .65 * p.depth, duration: .85, delay: .35 + i * .17, ease: "power2.out",
-                  onStart: () => { Sfx.whoosh(); el.style.zIndex = Math.round(p.depth * 100); } });
-            return el;
-        });
-        later(() => {
-            ready = true; busy = false;
-            eye.classList.remove("awake");
-            bar(stage, [["‹", "", () => spinTo(state.t - step)], ["Gather", "gold", () => gather(), true], ["›", "", () => spinTo(state.t + step)]]);
-            onFront();
-        }, 350 + n * 170 + 850);
-    }
+    enter(els, pos);
+    later(() => {
+        ready = true; busy = false;
+        onReady?.();
+        bar(stage, [["‹", "", () => spinTo(state.t - step)], ["Gather", "gold", () => gather(), true], ["›", "", () => spinTo(state.t + step)]]);
+        onFront();
+    }, enterMs);
 
     let drag = null;
     stage.addEventListener("pointerdown", (e) => { if (!ready || busy || gathered || e.target.closest(".bar")) return; drag = { x: e.clientX, t: state.t, moved: false }; });
@@ -867,12 +909,10 @@ function altar(stage) {
         if (el.classList.contains("flipped")) return;
         if (c.rarity === "Common") { el.classList.add("flipped"); Sfx.flip(); buzz(10); return afterReveal(); }
         busy = true; el.classList.remove("glowing"); setHint(stage, "");
-        eye.classList.add("awake"); Sfx.rise(.8);
+        onRareStart?.(); Sfx.rise(.8);
         later(() => {
             el.classList.add("flipped"); Sfx.flip();
-            // The Eye sits where the banner usually goes; announce it over the altar instead.
-            const bannerTop = stage.getBoundingClientRect().top + altarTop - 78;
-            later(() => { revealFx(el, c.rarity, { glyphs: true, bannerTop }); later(() => { eye.classList.remove("awake"); busy = false; afterReveal(); }, 1200); }, 270);
+            later(() => { revealFx(el, c.rarity, { glyphs: true, bannerTop: bannerTop() }); later(() => { onRareEnd?.(); busy = false; afterReveal(); }, 1200); }, 270);
         }, 800);
     }
 
@@ -884,14 +924,61 @@ function altar(stage) {
     function gather() {
         gathered = true;
         $(".bar", stage).remove();
-        gsap.to([eye, beam], { opacity: .25, duration: .5 });
+        onGather?.();
         summary(stage, els, cw);
     }
 }
 
+/* ---------- Chosen for phones: A's tear, then the cards swirl out into C's ring ---------- */
+function mix(stage) {
+    const W = stage.clientWidth, H = stage.clientHeight, pack = newPack(), n = pack.length, step = (Math.PI * 2) / n;
+    const cw = Math.min(W * .5, H * .4 * ASPECT, 230), ch = cw / ASPECT;
+    const R = Math.min(W * .48, 400), ringY = H * .42;
+    stage.innerHTML = `<div class="backdrop bg-tear"></div><div class="halo"></div>`;
+    const halo = $(".halo", stage);
+    Object.assign(halo.style, { width: R * 2.6 + "px", height: R * .9 + "px", left: W / 2 - R * 1.3 + "px", top: ringY + ch * .3 + "px" });
+
+    tearable(stage, { heightShare: .56, onRip: ({ pk, packW, top }) => {
+        const mouth = { x: W / 2, y: top + packW * .3 };
+        // Light spills out of the torn mouth, the pack sinks, and the cards spiral out onto the ring.
+        FX.burst(mouth.x + stage.getBoundingClientRect().left, mouth.y + stage.getBoundingClientRect().top, "Ultra", 40, true);
+        Sfx.rise(.9);
+        gsap.to(pk, { y: H * .85, rotation: 6, duration: .8, delay: .35, ease: "power2.in" });
+        gsap.to(halo, { opacity: 1, duration: 1.2, delay: .5 });
+        ring(stage, pack, {
+            cw, R, ringY,
+            bannerTop: () => stage.getBoundingClientRect().top + ringY + ch / 2 + 18,
+            enter: (els, pos) => els.forEach((el, i) => {
+                const swirl = { p: 0 }, sb = stage.getBoundingClientRect();
+                gsap.to(swirl, {
+                    p: 1, duration: 1.15, delay: .25 + i * .085, ease: "power2.out",
+                    onStart: () => { if (i % 2 === 0) Sfx.whoosh(); },
+                    onUpdate: () => {
+                        const p = swirl.p;
+                        // Spin in from extra turns, widening from the pack mouth out to the ring.
+                        const at = pos(i, -(1 - p) * Math.PI * 2.2, R * p);
+                        const y = mouth.y - ch / 2 + (at.y - (mouth.y - ch / 2)) * p;
+                        gsap.set(el, { x: at.x, y, scale: .2 + (at.scale - .2) * p, opacity: Math.min(1, p * 3) * (.35 + .65 * at.depth), rotation: (1 - p) * 140 });
+                        el.style.zIndex = Math.round(at.depth * 100);
+                        if (Math.random() < .5) FX.trail(sb.left + at.x + cw / 2, sb.top + y + ch / 2);
+                    },
+                    onComplete: () => gsap.set(el, { rotation: 0 }),
+                });
+            }),
+            enterMs: 250 + n * 85 + 1250,
+            onRareStart: () => gsap.to(halo, { scale: 1.15, filter: "brightness(1.8)", duration: .6 }),
+            onRareEnd: () => gsap.to(halo, { scale: 1, filter: "brightness(1)", duration: .8 }),
+            onGather: () => gsap.to(halo, { opacity: .3, duration: .5 }),
+        });
+    } });
+}
+
+/* The chosen direction: tear + ring on phones, the duel table on wider screens. */
+const chosen = (stage) => (stage.clientWidth < 700 ? mix : deal)(stage);
+
 /* ---------- switching ---------- */
-const VIEWS = { tear, deal, altar };
-let view = "tear";
+const VIEWS = { chosen, tear, deal, altar };
+let view = "chosen";
 function start() {
     gen++;
     gsap.globalTimeline.clear();
@@ -902,7 +989,7 @@ function start() {
     VIEWS[view](stage);
 }
 function show(name) {
-    view = VIEWS[name] ? name : "tear";
+    view = VIEWS[name] ? name : "chosen";
     document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === view)));
     start();
 }
