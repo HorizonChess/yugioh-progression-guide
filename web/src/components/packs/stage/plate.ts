@@ -9,6 +9,8 @@ export type StageCard = {
     rarity: string;
     code: string;
     owned: number;
+    /** Replaces the New / Owned ×N stamp, for cards that weren't just pulled (e.g. "Not owned yet"). */
+    ownedNote?: string;
 };
 
 export const TIER_LABEL: Record<Tier, string> = { Common: "Common", Rare: "Rare", Super: "Super Rare", Ultra: "Ultra Rare", Secret: "Secret Rare" };
@@ -26,6 +28,14 @@ export function tierOf(rarity: string): Tier {
 export function toStageCard(card: PulledCard, owned: number): StageCard {
     const rarity = card.pulled_rarity || "Common";
     return { card, image: card.card_images[0]?.image_url ?? "", tier: tierOf(rarity), rarity, code: card.pulled_set_code ?? "", owned };
+}
+
+/** A card as printed in set `setCode` (its rarity and code there), for lists that aren't pulls. */
+export function printedIn(card: Card, setCode: string, owned: number, ownedNote?: string): StageCard {
+    const prefix = setCode.split("-")[0];
+    const print = card.card_sets?.find((s) => s.set_code.split("-")[0] === prefix) ?? card.card_sets?.[0];
+    const rarity = print?.set_rarity || "Common";
+    return { card, image: card.card_images[0]?.image_url ?? "", tier: tierOf(rarity), rarity, code: print?.set_code ?? "", owned, ownedNote };
 }
 
 const ATTR: Record<string, [string, string]> = {
@@ -80,7 +90,7 @@ export function plate(s: StageCard, extra = "") {
     const foot = document.createElement("div");
     foot.className = "ps-plate__foot";
     foot.append(text("span", "", [s.code, s.rarity].filter(Boolean).join(" · ")));
-    foot.append(s.owned === 0 ? text("span", "ps-stamp-new", "New") : text("span", "", `Owned ×${s.owned + 1}`));
+    foot.append(s.ownedNote !== undefined ? text("span", "", s.ownedNote) : s.owned === 0 ? text("span", "ps-stamp-new", "New") : text("span", "", `Owned ×${s.owned + 1}`));
 
     el.append(name, sub, box, foot);
     return el;

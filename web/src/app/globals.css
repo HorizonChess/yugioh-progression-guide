@@ -1269,6 +1269,85 @@ html::-webkit-scrollbar-corner,
 .store__chip--on { color: #2a1c05 !important; background: linear-gradient(#ffe8a6, #e0b54f 55%, #b5852a) !important; border-color: #ffe08a !important; }
 @keyframes store-in { from { opacity: 0; transform: translateY(10px); } }
 
+/* ---------- the haul (opened packs) and the set's card list ---------- */
+.haul { position: relative; max-width: 1200px; margin: 0 auto; padding: 14px 16px 120px; }
+.haul__head { text-align: center; padding: 6px 0 18px; animation: store-in 0.5s ease-out both; }
+.haul__head h1 { margin: 2px 0 0; font: 800 clamp(22px, 2.2vw + 10px, 40px)/1.1 var(--font-display); color: #fff; text-shadow: 0 3px 10px #000; }
+.haul__backtop { display: block; margin: 0 0 10px; }
+.haul__hits { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.haul__hits li {
+  padding: 6px 12px; border-radius: 999px; font: 700 12px/1 var(--font-main); letter-spacing: 0.12em; text-transform: uppercase; color: #f1e7cc;
+  background: rgba(10, 7, 4, 0.7); box-shadow: 0 0 0 1px var(--tc, #e0b54f), 0 0 14px -2px var(--tc, #e0b54f);
+}
+.haul__hits b { font-size: 14px; color: #fff; margin-right: 2px; }
+/* The finishing choices stay at hand at the bottom, as on the timeline. */
+.haul__dock {
+  position: sticky; bottom: 0; z-index: 20; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 14px;
+  margin: 0 -16px; padding: 18px 12px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(0, 0, 0, 0.8) 40%);
+}
+.haul__btn { width: clamp(132px, 10vw + 60px, 200px); }
+.haul__back { flex-basis: 100%; text-align: center; color: #e9d9ad; font: 700 12px/1 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233, 217, 173, 0.4); }
+
+[data-tier="Secret"] { --tc: #ff6ad5; }
+[data-tier="Ultra"] { --tc: #ffcc33; }
+[data-tier="Super"] { --tc: #4fc3ff; }
+[data-tier="Rare"] { --tc: #cdd8ff; }
+[data-tier="Common"] { --tc: #a99d80; }
+
+.gallery__section { margin-top: 18px; animation: store-in 0.5s 0.1s ease-out both; }
+/* A gold band engraved with the rarity, its colour on the line ends. */
+.gallery__band {
+  display: flex; align-items: center; gap: 12px; margin: 0 0 12px; font: 800 15px/1 var(--font-display); letter-spacing: 0.12em; text-transform: uppercase; color: #ffe08a;
+  text-shadow: 0 2px 6px #000;
+}
+.gallery__band::before, .gallery__band::after { content: ""; flex: 1; height: 2px; border-radius: 1px; background: linear-gradient(90deg, transparent, #b58a2e 30%, var(--tc) 100%); box-shadow: 0 0 8px -1px var(--tc); }
+.gallery__band::after { background: linear-gradient(270deg, transparent, #b58a2e 30%, var(--tc) 100%); }
+.gallery__band small { font: 700 12px/1 var(--font-main); letter-spacing: 0.1em; color: #c7b99a; }
+/* Each rarity's cards sit centred under its band: three across on phones, a fixed width on desktop. */
+.gallery__grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 10px; }
+.gallery__tile { flex: 0 0 calc((100% - 20px) / 3); }
+@media (min-width: 768px) { .gallery__grid { gap: 18px 14px; } .gallery__tile { flex-basis: 122px; } }
+.gallery__tile { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer; text-align: center; color: inherit; }
+.gallery__art {
+  position: relative; display: block; aspect-ratio: 813 / 1185; border-radius: 4.5% / 3.2%; overflow: hidden; background: #111;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6); transition: transform 0.2s, box-shadow 0.2s;
+}
+.gallery__tile:not([data-tier="Common"]) .gallery__art { box-shadow: 0 0 0 2px var(--tc), 0 0 16px 1px var(--tc), 0 8px 16px rgba(0, 0, 0, 0.6); }
+.gallery__tile:hover .gallery__art, .gallery__tile:focus-visible .gallery__art { transform: translateY(-4px); }
+.gallery__art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery__tile--dim .gallery__art img { filter: grayscale(0.85) brightness(0.55); }
+.gallery__tile--dim:not([data-tier="Common"]) .gallery__art { box-shadow: 0 0 0 1px var(--tc), 0 8px 16px rgba(0, 0, 0, 0.6); }
+.gallery__tile--dim .gallery__name { opacity: 0.55; }
+.gallery__new {
+  position: absolute; top: 7%; right: -14%; transform: rotate(38deg); padding: 0.25em 2.4em; font: 800 9px/1 var(--font-main); letter-spacing: 0.2em;
+  text-transform: uppercase; color: #2a1c05; background: linear-gradient(#fff1bd, #e0b54f 60%, #b5852a); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.gallery__count {
+  position: absolute; right: 5px; bottom: 5px; min-width: 26px; padding: 4px 6px; border-radius: 999px; font: 800 12px/1 var(--font-main);
+  color: #ffe08a; background: rgba(10, 7, 4, 0.85); box-shadow: 0 0 0 1px rgba(224, 181, 79, 0.7);
+}
+.gallery__name { font: 700 11px/1.2 var(--font-heading); color: #e5e7eb; text-shadow: 0 1px 3px #000; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media (min-width: 768px) { .gallery__name { font-size: 12px; } }
+
+/* the close-up: the card large, its plate beside it (or a sheet under it on phones) */
+.closeup { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 48px 16px 16px; background: rgba(4, 3, 8, 0.86); cursor: pointer; animation: ps-fade-in 0.25s ease-out both; }
+.closeup__body { display: flex; align-items: center; gap: 32px; max-height: 100%; }
+.closeup__card { position: relative !important; flex: none; height: min(72vh, 560px); aspect-ratio: 813 / 1185; cursor: default; animation: closeup-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.closeup__face { transform: none; }
+.closeup__card:not([data-tier="Common"]) .closeup__face { box-shadow: 0 0 0 2px var(--rc), 0 0 28px 5px var(--rc), 0 12px 24px rgba(0, 0, 0, 0.6); }
+.closeup__card:not([data-tier="Common"]) .closeup__glare { opacity: 1; }
+.closeup__side { width: min(400px, 40vw); cursor: default; animation: store-in 0.4s 0.1s ease-out both; }
+.closeup__action { margin-top: 14px; display: flex; justify-content: center; }
+@keyframes closeup-in { from { opacity: 0; transform: scale(0.85) translateY(20px); } }
+@media (max-width: 767px) {
+  .closeup { align-items: stretch; padding: 40px 0 0; }
+  .closeup__body { flex-direction: column; justify-content: space-between; gap: 16px; width: 100%; }
+  .closeup__card { height: auto; width: min(72vw, 52vh * 0.686); margin: 0 auto; }
+  .closeup__side { width: 100%; }
+  .closeup__side .ps-plate { border-radius: 14px 14px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom)); max-height: 46vh; overflow-y: auto; }
+}
+.ps-peek--react .ps-plate { animation: ps-fade-in 0.18s ease-out both; }
+
 @media (prefers-reduced-motion: reduce) {
   .store__pack img, .store__light { animation: none; }
   .wall-torch, .stats-living::before, .stats-living::after, .chain-gold, .cartouche-btn--next::after { animation: none; }
