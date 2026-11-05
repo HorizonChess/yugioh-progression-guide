@@ -40,6 +40,17 @@ const YGOPRODECK_API = 'https://db.ygoprodeck.com';
 /** Yugipedia serves pack art from img.; old ms. links redirect there. */
 const PACK_ART_HOSTS = ['https://img.yugipedia.com', 'https://ms.yugipedia.com'];
 
+/**
+ * Next's build files carry a content hash, so they never change; images and fonts
+ * rarely do. Pages and their prefetch payloads always revalidate, so a deploy shows up.
+ */
+export function cacheControlFor(filePath: string): string {
+    const p = filePath.replaceAll('\\', '/');
+    if (p.includes('/_next/static/')) return 'public, max-age=31536000, immutable';
+    if (/\.(html|txt)$/.test(p)) return 'no-cache';
+    return 'public, max-age=604800';
+}
+
 export interface AppOptions {
     config: Config;
     /** Defaults to on, except under test. */
@@ -158,6 +169,8 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
             // Next prefetches pages with `Range: bytes=0-63`; behind Render's Cloudflare
             // the 206 gets compressed and Chrome caches it as the whole page (blank screen).
             acceptRanges: false,
+            cacheControl: false,
+            setHeaders: (reply, filePath) => reply.header('cache-control', cacheControlFor(filePath)),
         });
     }
 

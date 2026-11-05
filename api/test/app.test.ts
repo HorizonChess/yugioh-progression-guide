@@ -110,6 +110,20 @@ describe('static site', () => {
         await app.close();
     });
 
+    it('caches build files for good, images for a week, and revalidates pages', async () => {
+        await mkdir(path.join(webDist, '_next', 'static', 'chunks'), { recursive: true });
+        await writeFile(path.join(webDist, '_next', 'static', 'chunks', 'app-abc123.js'), '1');
+        await writeFile(path.join(webDist, 'wall.webp'), 'img');
+        const { app } = await testApp(mongo, { WEB_DIST: webDist });
+
+        const cache = async (url: string) => (await app.inject({ url })).headers['cache-control'];
+        expect(await cache('/_next/static/chunks/app-abc123.js')).toBe('public, max-age=31536000, immutable');
+        expect(await cache('/wall.webp')).toBe('public, max-age=604800');
+        expect(await cache('/menu/')).toBe('no-cache');
+        expect(await cache('/menu/__next.menu.__PAGE__.txt')).toBe('no-cache');
+        await app.close();
+    });
+
     it("maps Next's dotted segment-prefetch requests onto the exported folders", async () => {
         const { app } = await testApp(mongo, { WEB_DIST: webDist });
 
