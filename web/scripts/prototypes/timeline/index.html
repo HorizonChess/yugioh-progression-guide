@@ -134,7 +134,17 @@ main { flex: 1; position: relative; overflow: hidden auto; min-height: 0; }
 /* the physics chain between packs (feat/physics-chain) */
 .chain { flex: none; position: relative; width: 96px; height: 32px; margin: 0 -16px; z-index: 0; }
 .chain canvas { position: absolute; left: 0; top: -8px; width: 96px; height: 110px; touch-action: pan-x; }
-.chain.gold canvas { filter: drop-shadow(0 0 4px rgba(212,175,55,.45)); }
+.chain.gold canvas { filter: drop-shadow(0 0 3px rgba(255,214,90,.8)) drop-shadow(0 0 9px rgba(212,175,55,.55)); animation: chainglow 2.8s ease-in-out infinite; }
+@keyframes chainglow { 50% { filter: drop-shadow(0 0 2px rgba(255,214,90,.6)) drop-shadow(0 0 5px rgba(212,175,55,.35)); } }
+.chain.flare canvas { animation: chainflare 1.6s ease-out; }
+@keyframes chainflare {
+    0% { filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 4px rgba(255,214,90,.6)); }
+    35% { filter: drop-shadow(0 0 6px #fff7d6) drop-shadow(0 0 22px rgba(255,200,60,1)) brightness(1.5); }
+    100% { filter: drop-shadow(0 0 3px rgba(255,214,90,.8)) drop-shadow(0 0 9px rgba(212,175,55,.55)); }
+}
+.node.unlocking .lock { animation: unlock .65s ease-in forwards; }
+@keyframes unlock { 30% { transform: translate(-50%, -62%) rotate(-8deg); } 100% { transform: translate(-50%, 40%) rotate(24deg); opacity: 0; } }
+.node.unlocking .art { transition: filter .6s, opacity .6s; filter: none; opacity: 1; }
 .node { z-index: 1; }
 
 .arrow {
@@ -167,9 +177,9 @@ main { flex: 1; position: relative; overflow: hidden auto; min-height: 0; }
 .opt-c .fb { overflow: hidden; }
 .opt-c .fb::before {
     content: ""; position: absolute; inset: -20%; left: -60%; width: 40%; transform: skewX(-20deg) translateX(-120%);
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent); mix-blend-mode: overlay; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent); mix-blend-mode: overlay; pointer-events: none; opacity: 0;
 }
-.opt-c .fb:hover::before { transition: transform .7s ease; transform: skewX(-20deg) translateX(520%); }
+.opt-c .fb:hover::before { transition: transform .7s ease; transform: skewX(-20deg) translateX(520%); opacity: 1; }
 .opt-c .fb:active { transform: scale(.97) translateY(2px); filter: drop-shadow(0 10px 10px rgba(0,0,0,.45)) brightness(.95); }
 .opt-c .fb.next { overflow: visible; }
 
@@ -227,7 +237,7 @@ main { flex: 1; position: relative; overflow: hidden auto; min-height: 0; }
 }
 @media (max-width: 760px) {
     .rail { --art-h: 160px; padding-bottom: 76px; }
-    .chain { transform: scale(.8); margin: 0 -24px; }
+    .chain { margin: 0 -24px; }
     .arrow { display: none; }
     .hud { padding: 0 12px 16px; gap: 10px; }
     .guide .sprite { width: 170px; }
@@ -245,7 +255,7 @@ main { flex: 1; position: relative; overflow: hidden auto; min-height: 0; }
     <nav role="tablist">
         <button role="tab" data-opt="a"><span class="long">A · Faithful</span><span class="short">A</span></button>
         <button role="tab" data-opt="b"><span class="long">B · Steps on the buttons</span><span class="short">B · Steps</span></button>
-        <button role="tab" data-opt="c"><span class="long">C · Steps, living assets</span><span class="short">C · Living</span></button>
+        <button role="tab" data-opt="c"><span class="long">C · Faithful, living assets ★</span><span class="short">C · Living ★</span></button>
     </nav>
     <select id="mode" aria-label="Series mode"><option value="solo">Solo</option><option value="duo">Duo vs Kaiba</option></select>
     <select id="state" aria-label="Stage state">
@@ -253,6 +263,7 @@ main { flex: 1; position: relative; overflow: hidden auto; min-height: 0; }
         <option value="opened" selected>Packs opened</option>
         <option value="waiting">Waiting on rival</option>
         <option value="lost">Just lost</option>
+        <option value="confirmed">Victory confirmed</option>
     </select>
 </div>
 
@@ -301,7 +312,7 @@ const LOCK = `<svg class="lock" viewBox="0 0 40 48" aria-hidden="true"><defs><li
     `<circle cx="20" cy="31" r="3.5" fill="#2b2722"/><rect x="18.5" y="32" width="3" height="8" rx="1" fill="#2b2722"/></svg>`;
 
 /* ---------- the physics chain, ported from feat/physics-chain (ChainConnector + chain-physics) ---------- */
-const CW = 96, CH = 110, PIN_Y = 24, PINS = { ax: 10, ay: PIN_Y, bx: CW - 10, by: PIN_Y }, LINKS = 7, WIRE = 3.3, STEP = 1000 / 60;
+const CH = 110, PIN_Y = 24, LINKS = 7, WIRE = 3.3, STEP = 1000 / 60;
 const IRON = { lo: "#16191d", mid: "#5b626c", hi: "#dfe3e8", edge: "#07090b" };
 const GOLD = { lo: "#5a3d08", mid: "#c9a032", hi: "#fff1bf", edge: "#2e1f04" };
 const clampV = (v, m) => Math.max(-m, Math.min(m, v));
@@ -341,10 +352,27 @@ function drawLink(ctx, c, i, metal) {
     ctx.moveTo(-L * (face ? .2 : .38), y); ctx.lineTo(L * (face ? .2 : .38), y); ctx.lineWidth = .7; ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.stroke();
     ctx.restore();
 }
-function mountChain(holder, active) {
+/**
+ * A chain spanning the gap between two pack arts, its ends tucked under them.
+ * Finished links hang taut and glow; `finish()` pulls a slack iron chain straight and turns it gold.
+ */
+function mountChain(holder, done) {
     const canvas = document.createElement("canvas"), ctx = canvas.getContext("2d"), dpr = Math.min(devicePixelRatio || 1, 2);
-    canvas.width = CW * dpr; canvas.height = CH * dpr; holder.appendChild(canvas);
-    const chain = createChain(PINS, LINKS, 1.3), metal = active ? GOLD : IRON;
+    holder.appendChild(canvas);
+    let CW = 96, PINS = { ax: 10, ay: PIN_Y, bx: 86, by: PIN_Y }, chain, slack = done ? 1.0 : 1.3, metal = done ? GOLD : IRON;
+    const fit = () => {
+        const prev = holder.previousElementSibling.querySelector(".art").getBoundingClientRect();
+        const next = holder.nextElementSibling.querySelector(".art").getBoundingClientRect();
+        const box = holder.getBoundingClientRect(), tuck = 8;
+        CW = Math.round(next.left - prev.right + tuck * 2);
+        canvas.style.left = prev.right - tuck - box.left + "px";
+        canvas.style.width = CW + "px";
+        canvas.width = CW * dpr; canvas.height = CH * dpr;
+        PINS = { ax: 2, ay: PIN_Y, bx: CW - 2, by: PIN_Y };
+        chain = createChain(PINS, LINKS, slack);
+    };
+    fit();
+    holder.classList.toggle("gold", done);
     const draw = () => {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, CW, CH);
         ctx.save(); ctx.translate(1.5, 3.5); ctx.filter = "blur(1.2px)"; ctx.fillStyle = "rgba(0,0,0,0.55)";
@@ -391,17 +419,32 @@ function mountChain(holder, active) {
     canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
     canvas.addEventListener("pointerleave", () => { pointer = null; });
     draw(); wake();
-    return wake;
+    const finish = () => {
+        // Turn gold, then shorten the links until the chain is straight, with a flare of light.
+        metal = GOLD; holder.classList.add("gold", "flare");
+        const span = PINS.bx - PINS.ax, from = slack, t0 = performance.now();
+        const pull = (now) => {
+            const k = Math.min(1, (now - t0) / 900), e = 1 - (1 - k) ** 3;
+            slack = from + (1 - from) * e;
+            chain.seg = (span * slack) / LINKS;
+            wake();
+            if (k < 1) requestAnimationFrame(pull);
+            else setTimeout(() => holder.classList.remove("flare"), 900);
+        };
+        requestAnimationFrame(pull);
+    };
+    return { wake, finish, refit: () => { fit(); draw(); wake(); } };
 }
 
 /* ---------- carousel ---------- */
-const rail = $("#rail"), wakers = [];
+const rail = $("#rail"), holders = [];
+let chains = [];
 SETS.forEach((s, i) => {
     if (i > 0) {
         const c = document.createElement("div");
-        c.className = "chain" + (i <= CURRENT ? " gold" : "");
+        c.className = "chain";
         rail.appendChild(c);
-        wakers.push(mountChain(c, i <= CURRENT));
+        holders.push(c);
     }
     const node = document.createElement("div");
     node.className = "node " + (i === CURRENT ? "current" : "other") + (i > CURRENT ? " locked" : "");
@@ -414,7 +457,22 @@ SETS.forEach((s, i) => {
     art.addEventListener("click", (e) => e.preventDefault());
     rail.appendChild(node);
 });
-rail.addEventListener("scroll", () => wakers.forEach((w) => w()), { passive: true });
+// A chain is finished (gold, taut) once the set before it is cleared.
+chains = holders.map((h, k) => mountChain(h, k + 1 <= CURRENT));
+rail.addEventListener("scroll", () => chains.forEach((c) => c.wake()), { passive: true });
+addEventListener("resize", () => chains.forEach((c) => c.refit()));
+let finished = false;
+/** Victory confirmed: the chain to the next set pulls straight and glows, and its padlock breaks. */
+function finishStage() {
+    if (finished) return;
+    finished = true;
+    chains[CURRENT].finish();
+    const next = document.getElementById("set-" + (CURRENT + 1));
+    setTimeout(() => {
+        next.classList.add("unlocking");
+        setTimeout(() => { next.classList.remove("locked", "unlocking"); next.querySelector(".lock")?.remove(); }, 650);
+    }, 700);
+}
 const scrollBy = (d) => rail.scrollBy({ left: d * 400, behavior: "smooth" });
 $(".arrow.prev").onclick = () => scrollBy(-1);
 $(".arrow.next").onclick = () => scrollBy(1);
@@ -425,26 +483,29 @@ const fb = (label, cls = "", extra = "") => `<a href="#" class="fb ${cls}" ${ext
 
 function render() {
     const duo = $("#mode").value === "duo", state = $("#state").value;
-    const opened = state !== "start", waiting = state === "waiting", lost = state === "lost";
+    const confirmed = state === "confirmed";
+    const opened = state !== "start", waiting = state === "waiting" || confirmed, lost = state === "lost";
     document.body.className = "opt-" + opt;
     $("#series").textContent = duo ? "DUO SERIES · VS KAIBA" : "SOLO CAMPAIGN";
     const set = SETS[CURRENT].name;
+    if (confirmed) finishStage();
 
     // What Yugi says, and how he looks, follows where you are in the stage.
     const next = !opened ? "open" : waiting ? "none" : "record";
-    const tip = lost ? "Don't give up! Rebuild your deck and try again." :
+    const tip = confirmed ? `Victory! The chain is complete. On to ${SETS[CURRENT + 1].name}!` :
+        lost ? "Don't give up! Rebuild your deck and try again." :
         !opened ? `The ${set} packs are waiting. Let's open them!` :
         waiting ? (duo ? "Nice duel! Once Kaiba confirms, the next set unlocks." : "Well played!") :
         duo ? "Build a deck from your new cards, then challenge Kaiba!" : "Build a deck from your new cards, then record your duel.";
     const mood = lost ? "sad" : waiting ? "happy" : "neutral";
     const guide = `<div class="guide"><div class="sprite" style="background-image:url(img/yugi-${mood}.webp)" aria-hidden="true"></div><div class="bubble">${tip}</div></div>`;
 
-    const wins = RESULTS.filter((r) => r === "won").length + (waiting ? 0 : 0), losses = RESULTS.length - RESULTS.filter((r) => r === "won").length + (lost ? 1 : 0);
+    const wins = RESULTS.filter((r) => r === "won").length + (confirmed ? 1 : 0), losses = RESULTS.length - RESULTS.filter((r) => r === "won").length + (lost ? 1 : 0);
     const stats = `<div class="stats" role="img" aria-label="${wins} wins, ${losses} losses"><div class="gem w"><small>Wins</small><b>${wins}</b></div><div class="gem l"><small>Losses</small><b>${losses}</b></div></div>`;
     const bonus = `<div class="right">${fb("<span>Bonus Matches</span>", "small")}</div>`;
 
     let middle;
-    if (opt === "a") {
+    if (opt !== "b") {
         $("#top-cta").innerHTML = fb("<span>Prepare Your Deck</span>", "wide");
         middle = `<div class="actions">${fb("<span>Open Packs</span>", next === "open" ? "next" : "")}${fb("<span>Record Match</span>", next === "record" ? "next" : "", waiting ? 'aria-disabled="true"' : "")}</div>`;
     } else {
@@ -458,8 +519,8 @@ function render() {
             `</div>`;
     }
     const hud = $("#hud");
-    hud.classList.toggle("steps", opt !== "a");
-    hud.innerHTML = opt === "a"
+    hud.classList.toggle("steps", opt === "b");
+    hud.innerHTML = opt !== "b"
         ? guide + `<div class="middle">${middle}${stats}</div>` + bonus
         : guide + `<div class="middle">${middle}</div><div class="right">${stats}${fb("<span>Bonus Matches</span>", "small")}</div>`;
     document.querySelectorAll(".proto nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.opt === opt)));
