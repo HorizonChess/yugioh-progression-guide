@@ -1,11 +1,12 @@
-name: Deploy to GitHub Pages
+name: Pages note
 
-# The static site stays on GitHub Pages until the Render service (render.yaml)
-# is live and verified; then this workflow is retired.
+# The game is served from Render (render.yaml). GitHub Pages only shows a note
+# that links there, on the home page and on any old deep link (404.html).
 
 on:
   push:
     branches: [main]
+    paths: [pages-note/**, .github/workflows/deploy.yml]
   workflow_dispatch:
 
 permissions:
@@ -18,34 +19,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
-    uses: ./.github/workflows/ci.yml
-
-  build:
-    needs: ci
-    runs-on: ubuntu-latest
-    env:
-      NEXT_PUBLIC_BASE_PATH: /yugioh-progression-guide
-      # Public Cloudflare R2 bucket that serves the card and pack images
-      NEXT_PUBLIC_IMAGE_HOST: https://pub-9397530dccf24d04a56c8eafb6e3edd0.r2.dev
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build -w web
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: web/out
-
   deploy:
-    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+      - run: cp pages-note/index.html pages-note/404.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-note
       - id: deployment
         uses: actions/deploy-pages@v4

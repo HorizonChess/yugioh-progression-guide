@@ -2,11 +2,7 @@ name: CI
 
 on:
   push:
-    # main runs these checks through deploy.yml, before publishing.
-    branches-ignore: [main]
   pull_request:
-  # Lets deploy.yml run these checks before it publishes.
-  workflow_call:
 
 jobs:
   check:
