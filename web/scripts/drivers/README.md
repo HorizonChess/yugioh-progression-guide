@@ -51,6 +51,10 @@ reports the assertions each driver checks.
 - `duo.mjs` — two players in two browsers: invite by name and by link (opened
   signed out, then signed in), live notifications in the bell, the rival
   confirming a result, Snatch Steal, and leaving. Same test API as `auth.mjs`.
+- `guest-import.mjs` — guest saves moving into an account: brought along on the
+  sign-up letter, or moved later from the Campaign list (after "Not now"); they
+  land as solo series placed by set name and leave the browser. Same test API as
+  `auth.mjs`.
 
 Extend these rather than writing throwaway drivers. Keep the scripts checked in;
 keep generated images out of git.

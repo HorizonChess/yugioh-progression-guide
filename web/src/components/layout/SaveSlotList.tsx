@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { fetchAllSets, CardSet } from "@/lib/api";
 import { inviteLink, inviteRival } from "@/lib/duo-client";
 import type { SeriesMode, SeriesSummary } from "@/lib/repo/types";
+import GuestSavesImport from "./GuestSavesImport";
 
 interface SaveSlotListProps {
     onSaveSelect?: (saveId: string) => void;
@@ -111,6 +112,8 @@ export default function SaveSlotList({ onSaveSelect }: SaveSlotListProps) {
                     + NEW GAME
                 </button>
             </div>
+
+            {remote && <GuestSavesImport />}
 
             {invites.map((invite) => (
                 <Link
