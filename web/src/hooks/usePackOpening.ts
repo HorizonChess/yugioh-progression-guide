@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Card, PulledCard } from "@/lib/api";
 import { flatIndex } from "@/lib/repo/types";
 
@@ -12,6 +12,12 @@ export function usePackOpening(onFlip?: (flipped: number[]) => void) {
     const [packsToOpen, setPacksToOpen] = useState<PulledCard[][]>([]);
     const [currentPackIndex, setCurrentPackIndex] = useState(0);
     const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
+    // Mirrors flippedCards synchronously, so several flips in one tick (Flip All) all count.
+    const flippedNow = useRef<Set<number>>(new Set());
+    const setFlipped = (next: Set<number>) => {
+        flippedNow.current = next;
+        setFlippedCards(next);
+    };
     const [allOpenedCards, setAllOpenedCards] = useState<PulledCard[]>([]);
     const [isOpening, setIsOpening] = useState(false);
     const [showSummary, setShowSummary] = useState(false);
@@ -22,16 +28,16 @@ export function usePackOpening(onFlip?: (flipped: number[]) => void) {
         const resumeAt = flipped.length ? Math.min(Math.max(...flipped.map((i) => Math.floor(i / 100))), packs.length - 1) : 0;
         setPacksToOpen(packs);
         setCurrentPackIndex(resumeAt);
-        setFlippedCards(new Set(flipped.filter((i) => Math.floor(i / 100) === resumeAt).map((i) => i % 100)));
+        setFlipped(new Set(flipped.filter((i) => Math.floor(i / 100) === resumeAt).map((i) => i % 100)));
         setAllOpenedCards(packs.slice(0, resumeAt).flat());
         setShowSummary(false);
         setIsOpening(true);
     };
 
     const flip = (indexes: number[]) => {
-        const fresh = indexes.filter((i) => !flippedCards.has(i));
+        const fresh = indexes.filter((i) => !flippedNow.current.has(i));
         if (!fresh.length) return;
-        setFlippedCards(new Set([...flippedCards, ...fresh]));
+        setFlipped(new Set([...flippedNow.current, ...fresh]));
         onFlip?.(fresh.map((i) => flatIndex(currentPackIndex, i)));
     };
 
@@ -60,7 +66,7 @@ export function usePackOpening(onFlip?: (flipped: number[]) => void) {
         setAllOpenedCards((prev) => [...prev, ...currentPack]);
         if (currentPackIndex < packsToOpen.length - 1) {
             setCurrentPackIndex((prev) => prev + 1);
-            setFlippedCards(new Set());
+            setFlipped(new Set());
         } else {
             setShowSummary(true);
         }
@@ -73,7 +79,7 @@ export function usePackOpening(onFlip?: (flipped: number[]) => void) {
         setAllOpenedCards([]);
         setPacksToOpen([]);
         setCurrentPackIndex(0);
-        setFlippedCards(new Set());
+        setFlipped(new Set());
     };
 
     const currentPack = packsToOpen[currentPackIndex];
@@ -89,6 +95,7 @@ export function usePackOpening(onFlip?: (flipped: number[]) => void) {
         currentPack,
         isPackFullyOpened,
         start,
+        flip,
         handleCardClick,
         handleFlipAll,
         handleOpenAll,
