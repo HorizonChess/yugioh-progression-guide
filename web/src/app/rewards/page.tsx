@@ -36,8 +36,8 @@ import CardDetailModal from "@/components/card/CardDetailModal";
  *                  `bannedCardIds` and blocks/greys the add).
  *  - starlight   → the `StarlightSearchModal`: a full-catalog typeahead gated to
  *                  cards released before the won pack, granted at Starlight Rare.
- *  - snatch      → the `SnatchModal`: take one copy of a card from the rival's
- *                  binder (duo series only; solo wheels leave it off).
+ *  - snatch      → the `SnatchModal`: copy a card from the rival's binder, who
+ *                  keeps theirs (duo series only; solo wheels leave it off).
  */
 
 const REDOER_NOTE = "Spend it from the pack summary to reroll an opening";

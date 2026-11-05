@@ -12,7 +12,7 @@ import { requireSeriesMember } from '../middleware/requireSeriesMember';
 const ReportBodySchema = z.strictObject({ result: z.enum(['win', 'loss']) });
 const ClaimBodySchema = z.strictObject({
     cardId: z.number().int().positive().optional(),
-    /** Snatch Steal: the collection key (`id_setCode_rarity`) of the rival's copy to take. */
+    /** Snatch Steal: the collection key (`id_setCode_rarity`) of the rival's card to copy. */
     printing: PrintingSchema.optional(),
 });
 

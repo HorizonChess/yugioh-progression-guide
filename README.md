@@ -20,7 +20,7 @@ new set in release order by winning duels.
   packs, spins the wheel and checks each reward, so the rules can't be bent.
 - **Duo series**: invite a rival by duelist name or link. You share the set
   progression and banlist, each result waits for the rival to confirm, Snatch
-  Steal takes a card from their binder, and a bell shows their moves live.
+  Steal copies a card from their binder, and a bell shows their moves live.
 - **Guest play** with saves stored in the browser. Signing up (or in) offers to
   move them into the account.
 - A custom stone-and-parchment design with an animated guide character.
