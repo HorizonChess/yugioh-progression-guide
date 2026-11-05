@@ -74,7 +74,7 @@ export default function GuideSprite({ raised = false }: { raised?: boolean }) {
     return (
         <div
             aria-hidden={!onStage}
-            className={`fixed left-0 ${raised ? "bottom-[calc(190px+env(safe-area-inset-bottom))]" : "bottom-[calc(64px+env(safe-area-inset-bottom))]"} md:bottom-0 z-50 flex items-end pointer-events-none transition-transform duration-500 ease-[cubic-bezier(.2,.9,.3,1.15)] ${onStage ? "translate-x-0" : "-translate-x-[calc(100%+18rem)]"}`}
+            className={`fixed left-0 ${raised ? "bottom-[calc(230px+env(safe-area-inset-bottom))]" : "bottom-[calc(64px+env(safe-area-inset-bottom))]"} md:bottom-0 z-50 flex items-end pointer-events-none transition-transform duration-500 ease-[cubic-bezier(.2,.9,.3,1.15)] ${onStage ? "translate-x-0" : "-translate-x-[calc(100%+18rem)]"}`}
         >
             <div className="relative">
                 {/* Speech bubble, to the right of his head */}

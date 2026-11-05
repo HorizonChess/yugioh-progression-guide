@@ -1,42 +1,54 @@
 "use client";
 
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
-import { fetchCardsByIds, Card } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { fetchAllSets, fetchCardsByIds, fetchCardsInSet, Card, CardSet } from "@/lib/api";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import Link from "next/link";
-import CardDetailModal from "@/components/card/CardDetailModal";
-import CardTooltip from "@/components/card/CardTooltip";
 import CollectionFilters, { DEFAULT_FILTERS, FilterState } from "@/components/collection/CollectionFilters";
-import CollectionCard from "@/components/collection/CollectionCard";
-import CollectionPagination from "@/components/collection/CollectionPagination";
+import Binder, { type BinderChapter, type BinderSlot } from "@/components/collection/Binder";
+import { CardCloseUp, useCardPeek } from "@/components/card/CardPlate";
+import { tierOf, type StageCard } from "@/components/packs/stage/plate";
 import { parseYDK, generateYDKFromCollection, downloadYDK } from "@/lib/ydk-parser";
-import ParchmentButton from "@/components/ui/ParchmentButton";
+import { filterCollection, type OwnedEntry } from "@/lib/collection-filter";
 import GuideSprite from "@/components/layout/GuideSprite";
-import StonePanel from "@/components/ui/StonePanel";
-import { useCardTooltip } from "@/hooks/useCardTooltip";
-import { ownedCardIds, parseCollectionKey, UNKNOWN_SET } from "@/lib/collection";
+import { useIsPhone } from "@/lib/useIsPhone";
+import { ownedCardIds, ownedCountsById, parseCollectionKey, UNKNOWN_SET } from "@/lib/collection";
 
-const ITEMS_PER_PAGE = 60;
+/** The chapter for owned cards from sets outside the binder's chapters (e.g. YDK imports). */
+const OTHER = "MORE";
+const prefixOf = (code: string) => code.split("-")[0] ?? code;
+const KEYS = Object.keys(DEFAULT_FILTERS) as (keyof FilterState)[];
+
+const toStage = (s: BinderSlot): StageCard => ({
+    card: s.card, image: s.card.card_images[0]?.image_url ?? "", tier: s.tier, rarity: s.rarity, code: s.code,
+    owned: s.count, ownedNote: s.count ? `Owned ×${s.count}` : "Not owned yet",
+});
 
 /**
- * The card COLLECTION browser (route: /collection). Owned cards in a filterable,
- * sortable, paginated grid, with YDK import/export and per-card detail/tooltip.
+ * The card COLLECTION (route: /collection), as a ring binder: a chapter per set
+ * reached (or that you own cards from), each the whole set in number order with
+ * an empty pocket for every card still missing. Searching or any filter turns
+ * the binder to just your matching cards, in the chosen sort. Today's filter
+ * panel sits in a drawer; YDK import/export and delete are under the ⋯ menu.
  */
 export default function Collection() {
-    const { collection, importCollection } = useProgression();
+    const { collection, importCollection, currentSetIndex } = useProgression();
+    const owner = useAuth().user?.duelistName ?? "Guest";
+    const isPhone = useIsPhone();
     const [cards, setCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-    const { hoveredCard, tooltipPosition, onHover, onLeave } = useCardTooltip();
-    const [currentPage, setCurrentPage] = useState(1);
+    const [selected, setSelected] = useState<StageCard | null>(null);
+    const { bind, peek, hide } = useCardPeek();
 
-    const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+    // The drawer's panel holds every filter but the search, which sits on the page.
+    const [panel, setPanel] = useState<FilterState>(DEFAULT_FILTERS);
+    const [search, setSearch] = useState("");
+    const filters = useMemo(() => ({ ...panel, search }), [panel, search]);
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
 
     // Stable, because CollectionFilters re-sends filters whenever this handler changes.
-    const handleFilterChange = useCallback((next: FilterState) => {
-        setFilters(next);
-        setCurrentPage(1);
-    }, []);
+    const handleFilterChange = useCallback((next: FilterState) => setPanel(next), []);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -78,6 +90,12 @@ export default function Collection() {
         await downloadYDK("collection.ydk", content);
     };
 
+    const handleDelete = () => {
+        if (confirm("WARNING: This will PERMANENTLY DELETE your entire collection. This action cannot be undone. Are you sure?")) {
+            importCollection([], "replace").catch(alertRepoError);
+        }
+    };
+
     // Fetch card data for every owned card id.
     useEffect(() => {
         let cancelled = false;
@@ -91,137 +109,88 @@ export default function Collection() {
         };
     }, [collection]);
 
-    // Filter + sort the OWNED variants (one entry per ID_SET_RARITY we hold)
-    const filteredCards = useMemo(() => {
-        const cardsById = new Map(cards.map((c) => [c.id, c]));
-        const collectionEntries = Object.entries(collection).flatMap(([key, count]) => {
-            const parsed = parseCollectionKey(key);
-            const card = parsed && cardsById.get(parsed.id);
-            return parsed && card ? [{ key, count, ...parsed, card }] : [];
-        });
+    const filteredCards = useMemo(() => filterCollection(collection, cards, filters), [cards, collection, filters]);
 
-        return collectionEntries
-            .filter((entry) => {
-                const { card, setCode, rarity } = entry;
-
-                // Search
-                if (filters.search) {
-                    const searchLower = filters.search.toLowerCase();
-                    if (!card.name.toLowerCase().includes(searchLower) && !card.desc.toLowerCase().includes(searchLower)) {
-                        return false;
-                    }
-                }
-
-                // Set — prefer the PULLED set code, fall back to card's set list
-                if (filters.set !== "All") {
-                    if (setCode !== UNKNOWN_SET) {
-                        const setInfo = card.card_sets?.find((s) => s.set_code === setCode);
-                        if (setInfo?.set_name !== filters.set) return false;
-                    } else {
-                        const inSet = card.card_sets?.some((s) => s.set_name === filters.set);
-                        if (!inSet) return false;
-                    }
-                }
-
-                // Rarity — prefer the PULLED rarity, fall back to card's set list
-                if (filters.rarity !== "All") {
-                    if (rarity !== "Unknown") {
-                        if (rarity !== filters.rarity) return false;
-                    } else {
-                        const hasRarity = card.card_sets?.some((s) => s.set_rarity === filters.rarity);
-                        if (!hasRarity) return false;
-                    }
-                }
-
-                // Category (Monster / Spell / Trap)
-                if (filters.category !== "All") {
-                    if (filters.category === "Monster") {
-                        if (card.type.includes("Spell") || card.type.includes("Trap")) return false;
-                    } else if (filters.category === "Spell") {
-                        if (!card.type.includes("Spell")) return false;
-                    } else if (filters.category === "Trap") {
-                        if (!card.type.includes("Trap")) return false;
-                    }
-                }
-
-                // Card Type — Spell/Trap subtypes live in `race`; monster types in `type`
-                if (filters.cardType !== "All") {
-                    const isSpellTrapType = [
-                        "Normal Spell", "Continuous Spell", "Equip Spell", "Field Spell", "Quick-Play Spell", "Ritual Spell",
-                        "Normal Trap", "Continuous Trap", "Counter Trap",
-                    ].includes(filters.cardType);
-
-                    if (isSpellTrapType) {
-                        const type = filters.cardType.includes("Spell") ? "Spell Card" : "Trap Card";
-                        const race = filters.cardType.replace(" Spell", "").replace(" Trap", "");
-                        if (!card.type.includes(type)) return false;
-                        if (card.race !== race) return false;
-                    } else {
-                        if (!card.type.includes(filters.cardType)) return false;
-                    }
-                }
-
-                // Subtype (Race)
-                if (filters.subtype !== "All" && card.race !== filters.subtype) return false;
-
-                // Attribute
-                if (filters.attribute !== "All" && card.attribute !== filters.attribute) return false;
-
-                // Level / Rank / Link
-                if (filters.level !== "All") {
-                    const lvl = parseInt(filters.level);
-                    const cardLevel = card.level ?? card.rank ?? card.linkval;
-                    if (cardLevel !== lvl) return false;
-                }
-
-                // Scale
-                if (filters.scale !== "All" && card.scale !== parseInt(filters.scale)) return false;
-
-                // ATK / DEF ranges
-                if (filters.atkMin) {
-                    if (card.atk === undefined || card.atk < parseInt(filters.atkMin)) return false;
-                }
-                if (filters.atkMax) {
-                    if (card.atk === undefined || card.atk > parseInt(filters.atkMax)) return false;
-                }
-                if (filters.defMin) {
-                    if (card.def === undefined || card.def < parseInt(filters.defMin)) return false;
-                }
-                if (filters.defMax) {
-                    if (card.def === undefined || card.def > parseInt(filters.defMax)) return false;
-                }
-
-                return true;
-            })
-            .sort((a, b) => {
-                const cardA = a.card;
-                const cardB = b.card;
-                switch (filters.sort) {
-                    case "name_asc": return cardA.name.localeCompare(cardB.name);
-                    case "name_desc": return cardB.name.localeCompare(cardA.name);
-                    case "atk_desc": return (cardB.atk || 0) - (cardA.atk || 0);
-                    case "def_desc": return (cardB.def || 0) - (cardA.def || 0);
-                    case "level_desc": return (cardB.level || 0) - (cardA.level || 0);
-                    case "newest": return cardB.id - cardA.id;
-                    case "oldest": return cardA.id - cardB.id;
-                    default: return 0;
-                }
-            });
-    }, [cards, collection, filters]);
-
-    const totalPages = Math.ceil(filteredCards.length / ITEMS_PER_PAGE);
-    const displayedEntries = filteredCards.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-    // The rarity label shown on a tile: the pulled rarity, else the active
+    // The rarity label shown on a card: the pulled rarity, else the active
     // rarity filter if this card has it, else the card's first printed rarity.
-    const resolveRarity = (entry: (typeof displayedEntries)[number]) => {
+    const resolveRarity = useCallback((entry: OwnedEntry) => {
         const { card, rarity } = entry;
         if (rarity !== "Unknown") return rarity;
         if (filters.rarity !== "All" && card.card_sets?.some((s) => s.set_rarity === filters.rarity)) {
             return filters.rarity;
         }
         return card.card_sets?.[0]?.set_rarity || "Common";
-    };
+    }, [filters.rarity]);
+
+    // ---- the chapters: the sets reached, and any others you own cards from ----
+    const [sets, setSets] = useState<CardSet[]>([]);
+    useEffect(() => {
+        fetchAllSets().then(setSets);
+    }, []);
+    const owned = useMemo(() => ownedCountsById(collection), [collection]);
+    const [chapterCards, setChapterCards] = useState<Record<string, Card[]>>({});
+    const ownedBySet = useMemo(() => {
+        const m = new Map<string, Set<number>>();
+        for (const key of Object.keys(collection)) {
+            const p = parseCollectionKey(key);
+            if (!p) continue;
+            const k = p.setCode === UNKNOWN_SET ? OTHER : prefixOf(p.setCode);
+            m.set(k, (m.get(k) ?? new Set()).add(p.id));
+        }
+        return m;
+    }, [collection]);
+    const chapterSets = useMemo(
+        () => sets.filter((s, i) => i <= currentSetIndex || ownedBySet.has(prefixOf(s.set_code))),
+        [sets, currentSetIndex, ownedBySet],
+    );
+    const strays = useMemo(() => {
+        const known = new Set(chapterSets.map((s) => prefixOf(s.set_code)));
+        return filterCollection(collection, cards, DEFAULT_FILTERS).filter((e) => e.setCode === UNKNOWN_SET || !known.has(prefixOf(e.setCode)));
+    }, [chapterSets, collection, cards]);
+    const chapters: BinderChapter[] = useMemo(() => [
+        // The set list's count includes every printing, so a chapter's total waits for its own card list.
+        ...chapterSets.map((s) => ({ key: prefixOf(s.set_code), label: s.set_name, owned: ownedBySet.get(prefixOf(s.set_code))?.size ?? 0, total: chapterCards[prefixOf(s.set_code)]?.length ?? null })),
+        ...(strays.length ? [{ key: OTHER, label: "More cards", owned: strays.length, total: strays.length }] : []),
+    ], [chapterSets, ownedBySet, strays, chapterCards]);
+
+    // Open on the current set's chapter until the player picks another.
+    const [chapterPick, setChapterPick] = useState<string | null>(null);
+    const currentKey = sets[currentSetIndex] ? prefixOf(sets[currentSetIndex]!.set_code) : null;
+    const chapter = chapterPick ?? (chapters.some((c) => c.key === currentKey) ? currentKey : chapters[0]?.key ?? null);
+    const chapterSet = chapterSets.find((s) => prefixOf(s.set_code) === chapter);
+
+    // A chapter's whole card list, fetched the first time it's opened.
+    useEffect(() => {
+        if (!chapter || !chapterSet || chapterCards[chapter]) return;
+        let gone = false;
+        fetchCardsInSet(chapterSet.set_name).then((list) => {
+            if (!gone) setChapterCards((m) => ({ ...m, [chapter]: list }));
+        });
+        return () => {
+            gone = true;
+        };
+    }, [chapter, chapterSet, chapterCards]);
+
+    const searching = KEYS.some((k) => filters[k] !== DEFAULT_FILTERS[k]);
+    const activeCount = KEYS.filter((k) => k !== "search" && panel[k] !== DEFAULT_FILTERS[k]).length;
+
+    const slots = useMemo<BinderSlot[]>(() => {
+        const ownedSlot = (e: OwnedEntry): BinderSlot => {
+            const rarity = resolveRarity(e);
+            return { key: e.key, card: e.card, count: e.count, rarity, code: e.setCode === UNKNOWN_SET ? "" : e.setCode, tier: tierOf(rarity) };
+        };
+        if (searching) return filteredCards.map(ownedSlot);
+        if (chapter === OTHER) return strays.map(ownedSlot);
+        const list = chapter ? chapterCards[chapter] : undefined;
+        if (!list) return [];
+        return list
+            .map((card) => {
+                const print = card.card_sets?.find((p) => prefixOf(p.set_code) === chapter);
+                const rarity = print?.set_rarity ?? "Common";
+                return { key: `${card.id}-${print?.set_code ?? ""}`, card, count: owned.get(card.id) ?? 0, rarity, code: print?.set_code ?? "", tier: tierOf(rarity) };
+            })
+            .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+    }, [searching, filteredCards, chapter, strays, chapterCards, owned, resolveRarity]);
 
     if (loading && Object.keys(collection).length > 0) {
         return (
@@ -231,90 +200,79 @@ export default function Collection() {
         );
     }
 
+    const isEmpty = Object.keys(collection).length === 0;
+    const info = chapters.find((c) => c.key === chapter);
+    const meta = searching
+        ? `of ${filterCollection(collection, cards, DEFAULT_FILTERS).length} you own`
+        : isEmpty
+            ? "Empty for now: open some packs to fill it."
+            : info && chapter !== OTHER
+                ? info.total === null
+                    ? `${chapterSet?.tcg_date ?? ""} · ${info.owned} collected`
+                    : `${chapterSet?.tcg_date ?? ""} · ${info.owned} of ${info.total} collected · ${Math.round((info.owned / Math.max(1, info.total)) * 100)}%`
+                : "Cards from sets outside your binder's chapters";
+
     return (
-        <div className="h-full overflow-hidden grid grid-rows-[auto_1fr] relative">
+        <div className={`coll ${filtersOpen ? "coll--filters" : ""}`} onClick={() => setMenuOpen(false)}>
             <GuideSprite />
-
-            {/* Sub-header — title, counts, and the YDK import/export/delete actions.
-                The nav is hoisted to the root layout above this page. */}
-            <div className="bg-wood-dark border-b-2 border-wood-border p-4 shadow-md relative z-40">
-                <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-white leading-none">My Collection</h1>
-                        <p className="text-sm text-gray-400 font-mono mt-1">{filteredCards.length} Cards Found</p>
-                    </div>
-
-                    <div className="flex gap-4">
-                        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".ydk" className="hidden" />
-                        <ParchmentButton onClick={handleImportClick}>Import YDK</ParchmentButton>
-                        <ParchmentButton onClick={handleExportClick}>Export YDK</ParchmentButton>
-                        <ParchmentButton
-                            onClick={() => {
-                                if (confirm("WARNING: This will PERMANENTLY DELETE your entire collection. This action cannot be undone. Are you sure?")) {
-                                    importCollection([], "replace").catch(alertRepoError);
-                                }
-                            }}
-                            className="text-red-800 hover:text-red-600 border-red-800/50"
-                        >
-                            Delete Collection
-                        </ParchmentButton>
-                    </div>
+            <div className="coll__head">
+                <div className="coll__title">
+                    <p className="store__stage">{searching ? "Searching your binder" : chapter ? `Chapter · ${chapter}` : "Your binder"}</p>
+                    <h1>{searching ? `${filteredCards.length} cards found` : info?.label ?? "Collection"}</h1>
+                    <p className="store__meta">{meta}</p>
                 </div>
+                <div className="coll__menu" onClick={(e) => e.stopPropagation()}>
+                    <button className="ps-btn" aria-haspopup="true" aria-expanded={menuOpen} aria-label="More" onClick={() => setMenuOpen((v) => !v)}>⋯</button>
+                    {menuOpen && (
+                        <div className="coll__menu-list" role="menu">
+                            <button role="menuitem" onClick={() => { setMenuOpen(false); handleImportClick(); }}>Import YDK</button>
+                            <button role="menuitem" onClick={() => { setMenuOpen(false); void handleExportClick(); }}>Export YDK</button>
+                            <button role="menuitem" className="coll__danger" onClick={() => { setMenuOpen(false); handleDelete(); }}>Delete collection</button>
+                        </div>
+                    )}
+                </div>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".ydk" className="hidden" />
             </div>
 
-            {/* Scroll happens HERE (not the document), so the retro scrollbar
-                sits inside the content area beneath the nav and never shifts it */}
-            <div className="min-h-0 p-4 md:p-8 overflow-y-auto custom-scrollbar">
-                <div className="max-w-[1920px] mx-auto flex flex-col lg:flex-row gap-6 items-start">
-                    <div className="w-full lg:w-auto sticky top-4 z-30">
-                        <CollectionFilters onFilterChange={handleFilterChange} />
-                    </div>
-
-                    <StonePanel className="flex-1 w-full min-h-[80vh]">
-                        {Object.keys(collection).length === 0 ? (
-                            <div className="text-center py-20">
-                                <h2 className="text-2xl text-gray-400 mb-4">Your collection is empty</h2>
-                                <p className="text-gray-500">Open some packs to start building your collection!</p>
-                                <Link
-                                    href="/timeline"
-                                    className="inline-block mt-6 px-8 py-3 bg-primary text-black font-bold rounded-lg hover:bg-primary-hover transition-colors"
-                                >
-                                    Go to Map
-                                </Link>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-9 gap-2 md:gap-4">
-                                    {displayedEntries.map((entry) => (
-                                        <CollectionCard
-                                            key={entry.key}
-                                            card={entry.card}
-                                            count={entry.count}
-                                            rarity={resolveRarity(entry)}
-                                            onSelect={() => setSelectedCard(entry.card)}
-                                            onHover={(e) => onHover(entry.card, e)}
-                                            onLeave={onLeave}
-                                        />
-                                    ))}
-                                </div>
-
-                                {totalPages > 1 && (
-                                    <CollectionPagination
-                                        currentPage={currentPage}
-                                        totalPages={totalPages}
-                                        onPrev={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                        onNext={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                    />
-                                )}
-                            </>
-                        )}
-                    </StonePanel>
-                </div>
+            <div className="coll__bar">
+                <label className="coll__search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+                    <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your cards by name or text" aria-label="Search your cards" />
+                </label>
+                <button className="ps-btn" onClick={() => setFiltersOpen(true)}>
+                    Filters{activeCount > 0 && <span className="coll__n">{activeCount}</span>}
+                </button>
             </div>
 
-            {selectedCard && <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />}
+            <Binder
+                owner={owner}
+                title={searching ? "Search results" : info?.label ?? ""}
+                chapterCode={searching ? "" : chapter ?? ""}
+                slots={slots}
+                chapters={chapters}
+                activeChapter={searching ? null : chapter}
+                onChapter={(k) => {
+                    setChapterPick(k);
+                    setSearch("");
+                }}
+                onOpen={(s) => {
+                    hide();
+                    setSelected(toStage(s));
+                }}
+                bind={(s) => bind(toStage(s))}
+                empty={searching ? "No cards match. Try fewer filters." : chapter && chapter !== OTHER && !chapterCards[chapter] ? "Opening the chapter…" : undefined}
+                isPhone={isPhone}
+            />
 
-            {hoveredCard && <CardTooltip card={hoveredCard} x={tooltipPosition.x} y={tooltipPosition.y} />}
+            {/* Today's filter panel, unchanged, in a drawer. It stays mounted so it keeps its choices. */}
+            <div className="coll__drawer-bg" onClick={() => setFiltersOpen(false)} />
+            <aside className="coll__drawer" aria-label="Filters" aria-hidden={!filtersOpen}>
+                <CollectionFilters onFilterChange={handleFilterChange} hideSearch />
+                <button className="ps-btn coll__drawer-done" onClick={() => setFiltersOpen(false)}>Show {filteredCards.length} cards</button>
+            </aside>
+
+            {peek}
+            {selected && <CardCloseUp card={selected} onClose={() => setSelected(null)} />}
         </div>
     );
 }

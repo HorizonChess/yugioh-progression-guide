@@ -1,0 +1,185 @@
+/* The collection binder (Binder.tsx) and the collection page around it. */
+
+.binder-stage {
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 -.08'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+  --pebble: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='turbulence' baseFrequency='.22' numOctaves='2' seed='9'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .85 0 0 0 0 .6 0 0 0 .16 -.04'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23p)'/%3E%3C/svg%3E");
+  flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; padding: 6px 10px 4px; perspective: 2200px; touch-action: pan-y;
+}
+.binder { position: relative; flex: 1; min-height: 0; max-height: 680px; aspect-ratio: 1.5; max-width: calc(100% - 46px); margin-right: 40px; transform-style: preserve-3d; }
+@media (max-width: 767px) { .binder { aspect-ratio: 0.74; max-width: 100%; margin: 28px 0 0; } }
+
+/* padded leather with a stitched border, worn darker at the edges */
+.binder-shell {
+  position: absolute; inset: 0; border-radius: 18px;
+  background: var(--pebble), var(--grain), radial-gradient(ellipse at 30% 20%, #6b2e1a, #3c160c 55%, #210a05);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.35), inset 0 2px 1px rgba(255, 200, 160, 0.18), inset 0 0 40px rgba(0, 0, 0, 0.55), 0 30px 50px rgba(0, 0, 0, 0.75), 0 6px 0 #170703;
+}
+.binder-shell::before { content: ""; position: absolute; inset: 9px; border-radius: 12px; border: 1.5px dashed rgba(230, 190, 120, 0.45); pointer-events: none; }
+.binder-spine {
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 9%; transform: translateX(-50%); z-index: 1;
+  background: var(--pebble), linear-gradient(90deg, #2a0e06, #5a2414 30%, #6e2e19 50%, #5a2414 70%, #2a0e06); box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.6);
+}
+@media (max-width: 767px) { .binder-spine { left: 0; width: 13%; transform: none; border-radius: 18px 0 0 18px; } }
+
+/* the open pages, each on a stack of sheet edges */
+.binder-sheets, .binder-leaf { position: absolute; top: 4.2%; bottom: 4.2%; z-index: 2; display: flex; }
+.binder-sheets--l, .binder-leaf--l { left: 3.4%; right: 52%; }
+.binder-sheets--r, .binder-leaf--r { left: 52%; right: 3.4%; }
+@media (max-width: 767px) { .binder-sheets--r, .binder-leaf--r { left: 15%; right: 3.6%; } }
+.binder-sheets::before {
+  content: ""; position: absolute; inset: 0; border-radius: 6px; transform: translate(3px, 4px); background: #0b0806;
+  box-shadow: 2px 2px 0 #19130d, 4px 4px 0 #0b0806, 6px 6px 0 #19130d, 0 10px 18px rgba(0, 0, 0, 0.5);
+}
+.binder-sheets--l::before { transform: translate(-3px, 4px); box-shadow: -2px 2px 0 #19130d, -4px 4px 0 #0b0806, -6px 6px 0 #19130d, 0 10px 18px rgba(0, 0, 0, 0.5); }
+
+/* a page: black card behind a 3×3 clear sleeve */
+.binder-page {
+  position: relative; flex: 1; border-radius: 6px; padding: 7% 6% 9%; display: grid; grid-template: repeat(3, minmax(0, 1fr)) / repeat(3, minmax(0, 1fr)); gap: 3.4% 4.6%;
+  background: var(--grain), radial-gradient(ellipse at 50% 0%, #2b2520, #121010 75%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 0 30px rgba(0, 0, 0, 0.7);
+}
+.binder-sheets--l .binder-page { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset -26px 0 30px -16px rgba(0, 0, 0, 0.85); }
+.binder-sheets--r .binder-page, .binder-leaf > .binder-page { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 26px 0 30px -16px rgba(0, 0, 0, 0.85); }
+/* punched holes where the rings pass through */
+.binder-page::before { content: ""; position: absolute; top: 12%; bottom: 12%; left: 2.2%; width: 10px; background: radial-gradient(circle 4px at 50% 50%, #050404 70%, transparent 76%) 0 0 / 10px 33.3% repeat-y; }
+.binder-sheets--l .binder-page::before { left: auto; right: 2.2%; }
+.binder-page__title {
+  position: absolute; left: 0; right: 0; top: 2.6%; padding: 0 8%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font: 800 clamp(8px, 0.75vw, 11px)/1 var(--font-display); letter-spacing: 0.3em; text-transform: uppercase; color: rgba(224, 181, 79, 0.55);
+}
+.binder-page__foot {
+  position: absolute; left: 0; right: 0; bottom: 3.2%; display: flex; justify-content: space-between; padding: 0 7%;
+  font: 700 clamp(8px, 0.7vw, 10px)/1 var(--font-display); letter-spacing: 0.2em; text-transform: uppercase; color: rgba(224, 181, 79, 0.5);
+}
+
+/* a pocket of the sleeve: its opening lip, and a sheen across the plastic */
+.binder-pocket {
+  position: relative; min-height: 0; min-width: 0; display: grid; place-items: center; padding: 0; border: 0; color: inherit; border-radius: 3px;
+  background: linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 2px 0 rgba(255, 255, 255, 0.12), 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+button.binder-pocket { cursor: pointer; }
+.binder-pocket::before { content: ""; position: absolute; left: 6%; right: 6%; top: 5%; height: 1px; background: rgba(255, 255, 255, 0.22); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); z-index: 2; pointer-events: none; }
+.binder-pocket::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: 3px;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 26%, transparent 42%, transparent 72%, rgba(255, 255, 255, 0.07) 86%, transparent 100%);
+}
+.binder-pocket img {
+  position: relative; z-index: 1; display: block; height: 92%; width: auto; max-width: 92%; aspect-ratio: 813 / 1185; object-fit: cover;
+  border-radius: 3.5% / 2.5%; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); transition: transform 0.2s;
+}
+.binder-pocket:hover img { transform: translateY(-2%); }
+.binder-pocket:not([data-tier="Common"]) img {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tc) 70%, transparent), 0 0 9px -1px color-mix(in srgb, var(--tc) 50%, transparent), 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+/* a light foil sheen on the rares, under the plastic */
+.binder-foil {
+  position: absolute; z-index: 2; height: 92%; aspect-ratio: 813 / 1185; max-width: 92%; border-radius: 3.5% / 2.5%; pointer-events: none; mix-blend-mode: soft-light; opacity: 0.55;
+  background: linear-gradient(115deg, transparent 30%, color-mix(in srgb, var(--tc) 80%, white) 46%, transparent 60%) 0 0 / 250% 100%; animation: binder-foil 5s ease-in-out infinite;
+}
+@keyframes binder-foil { 50% { background-position: 100% 0; } }
+.binder-count {
+  position: absolute; z-index: 4; right: 6%; bottom: 6%; min-width: 22px; padding: 3px 5px; border-radius: 999px; text-align: center;
+  font: 800 clamp(9px, 0.8vw, 11px)/1 var(--font-main); color: #ffe08a; background: rgba(10, 7, 4, 0.88); box-shadow: 0 0 0 1px rgba(224, 181, 79, 0.7);
+}
+/* an empty pocket: the faint printed outline of the card that belongs there */
+.binder-ghost {
+  position: relative; z-index: 1; height: 92%; aspect-ratio: 813 / 1185; max-width: 92%; border-radius: 3.5% / 2.5%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6%; padding: 8%; text-align: center;
+  border: 1px dashed rgba(224, 181, 79, 0.22); background: radial-gradient(ellipse at 50% 40%, rgba(224, 181, 79, 0.06), transparent 70%);
+}
+.binder-ghost b { font: 800 clamp(8px, 0.85vw, 12px)/1 var(--font-display); color: rgba(224, 181, 79, 0.5); letter-spacing: 0.06em; }
+.binder-ghost span { font: 600 clamp(6px, 0.6vw, 9px)/1.2 var(--font-main); color: rgba(241, 231, 204, 0.28); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* the rings */
+.binder-rings { position: absolute; top: 9%; bottom: 9%; left: 50%; width: 9%; transform: translateX(-50%); z-index: 6; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+@media (max-width: 767px) { .binder-rings { left: 7.5%; width: 12%; } }
+.binder-rings i { position: relative; display: block; height: 13%; }
+.binder-rings i::before {
+  content: ""; position: absolute; left: -6%; right: -6%; top: 0; bottom: 0; border-radius: 50%; border: clamp(4px, 0.55vw, 7px) solid transparent;
+  background: linear-gradient(#fdfaf2, #b9bcc4 30%, #6e727b 55%, #d9dce2 75%, #888c94) border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.7));
+}
+.binder-rings i::after { content: ""; position: absolute; left: 10%; right: 10%; top: 38%; height: 24%; border-radius: 4px; background: linear-gradient(#5c3015, #2a1006); box-shadow: inset 0 1px 0 rgba(255, 200, 150, 0.2); }
+
+/* index tabs sticking out of the edge, one per set */
+.binder-tabs { position: absolute; right: -40px; top: 8%; bottom: 8%; z-index: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scrollbar-width: none; padding-right: 8px; }
+.binder-tabs::-webkit-scrollbar { display: none; }
+@media (max-width: 767px) { .binder-tabs { right: 4%; left: 16%; top: -28px; bottom: auto; flex-direction: row; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 4px 0 0; } }
+.binder-tab {
+  flex: none; width: 56px; padding: 8px 6px 8px 14px; border: 0; cursor: pointer; border-radius: 0 10px 10px 0; color: #2a1c05; text-align: left;
+  background: var(--grain), linear-gradient(90deg, rgba(0, 0, 0, 0.25), transparent 30%), var(--tabc, #c9a04a);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35); transition: transform 0.2s, filter 0.2s;
+}
+.binder-tab:hover { transform: translateX(3px); }
+.binder-tab--on { transform: translateX(6px); filter: brightness(1.12); }
+.binder-tab b { display: block; font: 800 12px/1 var(--font-display); letter-spacing: 0.04em; }
+.binder-tab small { display: block; margin-top: 3px; font: 700 9px/1 var(--font-main); opacity: 0.8; }
+@media (max-width: 767px) {
+  .binder-tab { width: auto; padding: 6px 10px 8px; border-radius: 10px 10px 0 0; background: var(--grain), linear-gradient(rgba(0, 0, 0, 0.2), transparent 40%), var(--tabc, #c9a04a); }
+  .binder-tab:hover { transform: none; }
+  .binder-tab--on { transform: translateY(-4px); }
+}
+
+/* the cover swings open on arrival */
+.binder-cover { position: absolute; top: 0; bottom: 0; right: 0; width: 50%; z-index: 20; transform-origin: left center; transform-style: preserve-3d; transition: transform 1.1s cubic-bezier(0.55, 0.05, 0.25, 1); pointer-events: none; }
+@media (max-width: 767px) { .binder-cover { width: 100%; } }
+.binder-cover > div { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 4px 18px 18px 4px; }
+.binder-cover__front {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4%;
+  background: var(--pebble), var(--grain), radial-gradient(ellipse at 40% 30%, #74331d, #3c160c 60%, #200904);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.4), inset 0 0 40px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.7);
+}
+.binder-cover__front::before { content: ""; position: absolute; inset: 12px; border-radius: 4px 12px 12px 4px; border: 1.5px dashed rgba(230, 190, 120, 0.5); }
+.binder-cover__front svg { width: 40%; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6)); }
+.binder-cover__front h2 {
+  margin: 0; font: 800 clamp(16px, 2vw, 30px)/1.1 var(--font-display); letter-spacing: 0.18em; text-align: center;
+  color: transparent; background: linear-gradient(#fff1bf, #d4af37 50%, #8a6420); -webkit-background-clip: text; background-clip: text;
+}
+.binder-cover__front p { margin: 0; font: 700 clamp(10px, 0.9vw, 13px)/1 var(--font-main); letter-spacing: 0.3em; text-transform: uppercase; color: rgba(230, 190, 120, 0.7); }
+.binder-cover > .binder-cover__back { transform: rotateY(180deg); border-radius: 18px 4px 4px 18px; background: var(--grain), linear-gradient(90deg, #1b0904, #3a160c); box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.7); }
+.binder--open .binder-cover { transform: rotateY(-178deg); opacity: 0; transition: transform 1.1s cubic-bezier(0.55, 0.05, 0.25, 1), opacity 0.35s 0.95s; }
+@media (max-width: 767px) { .binder--open .binder-cover { transform: rotateY(-100deg); opacity: 0; transition: transform 1s cubic-bezier(0.55, 0.05, 0.25, 1), opacity 0.4s 0.6s; } }
+
+/* the turning sheet */
+.binder-leaf { z-index: 8; transform-style: preserve-3d; pointer-events: none; transform-origin: left center; }
+.binder-leaf--l { transform-origin: right center; }
+.binder-leaf > .binder-page { position: absolute; inset: 0; backface-visibility: hidden; }
+.binder-leaf__back { position: absolute; inset: 0; display: flex; transform: rotateY(180deg); backface-visibility: hidden; }
+.binder-leaf__shade { position: absolute; inset: 0; border-radius: 6px; pointer-events: none; background: linear-gradient(90deg, rgba(0, 0, 0, 0.55), transparent 60%); opacity: 0; }
+
+.binder-pager { flex: none; display: flex; align-items: center; justify-content: center; gap: 14px; padding: 8px 0 6px; }
+.binder-pager span { font: 700 12px/1 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; color: #c7b99a; min-width: 140px; text-align: center; }
+.binder-empty { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; padding: 20%; margin: 0; text-align: center; font: 600 14px/1.4 var(--font-main); color: #c7b99a; pointer-events: none; }
+
+/* ---------- the collection page around it ---------- */
+.coll { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.coll__head { flex: none; display: flex; align-items: center; gap: 10px; padding: 12px 16px 4px; }
+.coll__title { flex: 1; min-width: 0; }
+.coll__title h1 { margin: 0; font: 800 clamp(20px, 1.6vw + 12px, 32px)/1.05 var(--font-display); color: #fff; text-shadow: 0 3px 10px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coll__bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 16px 8px; }
+.coll__search { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 999px; background: rgba(10, 7, 4, 0.7); box-shadow: 0 0 0 1px rgba(224, 181, 79, 0.4); }
+.coll__search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: #f1e7cc; font: 600 14px var(--font-main); }
+.coll__search svg { width: 16px; height: 16px; color: #c7b99a; flex: none; }
+.coll__n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 6px; border-radius: 9px; background: #e0b54f; color: #2a1c05; font-size: 11px; letter-spacing: 0; }
+.coll__menu { position: relative; }
+.coll__menu-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 70; min-width: 210px; padding: 6px; border-radius: 10px; background: #15100a; box-shadow: 0 0 0 1px #6e5320, 0 18px 30px rgba(0, 0, 0, 0.6); }
+.coll__menu-list button { display: block; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 6px; background: none; cursor: pointer; color: #f1e7cc; font: 600 14px/1 var(--font-main); }
+.coll__menu-list button:hover { background: rgba(224, 181, 79, 0.12); }
+.coll__menu-list .coll__danger { color: #f87171; }
+/* today's filter panel, in a drawer: at the side on desktop, a sheet on phones */
+.coll__drawer-bg { position: fixed; inset: 0; z-index: 180; background: rgba(4, 3, 8, 0.6); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+.coll__drawer { position: fixed; z-index: 181; top: 0; right: 0; bottom: 0; width: min(320px, 92vw); padding: 14px 12px; overflow-y: auto; background: linear-gradient(#1a1324, #0d0a07); box-shadow: -2px 0 0 #8a6420, -20px 0 40px rgba(0, 0, 0, 0.6); transform: translateX(105%); transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.coll--filters .coll__drawer-bg { opacity: 1; pointer-events: auto; }
+.coll--filters .coll__drawer { transform: none; }
+.coll__drawer > div { width: 100% !important; }
+.coll__drawer-done { display: block; width: 100%; margin-top: 10px; }
+@media (max-width: 767px) {
+  .coll__drawer { top: auto; left: 0; width: auto; max-height: 82vh; border-radius: 16px 16px 0 0; box-shadow: 0 -2px 0 #8a6420, 0 -20px 40px rgba(0, 0, 0, 0.6); transform: translateY(105%); padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .binder-foil { animation: none; }
+  .binder-cover { transition: none; }
+}

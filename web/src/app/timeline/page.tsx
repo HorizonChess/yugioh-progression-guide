@@ -8,6 +8,7 @@ import GuideSprite from "@/components/layout/GuideSprite";
 import CartoucheButton from "@/components/ui/CartoucheButton";
 import TimelineRoad from "@/components/timeline/TimelineRoad";
 import { useIsPhone } from "@/lib/useIsPhone";
+import { launchFlight } from "@/lib/pack-flight";
 import TimelineControls from "@/components/timeline/TimelineControls";
 import TimelineNode from "@/components/timeline/TimelineNode";
 import StatsPanel from "@/components/timeline/StatsPanel";
@@ -79,7 +80,7 @@ export default function Timeline() {
             <main className="h-full w-full overflow-hidden text-white grid grid-rows-[minmax(0,1fr)_auto]">
                 <TimelineRoad sets={sets} currentSetIndex={currentSetIndex} matchFor={matchFor} />
                 <nav className="road-dock" aria-label="Stage actions">
-                    <CartoucheButton href={`/packs?set=${currentSetIndex}`}>Open Packs</CartoucheButton>
+                    <CartoucheButton href={`/packs?set=${currentSetIndex}`} onClick={() => launchFlight(currentSetIndex)}>Open Packs</CartoucheButton>
                     <CartoucheButton href="/record-match">Record Match</CartoucheButton>
                     <div className="road-dock__small">
                         <Link href="/deck-builder">Prepare deck</Link>
@@ -128,7 +129,7 @@ export default function Timeline() {
                 compresses on short screens. */}
             <footer className="relative flex flex-col items-center gap-[clamp(0.5rem,2vh,1.5rem)] px-6 pb-[clamp(0.5rem,2vh,1.5rem)]">
                 <div className="flex flex-wrap justify-center gap-[clamp(1rem,2vw,1.5rem)]">
-                    <CartoucheButton href={`/packs?set=${currentSetIndex}`} className="w-[clamp(11rem,min(16vw,24vh),15rem)]">
+                    <CartoucheButton href={`/packs?set=${currentSetIndex}`} onClick={() => launchFlight(currentSetIndex)} className="w-[clamp(11rem,min(16vw,24vh),15rem)]">
                         Open Packs
                     </CartoucheButton>
                     <CartoucheButton href="/record-match" className="w-[clamp(11rem,min(16vw,24vh),15rem)]">

@@ -7,17 +7,11 @@ import type { Opening } from "@/lib/repo/types";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import GuideSprite from "@/components/layout/GuideSprite";
-import CardDetailModal from "@/components/card/CardDetailModal";
-import StonePanel from "@/components/ui/StonePanel";
-import ParchmentButton from "@/components/ui/ParchmentButton";
-import CardTooltip from "@/components/card/CardTooltip";
-import RarityCardGrid from "@/components/packs/RarityCardGrid";
 import StoreView from "@/components/packs/StoreView";
 import PackStageView from "@/components/packs/PackStageView";
 import { ownedCountsById } from "@/lib/collection";
-import PackDetails from "@/components/packs/PackDetails";
-import { processCardsForRarityGrid } from "@/lib/card-utils";
-import { useCardTooltip } from "@/hooks/useCardTooltip";
+import OpeningSummary from "@/components/packs/OpeningSummary";
+import SetCardList from "@/components/packs/SetCardList";
 import { usePackOpening } from "@/hooks/usePackOpening";
 
 /**
@@ -43,7 +37,6 @@ function PacksPageContent() {
     const [loading, setLoading] = useState(true);
 
     const [customQuantity, setCustomQuantity] = useState<number>(1);
-    const [selectedCard, setSelectedCard] = useState<Card | null>(null);
     const [viewDetails, setViewDetails] = useState(false);
 
     // Flips are sent in small batches so a reload resumes the reveal.
@@ -61,7 +54,6 @@ function PacksPageContent() {
         clearTimeout(flipTimer.current);
         flipTimer.current = setTimeout(flushFlips, 600);
     });
-    const { hoveredCard, tooltipPosition, onHover, onLeave } = useCardTooltip();
 
     const startReveal = (opening: Opening) => {
         openingId.current = opening.id;
@@ -191,9 +183,9 @@ function PacksPageContent() {
     if (!pack.isOpening && !viewDetails) {
         return (
             <PacksShell fixed withSprite>
-                {renderOverlays()}
                 <StoreView
                     set={currentSet}
+                    setIndex={targetSetIndex}
                     cardCount={setCards.length}
                     isLocked={!canOpen}
                     lockedMessage={lockedMessage}
@@ -207,62 +199,27 @@ function PacksPageContent() {
         );
     }
 
-    // --- Summary + Details show the full card list; they scroll normally.
+    // --- The haul and the card list can run to 100+ cards; they scroll normally.
+    const owned = ownedCountsById(collection);
+    const ownedCount = (id: number) => owned.get(id) ?? 0;
     return (
         <PacksShell withSprite={!pack.isOpening}>
-            {renderOverlays()}
             {viewDetails ? (
-                <PackDetails
-                    set={currentSet}
-                    cards={setCards}
-                    onCardClick={setSelectedCard}
-                    onHover={onHover}
-                    onLeave={onLeave}
-                    onBack={() => setViewDetails(false)}
-                />
+                <SetCardList set={currentSet} cards={setCards} ownedCount={ownedCount} onBack={() => setViewDetails(false)} />
             ) : (
-                renderSummary(currentSet)
+                <OpeningSummary
+                    set={currentSet}
+                    cards={pack.allOpenedCards}
+                    packCount={pack.packsToOpen.length}
+                    ownedCount={ownedCount}
+                    onSave={handleSaveAndContinue}
+                    onBack={handleDiscardAndExit}
+                    onOpenMore={repo.freePacks ? pack.reset : undefined}
+                    onReroll={hasTicket ? handleReroll : undefined}
+                />
             )}
         </PacksShell>
     );
-
-    // ---- render helpers -------------------------------------------------
-
-    function renderOverlays() {
-        return (
-            <>
-                {selectedCard && <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />}
-                {hoveredCard && <CardTooltip card={hoveredCard} x={tooltipPosition.x} y={tooltipPosition.y} />}
-            </>
-        );
-    }
-
-    function renderSummary(set: CardSet) {
-        const { cardsByRarity, sortedRarities } = processCardsForRarityGrid(pack.allOpenedCards, set.set_code);
-        return (
-            <div className="max-w-7xl mx-auto">
-                <StonePanel className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 sticky top-4 z-50">
-                    <div className="text-center md:text-left">
-                        <h1 className="text-2xl md:text-3xl font-black text-white mb-1">{set.set_name}</h1>
-                        <p className="text-primary text-sm font-bold">Opened {pack.allOpenedCards.length} Cards</p>
-                    </div>
-                    <div className="flex gap-4">
-                        <button onClick={handleDiscardAndExit} className="pack-exit-btn">Back to Campaign</button>
-                        {repo.freePacks && (
-                            <ParchmentButton onClick={pack.reset}>
-                                Open More
-                            </ParchmentButton>
-                        )}
-                        {hasTicket && <ParchmentButton onClick={handleReroll}>Reroll (Redoer Ticket)</ParchmentButton>}
-                        <ParchmentButton onClick={handleSaveAndContinue} className="text-green-900 border-green-800 hover:bg-green-50">
-                            Done &amp; Save
-                        </ParchmentButton>
-                    </div>
-                </StonePanel>
-                <RarityCardGrid cardsByRarity={cardsByRarity} sortedRarities={sortedRarities} onCardClick={setSelectedCard} onHover={onHover} onLeave={onLeave} />
-            </div>
-        );
-    }
 }
 
 /**
@@ -286,14 +243,14 @@ function PacksShell({
     // for summary/details.
     return (
         <div className="h-full overflow-hidden grid grid-rows-[1fr]">
-            {withSprite && <GuideSprite />}
+            {withSprite && <GuideSprite raised={fixed} />}
             {fixed ? (
                 // Pack-opening board: row-locked, centered, never scrolls.
                 <div className="min-h-0 min-w-0 flex items-center justify-center p-4">{children}</div>
             ) : (
                 // Summary / details: a potentially long card list — scroll INSIDE
                 // this row (retro scrollbar under the nav), not the document.
-                <div className="min-h-0 overflow-y-auto custom-scrollbar p-8 pb-16">{children}</div>
+                <div className="min-h-0 overflow-y-auto custom-scrollbar">{children}</div>
             )}
         </div>
     );

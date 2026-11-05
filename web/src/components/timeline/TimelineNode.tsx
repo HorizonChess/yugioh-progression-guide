@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CardSet } from "@/lib/api";
 import { markLoaded } from "@/lib/utils";
 import ChainConnector from "@/components/timeline/ChainConnector";
+import { launchFlight } from "@/lib/pack-flight";
 
 type Match = { winner: "player" | "opponent" } | undefined;
 
@@ -41,6 +42,7 @@ export default function TimelineNode({
             >
                 <Link
                     href={`/packs?set=${index}`}
+                    onClick={() => launchFlight(index)}
                     className={`timeline-node__art ${current ? "timeline-node__art--current" : "timeline-node__art--other"}`}
                 >
                     {set.set_image ? (

@@ -24,6 +24,8 @@ export interface FilterState {
 interface CollectionFiltersProps {
     onFilterChange: (filters: FilterState) => void;
     className?: string;
+    /** Leave the search box out, when the page shows its own (it then supplies `search`). */
+    hideSearch?: boolean;
 }
 
 const CATEGORIES = ["All", "Monster", "Spell", "Trap"];
@@ -84,7 +86,7 @@ export const DEFAULT_FILTERS: FilterState = {
     sort: "name_asc",
 };
 
-export default function CollectionFilters({ onFilterChange, className = "" }: CollectionFiltersProps) {
+export default function CollectionFilters({ onFilterChange, className = "", hideSearch = false }: CollectionFiltersProps) {
     const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
     const [sets, setSets] = useState<CardSet[]>([]);
@@ -121,7 +123,7 @@ export default function CollectionFilters({ onFilterChange, className = "" }: Co
                     </div>
 
                     {/* Search */}
-                    <div className="flex flex-col gap-1">
+                    {!hideSearch && <div className="flex flex-col gap-1">
                         <ParchmentInput
                             type="text"
                             placeholder="Search cards..."
@@ -129,7 +131,7 @@ export default function CollectionFilters({ onFilterChange, className = "" }: Co
                             onChange={(e) => handleChange('search', e.target.value)}
                             className="w-full"
                         />
-                    </div>
+                    </div>}
 
                     {/* Filter Groups */}
                     <div className="flex flex-col gap-2">

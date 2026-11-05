@@ -52,30 +52,31 @@
 .ps-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 4.5% / 3.2%; overflow: hidden; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.55); background: #111; }
 .ps-face img { width: 100%; height: 100%; display: block; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
 .ps-front { transform: rotateY(180deg); }
-.ps-card[data-tier="Rare"] { --rc: rgba(205, 216, 255, 0.9); }
-.ps-card[data-tier="Super"] { --rc: rgba(79, 195, 255, 0.95); }
-.ps-card[data-tier="Ultra"] { --rc: rgba(255, 204, 51, 0.95); }
-.ps-card[data-tier="Secret"] { --rc: rgba(255, 106, 213, 0.95); }
+/* Rarity light: a thin rim and a soft halo, never a flood. */
+.ps-card[data-tier="Rare"] { --rc: rgba(205, 216, 255, 0.55); }
+.ps-card[data-tier="Super"] { --rc: rgba(79, 195, 255, 0.55); }
+.ps-card[data-tier="Ultra"] { --rc: rgba(255, 204, 51, 0.6); }
+.ps-card[data-tier="Secret"] { --rc: rgba(255, 106, 213, 0.55); }
 .ps-card--glowing .ps-back { animation: ps-glow 1.1s ease-in-out infinite; }
 .ps-card--glowing[data-tier="Secret"] .ps-back { animation: ps-glow 1.1s ease-in-out infinite, ps-hue 2.2s linear infinite; }
-@keyframes ps-glow { 0%, 100% { box-shadow: 0 0 0 2px var(--rc), 0 0 14px 2px var(--rc); } 50% { box-shadow: 0 0 0 3px var(--rc), 0 0 38px 12px var(--rc); } }
+@keyframes ps-glow { 0%, 100% { box-shadow: 0 0 0 1.5px var(--rc), 0 0 8px 0 var(--rc); } 50% { box-shadow: 0 0 0 2px var(--rc), 0 0 20px 3px var(--rc); } }
 @keyframes ps-hue { to { filter: hue-rotate(360deg); } }
-.ps-card--revealed .ps-front { box-shadow: 0 0 0 2px var(--rc), 0 0 28px 5px var(--rc), 0 12px 24px rgba(0, 0, 0, 0.6); }
+.ps-card--revealed .ps-front { box-shadow: 0 0 0 1.5px var(--rc), 0 0 12px 0 var(--rc), 0 12px 24px rgba(0, 0, 0, 0.6); }
 
 /* holo foil */
 .ps-holo, .ps-glare { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.5s 0.25s; }
 .ps-holo { mix-blend-mode: color-dodge; background-size: 300% 300%; animation: ps-sheen 3.4s ease-in-out infinite alternate; }
 @keyframes ps-sheen { from { background-position: 0% 30%; } to { background-position: 100% 70%; } }
 .ps-card--flipped[data-tier="Super"] .ps-holo {
-  opacity: 0.8; clip-path: inset(18.3% 12% 27.6% 12%);
+  opacity: 0.45; clip-path: inset(18.3% 12% 27.6% 12%);
   background-image: linear-gradient(115deg, transparent 25%, rgba(140, 210, 255, 0.75) 40%, rgba(255, 255, 255, 0.85) 48%, rgba(140, 255, 230, 0.6) 56%, transparent 72%);
 }
 .ps-card--flipped[data-tier="Ultra"] .ps-holo {
-  opacity: 0.85; clip-path: inset(18.3% 12% 27.6% 12%);
+  opacity: 0.45; clip-path: inset(18.3% 12% 27.6% 12%);
   background-image: repeating-linear-gradient(110deg, rgba(255, 0, 128, 0.5) 0%, rgba(255, 215, 0, 0.5) 7%, rgba(0, 255, 200, 0.5) 14%, rgba(110, 90, 255, 0.5) 21%, rgba(255, 0, 128, 0.5) 28%);
 }
 .ps-card--flipped[data-tier="Secret"] .ps-holo {
-  opacity: 0.75; background-size: 9px 9px, 300% 300%;
+  opacity: 0.42; background-size: 9px 9px, 300% 300%;
   background-image: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 1px, transparent 1.6px),
     repeating-linear-gradient(-45deg, rgba(255, 0, 128, 0.4) 0 2%, rgba(255, 215, 0, 0.4) 2% 4%, rgba(0, 255, 200, 0.4) 4% 6%, rgba(110, 90, 255, 0.4) 6% 8%);
 }
