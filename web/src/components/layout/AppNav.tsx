@@ -26,9 +26,83 @@ const NAV_LINKS = [
     { href: "/menu", label: "MENU" },
 ];
 
+/** Tab icons for the phone tab bar, in NAV_LINKS order. */
+const TAB_ICONS = [
+    "M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6",
+    "M4 3h11v15H4zM9 21h9.5A1.5 1.5 0 0 0 20 19.5V7",
+    "M4 7h16M4 12h16M4 17h10",
+    "M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8-4.3-4.1 5.9-.8Z",
+    "M4 6h16M4 12h16M4 18h16",
+];
+const TAB_LABELS: Record<string, string> = { "/deck-builder": "DECK" };
+
+const useNavPath = () => usePathname().replace(/(.)\/$/, "$1"); // trailingSlash makes it "/timeline/"
+
+/** Phones: the app sections as a bottom tab bar (the layout puts it below the page). */
+export function PhoneTabBar() {
+    const pathname = useNavPath();
+    const { activeSeriesId } = useProgression();
+    if (!NAV_ROUTES.has(pathname)) return null;
+    return (
+        <nav className="phone-tabs md:hidden" aria-label="Main">
+            {NAV_LINKS.map(({ href, label }, i) => {
+                const inner = (
+                    <>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d={TAB_ICONS[i]} /></svg>
+                        {TAB_LABELS[href] ?? label}
+                    </>
+                );
+                return !activeSeriesId && href !== "/menu" ? (
+                    <span key={href} aria-disabled="true" title="Pick a save first">{inner}</span>
+                ) : (
+                    <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined}>{inner}</Link>
+                );
+            })}
+        </nav>
+    );
+}
+
+/** Phones: a lacquer bar with Yugi (the guide toggle), the duelist and stage, and on the timeline the painted scoreboard hanging from it. */
+function PhoneBar({ duelistName, signedIn }: { duelistName: string; signedIn: boolean }) {
+    const pathname = useNavPath();
+    const { isGuideVisible, toggleGuide, series, matchHistory } = useProgression();
+    const wins = matchHistory.filter((m) => m.winner === "player").length;
+    const losses = matchHistory.filter((m) => m.winner === "opponent").length;
+    const sub = series ? `Stage ${series.currentSetIndex + 1} · ${series.mode === "duo" ? "Duo" : "Solo"}` : "No save picked";
+    return (
+        <header className="phone-bar md:hidden">
+            <button
+                type="button"
+                onClick={toggleGuide}
+                className={`phone-bar__face ${isGuideVisible ? "" : "phone-bar__face--off"}`}
+                style={{ backgroundImage: `url('${asset("/sprites/yugi_neutral_v2_transparent.webp")}')` }}
+                aria-label={isGuideVisible ? "Hide Guide" : "Show Guide"}
+                aria-pressed={isGuideVisible}
+            />
+            <Link href="/menu" className="phone-bar__who">
+                <div className="phone-bar__name">{duelistName}</div>
+                <div className="phone-bar__sub">{sub}</div>
+            </Link>
+            {pathname === "/timeline" ? (
+                <div className="phone-bar__score" style={{ background: `url('${asset("/ui/stats_panel_cropped.webp")}') center / contain no-repeat` }} role="img" aria-label={`${wins} wins, ${losses} losses`}>
+                    <div className="stats-gem" style={{ left: "30%" }}>
+                        <span className="stats-gem__label text-win">Wins</span>
+                        <span className="stats-gem__value">{wins}</span>
+                    </div>
+                    <div className="stats-gem" style={{ left: "70%" }}>
+                        <span className="stats-gem__label text-loss">Losses</span>
+                        <span className="stats-gem__value">{losses}</span>
+                    </div>
+                </div>
+            ) : (
+                <div className="ml-auto">{signedIn && <NotificationBell />}</div>
+            )}
+        </header>
+    );
+}
+
 export default function AppNav() {
-    // trailingSlash (for static hosting) makes this "/timeline/"; strip it so route lookups match
-    const pathname = usePathname().replace(/(.)\/$/, "$1");
+    const pathname = useNavPath();
     const { isGuideVisible, toggleGuide, activeSeriesId } = useProgression();
     const user = useAuth().user;
     const duelistName = user?.duelistName ?? "Guest";
@@ -36,7 +110,9 @@ export default function AppNav() {
     if (!NAV_ROUTES.has(pathname)) return null;
 
     return (
-        <div className="z-[100] bg-gradient-to-b from-gray-900 to-black border-b-2 border-gray-700 p-3 flex justify-between items-center shadow-lg">
+        <>
+        <PhoneBar duelistName={duelistName} signedIn={!!user} />
+        <div className="hidden md:flex z-[100] bg-gradient-to-b from-gray-900 to-black border-b-2 border-gray-700 p-3 justify-between items-center shadow-lg">
             <div className="flex items-center gap-4">
                 <Link href="/menu" className="group flex items-center gap-4 hover:opacity-80 transition-opacity">
                     <div>
@@ -87,5 +163,6 @@ export default function AppNav() {
                 </div>
             </div>
         </div>
+        </>
     );
 }

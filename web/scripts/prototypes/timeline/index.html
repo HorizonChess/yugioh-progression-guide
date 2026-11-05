@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeline Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Outfit:wght@500;700;800&family=Barlow+Semi+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --gold-stone-light: #f6dd94;
+    --gold-stone: #d8b871;
+    --gold-stone-dark: #b59748;
+    --primary: #d4af37;
+    --ink: #1f160b;
+    --win: #4ade80;
+    --loss: #f87171;
+    --techno: "Russo One", sans-serif;
+    --heading: "Outfit", sans-serif;
+    --ui: "Barlow Semi Condensed", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+    display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
+    background: #000; color: #fff; font-family: var(--heading);
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- prototype switcher (not part of the design) ---------- */
+.proto {
+    flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 12px;
+    background: #110c18; border-bottom: 1px dashed #6e5320; font: 600 12px/1 var(--ui); letter-spacing: .1em; text-transform: uppercase; color: #a99d80;
+    position: relative; z-index: 40;
+}
+.proto nav { display: flex; gap: 4px; margin-right: auto; }
+.proto button, .proto select { font: inherit; color: #a99d80; background: transparent; border: 1px solid #3d3220; border-radius: 5px; padding: 6px 9px; cursor: pointer; }
+.proto button[aria-selected="true"] { color: #ffe08a; border-color: #8a6a2c; background: rgba(224,181,79,.1); }
+.proto select { color: #eee; background: #120e19; }
+@media (max-width: 760px) { .proto .long { display: none; } }
+@media (min-width: 761px) { .proto .short { display: none; } }
+
+/* ---------- the app's own nav bar ---------- */
+.appnav {
+    flex: none; height: 64px; display: flex; align-items: center; gap: 16px; padding: 0 12px;
+    background: linear-gradient(#0f172a, #020617); border-bottom: 1px solid #1e293b; position: relative; z-index: 30;
+}
+.appnav .name { font: 800 22px/1 var(--heading); color: #d4af37; letter-spacing: .04em; }
+.appnav .id { font: 400 11px/1.4 ui-monospace, monospace; color: #94a3b8; }
+.appnav .face { width: 44px; height: 44px; border-radius: 50%; border: 2px solid #d4af37; box-shadow: 0 0 12px rgba(212,175,55,.5); background: url("img/yugi-neutral.webp") 50% 6% / 260% auto no-repeat, #0f172a; }
+.appnav .links { display: flex; gap: 22px; margin-left: auto; font: 700 13px/1 var(--heading); letter-spacing: .16em; color: #94a3b8; }
+.appnav .links a { color: inherit; text-decoration: none; }
+.appnav .links a[aria-current] { color: #d4af37; }
+.appnav .logo { font: 800 italic 24px/1 var(--heading); color: #f2b705; letter-spacing: .02em; text-shadow: 0 2px 0 #7a4c00; margin-left: 18px; }
+.tabbar { display: none; }
+@media (max-width: 760px) {
+    .appnav { height: 56px; }
+    .appnav .links { display: none; }
+    .appnav .logo { margin-left: auto; font-size: 20px; }
+    .tabbar {
+        display: flex; flex: none; height: 62px; background: linear-gradient(#0f172a, #020617); border-top: 1px solid #1e293b; position: relative; z-index: 30;
+    }
+    .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #94a3b8; text-decoration: none; font: 700 10px/1 var(--heading); letter-spacing: .12em; }
+    .tabbar svg { width: 22px; height: 22px; }
+    .tabbar a[aria-current] { color: #d4af37; }
+}
+
+/* ---------- the wall: the app's bg-stone, as GlobalBackground draws it ---------- */
+main { flex: 1; position: relative; overflow: hidden auto; min-height: 0; }
+.wall { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.wall .stone { position: absolute; inset: 0; background: url("img/bg-stone.webp") center / cover; filter: brightness(1.3) contrast(1.1); }
+.wall .shade { position: absolute; inset: 0; background: rgba(0,0,0,.5); }
+/* C: the same wall at its true size (sharp), lit by flickering torches */
+.wall.new .stone { background-image: url("img/wall-gemini-1.webp"); }
+.opt-c .wall:not(.new) .stone { background-size: 1024px auto; background-repeat: repeat; }
+.opt-c .wall .stone { filter: brightness(1.15) contrast(1.15) saturate(1.05); }
+.opt-c .wall .shade { background: radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,0,0,.2), rgba(0,0,0,.72) 100%); }
+.torch { position: absolute; width: 70vmax; height: 70vmax; margin: -35vmax 0 0 -35vmax; border-radius: 50%; mix-blend-mode: soft-light; opacity: 0; }
+.opt-c .torch { opacity: 1; background: radial-gradient(circle, rgba(255,170,70,.9), rgba(255,120,40,.35) 30%, transparent 62%); animation: flicker 3.2s infinite steps(1, end); }
+.opt-c .torch.b { animation-duration: 2.7s; animation-delay: -1.3s; }
+@keyframes flicker {
+    0% { opacity: 1; } 7% { opacity: .82; } 12% { opacity: .97; } 31% { opacity: .88; } 38% { opacity: 1; }
+    54% { opacity: .78; } 59% { opacity: .95; } 77% { opacity: .86; } 84% { opacity: 1; }
+}
+.page { position: relative; z-index: 1; min-height: 100%; display: grid; grid-template-rows: 1fr auto; }
+
+/* ---------- carousel ---------- */
+.timeline { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(.75rem, 3vh, 2rem); padding: clamp(.5rem, 2vh, 1.5rem) 0; min-width: 0; }
+.road { position: relative; width: 100%; }
+.rail {
+    display: flex; align-items: center; overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+    padding: clamp(1rem, 3vh, 2.5rem) 50vw clamp(4.5rem, 12vh, 7rem); --art-h: clamp(150px, 24vh, 230px);
+}
+.rail::-webkit-scrollbar { display: none; }
+/* Every pack sits in a slot of the same width and the chains are all the same
+   length, so the gaps are even; the current pack is drawn larger by its own
+   height (not a transform), so it never crowds its neighbours. */
+.node { position: relative; flex: none; width: calc(var(--art-h) * .667 * 1.18); display: flex; justify-content: center; }
+.art {
+    position: relative; display: block; height: var(--art-h); aspect-ratio: 2 / 3; border-radius: 12px; overflow: hidden;
+    background: #000; box-shadow: 0 25px 50px -12px rgba(0,0,0,.8); cursor: pointer; transition: filter .3s, opacity .3s, height .3s;
+}
+.art img { width: 100%; height: 100%; object-fit: contain; display: block; transition: transform .7s; }
+.art:hover img { transform: scale(1.1); }
+.node.other .art { opacity: .6; filter: grayscale(1); height: calc(var(--art-h) * .9); }
+.node.other .art:hover { opacity: 1; filter: none; box-shadow: 0 0 0 2px #6b7280, 0 25px 50px -12px rgba(0,0,0,.8); }
+/* Wide enough that the current pack keeps the same margin as the others: art .787h + .187h. */
+.node.current { width: calc(var(--art-h) * .974); }
+.node.current .art { height: calc(var(--art-h) * 1.18); box-shadow: 0 0 0 4px var(--primary), 0 0 50px rgba(212,175,55,.5); }
+.caption { position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); width: max-content; max-width: min(12rem, 40vw); text-align: center; }
+.caption h3 { margin: 0; font: 700 15px/1.2 var(--heading); color: #9ca3af; text-shadow: 0 2px 4px #000; }
+.caption span { display: block; margin-top: 4px; font: 400 12px/1 ui-monospace, monospace; letter-spacing: .1em; color: #6b7280; }
+.node.current .caption h3 { font-size: 22px; color: #fff; }
+.node.current .caption span { color: #e5e7eb; font-size: 14px; }
+.node.locked .art::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 46%, rgba(0,0,0,.2), rgba(0,0,0,.65));
+}
+.node.locked .lock { position: absolute; left: 50%; top: 42%; width: 28%; transform: translate(-50%, -50%); z-index: 2; filter: drop-shadow(0 3px 6px #000); }
+
+/* the app's WON/LOST stamp */
+.stamp-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.6); backdrop-filter: blur(2px); }
+.stamp { font: 900 24px/1 var(--heading); text-transform: uppercase; transform: rotate(-12deg); border: 4px solid; padding: 8px 16px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,.4); }
+.stamp.won { color: var(--win); border-color: var(--win); background: rgba(20,83,45,.5); }
+.stamp.lost { color: var(--loss); border-color: var(--loss); background: rgba(127,29,29,.5); }
+/* C: an inked stamp, pressed into the art */
+.opt-c .stamp-wrap { background: rgba(0,0,0,.42); backdrop-filter: none; }
+.opt-c .stamp {
+    background: transparent; box-shadow: none; border-width: 5px; letter-spacing: .06em; font-size: 26px;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.5 1.55'/%3E%3C/filter%3E%3Crect width='120' height='60' filter='url(%23n)'/%3E%3C/svg%3E");
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.5 1.55'/%3E%3C/filter%3E%3Crect width='120' height='60' filter='url(%23n)'/%3E%3C/svg%3E");
+    filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* the physics chain between packs (feat/physics-chain) */
+.chain { flex: none; position: relative; width: 96px; height: 32px; margin: 0 -16px; z-index: 0; }
+.chain canvas { position: absolute; left: 0; top: -8px; width: 96px; height: 110px; touch-action: pan-x; }
+.chain.gold canvas { filter: drop-shadow(0 0 3px rgba(255,214,90,.8)) drop-shadow(0 0 9px rgba(212,175,55,.55)); animation: chainglow 2.8s ease-in-out infinite; }
+@keyframes chainglow { 50% { filter: drop-shadow(0 0 2px rgba(255,214,90,.6)) drop-shadow(0 0 5px rgba(212,175,55,.35)); } }
+.chain.flare canvas { animation: chainflare 1.6s ease-out; }
+@keyframes chainflare {
+    0% { filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 4px rgba(255,214,90,.6)); }
+    35% { filter: drop-shadow(0 0 6px #fff7d6) drop-shadow(0 0 22px rgba(255,200,60,1)) brightness(1.5); }
+    100% { filter: drop-shadow(0 0 3px rgba(255,214,90,.8)) drop-shadow(0 0 9px rgba(212,175,55,.55)); }
+}
+.node.unlocking .lock { animation: unlock .65s ease-in forwards; }
+@keyframes unlock { 30% { transform: translate(-50%, -62%) rotate(-8deg); } 100% { transform: translate(-50%, 40%) rotate(24deg); opacity: 0; } }
+.node.unlocking .art { transition: filter .6s, opacity .6s; filter: none; opacity: 1; }
+.node { z-index: 1; }
+
+.arrow {
+    position: absolute; top: 42%; transform: translateY(-50%); z-index: 5; width: 56px; height: 56px; border-radius: 50%;
+    border: 2px solid rgba(212,175,55,.5); background: rgba(0,0,0,.6); color: var(--primary); display: grid; place-items: center; cursor: pointer;
+    backdrop-filter: blur(4px); transition: background .2s, transform .2s;
+}
+.arrow:hover { background: rgba(212,175,55,.2); transform: translateY(-50%) scale(1.08); }
+.arrow.prev { left: 32px; } .arrow.next { right: 32px; }
+
+/* ---------- FrameButton: the app's gold frame, 9-sliced over a stone fill ---------- */
+.fb {
+    position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none;
+    border-style: solid; border-width: clamp(.6rem, 1.2vw, .9rem); border-image: url("img/frame-gold.svg") 58 / 1 / 0 round;
+    background: radial-gradient(circle at 50% 42%, var(--gold-stone-light) 0%, var(--gold-stone) 60%, var(--gold-stone-dark) 100%);
+    filter: drop-shadow(0 25px 25px rgba(0,0,0,.45)); transition: transform .15s; cursor: pointer; user-select: none;
+    width: clamp(12rem, 18vw, 16rem); height: clamp(2.9rem, 6.4vh, 4.2rem); padding: 0;
+}
+.fb:hover { transform: scale(1.05); }
+.fb:active { transform: scale(1); }
+.fb span { font: 400 clamp(.82rem, 1.7vh, 1.08rem)/1 var(--techno); text-transform: uppercase; letter-spacing: .03em; color: var(--ink); text-shadow: 0 1px 1px rgba(255,255,255,.5); white-space: nowrap; }
+.fb.small { width: clamp(11rem, 16vw, 14rem); height: clamp(2.6rem, 5.4vh, 3.6rem); }
+.fb.wide { width: clamp(14rem, 20vw, 18rem); }
+.fb[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+.fb[aria-disabled="true"]:hover { transform: none; }
+/* the step the guide is pointing at */
+.fb.next::after { content: ""; position: absolute; inset: -14px; border-radius: 10px; box-shadow: 0 0 0 0 rgba(255,214,90,.7); animation: beckon 1.8s ease-out infinite; pointer-events: none; }
+@keyframes beckon { 0% { box-shadow: 0 0 0 0 rgba(255,214,90,.75); } 100% { box-shadow: 0 0 0 16px rgba(255,214,90,0); } }
+/* C: a gold glint sweeps the frame on hover, and the stone sinks when pressed */
+.opt-c .fb { overflow: hidden; }
+.opt-c .fb::before {
+    content: ""; position: absolute; inset: -20%; left: -60%; width: 40%; transform: skewX(-20deg) translateX(-120%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent); mix-blend-mode: overlay; pointer-events: none; opacity: 0;
+}
+.opt-c .fb:hover::before { transition: transform .7s ease; transform: skewX(-20deg) translateX(520%); opacity: 1; }
+.opt-c .fb:active { transform: scale(.97) translateY(2px); filter: drop-shadow(0 10px 10px rgba(0,0,0,.45)) brightness(.95); }
+.opt-c .fb.next { overflow: visible; }
+
+/* B and C: the stage's three steps on the frame buttons */
+.badge {
+    width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none;
+    font: 400 13px/1 var(--techno); color: #f6dd94; background: radial-gradient(circle at 40% 35%, #4b3a1a, #1f160b); box-shadow: 0 0 0 2px #7a5d27, inset 0 1px 0 rgba(255,255,255,.2);
+}
+.badge.done { color: #052e16; background: radial-gradient(circle at 40% 35%, #bbf7d0, #22c55e 70%); box-shadow: 0 0 0 2px #14532d, 0 0 10px rgba(74,222,128,.7); }
+.step { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.step small { font: 600 13px/1.2 var(--ui); letter-spacing: .06em; color: #e5e7eb; text-shadow: 0 2px 4px #000; text-align: center; max-width: 15rem; }
+.step small.wait { color: #fde68a; }
+.path { display: flex; align-items: flex-start; gap: clamp(.5rem, 1.5vw, 1.25rem); }
+.path .join { align-self: center; margin-top: -24px; width: 28px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, #7a5d27, #f6dd94, #7a5d27); box-shadow: 0 1px 3px #000; }
+
+/* ---------- HUD ---------- */
+.hud { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 12px 24px; padding: 0 24px clamp(.5rem, 2vh, 1.5rem); }
+.hud .middle { grid-column: 2; display: flex; flex-direction: column; align-items: center; gap: clamp(.5rem, 2vh, 1.4rem); }
+.hud .right { grid-column: 3; justify-self: end; align-self: center; }
+/* B and C: Yugi, the steps, then the scoreboard with Bonus Matches */
+.hud.steps { grid-template-columns: minmax(330px, 1fr) auto minmax(220px, 1fr); align-items: center; }
+.hud.steps .middle .fb { width: clamp(11rem, 14.5vw, 14rem); }
+.hud.steps .right { justify-self: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(1rem, 2vw, 1.5rem); }
+
+/* the app's painted scoreboard */
+.stats { position: relative; height: clamp(6.5rem, 16vh, 12rem); aspect-ratio: 952 / 792; background: url("img/stats-panel.webp") center / contain no-repeat; }
+.gem { position: absolute; top: 46%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.gem.w { left: 30%; } .gem.l { left: 70%; }
+.gem small { font: 400 clamp(8px, 1.1vh, 11px)/1 var(--techno); letter-spacing: .2em; text-transform: uppercase; }
+.gem.w small { color: var(--win); } .gem.l small { color: var(--loss); }
+.gem b { font: 400 clamp(1.1rem, 3vh, 1.75rem)/1 var(--techno); color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.8); }
+/* C: the gems light up from inside */
+.opt-c .stats::before, .opt-c .stats::after { content: ""; position: absolute; top: 46%; width: 26%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; mix-blend-mode: screen; animation: gemglow 2.6s ease-in-out infinite; }
+.opt-c .stats::before { left: 30%; background: radial-gradient(circle, rgba(74,222,128,.55), transparent 65%); }
+.opt-c .stats::after { left: 70%; background: radial-gradient(circle, rgba(248,113,113,.5), transparent 65%); animation-delay: -1.3s; }
+@keyframes gemglow { 50% { opacity: .45; } }
+
+/* ---------- Yugi, the guide, with the app's speech bubble ---------- */
+.guide { grid-column: 1; grid-row: 1; justify-self: start; display: flex; align-items: flex-end; min-width: 0; }
+.guide .sprite { flex: none; width: clamp(150px, 17vw, 250px); aspect-ratio: 1; background: center bottom / contain no-repeat; filter: drop-shadow(0 10px 14px rgba(0,0,0,.7)); }
+.bubble {
+    position: relative; margin: 0 0 clamp(100px, 12vw, 170px) -40px; min-width: 180px; max-width: 220px; padding: 12px 16px;
+    background: #fff; color: #000; border: 4px solid #000; border-radius: 16px;
+    font: 700 15px/1.3 var(--heading); text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,.4);
+}
+.bubble::before { content: ""; position: absolute; left: -14px; bottom: 18px; border: 10px solid transparent; border-right: 12px solid #000; border-left: none; }
+.bubble::after { content: ""; position: absolute; left: -7px; bottom: 21px; border: 7px solid transparent; border-right: 8px solid #fff; border-left: none; }
+
+@media (max-width: 1100px) {
+    .hud { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+    .hud .middle, .hud .right, .guide { grid-column: 1; grid-row: auto; justify-self: center; }
+    .guide { order: -1; }
+    .bubble { margin-bottom: 40px; }
+}
+@media (max-width: 760px) {
+    .rail { --art-h: 160px; padding-bottom: 76px; }
+    .chain { margin: 0 -24px; }
+    .arrow { display: none; }
+    .hud { padding: 0 12px 16px; gap: 10px; }
+    .guide .sprite { width: 170px; }
+    .bubble { font-size: 14px; max-width: 190px; margin-bottom: 70px; margin-left: -36px; }
+    .path { flex-direction: column; align-items: center; gap: 10px; }
+    .path .join { width: 4px; height: 12px; margin: -4px 0; }
+    .step small { margin-top: -4px; }
+    .fb, .fb.wide, .fb.small { width: min(18rem, 86vw); height: 3.4rem; }
+    .stats { height: 7.5rem; }
+}
+</style>
+</head>
+<body>
+<div class="proto" aria-label="Prototype controls">
+    <nav role="tablist">
+        <button role="tab" data-opt="a"><span class="long">A · Faithful</span><span class="short">A</span></button>
+        <button role="tab" data-opt="b"><span class="long">B · Steps on the buttons</span><span class="short">B · Steps</span></button>
+        <button role="tab" data-opt="c"><span class="long">C · Faithful, living assets ★</span><span class="short">C · Living ★</span></button>
+    </nav>
+    <select id="wall" aria-label="Wall"><option value="gemini">Wall: new (Gemini)</option><option value="original">Wall: today's</option></select>
+    <select id="mode" aria-label="Series mode"><option value="solo">Solo</option><option value="duo">Duo vs Kaiba</option></select>
+    <select id="state" aria-label="Stage state">
+        <option value="start">Stage start</option>
+        <option value="opened" selected>Packs opened</option>
+        <option value="waiting">Waiting on rival</option>
+        <option value="lost">Just lost</option>
+        <option value="confirmed">Victory confirmed</option>
+    </select>
+</div>
+
+<header class="appnav">
+    <div><div class="name">HORIZONDEV</div><div class="id" id="series">SOLO CAMPAIGN</div></div>
+    <div class="face" aria-hidden="true"></div>
+    <nav class="links"><a href="#" aria-current="page">CAMPAIGN</a><a href="#">COLLECTION</a><a href="#">DECK BUILDER</a><a href="#">REWARDS</a><a href="#">MENU</a></nav>
+    <div class="logo">PROGRESSION</div>
+</header>
+
+<main id="main">
+    <div class="wall"><div class="stone"></div><div class="torch" style="left:12%;top:30%"></div><div class="torch b" style="left:88%;top:26%"></div><div class="shade"></div></div>
+    <div class="page">
+        <section class="timeline">
+            <div id="top-cta"></div>
+            <div class="road">
+                <button class="arrow prev" aria-label="Scroll timeline left"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg></button>
+                <button class="arrow next" aria-label="Scroll timeline right"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg></button>
+                <div class="rail" id="rail"></div>
+            </div>
+        </section>
+        <footer class="hud" id="hud"></footer>
+    </div>
+</main>
+
+<nav class="tabbar" aria-label="Main">
+    <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6"/></svg>CAMPAIGN</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="11" height="15" rx="1.5"/><path d="M9 21h9.5A1.5 1.5 0 0 0 20 19.5V7"/></svg>COLLECTION</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>DECK</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8-4.3-4.1 5.9-.8Z"/></svg>REWARDS</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>MENU</a>
+</nav>
+
+<script>
+const SETS = [
+    ["LOB", "Legend of Blue Eyes White Dragon", "2002-03-08"], ["MRD", "Metal Raiders", "2002-06-26"], ["SRL", "Spell Ruler", "2002-09-16"],
+    ["PSV", "Pharaoh's Servant", "2002-10-20"], ["LON", "Labyrinth of Nightmare", "2003-03-01"], ["LOD", "Legacy of Darkness", "2003-06-06"],
+    ["PGD", "Pharaonic Guardian", "2003-07-18"], ["MFC", "Magician's Force", "2003-10-10"], ["DCR", "Dark Crisis", "2003-12-01"],
+    ["IOC", "Invasion of Chaos", "2004-03-01"], ["AST", "Ancient Sanctuary", "2004-06-01"], ["SOD", "Soul of the Duelist", "2004-10-01"],
+].map(([code, name, date]) => ({ code, name, date }));
+const CURRENT = 4;
+const RESULTS = ["won", "won", "lost", "won"];
+const $ = (s) => document.querySelector(s);
+const LOCK = `<svg class="lock" viewBox="0 0 40 48" aria-hidden="true"><defs><linearGradient id="lk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c7c2b8"/><stop offset="1" stop-color="#4b463e"/></linearGradient></defs>` +
+    `<path d="M10 22V14a10 10 0 0 1 20 0v8" fill="none" stroke="#8d877c" stroke-width="5"/><rect x="4" y="21" width="32" height="25" rx="4" fill="url(#lk)" stroke="#2b2722" stroke-width="1.5"/>` +
+    `<circle cx="20" cy="31" r="3.5" fill="#2b2722"/><rect x="18.5" y="32" width="3" height="8" rx="1" fill="#2b2722"/></svg>`;
+
+/* ---------- the physics chain, ported from feat/physics-chain (ChainConnector + chain-physics) ---------- */
+const CH = 110, PIN_Y = 24, LINKS = 7, WIRE = 3.3, STEP = 1000 / 60;
+const IRON = { lo: "#16191d", mid: "#5b626c", hi: "#dfe3e8", edge: "#07090b" };
+const GOLD = { lo: "#5a3d08", mid: "#c9a032", hi: "#fff1bf", edge: "#2e1f04" };
+const clampV = (v, m) => Math.max(-m, Math.min(m, v));
+function createChain({ ax, ay, bx, by }, links, slack) {
+    const span = Math.hypot(bx - ax, by - ay), sag = Math.sqrt((3 * span * span * (slack - 1)) / 8);
+    const p = Array.from({ length: links + 1 }, (_, i) => { const t = i / links, x = ax + (bx - ax) * t, y = ay + (by - ay) * t + sag * 4 * t * (1 - t); return { x, y, px: x, py: y }; });
+    return { p, seg: (span * slack) / links };
+}
+function nudge(c, dx, dy, near) { for (const q of c.p.slice(1, -1)) { if (near && Math.hypot(q.x - near.x, q.y - near.y) > near.r) continue; q.x += dx; q.y += dy; } }
+function stepChain(c, pins, hold, gravity = .32, damping = .985) {
+    const { p, seg } = c, n = p.length; let energy = 0;
+    for (const q of p.slice(1, -1)) { const vx = (q.x - q.px) * damping, vy = (q.y - q.py) * damping; energy = Math.max(energy, vx * vx + vy * vy); q.px = q.x; q.py = q.y; q.x += vx; q.y += vy + gravity; }
+    const first = p[0], last = p[n - 1], held = hold && p[hold.i];
+    for (let k = 0; k < 12; k++) {
+        Object.assign(first, { x: pins.ax, y: pins.ay }); Object.assign(last, { x: pins.bx, y: pins.by });
+        if (held) Object.assign(held, { x: hold.x, y: hold.y });
+        for (let i = 0; i < n - 1; i++) {
+            const a = p[i], b = p[i + 1], wa = a === first || a === held ? 0 : 1, wb = b === last || b === held ? 0 : 1;
+            if (!wa && !wb) continue;
+            const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1e-6, f = (d - seg) / d / (wa + wb);
+            a.x += dx * f * wa; a.y += dy * f * wa; b.x -= dx * f * wb; b.y -= dy * f * wb;
+        }
+    }
+    return energy;
+}
+function drawLink(ctx, c, i, metal) {
+    const p0 = c.p[i], p1 = c.p[i + 1], face = i % 2 === 0, a = Math.atan2(p1.y - p0.y, p1.x - p0.x), len = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+    const L = len + WIRE * 2 + 1, h = face ? len * .5 + WIRE * 2 : WIRE * 1.25;
+    ctx.save(); ctx.translate((p0.x + p1.x) / 2, (p0.y + p1.y) / 2); ctx.rotate(a);
+    ctx.beginPath(); ctx.roundRect(-L / 2, -h / 2, L, h, h / 2);
+    if (face) ctx.roundRect(-L / 2 + WIRE, -h / 2 + WIRE, L - WIRE * 2, h - WIRE * 2, h / 2 - WIRE);
+    if (!metal) { ctx.fill("evenodd"); ctx.restore(); return; }
+    const s = Math.sin(a), co = Math.cos(a), r = h / 2, g = ctx.createLinearGradient(-r * s, -r * co, r * s, r * co);
+    g.addColorStop(0, metal.hi); g.addColorStop(face ? .3 : .45, metal.mid); g.addColorStop(1, metal.lo);
+    ctx.fillStyle = g; ctx.fill("evenodd"); ctx.lineWidth = .7; ctx.strokeStyle = metal.edge; ctx.stroke();
+    const up = co >= 0 ? -1 : 1; ctx.beginPath(); const y = face ? up * (h / 2 - WIRE * .45) : up * h * .18;
+    ctx.moveTo(-L * (face ? .2 : .38), y); ctx.lineTo(L * (face ? .2 : .38), y); ctx.lineWidth = .7; ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.stroke();
+    ctx.restore();
+}
+/**
+ * A chain spanning the gap between two pack arts, its ends tucked under them.
+ * Finished links hang taut and glow; `finish()` pulls a slack iron chain straight and turns it gold.
+ */
+function mountChain(holder, done) {
+    const canvas = document.createElement("canvas"), ctx = canvas.getContext("2d"), dpr = Math.min(devicePixelRatio || 1, 2);
+    holder.appendChild(canvas);
+    let CW = 96, PINS = { ax: 10, ay: PIN_Y, bx: 86, by: PIN_Y }, chain, slack = done ? 1.0 : 1.3, metal = done ? GOLD : IRON;
+    const fit = () => {
+        const prev = holder.previousElementSibling.querySelector(".art").getBoundingClientRect();
+        const next = holder.nextElementSibling.querySelector(".art").getBoundingClientRect();
+        const box = holder.getBoundingClientRect(), tuck = 8;
+        CW = Math.round(next.left - prev.right + tuck * 2);
+        canvas.style.left = prev.right - tuck - box.left + "px";
+        canvas.style.width = CW + "px";
+        canvas.width = CW * dpr; canvas.height = CH * dpr;
+        PINS = { ax: 2, ay: PIN_Y, bx: CW - 2, by: PIN_Y };
+        chain = createChain(PINS, LINKS, slack);
+    };
+    fit();
+    holder.classList.toggle("gold", done);
+    const draw = () => {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, CW, CH);
+        ctx.save(); ctx.translate(1.5, 3.5); ctx.filter = "blur(1.2px)"; ctx.fillStyle = "rgba(0,0,0,0.55)";
+        for (let i = 0; i < LINKS; i++) drawLink(ctx, chain, i, null);
+        ctx.restore();
+        for (let i = 0; i < LINKS; i += 2) drawLink(ctx, chain, i, metal);
+        for (let i = 1; i < LINKS; i += 2) drawLink(ctx, chain, i, metal);
+    };
+    let raf = 0, last = 0, acc = 0, calm = 0, lastLeft = canvas.getBoundingClientRect().left, lastV = 0, hold, pointer = null;
+    const tick = (now) => {
+        const left = canvas.getBoundingClientRect().left, v = left - lastLeft, kick = clampV(-(v - lastV) * .35, 3);
+        lastLeft = left; lastV = v;
+        if (kick) nudge(chain, kick, 0);
+        acc = Math.min(acc + now - last, STEP * 4); last = now;
+        let energy = 0;
+        while (acc >= STEP) { energy = stepChain(chain, PINS, hold); acc -= STEP; }
+        draw();
+        calm = energy < .002 && !hold && Math.abs(v) < .1 ? calm + 1 : 0;
+        raf = calm > 30 ? 0 : requestAnimationFrame(tick);
+        if (!raf) lastV = 0;
+    };
+    const wake = () => { if (raf) return; last = performance.now(); calm = 0; raf = requestAnimationFrame(tick); };
+    const local = (e) => { const r = canvas.getBoundingClientRect(); return { x: ((e.clientX - r.left) * CW) / r.width, y: ((e.clientY - r.top) * CH) / r.height }; };
+    const reach = (p, i) => {
+        for (const [px, py, max] of [[PINS.ax, PINS.ay, i * chain.seg], [PINS.bx, PINS.by, (LINKS - i) * chain.seg]]) {
+            const d = Math.hypot(p.x - px, p.y - py); if (d > max) { p.x = px + ((p.x - px) * max) / d; p.y = py + ((p.y - py) * max) / d; }
+        }
+        return p;
+    };
+    canvas.addEventListener("pointermove", (e) => {
+        const p = local(e);
+        if (hold) Object.assign(hold, reach(p, hold.i));
+        else if (pointer) nudge(chain, clampV((p.x - pointer.x) * .5, 4), clampV((p.y - pointer.y) * .5, 4), { ...p, r: 10 });
+        pointer = p; wake();
+    });
+    canvas.addEventListener("pointerdown", (e) => {
+        if (e.pointerType !== "mouse") return;
+        const p = local(e); let best = -1, bestD = 12;
+        chain.p.forEach((q, i) => { const d = Math.hypot(q.x - p.x, q.y - p.y); if (i > 0 && i < LINKS && d < bestD) [best, bestD] = [i, d]; });
+        if (best < 0) return;
+        hold = { i: best, ...reach(p, best) }; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = "grabbing"; wake();
+    });
+    const up = () => { hold = undefined; canvas.style.cursor = ""; };
+    canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
+    canvas.addEventListener("pointerleave", () => { pointer = null; });
+    draw(); wake();
+    const finish = () => {
+        // Turn gold, then shorten the links until the chain is straight, with a flare of light.
+        metal = GOLD; holder.classList.add("gold", "flare");
+        const span = PINS.bx - PINS.ax, from = slack, t0 = performance.now();
+        const pull = (now) => {
+            const k = Math.min(1, (now - t0) / 900), e = 1 - (1 - k) ** 3;
+            slack = from + (1 - from) * e;
+            chain.seg = (span * slack) / LINKS;
+            wake();
+            if (k < 1) requestAnimationFrame(pull);
+            else setTimeout(() => holder.classList.remove("flare"), 900);
+        };
+        requestAnimationFrame(pull);
+    };
+    return { wake, finish, refit: () => { fit(); draw(); wake(); } };
+}
+
+/* ---------- carousel ---------- */
+const rail = $("#rail"), holders = [];
+let chains = [];
+SETS.forEach((s, i) => {
+    if (i > 0) {
+        const c = document.createElement("div");
+        c.className = "chain";
+        rail.appendChild(c);
+        holders.push(c);
+    }
+    const node = document.createElement("div");
+    node.className = "node " + (i === CURRENT ? "current" : "other") + (i > CURRENT ? " locked" : "");
+    node.id = "set-" + i;
+    node.innerHTML = `<a class="art" href="#" aria-label="${s.name}"><img src="img/${s.code}.webp" alt="${s.name}"></a>` +
+        `<div class="caption"><h3>${s.name}</h3><span>${s.date}</span></div>`;
+    const art = node.firstChild;
+    if (i < CURRENT) art.insertAdjacentHTML("beforeend", `<div class="stamp-wrap"><span class="stamp ${RESULTS[i]}">${RESULTS[i] === "won" ? "WON" : "LOST"}</span></div>`);
+    if (i > CURRENT) art.insertAdjacentHTML("beforeend", LOCK);
+    art.addEventListener("click", (e) => e.preventDefault());
+    rail.appendChild(node);
+});
+// A chain is finished (gold, taut) once the set before it is cleared.
+chains = holders.map((h, k) => mountChain(h, k + 1 <= CURRENT));
+rail.addEventListener("scroll", () => chains.forEach((c) => c.wake()), { passive: true });
+addEventListener("resize", () => chains.forEach((c) => c.refit()));
+let finished = false;
+/** Victory confirmed: the chain to the next set pulls straight and glows, and its padlock breaks. */
+function finishStage() {
+    if (finished) return;
+    finished = true;
+    chains[CURRENT].finish();
+    const next = document.getElementById("set-" + (CURRENT + 1));
+    setTimeout(() => {
+        next.classList.add("unlocking");
+        setTimeout(() => { next.classList.remove("locked", "unlocking"); next.querySelector(".lock")?.remove(); }, 650);
+    }, 700);
+}
+const scrollBy = (d) => rail.scrollBy({ left: d * 400, behavior: "smooth" });
+$(".arrow.prev").onclick = () => scrollBy(-1);
+$(".arrow.next").onclick = () => scrollBy(1);
+
+/* ---------- options ---------- */
+let opt = "a";
+const fb = (label, cls = "", extra = "") => `<a href="#" class="fb ${cls}" ${extra}>${label}</a>`;
+
+function render() {
+    const duo = $("#mode").value === "duo", state = $("#state").value;
+    const confirmed = state === "confirmed";
+    const opened = state !== "start", waiting = state === "waiting" || confirmed, lost = state === "lost";
+    document.body.className = "opt-" + opt;
+    $(".wall").classList.toggle("new", $("#wall").value === "gemini");
+    $("#series").textContent = duo ? "DUO SERIES · VS KAIBA" : "SOLO CAMPAIGN";
+    const set = SETS[CURRENT].name;
+    if (confirmed) finishStage();
+
+    // What Yugi says, and how he looks, follows where you are in the stage.
+    const next = !opened ? "open" : waiting ? "none" : "record";
+    const tip = confirmed ? `Victory! The chain is complete. On to ${SETS[CURRENT + 1].name}!` :
+        lost ? "Don't give up! Rebuild your deck and try again." :
+        !opened ? `The ${set} packs are waiting. Let's open them!` :
+        waiting ? (duo ? "Nice duel! Once Kaiba confirms, the next set unlocks." : "Well played!") :
+        duo ? "Build a deck from your new cards, then challenge Kaiba!" : "Build a deck from your new cards, then record your duel.";
+    const mood = lost ? "sad" : waiting ? "happy" : "neutral";
+    const guide = `<div class="guide"><div class="sprite" style="background-image:url(img/yugi-${mood}.webp)" aria-hidden="true"></div><div class="bubble">${tip}</div></div>`;
+
+    const wins = RESULTS.filter((r) => r === "won").length + (confirmed ? 1 : 0), losses = RESULTS.length - RESULTS.filter((r) => r === "won").length + (lost ? 1 : 0);
+    const stats = `<div class="stats" role="img" aria-label="${wins} wins, ${losses} losses"><div class="gem w"><small>Wins</small><b>${wins}</b></div><div class="gem l"><small>Losses</small><b>${losses}</b></div></div>`;
+    const bonus = `<div class="right">${fb("<span>Bonus Matches</span>", "small")}</div>`;
+
+    let middle;
+    if (opt !== "b") {
+        $("#top-cta").innerHTML = fb("<span>Prepare Your Deck</span>", "wide");
+        middle = `<div class="actions">${fb("<span>Open Packs</span>", next === "open" ? "next" : "")}${fb("<span>Record Match</span>", next === "record" ? "next" : "", waiting ? 'aria-disabled="true"' : "")}</div>`;
+    } else {
+        $("#top-cta").innerHTML = "";
+        const step = (n, label, done, isNext, note, wait) =>
+            `<div class="step">${fb(`<span class="badge ${done ? "done" : ""}">${done ? "✓" : n}</span><span>${label}</span>`, isNext ? "next" : "", wait ? 'aria-disabled="true"' : "")}<small class="${wait ? "wait" : ""}">${note}</small></div>`;
+        middle = `<div class="path">` +
+            step(1, "Open Packs", opened, next === "open", opened ? "24 packs opened · 216 cards" : `24 packs of ${set}`) + `<div class="join"></div>` +
+            step(2, "Prepare Deck", waiting, false, opened ? "Dragon Fury · 41 cards" : "Build from your binder") + `<div class="join"></div>` +
+            step(3, "Record Match", waiting, next === "record", waiting ? (duo ? "⌛ Kaiba is confirming your VICTORY" : "Recorded") : duo ? "Kaiba confirms the result" : "A victory unlocks the next set", waiting) +
+            `</div>`;
+    }
+    const hud = $("#hud");
+    hud.classList.toggle("steps", opt === "b");
+    hud.innerHTML = opt !== "b"
+        ? guide + `<div class="middle">${middle}${stats}</div>` + bonus
+        : guide + `<div class="middle">${middle}</div><div class="right">${stats}${fb("<span>Bonus Matches</span>", "small")}</div>`;
+    document.querySelectorAll(".proto nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.opt === opt)));
+}
+
+document.querySelectorAll(".proto nav button").forEach((b) => b.addEventListener("click", () => { opt = b.dataset.opt; location.hash = opt; render(); }));
+$("#mode").onchange = render;
+$("#wall").onchange = render;
+$("#state").onchange = render;
+const fromHash = () => { opt = ["a", "b", "c"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "a"; render(); };
+addEventListener("hashchange", fromHash);
+fromHash();
+requestAnimationFrame(() => document.getElementById("set-" + CURRENT).scrollIntoView({ inline: "center", block: "nearest" }));
+</script>
+</body>
+</html>

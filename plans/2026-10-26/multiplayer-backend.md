@@ -408,3 +408,52 @@ Prepared 2026-11-05 (branch `chore/alpha-deploy`, merged into `main`):
 Steps for the user: Atlas network access `0.0.0.0/0`; push `main`; Render → New → Blueprint on this repo; fill the env vars (`PUBLIC_URL` = the service's URL); add `<PUBLIC_URL>/api/auth/google/callback` to the Google OAuth client; add the friend as a Google test user (or they sign up with email).
 
 Deployed 2026-11-05 at https://ygo-progression.onrender.com. `smoke.mjs` against it found pages loading blank after a prefetch: Next 16 prefetches each linked page with `Range: bytes=0-63`, Render's Cloudflare compressed the 206, and Chrome cached that as the whole page. The static server now ignores ranges (`acceptRanges: false`). The GitHub Pages site was replaced by a note linking to Render (`pages-note/`, also served as its 404 page), and CI runs on `main` by itself.
+
+### Phase 7: audit (2026-11-05, branch `feat/mobile-redesign`)
+The user's brief: every screen should feel like a game; fix the fonts and the generic effects; the rewards screen gets a full redesign; the pack opener gets a do-over (the user picks from options); hunt deck builder bugs, keeping its careful layout.
+
+Fixed first, on their own branches off `main`:
+- Pack opener: a card sometimes flipped face up and back down at the start of a pack, showing the last pack's card. Cards were keyed by card id and slot, so a card repeated in the same slot reused the face-up element. They're now keyed by pack (`fix/pack-card-flash`, merged).
+- Deck builder: quick drops sometimes don't land (user report). Not reproduced: Playwright's drags (`deck-builder-drops.mjs`, centres, slot boundaries, gaps and corners, released on arrival, CPU slowed 8×) all land, but Playwright fires drag events in strict order, so it can't produce a real-input race. Found instead: a deck card dropped on the main grid's 1px border is deleted (it counts as a drag-out). The deck builder runs on native HTML5 drag-and-drop, which is unreliable for quick drops on Windows and doesn't work on touch at all, so Phase 7 needs pointer-event dragging there anyway (same look, same preview).
+
+Audit, from `screens.mjs` (every screen at 1440×900 and 390×844):
+- Fonts: the body is Arial, parchment buttons are Times New Roman, and Inter, Outfit, Russo One, Cinzel, IM Fell, a script and a comic face are all in use, plus 13 monospace spots (dates, IDs, the rewards subtitle). Headings are plain heavy sans with drop shadows.
+- Generic effects: white hover overlays, plain drop shadows and the same gold-ticket button everywhere; nothing reacts like a game (no press, glow or sound).
+- Phone: the deck builder is the desktop board scaled to 390px, unreadable and undraggable. The pack opener's title wraps one word per line over the Back/Open All buttons and the cards overlap. Rewards truncates every name ("Wh…"). The GuideSprite covers buttons on the timeline, rewards and record-match screens.
+- Desktop: the collection and rewards screens are lists on parchment with no sense of reward; the pack summary is a plain grid with no rarity moment.
+
+Pack opener direction (decided 2026-11-05, from the prototypes in `web/scripts/prototypes/pack-opener/`, published as a private claude.ai page): on phones, tear the pack by swiping its top strip (A), then the cards spiral out of the torn pack into a carousel you swipe through and tap to reveal (C's ring, without the altar). On desktop, the duel table (B): cards dealt onto a mat, tap to flip, the rare gets a dimmed close-up beat. Shared: the rare's back glows its rarity colour first, foil and glare on revealed rares, the whole pack laid out at the end. Still to settle with the user: card hover and card details during and after the reveal.
+
+Card details in the opener (prototyped 2026-11-05, for the user to review): on desktop, resting the mouse on a face-up card lifts it and opens a details panel beside it after 200 ms (as the current tooltip does). Clicking a face-up card, or tapping it on a phone, flies it up into a close-up: details beside it on desktop, in a bottom sheet on phones. This replaces the current detail modal. Details show name, rarity, set code, attribute, type, level, ATK/DEF, card text, and either NEW (first copy) or the count you now own; NEW cards also carry a ribbon on their face.
+
+Card details restyled (2026-11-05, user request): the hover panel and close-up now look like the card itself, with a frame in the card type's colour, a name plate (silver lettering for Rares, gold for Ultras, as printed), the attribute disc, level stars and a parchment text box.
+
+Timeline prototype (2026-11-05, `web/scripts/prototypes/timeline/`, its own private claude.ai page). It is the first screen of the do-over, in the order the user set: timeline, then the pack screen, pack details and the opened-packs overview, then the collection. It covers:
+- The new app bar, with avatar, series and the bell, plus a bottom tab bar on phones.
+- The road of packs: cleared sets carry WON or LOST wax seals, the current set is spotlit, and later sets are dark, chained and padlocked. The chain is a placeholder for `feat/physics-chain`.
+- A history track with year markers, filled to the current set.
+- Stage objectives replacing the floating buttons: open packs, prepare deck, duel and record, with done, next and waiting-on-rival states.
+- A record panel with the rival in duo mode.
+- Yugi in his own corner with a contextual tip; on smaller screens he becomes a portrait beside the tip.
+
+Timeline feedback (user, 2026-11-05): the first prototype replaced the app's look with generic dark panels and buttons, and the user rejected that. The do-over stays loyal to the source assets and improves them in place, as the physics chain does for the chain: the hieroglyph wall, the gold `FrameButton`, the painted scoreboard (`stats_panel_cropped.png`, styled with care), the full Yugi sprite with its moods and the speech bubble. The guide giving step-by-step direction is good and becomes a general pattern, but through the full Yugi sprite, never cropped, not a small avatar. Pack spacing must be even. Replacing the wall or the buttons with better-quality versions is allowed, and outside assets can be looked up as needed.
+
+Timeline options on the original assets (same page):
+- A, faithful: today's layout with even gaps (a fixed slot per pack, the current one larger by height rather than a transform), the physics chain ported from `feat/physics-chain`, a padlock on locked sets, and Yugi with a tip that changes mood and words with the stage.
+- B, steps on the buttons: Open Packs, Prepare Deck and Record Match become numbered steps on the same frame buttons, with done ticks, notes underneath, a pulse on the next step and a waiting state in duo.
+- C, B plus living assets: the wall at full sharpness under flickering torchlight, a gold glint across the frame buttons on hover with a pressed state, glowing scoreboard gems, and WON/LOST as inked stamps.
+A wall photo that's sharper than `bg-stone.png` (1024 px) is still to find: candidates on Wikimedia Commons had stray labels or the wrong mood.
+
+Timeline decision (user, 2026-11-05): option C's living assets on option A's faithful layout, without B's steps. Chain feedback: it must visibly connect pack to pack, and when a set is finished its chain straightens and glows. The prototype now sizes each chain to the real gap between pack arts, with the ends tucked under them. Finished chains hang taut and gold with a soft pulse. Finishing a set (the "Victory confirmed" state) turns the next chain gold, pulls it straight with a flare, and breaks the next set's padlock. For `feat/physics-chain`: take the pins from the neighbouring arts and animate the slack to 1.0 on finish. Asset generation with Google's Nano Banana image model is being set up with the user.
+
+Fixes on `main` (2026-11-05, pushed):
+- Phone loading (`fix/phone-loading`): pack art is now served as 480 px WebP copies in `web/public/packs` (made by `scripts/images/pack-art.mjs`) instead of Yugipedia's full-size PNGs. The wall, scoreboard, texture and sprites are WebP. Build files are cached for a year and images for a week, and pages revalidate. A warm base sits under the wall and pack frames shimmer while loading. On a simulated 4G phone the timeline went from 23.8 MB and 21.7 s to the current pack to 3.0 MB and 2.5 s.
+- Envelope seal: the five-pointed star became the Seal of Orichalcos shape, a unicursal hexagram in a ring of rune marks (corrected after the user pointed out a first, two-triangle version).
+
+Phase 7 order and guide (user, 2026-11-05): first make every page look good on desktop and phone (timeline, pack screen, pack details, opened-packs overview, collection, then the rest). The Yugi walkthrough details come after that. Direction for the guide: today's `GuideSprite` is fixed-position and overlaps the page; it becomes a character who slides in from the left edge when the game has something to say, like old games, overlays briefly with the speech bubble, then leaves. The buttons should get a higher-quality version of the same gold frame.
+
+Buttons (user, 2026-11-05): option A, the gold cartouche made with Nano Banana 2, becomes the app's button. Each button is one whole painted image, never sliced. The Gemini remaster of today's square button is kept as a future alternative for a visual-options setting. Sources live in `web/scripts/prototypes/buttons/src` (gitignored), and `cutout.mjs` removes the magenta background.
+
+Phone (user, 2026-11-05): the app is unusable on a phone. Before this round of the timeline is finished, it must work at phone size. Phone layout options are being prototyped.
+
+Phone timeline (user, 2026-11-05): the Road layout. Sets zigzag down a vertical path joined by the same physics chain as desktop: taut, glowing gold up to the current set and sagging iron beyond. The top bar gets a gold meander trim and Yugi's portrait, with the painted scoreboard hanging from its right edge. Cartouche buttons are smaller on the phone (two side by side, at most 142 px each) above the tab bar.

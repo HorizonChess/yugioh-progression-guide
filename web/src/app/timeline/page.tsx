@@ -3,8 +3,11 @@
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets, CardSet } from "@/lib/api";
 import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import GuideSprite from "@/components/layout/GuideSprite";
-import FrameButton from "@/components/ui/FrameButton";
+import CartoucheButton from "@/components/ui/CartoucheButton";
+import TimelineRoad from "@/components/timeline/TimelineRoad";
+import { useIsPhone } from "@/lib/useIsPhone";
 import TimelineControls from "@/components/timeline/TimelineControls";
 import TimelineNode from "@/components/timeline/TimelineNode";
 import StatsPanel from "@/components/timeline/StatsPanel";
@@ -13,6 +16,9 @@ import StatsPanel from "@/components/timeline/StatsPanel";
  * The progression TIMELINE (route: /timeline). A horizontal carousel of booster
  * packs as milestones, a top "Prepare Your Deck" CTA, and a bottom HUD of
  * actions + the wins/losses scoreboard.
+ *
+ * On phones it's the Road instead: the packs climb a vertical path and the
+ * actions sit in a dock (the scoreboard hangs from the phone top bar).
  *
  * Layout is a full-height CSS grid (timeline / HUD; the nav is hoisted to the
  * root layout above this page). Element sizes are vh/clamp-driven so the whole
@@ -24,6 +30,7 @@ export default function Timeline() {
     const [sets, setSets] = useState<CardSet[]>([]);
     const [loading, setLoading] = useState(true);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const isPhone = useIsPhone();
 
     const wins = matchHistory.filter((m) => m.winner === "player").length;
     const losses = matchHistory.filter((m) => m.winner === "opponent").length;
@@ -39,13 +46,13 @@ export default function Timeline() {
 
     // Auto-scroll to the current set on load
     useEffect(() => {
-        if (!loading && scrollContainerRef.current) {
+        if (!loading && !isPhone && scrollContainerRef.current) {
             const currentElement = document.getElementById(`set-${currentSetIndex}`);
             if (currentElement) {
                 currentElement.scrollIntoView({ behavior: "smooth", inline: "center", block: "center" });
             }
         }
-    }, [loading, currentSetIndex]);
+    }, [loading, currentSetIndex, isPhone]);
 
     const scroll = (direction: "left" | "right") => {
         if (scrollContainerRef.current) {
@@ -65,6 +72,25 @@ export default function Timeline() {
         );
     }
 
+    const matchFor = (set: CardSet) => matchHistory.find((m) => m.packName === set.set_name);
+
+    if (isPhone) {
+        return (
+            <main className="h-full w-full overflow-hidden text-white grid grid-rows-[minmax(0,1fr)_auto]">
+                <TimelineRoad sets={sets} currentSetIndex={currentSetIndex} matchFor={matchFor} />
+                <nav className="road-dock" aria-label="Stage actions">
+                    <CartoucheButton href={`/packs?set=${currentSetIndex}`}>Open Packs</CartoucheButton>
+                    <CartoucheButton href="/record-match">Record Match</CartoucheButton>
+                    <div className="road-dock__small">
+                        <Link href="/deck-builder">Prepare deck</Link>
+                        <button type="button">Bonus matches</button>
+                    </div>
+                </nav>
+                <GuideSprite raised />
+            </main>
+        );
+    }
+
     return (
         <main className="h-full w-full overflow-hidden text-white font-sans selection:bg-primary selection:text-black grid grid-rows-[1fr_auto] grid-cols-[minmax(0,1fr)]">
             {/* Row 1: Timeline region — fills the 1fr row. min-w-0 stops the wide
@@ -72,9 +98,9 @@ export default function Timeline() {
                 layout above this page.) */}
             <section className="relative flex flex-col items-center justify-center gap-[clamp(0.75rem,3vh,2rem)] py-[clamp(0.5rem,2vh,1.5rem)] min-h-0 min-w-0">
                 <div className="animate-in slide-in-from-top-10 duration-700">
-                    <FrameButton href="/deck-builder" className="w-[clamp(14rem,20vw,18rem)] h-[clamp(2.75rem,6vh,4rem)]">
+                    <CartoucheButton href="/deck-builder" className="w-[clamp(12rem,min(18vw,26vh),17rem)]">
                         Prepare Your Deck
-                    </FrameButton>
+                    </CartoucheButton>
                 </div>
 
                 <div className="w-full min-w-0 relative">
@@ -90,7 +116,7 @@ export default function Timeline() {
                                 index={idx}
                                 current={idx === currentSetIndex}
                                 reached={idx <= currentSetIndex}
-                                match={matchHistory.find((m) => m.packName === set.set_name)}
+                                match={matchFor(set)}
                                 showConnector={idx > 0}
                             />
                         ))}
@@ -102,21 +128,21 @@ export default function Timeline() {
                 compresses on short screens. */}
             <footer className="relative flex flex-col items-center gap-[clamp(0.5rem,2vh,1.5rem)] px-6 pb-[clamp(0.5rem,2vh,1.5rem)]">
                 <div className="flex flex-wrap justify-center gap-[clamp(1rem,2vw,1.5rem)]">
-                    <FrameButton href={`/packs?set=${currentSetIndex}`} className="w-[clamp(12rem,18vw,16rem)] h-[clamp(2.75rem,6vh,4rem)]">
-                        OPEN PACKS
-                    </FrameButton>
-                    <FrameButton href="/record-match" className="w-[clamp(12rem,18vw,16rem)] h-[clamp(2.75rem,6vh,4rem)]">
-                        RECORD MATCH
-                    </FrameButton>
+                    <CartoucheButton href={`/packs?set=${currentSetIndex}`} className="w-[clamp(11rem,min(16vw,24vh),15rem)]">
+                        Open Packs
+                    </CartoucheButton>
+                    <CartoucheButton href="/record-match" className="w-[clamp(11rem,min(16vw,24vh),15rem)]">
+                        Record Match
+                    </CartoucheButton>
                 </div>
 
                 <div className="w-full flex flex-col lg:flex-row items-center lg:justify-center gap-[clamp(0.5rem,2vh,1.5rem)] relative">
                     <StatsPanel wins={wins} losses={losses} />
 
                     <div className="lg:absolute lg:right-12 lg:top-1/2 lg:-translate-y-1/2 animate-in slide-in-from-right-10 duration-700">
-                        <FrameButton className="w-[clamp(11rem,16vw,14rem)] h-[clamp(2.5rem,5vh,3.5rem)]">
+                        <CartoucheButton className="w-[clamp(10rem,min(14vw,21vh),13rem)]">
                             Bonus Matches
-                        </FrameButton>
+                        </CartoucheButton>
                     </div>
                 </div>
             </footer>
