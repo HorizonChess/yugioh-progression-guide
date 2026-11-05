@@ -398,3 +398,11 @@ Verified: lint, typecheck, 53 shared + 115 API + 34 web tests, and the drivers: 
 
 ### Release plan (decided 2026-11-05)
 After Phase 6, the app is deployed to Render as **0.6 alpha**, before Phase 7's mobile redesign and UI do-over. The user and a friend test the duo flow on two machines there.
+
+Prepared 2026-11-05 (branch `chore/alpha-deploy`, merged into `main`):
+- `render.yaml` asks for `PUBLIC_URL`, the Google and SMTP settings as well as `MONGODB_URI`.
+- A local rehearsal of the Render build (production mode, one origin, the real CSP) found that Yugipedia now redirects pack art from `ms.yugipedia.com` to `img.yugipedia.com`, which the CSP blocked. Fixed: the CSP allows both and the art list points at `img.` directly. `smoke.mjs` then passed against the production build.
+- The deployed service uses the same Atlas database as local development, so existing accounts (HorizonDev) and card data carry over.
+- GitHub Pages keeps deploying on each push until Render is verified; signed-out guest play still works there, accounts don't.
+
+Steps for the user: Atlas network access `0.0.0.0/0`; push `main`; Render → New → Blueprint on this repo; fill the env vars (`PUBLIC_URL` = the service's URL); add `<PUBLIC_URL>/api/auth/google/callback` to the Google OAuth client; add the friend as a Google test user (or they sign up with email).
