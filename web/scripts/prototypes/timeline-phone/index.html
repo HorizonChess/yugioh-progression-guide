@@ -20,14 +20,26 @@ button { font: inherit; color: inherit; }
 .proto button[aria-selected="true"] { color: #ffe08a; border-color: #8a6a2c; background: rgba(224,181,79,.12); }
 
 /* app bar, shared */
-.bar { flex: none; height: 54px; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: linear-gradient(#0f172a, #020617); border-bottom: 1px solid #1e293b; position: relative; z-index: 40; }
-.bar .name { font: 800 18px/1 var(--heading); color: var(--gold); letter-spacing: .04em; }
-.bar .sub { font: 600 11px/1.3 var(--ui); letter-spacing: .12em; color: #94a3b8; text-transform: uppercase; }
-.score { margin-left: auto; display: flex; gap: 6px; }
-.score b { min-width: 42px; padding: 4px 8px; border-radius: 6px; font: 400 15px/1 var(--techno); text-align: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), inset 0 2px 0 rgba(255,255,255,.15); }
-.score b small { display: block; font: 700 8px/1 var(--ui); letter-spacing: .18em; opacity: .8; margin-bottom: 3px; }
-.score .w { background: linear-gradient(#1f6b43, #0f3a23); color: #d7ffe7; }
-.score .l { background: linear-gradient(#7a2219, #3e0f0a); color: #ffe1dc; }
+/* Top bar: dark lacquer with a gold meander trim; the painted scoreboard hangs from it like a plaque. */
+.bar {
+    flex: none; height: 58px; display: flex; align-items: center; gap: 10px; padding: 0 12px; position: relative; z-index: 40;
+    background: radial-gradient(120% 140% at 20% 0%, #2a1f3a, transparent 60%), linear-gradient(#1a1324, #0a070f);
+    box-shadow: 0 6px 14px rgba(0,0,0,.6);
+}
+.bar::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 7px;
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='7'%3E%3Cpath d='M0 6H4V1H12V4H8V6H16' fill='none' stroke='%233a2405' stroke-width='1.2'/%3E%3C/svg%3E") 0 0 / 16px 7px repeat-x,
+        linear-gradient(#fff1bf, #d4af37 45%, #8a6420);
+    box-shadow: 0 2px 4px rgba(0,0,0,.6);
+}
+.bar .face { flex: none; width: 40px; height: 40px; border-radius: 50%; background: url("img/yugi-neutral.webp") 50% 8% / 250% auto no-repeat, #1b1426; box-shadow: 0 0 0 2px #d4af37, 0 0 0 4px #3a2405, 0 0 12px rgba(212,175,55,.5); }
+.bar .name { font: 800 17px/1 var(--display); color: var(--gold-hi); letter-spacing: .05em; text-shadow: 0 1px 0 #000; }
+.bar .sub { margin-top: 3px; font: 700 11px/1.2 var(--ui); letter-spacing: .14em; color: #c7b99a; text-transform: uppercase; }
+.score { position: absolute; right: 8px; top: 3px; height: 82px; aspect-ratio: 952 / 792; background: url("img/stats-panel.webp") center / contain no-repeat; filter: drop-shadow(0 6px 8px rgba(0,0,0,.75)); z-index: 2; }
+.score .gem { top: 47%; }
+.score .gem small { font-size: 6px; }
+.score .gem b { font-size: 17px; }
 
 main { flex: 1; position: relative; min-height: 0; overflow: hidden; }
 main::before { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.55)), url("img/wall-gemini-1.webp") center / cover; }
@@ -41,14 +53,14 @@ main::before { content: ""; position: absolute; inset: 0; background: linear-gra
 
 /* cartouche button: one whole painted object */
 .cb { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1376 / 620; background: url("img/cartouche.webp") center / 100% 100% no-repeat; filter: drop-shadow(0 8px 10px rgba(0,0,0,.6)); border: 0; cursor: pointer; transition: transform .12s, filter .15s; padding: 0 12%; text-decoration: none; }
-.cb span { font: 800 clamp(12px, 3.6vw, 15px)/1.05 var(--display); letter-spacing: .08em; text-transform: uppercase; color: #3a2405; text-shadow: 0 1px 0 rgba(255,243,200,.7); text-align: center; }
+.cb span { font: 800 clamp(11px, 3.1vw, 13px)/1.05 var(--display); letter-spacing: .08em; text-transform: uppercase; color: #3a2405; text-shadow: 0 1px 0 rgba(255,243,200,.7); text-align: center; }
 .cb:active { transform: scale(.96) translateY(2px); filter: drop-shadow(0 3px 4px rgba(0,0,0,.6)) brightness(.95); }
 .cb.next::after { content: ""; position: absolute; inset: 8% 4%; border-radius: 999px; animation: beckon 1.8s ease-out infinite; pointer-events: none; }
 @keyframes beckon { 0% { box-shadow: 0 0 0 0 rgba(255,214,90,.8); } 100% { box-shadow: 0 0 0 14px rgba(255,214,90,0); } }
 .cb.quiet { filter: drop-shadow(0 6px 8px rgba(0,0,0,.6)) saturate(.75) brightness(.9); }
 
 /* bottom action dock, used by Road and Focus */
-.dock { flex: none; position: relative; z-index: 5; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 12px 12px; background: linear-gradient(transparent, rgba(0,0,0,.75) 35%); }
+.dock { flex: none; position: relative; z-index: 5; display: grid; grid-template-columns: repeat(2, minmax(0, 142px)); justify-content: center; gap: 10px 14px; padding: 8px 12px 10px; background: linear-gradient(transparent, rgba(0,0,0,.75) 35%); }
 .dock .cb { width: 100%; }
 .dock .small { grid-column: 1 / -1; display: flex; justify-content: center; gap: 18px; font: 700 12px/1 var(--ui); letter-spacing: .14em; text-transform: uppercase; }
 .dock .small a { color: #e9d9ad; text-decoration: none; padding: 6px 2px; border-bottom: 1px solid rgba(233,217,173,.4); }
@@ -61,10 +73,10 @@ main::before { content: ""; position: absolute; inset: 0; background: linear-gra
 
 /* ---------- 1 · Road: packs climb a vertical path ---------- */
 .road, .f-rail, .hub { outline: none; }
-.road { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 18px 0 30px; scrollbar-width: none; }
+.road { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 40px 0 30px; scrollbar-width: none; }
 .road::-webkit-scrollbar { display: none; }
 .r-stop { position: relative; display: flex; align-items: center; gap: 14px; padding: 0 22px; }
-.r-stop:nth-child(even) { flex-direction: row-reverse; text-align: right; }
+.r-stop.alt { flex-direction: row-reverse; text-align: right; }
 .r-art { position: relative; flex: none; width: 88px; aspect-ratio: 400 / 733; border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 10px 18px rgba(0,0,0,.7); }
 .r-art img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .r-stop.future .r-art img { filter: grayscale(1) brightness(.4); }
@@ -74,9 +86,12 @@ main::before { content: ""; position: absolute; inset: 0; background: linear-gra
 .r-stop.current .r-info h3 { font-size: 20px; color: #fff; }
 .r-stop.current .r-info .now { display: inline-block; margin-top: 8px; padding: 4px 8px; border-radius: 4px; background: var(--gold); color: #2a1c05; font: 700 11px/1 var(--ui); letter-spacing: .16em; }
 .r-stop.future .r-info { opacity: .55; }
-.r-link { height: 48px; position: relative; }
-.r-link::before { content: ""; position: absolute; left: 50%; top: 2px; bottom: 2px; width: 14px; margin-left: -7px; background: repeating-linear-gradient(#ffe9a3 0 3px, #c9a032 3px 9px, #5a3d08 9px 11px, transparent 11px 13px); border-radius: 5px; filter: drop-shadow(0 2px 2px #000); }
-.r-link.locked::before { background: repeating-linear-gradient(#dfe3e8 0 3px, #5b626c 3px 9px, #16191d 9px 11px, transparent 11px 13px); }
+.r-link { height: 46px; }
+.road { position: relative; }
+.r-art { z-index: 2; }
+/* the desktop physics chain, hung from pack to pack */
+.chainc { position: absolute; z-index: 1; pointer-events: auto; touch-action: pan-y; }
+.chainc.gold { filter: drop-shadow(0 0 3px rgba(255,214,90,.75)) drop-shadow(0 0 8px rgba(212,175,55,.5)); }
 
 /* ---------- 2 · Focus: one big pack at a time ---------- */
 .f-rail { flex: 1; min-height: 0; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
@@ -139,8 +154,9 @@ main::before { content: ""; position: absolute; inset: 0; background: linear-gra
     <button role="tab" data-v="hub">3 · Hub</button>
 </div>
 <header class="bar">
-    <div><div class="name">HORIZONDEV</div><div class="sub">Stage 5 of 12</div></div>
-    <div class="score" aria-label="3 wins, 1 loss"><b class="w"><small>WINS</small>3</b><b class="l"><small>LOSSES</small>1</b></div>
+    <div class="face" aria-hidden="true"></div>
+    <div><div class="name">HORIZONDEV</div><div class="sub">Stage 5 of 12 · Solo</div></div>
+    <div class="score" role="img" aria-label="3 wins, 1 loss"><div class="gem w"><small>Wins</small><b>3</b></div><div class="gem l"><small>Losses</small><b>1</b></div></div>
 </header>
 <main id="main"></main>
 <nav class="tabs" aria-label="Main">
@@ -161,12 +177,100 @@ const cb = (label, cls = "") => `<a href="#" class="cb ${cls}"><span>${label}</s
 const dock = () => `<div class="dock">${cb("Open Packs")}${cb("Record Match", "next")}<div class="small"><a href="#">Prepare deck</a><a href="#">Bonus matches</a></div></div>`;
 const stageOf = (i) => (i === CUR ? "Now playing" : i < CUR ? `Cleared · ${RES[i] === "won" ? "Victory" : "Defeat"}` : "Locked");
 
+/* ---------- the physics chain from feat/physics-chain (Verlet rope, drawn as alternating links) ---------- */
+const WIRE = 3.1, STEP = 1000 / 60;
+const IRON = { lo: "#16191d", mid: "#5b626c", hi: "#dfe3e8", edge: "#07090b" };
+const GOLD = { lo: "#5a3d08", mid: "#c9a032", hi: "#fff1bf", edge: "#2e1f04" };
+const clampV = (v, m) => Math.max(-m, Math.min(m, v));
+function createChain({ ax, ay, bx, by }, links, slack) {
+    const span = Math.hypot(bx - ax, by - ay), sag = Math.sqrt((3 * span * span * Math.max(0, slack - 1)) / 8);
+    const p = Array.from({ length: links + 1 }, (_, i) => { const t = i / links, x = ax + (bx - ax) * t, y = ay + (by - ay) * t + sag * 4 * t * (1 - t); return { x, y, px: x, py: y }; });
+    return { p, seg: (span * slack) / links };
+}
+function stepChain(c, pins, gravity = .32, damping = .985) {
+    const { p, seg } = c, n = p.length; let energy = 0;
+    for (const q of p.slice(1, -1)) { const vx = (q.x - q.px) * damping, vy = (q.y - q.py) * damping; energy = Math.max(energy, vx * vx + vy * vy); q.px = q.x; q.py = q.y; q.x += vx; q.y += vy + gravity; }
+    for (let k = 0; k < 12; k++) {
+        Object.assign(p[0], { x: pins.ax, y: pins.ay }); Object.assign(p[n - 1], { x: pins.bx, y: pins.by });
+        for (let i = 0; i < n - 1; i++) {
+            const a = p[i], b = p[i + 1], wa = i === 0 ? 0 : 1, wb = i + 1 === n - 1 ? 0 : 1;
+            const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1e-6, f = (d - seg) / d / (wa + wb);
+            a.x += dx * f * wa; a.y += dy * f * wa; b.x -= dx * f * wb; b.y -= dy * f * wb;
+        }
+    }
+    return energy;
+}
+function drawLink(ctx, c, i, metal) {
+    const p0 = c.p[i], p1 = c.p[i + 1], face = i % 2 === 0, a = Math.atan2(p1.y - p0.y, p1.x - p0.x), len = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+    const L = len + WIRE * 2 + 1, h = face ? len * .5 + WIRE * 2 : WIRE * 1.25;
+    ctx.save(); ctx.translate((p0.x + p1.x) / 2, (p0.y + p1.y) / 2); ctx.rotate(a);
+    ctx.beginPath(); ctx.roundRect(-L / 2, -h / 2, L, h, h / 2);
+    if (face) ctx.roundRect(-L / 2 + WIRE, -h / 2 + WIRE, L - WIRE * 2, h - WIRE * 2, Math.max(0, h / 2 - WIRE));
+    if (!metal) { ctx.fill("evenodd"); ctx.restore(); return; }
+    const s = Math.sin(a), co = Math.cos(a), r = h / 2, g = ctx.createLinearGradient(-r * s, -r * co, r * s, r * co);
+    g.addColorStop(0, metal.hi); g.addColorStop(face ? .3 : .45, metal.mid); g.addColorStop(1, metal.lo);
+    ctx.fillStyle = g; ctx.fill("evenodd"); ctx.lineWidth = .7; ctx.strokeStyle = metal.edge; ctx.stroke();
+    ctx.restore();
+}
+/** A chain from the bottom of one pack art to the top of the next, inside the scrolling road. */
+function hangChain(road, fromArt, toArt, done) {
+    const rr = road.getBoundingClientRect(), f = fromArt.getBoundingClientRect(), t = toArt.getBoundingClientRect();
+    const toLocal = (x, y) => [x - rr.left + road.scrollLeft, y - rr.top + road.scrollTop];
+    const [ax, ay] = toLocal(f.left + f.width / 2, f.bottom - 8), [bx, by] = toLocal(t.left + t.width / 2, t.top + 8);
+    const pad = 34, left = Math.min(ax, bx) - pad, top = Math.min(ay, by) - pad, W = Math.abs(bx - ax) + pad * 2, H = Math.abs(by - ay) + pad * 3;
+    const dpr = Math.min(devicePixelRatio || 1, 2), cv = document.createElement("canvas");
+    cv.className = "chainc" + (done ? " gold" : "");
+    Object.assign(cv.style, { left: left + "px", top: top + "px", width: W + "px", height: H + "px" });
+    cv.width = W * dpr; cv.height = H * dpr; road.appendChild(cv);
+    const ctx = cv.getContext("2d"), pins = { ax: ax - left, ay: ay - top, bx: bx - left, by: by - top };
+    const links = Math.max(5, Math.round(Math.hypot(bx - ax, by - ay) / 13) | 1);
+    const chain = createChain(pins, links, done ? 1.0 : 1.12), metal = done ? GOLD : IRON;
+    const draw = () => {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+        ctx.save(); ctx.translate(1.5, 3); ctx.filter = "blur(1.2px)"; ctx.fillStyle = "rgba(0,0,0,.55)";
+        for (let i = 0; i < links; i++) drawLink(ctx, chain, i, null);
+        ctx.restore();
+        for (let i = 0; i < links; i += 2) drawLink(ctx, chain, i, metal);
+        for (let i = 1; i < links; i += 2) drawLink(ctx, chain, i, metal);
+    };
+    let raf = 0, last = 0, acc = 0, calm = 0;
+    const tick = (now) => {
+        acc = Math.min(acc + now - last, STEP * 4); last = now;
+        let e = 0; while (acc >= STEP) { e = stepChain(chain, pins); acc -= STEP; }
+        draw(); calm = e < .002 ? calm + 1 : 0;
+        raf = calm > 30 ? 0 : requestAnimationFrame(tick);
+    };
+    const wake = () => { if (!raf) { last = performance.now(); calm = 0; raf = requestAnimationFrame(tick); } };
+    // Brushing a chain with a finger or the mouse sets it swinging.
+    let prev = null;
+    cv.addEventListener("pointermove", (e) => {
+        const b = cv.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top;
+        if (prev) for (const q of chain.p.slice(1, -1)) if (Math.hypot(q.x - x, q.y - y) < 14) { q.x += clampV((x - prev.x) * .6, 5); q.y += clampV((y - prev.y) * .6, 5); }
+        prev = { x, y }; wake();
+    });
+    cv.addEventListener("pointerleave", () => { prev = null; });
+    draw(); wake();
+    // Scrolling swings the chains a little, like the desktop carousel does.
+    return (kick) => { for (const q of chain.p.slice(1, -1)) q.x += kick * (Math.random() * .6 + .7); wake(); };
+}
+
 const VIEWS = {
     road: () => {
-        const stops = SETS.map((s, i) => `${i ? `<div class="r-link ${i > CUR ? "locked" : ""}"></div>` : ""}<div class="r-stop ${state(i)}" id="r${i}">${art(s, i, "r-art")}
+        const stops = SETS.map((s, i) => `${i ? `<div class="r-link ${i > CUR ? "locked" : ""}"></div>` : ""}<div class="r-stop ${state(i)}${i % 2 ? " alt" : ""}" id="r${i}">${art(s, i, "r-art")}
             <div class="r-info"><h3>${s.name}</h3><span>${s.date}</span>${i === CUR ? '<span class="now">NOW PLAYING</span>' : ""}</div></div>`).join("");
         return { html: `<div class="view"><div class="road" id="road">${stops}</div>${dock()}</div>`,
-            after: () => { const el = document.getElementById("r" + CUR), road = document.getElementById("road"); road.scrollTop = el.offsetTop - road.clientHeight / 2 + el.offsetHeight / 2; } };
+            after: () => {
+                const road = document.getElementById("road"), el = document.getElementById("r" + CUR);
+                const arts = [...road.querySelectorAll(".r-art")];
+                const kicks = arts.slice(1).map((a, k) => hangChain(road, arts[k], a, k + 1 <= CUR));
+                road.scrollTop = el.offsetTop - road.clientHeight / 2 + el.offsetHeight / 2;
+                let lastTop = road.scrollTop, lastV = 0;
+                road.addEventListener("scroll", () => {
+                    const v = road.scrollTop - lastTop; lastTop = road.scrollTop;
+                    const kick = clampV((v - lastV) * .25, 3); lastV = v;
+                    if (Math.abs(kick) > .05) kicks.forEach((k) => k(kick));
+                }, { passive: true });
+            } };
     },
     focus: () => {
         const slides = SETS.map((s, i) => `<div class="f-slide ${state(i)}" data-i="${i}"><div class="stage">Stage ${i + 1} · ${stageOf(i)}</div>${art(s, i, "f-art")}<h2>${s.name}</h2><div class="date">${s.date}</div></div>`).join("");
