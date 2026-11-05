@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rewards Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Outfit:wght@500;700;800&family=Inter:wght@500;600;700;800&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="plate.css">
+<style>
+:root { --primary: #d4af37; --gold-hi: #ffe08a; --font-display: "Cinzel", Georgia, serif; --font-heading: "Outfit", sans-serif; --font-main: "Inter", sans-serif; --fell: "IM Fell English", Georgia, serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; background: #2a1d10; color: #f1e7cc; font-family: var(--font-main); -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(0,0,0,.25), rgba(0,0,0,.75)), url("img/wall-gemini-1.webp") center / cover; }
+button { font: inherit; color: inherit; }
+.proto { flex: none; display: flex; gap: 4px; padding: 6px 8px; background: #110c18; border-bottom: 1px dashed #6e5320; position: relative; z-index: 60; }
+.proto button { flex: 1; font: 700 12px/1 var(--font-main); letter-spacing: .08em; text-transform: uppercase; color: #a99d80; background: transparent; border: 1px solid #3d3220; border-radius: 6px; padding: 8px 4px; cursor: pointer; }
+.proto button[aria-selected="true"] { color: var(--gold-hi); border-color: #8a6a2c; background: rgba(224,181,79,.12); }
+.bar { flex: none; height: 58px; display: flex; align-items: center; gap: 10px; padding: 0 12px; position: relative; z-index: 40; background: radial-gradient(120% 140% at 20% 0%, #2a1f3a, transparent 60%), linear-gradient(#1a1324, #0a070f); box-shadow: 0 6px 14px rgba(0,0,0,.6); }
+.bar::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 7px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='7'%3E%3Cpath d='M0 6H4V1H12V4H8V6H16' fill='none' stroke='%233a2405' stroke-width='1.2'/%3E%3C/svg%3E") 0 0 / 16px 7px repeat-x, linear-gradient(#fff1bf, #d4af37 45%, #8a6420); }
+.bar .face { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #1b1426 url("img/yugi-neutral.webp") center 8% / 250% auto no-repeat; box-shadow: 0 0 0 2px var(--primary), 0 0 0 4px #3a2405; }
+.bar .name { font: 800 17px/1 var(--font-display); color: var(--gold-hi); }
+.bar .sub { margin-top: 3px; font: 700 11px/1.2 var(--font-main); letter-spacing: .14em; color: #c7b99a; text-transform: uppercase; }
+main { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+.view { position: absolute; inset: 0; overflow-y: auto; padding: 14px 16px 40px; }
+.tabs { flex: none; display: flex; height: 60px; background: linear-gradient(#0f172a, #020617); border-top: 1px solid #1e293b; position: relative; z-index: 40; }
+.tabs a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #94a3b8; text-decoration: none; font: 700 10px/1 var(--font-heading); letter-spacing: .1em; }
+.tabs svg { width: 22px; height: 22px; } .tabs a[aria-current] { color: var(--primary); }
+@media (min-width: 768px) { .tabs { display: none; } }
+
+.kicker { margin: 0; font: 800 12px/1 var(--font-main); letter-spacing: .26em; text-transform: uppercase; color: var(--gold-hi); text-shadow: 0 1px 4px #000; }
+h1 { margin: 4px 0 0; font: 800 clamp(24px, 2.2vw + 12px, 40px)/1.1 var(--font-display); color: #fff; text-shadow: 0 3px 10px #000; }
+.meta { margin: 6px 0 0; font: 600 13px/1.3 var(--font-main); letter-spacing: .08em; color: #c7b99a; text-shadow: 0 1px 4px #000; }
+.headc { text-align: center; padding: 6px 0 14px; }
+.band { display: flex; align-items: center; gap: 12px; margin: 26px auto 14px; max-width: 1100px; font: 800 15px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--gold-hi); text-shadow: 0 2px 6px #000; }
+.band::before, .band::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, transparent, #b58a2e); }
+.band::after { background: linear-gradient(270deg, transparent, #b58a2e); }
+.band small { font: 700 12px/1 var(--font-main); color: #c7b99a; }
+/* the cartouche */
+.cb { position: relative; display: inline-flex; align-items: center; justify-content: center; aspect-ratio: 1376/620; width: 190px; padding: 0 10%; border: 0; cursor: pointer; background: url("img/cartouche.webp") center / 100% 100% no-repeat; filter: drop-shadow(0 8px 10px rgba(0,0,0,.6)); transition: transform .12s; }
+.cb span { font: 800 13px/1.05 var(--font-display); letter-spacing: .07em; text-transform: uppercase; color: #3a2405; text-shadow: 0 1px 0 rgba(255,243,200,.7); white-space: nowrap; }
+.cb:hover { transform: scale(1.04); } .cb:active { transform: scale(.96) translateY(2px); }
+.cb.sm { width: 140px; } .cb.sm span { font-size: 11px; }
+.ghost-btn { background: none; border: 0; cursor: pointer; color: #e9d9ad; font: 700 12px/1 var(--font-main); letter-spacing: .14em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233,217,173,.4); padding: 8px; }
+.relic { display: block; width: 100%; height: 100%; filter: drop-shadow(0 10px 12px rgba(0,0,0,.6)); }
+.toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 99; padding: 10px 14px; border-radius: 8px; background: #15100a; box-shadow: 0 0 0 1px #8a6420; font: 600 13px var(--font-main); max-width: 90vw; text-align: center; }
+
+/* ---------- A · the vault ---------- */
+.shelves { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 22px 16px; }
+@media (max-width: 767px) { .shelves { grid-template-columns: repeat(2, 1fr); gap: 18px 12px; } }
+.niche { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 10px 14px; border: 0; cursor: pointer; border-radius: 70px 70px 10px 10px; color: inherit;
+    background: linear-gradient(rgba(0,0,0,.5), rgba(20,12,4,.35)); box-shadow: inset 0 6px 16px rgba(0,0,0,.8), inset 0 -1px 0 rgba(255,220,150,.12), 0 0 0 1px rgba(224,181,79,.3); transition: transform .2s; }
+.niche:hover { transform: translateY(-3px); }
+.niche .art { position: relative; width: 78%; aspect-ratio: 1; }
+.niche .art::before { content: ""; position: absolute; inset: 8% 4% -4%; border-radius: 50%; background: radial-gradient(circle, rgba(255,205,120,.32), transparent 65%); animation: breathe 3s ease-in-out infinite; }
+.niche.locked .art::before { display: none; }
+.niche.locked .art { filter: grayscale(.6) brightness(.6); }
+@keyframes breathe { 50% { opacity: .5; transform: scale(.92); } }
+.plaque { width: 100%; padding: 7px 6px; border-radius: 4px; text-align: center; background: linear-gradient(#e9c977, #b58a2e 60%, #8a6420); box-shadow: inset 0 1px 0 rgba(255,245,210,.7), 0 2px 0 #3a2405, 0 6px 10px rgba(0,0,0,.5); color: #2a1c05; }
+.plaque b { display: block; font: 800 12px/1.15 var(--font-display); letter-spacing: .03em; }
+.plaque small { display: block; margin-top: 3px; font: 700 10px/1 var(--font-main); letter-spacing: .06em; opacity: .75; }
+.lockchain { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); width: 38%; opacity: .9; }
+.lock-note { font: 600 11px/1.3 var(--font-main); color: #c7b99a; text-align: center; }
+/* the chosen relic on its pedestal */
+.stage { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; background: rgba(4,3,8,.82); text-align: center; animation: fade .25s ease-out both; }
+@keyframes fade { from { opacity: 0; } }
+.stage .lightpool { position: absolute; left: 50%; top: 42%; width: min(80vw, 620px); aspect-ratio: 1.3; transform: translate(-50%, -50%); pointer-events: none; background: radial-gradient(ellipse, rgba(255,205,120,.34), rgba(255,170,60,.1) 40%, transparent 68%); }
+.stage .big { position: relative; width: min(56vw, 280px); aspect-ratio: 1; animation: rise .5s cubic-bezier(.2,.9,.3,1.15) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(30px) scale(.8); } }
+.pedestal { width: min(60vw, 300px); height: 22px; margin-top: -26px; border-radius: 50%; background: radial-gradient(ellipse, rgba(0,0,0,.6), transparent 70%); }
+.stage h2 { position: relative; margin: 0; font: 800 clamp(22px, 3vw, 34px)/1.1 var(--font-display); color: #fff; text-shadow: 0 3px 10px #000; }
+.stage p { position: relative; margin: 0; max-width: 32rem; font: 600 14px/1.45 var(--font-main); color: #d9ccaa; }
+.stage .row { position: relative; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
+/* the claimed rewards, a trophy hall of plaques */
+.hall { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.trophy { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(10,7,4,.6); box-shadow: 0 0 0 1px rgba(224,181,79,.25); }
+.trophy .thumb { position: relative; flex: none; width: 52px; aspect-ratio: 813/1185; border-radius: 4px; overflow: hidden; border: 0; padding: 0; cursor: pointer; background: #111; box-shadow: 0 4px 8px rgba(0,0,0,.6); }
+.trophy .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.trophy .mini { flex: none; width: 52px; height: 52px; }
+.banned::after { content: "BANNED"; position: absolute; inset: 0; display: grid; place-items: center; background: rgba(120,10,10,.55); color: #fff; font: 900 9px/1 var(--font-main); letter-spacing: .1em; transform: none; }
+.trophy b { display: block; font: 800 14px/1.2 var(--font-display); color: #fff; }
+.trophy small { display: block; margin-top: 3px; font: 600 12px/1.3 var(--font-main); color: #c7b99a; }
+.trophy em { display: block; margin-top: 3px; font: 700 12px/1.2 var(--font-main); font-style: normal; color: var(--gold-hi); }
+
+/* ---------- B · the altar ---------- */
+.altar-wrap { min-height: 100%; display: flex; flex-direction: column; align-items: center; }
+.altar-stage { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 900px; margin-top: 6px; }
+.altar-stage .lightpool { position: absolute; left: 50%; top: 45%; width: min(90vw, 640px); aspect-ratio: 1.3; transform: translate(-50%, -50%); pointer-events: none; background: radial-gradient(ellipse, rgba(255,205,120,.3), rgba(255,170,60,.08) 40%, transparent 68%); animation: breathe 4s ease-in-out infinite; }
+.altar-relic { position: relative; width: min(52vw, 260px); aspect-ratio: 1; }
+.altar-relic .relic { animation: float 5s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-8px); } }
+.altar-top { width: min(70vw, 360px); height: 34px; margin-top: -20px; border-radius: 6px 6px 2px 2px; background: linear-gradient(#8a6f48, #4a3922 60%, #2b2114); box-shadow: 0 -2px 0 #a2865a, 0 12px 20px rgba(0,0,0,.6), inset 0 6px 10px rgba(255,230,170,.15); }
+.arrow { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 1px solid #8a6a2c; background: rgba(10,7,4,.7); color: var(--gold-hi); font-size: 22px; cursor: pointer; }
+.arrow:disabled { opacity: .3; }
+.altar-info { text-align: center; margin-top: 12px; }
+.altar-info h2 { margin: 0; font: 800 clamp(22px, 3vw, 34px)/1.1 var(--font-display); color: #fff; text-shadow: 0 3px 10px #000; }
+.altar-info p { margin: 6px auto 0; max-width: 30rem; font: 600 14px/1.45 var(--font-main); color: #d9ccaa; }
+.altar-info .row { display: flex; gap: 12px; justify-content: center; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+.queue { display: flex; gap: 10px; justify-content: center; margin-top: 18px; padding: 4px 4px 10px; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.queue button { flex: none; width: 58px; height: 58px; padding: 6px; border: 0; cursor: pointer; border-radius: 12px; background: rgba(10,7,4,.6); box-shadow: 0 0 0 1px rgba(224,181,79,.3); }
+.queue button.on { box-shadow: 0 0 0 2px var(--primary), 0 0 14px rgba(212,175,55,.45); background: rgba(224,181,79,.16); }
+.queue button.locked { opacity: .5; }
+.chron { width: 100%; max-width: 640px; margin: 10px auto 0; position: relative; padding-left: 26px; }
+.chron::before { content: ""; position: absolute; left: 9px; top: 6px; bottom: 6px; width: 2px; background: linear-gradient(#b58a2e, rgba(181,138,46,.2)); }
+.chron .trophy { position: relative; margin-bottom: 10px; }
+.chron .trophy::before { content: ""; position: absolute; left: -22px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: #e0b54f; box-shadow: 0 0 0 3px rgba(224,181,79,.25); }
+
+/* ---------- C · the scroll ---------- */
+.scroll { position: relative; max-width: 760px; margin: 18px auto 0; padding: 30px clamp(16px, 4vw, 46px) 34px; color: #2a1c05;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .32 0 0 0 0 .12 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(90deg, #d9c08a, #f1e1b4 12%, #f5e7bf 50%, #f1e1b4 88%, #d9c08a);
+    box-shadow: 0 20px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(120,80,20,.35); }
+.scroll::before, .scroll::after { content: ""; position: absolute; left: -14px; right: -14px; height: 26px; border-radius: 13px; background: linear-gradient(#8a6420, #e9c977 40%, #b58a2e 60%, #5a3d08); box-shadow: 0 6px 12px rgba(0,0,0,.5); }
+.scroll::before { top: -13px; } .scroll::after { bottom: -13px; }
+.scroll h2 { margin: 6px 0 4px; text-align: center; font: 800 clamp(22px, 3vw, 32px)/1.1 var(--font-display); color: #3a2405; letter-spacing: .08em; }
+.scroll .sub { text-align: center; font: italic 400 16px/1.3 var(--fell); color: #5a4220; margin: 0 0 14px; }
+.scroll .sec { display: flex; align-items: center; gap: 10px; margin: 18px 0 8px; font: 800 13px/1 var(--font-display); letter-spacing: .2em; text-transform: uppercase; color: #6b4a12; }
+.scroll .sec::before, .scroll .sec::after { content: ""; flex: 1; height: 1px; background: #8a6420; opacity: .5; }
+.entry { display: flex; align-items: center; gap: 14px; padding: 10px 2px; border-bottom: 1px dashed rgba(90,61,8,.35); }
+.entry .medal { flex: none; width: 54px; height: 54px; border-radius: 50%; padding: 6px; background: radial-gradient(circle at 40% 35%, #fff1bf, #d4af37 55%, #8a6420); box-shadow: 0 0 0 2px #5a3d08, 0 4px 8px rgba(0,0,0,.3); }
+.entry .medal .relic { filter: none; }
+.entry .text { flex: 1; min-width: 0; }
+.entry b { display: block; font: 400 21px/1.1 var(--fell); color: #2a1c05; }
+.entry b::first-letter { font: 800 26px/1 var(--font-display); color: #8a1c10; }
+.entry small { display: block; margin-top: 3px; font: italic 400 14px/1.3 var(--fell); color: #5a4220; }
+.entry .thumb { position: relative; flex: none; width: 40px; aspect-ratio: 813/1185; border-radius: 3px; overflow: hidden; border: 0; padding: 0; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,.4); }
+.entry .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.entry .stamp { flex: none; padding: 5px 9px; border: 2px solid #6b4a12; border-radius: 4px; transform: rotate(-6deg); font: 800 11px/1 var(--font-display); letter-spacing: .14em; color: #6b4a12; opacity: .8; }
+.entry .stamp.lock { color: #8a1c10; border-color: #8a1c10; }
+.entry.done b { color: #4a3920; }
+@media (max-width: 520px) { .entry { flex-wrap: wrap; } .entry .cb { margin-left: 68px; } }
+
+/* claim animations */
+.burst { position: absolute; left: 50%; top: 40%; width: 10px; height: 10px; margin: -5px; border-radius: 50%; pointer-events: none; box-shadow: 0 0 0 0 rgba(255,220,130,.9); animation: burst .9s ease-out forwards; }
+@keyframes burst { to { box-shadow: 0 0 0 160px rgba(255,220,130,0); } }
+.opening .lid { transform-box: fill-box; transform-origin: 50% 100%; animation: lid .7s cubic-bezier(.3,1.4,.5,1) forwards; }
+@keyframes lid { to { transform: translateY(-14%) rotate(-24deg); } }
+.opening .flap { transform-box: fill-box; transform-origin: 50% 0%; animation: flap .6s ease-out forwards; }
+@keyframes flap { to { transform: scaleY(-1); } }
+.opening .seal { animation: seal .5s ease-in forwards; transform-box: fill-box; transform-origin: center; }
+@keyframes seal { to { transform: scale(1.4); opacity: 0; } }
+.opening .spin { transform-box: fill-box; transform-origin: center; animation: spin 1s cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes spin { to { transform: rotate(540deg); } }
+</style>
+</head>
+<body>
+<div class="proto" role="tablist" aria-label="Rewards layout">
+    <button role="tab" data-v="vault">A · Vault</button>
+    <button role="tab" data-v="altar">B · Altar</button>
+    <button role="tab" data-v="scroll">C · Scroll</button>
+</div>
+<header class="bar"><div class="face" aria-hidden="true"></div><div><div class="name">HORIZONDEV</div><div class="sub">Stage 5 · Duo</div></div></header>
+<main id="main"></main>
+<nav class="tabs" aria-label="Main">
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6"/></svg>CAMPAIGN</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 3h11v15H4zM9 21h9.5A1.5 1.5 0 0 0 20 19.5V7"/></svg>COLLECTION</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>DECK</a>
+    <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8-4.3-4.1 5.9-.8Z"/></svg>REWARDS</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg>MENU</a>
+</nav>
+<script src="cards.js"></script>
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ---------- the relics, one per prize kind ---------- */
+const G = (id, a, b, c) => `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset=".5" stop-color="${b}"/><stop offset="1" stop-color="${c}"/></linearGradient>`;
+let uid = 0;
+const RELIC = {
+    // a banded chest: the lid lifts when opened
+    chest: (tint = "#e0b54f") => { const u = ++uid; return `<svg class="relic" viewBox="0 0 120 120"><defs>${G("w" + u, "#8a4b24", "#5a2c12", "#3a1a08")}${G("g" + u, "#fff1bf", tint, "#7a5214")}</defs>
+        <rect x="14" y="58" width="92" height="46" rx="4" fill="url(#w${u})" stroke="#2a1006" stroke-width="2"/>
+        <rect x="14" y="58" width="92" height="9" fill="url(#g${u})"/><rect x="30" y="58" width="9" height="46" fill="url(#g${u})"/><rect x="81" y="58" width="9" height="46" fill="url(#g${u})"/>
+        <rect x="52" y="64" width="16" height="18" rx="3" fill="url(#g${u})" stroke="#3a2405"/><circle cx="60" cy="72" r="2.6" fill="#2a1006"/>
+        <g class="lid"><path d="M14 58 V44 Q60 18 106 44 V58 Z" fill="url(#w${u})" stroke="#2a1006" stroke-width="2"/>
+        <path d="M30 58 V35 Q34 33 39 31.5 V58 Z M81 58 V31.5 Q86 33 90 35 V58Z" fill="url(#g${u})"/><path d="M14 52 Q60 28 106 52 V58 H14Z" fill="url(#g${u})" opacity=".9"/></g></svg>`; },
+    // a face-down card in an envelope sealed with wax in the rarity's colour
+    wild: (seal) => { const u = ++uid; return `<svg class="relic" viewBox="0 0 120 120"><defs>${G("p" + u, "#f6ebcd", "#e8d5aa", "#cdb07a")}<radialGradient id="s${u}"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".35" stop-color="${seal}"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></radialGradient></defs>
+        <rect x="22" y="22" width="76" height="86" rx="5" fill="#3a1a08"/><rect x="28" y="28" width="64" height="74" rx="3" fill="none" stroke="#e0b54f" stroke-width="2" opacity=".8"/>
+        <rect x="16" y="46" width="88" height="62" rx="4" fill="url(#p${u})" stroke="#8a6420" stroke-width="1.5"/>
+        <path class="flap" d="M16 46 L60 82 L104 46 Z" fill="#d9c08a" stroke="#8a6420" stroke-width="1.5"/>
+        <g class="seal"><circle cx="60" cy="80" r="13" fill="url(#s${u})" stroke="#1a0a04" stroke-width="1"/><path d="M53 80 l5 5 l9 -11" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2.4" stroke-linecap="round"/></g></svg>`; },
+    // a star medallion for the Starlight wildcard
+    star: () => { const u = ++uid; return `<svg class="relic" viewBox="0 0 120 120"><defs><radialGradient id="r${u}" cx=".4" cy=".35"><stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#d3fbff"/><stop offset=".75" stop-color="#ffd3f3"/><stop offset="1" stop-color="#8a6aff"/></radialGradient></defs>
+        <circle cx="60" cy="60" r="44" fill="#14102a" stroke="#e0b54f" stroke-width="4"/><circle cx="60" cy="60" r="36" fill="none" stroke="#e0b54f" stroke-dasharray="2 5" opacity=".7"/>
+        <path class="spin" d="M60 22 L68 52 L98 60 L68 68 L60 98 L52 68 L22 60 L52 52 Z" fill="url(#r${u})"/>
+        ${[[30, 30], [92, 34], [88, 90], [32, 88]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2" fill="#fff"/>`).join("")}</svg>`; },
+    // a decree with a red wax seal (ban) or a broken one (unban)
+    decree: (broken) => { const u = ++uid; return `<svg class="relic" viewBox="0 0 120 120"><defs>${G("p" + u, "#f6ebcd", "#e8d5aa", "#c9aa6e")}</defs>
+        <rect x="26" y="20" width="68" height="82" fill="url(#p${u})" stroke="#8a6420" stroke-width="1.5"/>
+        <rect x="18" y="14" width="84" height="12" rx="6" fill="#b58a2e" stroke="#5a3d08"/><rect x="18" y="96" width="84" height="12" rx="6" fill="#b58a2e" stroke="#5a3d08"/>
+        ${[38, 46, 54, 62].map((y) => `<path d="M36 ${y} H84" stroke="#8a6420" stroke-width="2" opacity=".45"/>`).join("")}
+        <g class="seal">${broken ? `<path d="M50 74 a12 12 0 0 1 10 -8 l-3 8 l5 4 l-4 9 a12 12 0 0 1 -8 -13Z" fill="#8a1c10"/><path d="M64 66 a12 12 0 0 1 8 18 l-6 -2 l2 -7 l-6 -3Z" fill="#8a1c10"/>`
+        : `<circle cx="60" cy="78" r="13" fill="#9b1c12" stroke="#4a0806"/><path d="M54 72 L66 84 M66 72 L54 84" stroke="rgba(255,220,200,.8)" stroke-width="3" stroke-linecap="round"/>`}</g>
+        <path d="M54 90 l-4 14 l6 -4 l4 6 l2 -16" fill="#9b1c12" opacity="${broken ? 0 : 1}"/></svg>`; },
+    // a golden wheel token
+    wheel: () => { const u = ++uid; return `<svg class="relic" viewBox="0 0 120 120"><defs>${G("g" + u, "#fff1bf", "#e0b54f", "#7a5214")}</defs>
+        <circle cx="60" cy="60" r="46" fill="url(#g${u})" stroke="#3a2405" stroke-width="2"/><g class="spin">
+        ${Array.from({ length: 8 }, (_, i) => `<path d="M60 60 L${60 + 38 * Math.cos(i * Math.PI / 4)} ${60 + 38 * Math.sin(i * Math.PI / 4)} A38 38 0 0 1 ${60 + 38 * Math.cos((i + 1) * Math.PI / 4)} ${60 + 38 * Math.sin((i + 1) * Math.PI / 4)} Z" fill="${["#9b1c12", "#1f4f8a", "#2e7a3c", "#5b2a86"][i % 4]}" stroke="#e0b54f" stroke-width="1.5"/>`).join("")}</g>
+        <circle cx="60" cy="60" r="9" fill="url(#g${u})" stroke="#3a2405"/><path d="M60 8 L54 20 H66 Z" fill="#fff1bf" stroke="#3a2405"/></svg>`; },
+    // a reaching golden hand, for Snatch Steal
+    hand: () => { const u = ++uid; return `<svg class="relic" viewBox="0 0 120 120"><defs>${G("g" + u, "#fff1bf", "#e0b54f", "#7a5214")}</defs>
+        <rect x="58" y="24" width="38" height="54" rx="4" fill="#3a1a08" stroke="#e0b54f" stroke-width="2" transform="rotate(12 77 51)"/>
+        <path d="M18 92 C22 76 30 66 40 62 L40 40 a5 5 0 0 1 10 0 L50 58 L52 34 a5 5 0 0 1 10 0 L61 58 L65 38 a5 5 0 0 1 10 1 L71 62 L78 50 a5 5 0 0 1 9 4 L76 78 C70 92 56 100 40 100 Z" fill="url(#g${u})" stroke="#3a2405" stroke-width="2" stroke-linejoin="round"/></svg>`; },
+    // the Redoer ticket
+    ticket: () => { const u = ++uid; return `<svg class="relic" viewBox="0 0 120 120"><defs>${G("g" + u, "#fff1bf", "#e0b54f", "#7a5214")}</defs>
+        <path d="M14 38 H106 V52 a8 8 0 0 0 0 16 V82 H14 V68 a8 8 0 0 0 0 -16Z" fill="url(#g${u})" stroke="#3a2405" stroke-width="2" transform="rotate(-8 60 60)"/>
+        <g transform="rotate(-8 60 60)"><path d="M80 40 V80" stroke="#3a2405" stroke-dasharray="3 3"/><text x="46" y="65" text-anchor="middle" font-family="Cinzel" font-weight="800" font-size="13" fill="#3a2405">REDO</text>
+        <path d="M89 54 a7 7 0 1 1 -2 9" fill="none" stroke="#3a2405" stroke-width="2.4"/><path d="M85 62 l3 3 l3 -4" fill="none" stroke="#3a2405" stroke-width="2"/></g></svg>`; },
+};
+const LOCK = `<svg class="lockchain" viewBox="0 0 40 48"><path d="M10 22V14a10 10 0 0 1 20 0v8" fill="none" stroke="#c9c2b4" stroke-width="5"/><rect x="4" y="21" width="32" height="25" rx="4" fill="#9c958a" stroke="#2b2722" stroke-width="1.5"/><circle cx="20" cy="31" r="3.5" fill="#2b2722"/><rect x="18.5" y="32" width="3" height="8" rx="1" fill="#2b2722"/></svg>`;
+
+/* ---------- every prize kind the app has, as today's page claims it ---------- */
+const PRIZES = {
+    pity: { label: "3 Pity Packs", relic: () => RELIC.chest("#c9c2b4"), action: "Open 3 Packs", does: "Three packs of the set you just finished, for the match you lost.", flow: "the pack reveal (resumes if you reload)" },
+    tournament: { label: "3 Tournament Packs", relic: () => RELIC.chest(), action: "Open 3 Packs", does: "Three packs of the latest tournament set before this one.", flow: "the pack reveal (resumes if you reload)" },
+    "wildcard-ultra": { label: "Wildcard (Ultra Rare)", relic: () => RELIC.wild("#ffcc33"), action: "Choose Card", does: "Pick any card of Ultra Rare or below from the pack you won.", flow: "the wildcard card picker" },
+    "wildcard-rare": { label: "Wildcard (Rare)", relic: () => RELIC.wild("#cdd8ff"), action: "Choose Card", does: "Pick any Rare or Common from the pack you won.", flow: "the wildcard card picker" },
+    starlight: { label: "Wildcard (Starlight Rare)", relic: RELIC.star, action: "Search Card", does: "Any card released before this pack, as a Starlight Rare.", flow: "the full card search" },
+    ban: { label: "Ban a Card", relic: () => RELIC.decree(false), action: "Ban a Card", does: "Name a card your rival can't put in their deck.", flow: "the ban search" },
+    unban: { label: "Unban a Card", relic: () => RELIC.decree(true), action: "Unban a Card", does: "Lift one ban.", flow: "the unban list" },
+    spin: { label: "Wheel Spin", relic: RELIC.wheel, action: "Spin the Wheel", does: "A spin of the Winner's Wheel.", flow: "the wheel" },
+    snatch: { label: "Snatch Steal", relic: RELIC.hand, action: "Steal a Card", does: "Copy a card from your rival's binder. They keep theirs.", flow: "your rival's binder" },
+    redoer: { label: "Redoer Ticket", relic: RELIC.ticket, locked: true, does: "Spend it from the pack summary to reroll an opening.", flow: "" },
+};
+const AVAILABLE = [
+    { id: 1, kind: "tournament", from: "Metal Raiders", won: "5 Nov" },
+    { id: 2, kind: "wildcard-ultra", from: "Metal Raiders", won: "5 Nov" },
+    { id: 3, kind: "starlight", from: "Legend of Blue Eyes White Dragon", won: "3 Nov" },
+    { id: 4, kind: "ban", from: "Metal Raiders", won: "4 Nov" },
+    { id: 5, kind: "spin", from: "Spell Ruler", won: "5 Nov" },
+    { id: 6, kind: "snatch", from: "Metal Raiders", won: "4 Nov" },
+    { id: 7, kind: "pity", from: "Legend of Blue Eyes White Dragon", won: "2 Nov" },
+    { id: 8, kind: "unban", from: "Spell Ruler", won: "5 Nov" },
+    { id: 9, kind: "redoer", from: "Legend of Blue Eyes White Dragon", won: "1 Nov" },
+];
+const C = (n) => CARDS[n];
+const CLAIMED = [
+    { kind: "wildcard-ultra", from: "Legend of Blue Eyes White Dragon", on: "2 Nov", card: C("Blue-Eyes White Dragon"), note: "Picked from the won pack" },
+    { kind: "ban", from: "Legend of Blue Eyes White Dragon", on: "2 Nov", card: C("Dark Hole"), banned: true, note: "Banned for your rival" },
+    { kind: "tournament", from: "Legend of Blue Eyes White Dragon", on: "1 Nov", opened: 27 },
+    { kind: "snatch", from: "Legend of Blue Eyes White Dragon", on: "1 Nov", card: C("Red-Eyes Black Dragon"), note: "Copied from your rival" },
+    { kind: "wildcard-rare", from: "Legend of Blue Eyes White Dragon", on: "31 Oct", card: C("Man-Eater Bug"), note: "Picked from the won pack" },
+];
+const toast = (t) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = t; document.body.appendChild(el); setTimeout(() => el.remove(), 2200); };
+
+/* Claiming: the relic plays its opening, then the existing flow takes over. */
+function claim(r, holder, done) {
+    const p = PRIZES[r.kind];
+    holder?.classList.add("opening");
+    if (holder) holder.insertAdjacentHTML("beforeend", `<span class="burst"></span>`);
+    setTimeout(() => { toast(`Opens ${p.flow}, as today`); done?.(); }, 800);
+}
+function closeUp(card, banned) {
+    const ov = document.createElement("div"); ov.className = "ps-inspect"; ov.style.opacity = 1;
+    ov.innerHTML = `<span class="ps-close-hint">Tap anywhere to close</span>`;
+    const ch = Math.min(innerHeight * .7, 520), cw = ch * 813 / 1185;
+    ov.insertAdjacentHTML("beforeend", `<div style="position:absolute;left:50%;top:50%;width:${cw}px;height:${ch}px;transform:translate(-50%,-50%);border-radius:4.5%/3.2%;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,.7)" class="${banned ? "banned" : ""}"><img src="img/${card.id}.jpg" style="width:100%;height:100%;object-fit:cover" alt=""></div>`);
+    ov.onclick = () => ov.remove();
+    document.body.appendChild(ov);
+}
+function trophy(c) {
+    const p = PRIZES[c.kind], el = document.createElement("div"); el.className = "trophy";
+    el.innerHTML = (c.card ? `<button class="thumb ${c.banned ? "banned" : ""}" aria-label="View ${esc(c.card.name)}"><img src="img/${c.card.id}.jpg" alt=""></button>` : `<span class="mini">${p.relic()}</span>`) +
+        `<span style="min-width:0"><b>${p.label}</b><small>from ${esc(c.from)} · claimed ${c.on}</small><em>${c.card ? esc(c.card.name) + " · " + c.note : `Opened ${c.opened} cards`}</em></span>`;
+    $(".thumb", el)?.addEventListener("click", () => closeUp(c.card, c.banned));
+    return el;
+}
+
+/* ---------- A · the vault: every reward a relic in a niche ---------- */
+function vault(root) {
+    let left = AVAILABLE.slice();
+    const draw = () => {
+        root.innerHTML = `<div class="headc"><p class="kicker">The vault</p><h1>Rewards</h1><p class="meta">${left.filter((r) => !PRIZES[r.kind].locked).length} treasures waiting · won on the road through history</p></div>
+            <div class="shelves" id="shelves"></div><h3 class="band">Trophy hall <small>${CLAIMED.length}</small></h3><div class="hall" id="hall"></div>`;
+        for (const r of left) {
+            const p = PRIZES[r.kind], b = document.createElement("button");
+            b.className = "niche" + (p.locked ? " locked" : "");
+            b.innerHTML = `<span class="art">${p.relic()}${p.locked ? LOCK : ""}</span><span class="plaque"><b>${p.label}</b><small>${esc(r.from)}</small></span>`;
+            b.onclick = () => pedestal(r);
+            $("#shelves").appendChild(b);
+        }
+        CLAIMED.forEach((c) => $("#hall").appendChild(trophy(c)));
+    };
+    function pedestal(r) {
+        const p = PRIZES[r.kind], st = document.createElement("div"); st.className = "stage";
+        st.innerHTML = `<div class="lightpool"></div><div class="big">${p.relic()}${p.locked ? LOCK : ""}</div><div class="pedestal"></div><h2>${p.label}</h2>
+            <p>${p.does}<br><span style="color:#a99d80">Won from ${esc(r.from)} · ${r.won}</span></p>
+            <div class="row">${p.locked ? `<span class="lock-note">${p.does}</span>` : `<button class="cb" id="go"><span>${p.action}</span></button>`}<button class="ghost-btn" id="back">Not now</button></div>`;
+        document.body.appendChild(st);
+        $("#back", st).onclick = () => st.remove();
+        st.addEventListener("click", (e) => e.target === st && st.remove());
+        $("#go", st)?.addEventListener("click", () => claim(r, $(".big", st), () => { st.remove(); left = left.filter((x) => x !== r); draw(); }));
+    }
+    draw();
+}
+
+/* ---------- B · the altar: one reward at a time, centre stage ---------- */
+function altar(root) {
+    let left = AVAILABLE.slice(), at = 0, tab = "now";
+    const draw = () => {
+        const r = left[Math.min(at, left.length - 1)], p = r && PRIZES[r.kind];
+        root.innerHTML = `<div class="altar-wrap"><div class="headc" style="padding-bottom:4px"><p class="kicker">The altar · ${left.filter((x) => !PRIZES[x.kind].locked).length} waiting</p></div>
+            <div style="display:flex;gap:8px;margin-bottom:6px"><button class="ghost-btn" data-t="now" style="${tab === "now" ? "color:#ffe08a" : ""}">Waiting</button><button class="ghost-btn" data-t="past" style="${tab === "past" ? "color:#ffe08a" : ""}">Chronicle · ${CLAIMED.length}</button></div>
+            ${tab === "now" ? (r ? `<div class="altar-stage"><div class="lightpool"></div><button class="arrow" id="pv" ${at === 0 ? "disabled" : ""} aria-label="Previous">‹</button>
+                <div style="display:flex;flex-direction:column;align-items:center"><div class="altar-relic" id="relic">${p.relic()}${p.locked ? LOCK : ""}</div><div class="altar-top"></div></div>
+                <button class="arrow" id="nx" ${at >= left.length - 1 ? "disabled" : ""} aria-label="Next">›</button></div>
+                <div class="altar-info"><h2>${p.label}</h2><p>${p.does}<br><span style="color:#a99d80">Won from ${esc(r.from)} · ${r.won}</span></p>
+                <div class="row">${p.locked ? `<span class="lock-note" style="color:#e9d9ad">Locked here</span>` : `<button class="cb" id="go"><span>${p.action}</span></button>`}</div></div>
+                <div class="queue" id="queue"></div>` : `<p class="meta" style="margin-top:40px">Nothing waiting. Win or lose a match to earn some.</p>`) : `<div class="chron" id="chron"></div>`}</div>`;
+        root.querySelectorAll("[data-t]").forEach((b) => b.onclick = () => { tab = b.dataset.t; draw(); });
+        if (tab === "past") return CLAIMED.forEach((c) => $("#chron").appendChild(trophy(c)));
+        if (!r) return;
+        left.forEach((x, i) => { const q = document.createElement("button"); q.className = (i === at ? "on " : "") + (PRIZES[x.kind].locked ? "locked" : ""); q.innerHTML = PRIZES[x.kind].relic(); q.title = PRIZES[x.kind].label; q.onclick = () => { at = i; draw(); }; $("#queue").appendChild(q); });
+        $("#pv").onclick = () => { at--; draw(); };
+        $("#nx").onclick = () => { at++; draw(); };
+        $("#go")?.addEventListener("click", () => claim(r, $("#relic"), () => { left = left.filter((x) => x !== r); at = Math.min(at, left.length - 1); draw(); }));
+    };
+    let sx = null;
+    root.addEventListener("pointerdown", (e) => (sx = e.clientX));
+    root.addEventListener("pointerup", (e) => { if (sx == null || tab !== "now") return; const d = e.clientX - sx; sx = null; if (Math.abs(d) > 50) { at = Math.max(0, Math.min(left.length - 1, at + (d < 0 ? 1 : -1))); draw(); } });
+    draw();
+}
+
+/* ---------- C · the scroll: an illuminated ledger ---------- */
+function scroll(root) {
+    let left = AVAILABLE.slice();
+    const draw = () => {
+        root.innerHTML = `<div class="headc"><p class="kicker">The ledger</p><h1>Rewards</h1></div><div class="scroll"><h2>Spoils of the Road</h2><p class="sub">${left.filter((r) => !PRIZES[r.kind].locked).length} awaiting their claim</p>
+            <div class="sec">Awaiting</div><div id="aw"></div><div class="sec">Claimed</div><div id="cl"></div></div>`;
+        for (const r of left) {
+            const p = PRIZES[r.kind], el = document.createElement("div"); el.className = "entry";
+            el.innerHTML = `<span class="medal">${p.relic()}</span><span class="text"><b>${p.label}</b><small>won from ${esc(r.from)}, ${r.won}</small></span>` +
+                (p.locked ? `<span class="stamp lock" title="${esc(p.does)}">Locked</span>` : `<button class="cb sm"><span>${p.action}</span></button>`);
+            $(".cb", el)?.addEventListener("click", () => claim(r, $(".medal", el), () => { left = left.filter((x) => x !== r); draw(); }));
+            $("#aw").appendChild(el);
+        }
+        for (const c of CLAIMED) {
+            const p = PRIZES[c.kind], el = document.createElement("div"); el.className = "entry done";
+            el.innerHTML = (c.card ? `<button class="thumb ${c.banned ? "banned" : ""}"><img src="img/${c.card.id}.jpg" alt=""></button>` : `<span class="medal" style="width:40px;height:40px">${p.relic()}</span>`) +
+                `<span class="text"><b>${p.label}</b><small>${c.card ? esc(c.card.name) + " · " + c.note : `opened ${c.opened} cards`} · ${c.on}</small></span><span class="stamp">Claimed</span>`;
+            $(".thumb", el)?.addEventListener("click", () => closeUp(c.card, c.banned));
+            $("#cl").appendChild(el);
+        }
+    };
+    draw();
+}
+
+const VIEWS = { vault, altar, scroll };
+function show(name) {
+    const v = VIEWS[name] ? name : "vault";
+    document.querySelectorAll(".stage, .ps-inspect").forEach((e) => e.remove());
+    const el = document.createElement("div"); el.className = "view";
+    $("#main").replaceChildren(el);
+    VIEWS[v](el);
+    document.querySelectorAll(".proto button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === v)));
+}
+document.querySelectorAll(".proto button").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.v; }));
+addEventListener("hashchange", () => show(location.hash.slice(1)));
+show(location.hash.slice(1));
+</script>
+</body>
+</html>
