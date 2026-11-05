@@ -34,8 +34,10 @@ export interface SeriesDoc {
     /** The series-wide banlist (ban/unban rewards). */
     bannedCardIds: number[];
     matchHistory: MatchEntry[];
-    /** Imported from a guest save (Phase 6). */
+    /** Moved in from a guest save in the browser. */
     legacy?: boolean;
+    /** That guest save's id, so it's only ever moved in once. */
+    legacySaveId?: string;
     /** Bumped by every multi-document change, for optimistic concurrency. */
     version: number;
     createdAt: Date;
@@ -71,6 +73,10 @@ export const seriesPlayersCollection = (db: Db) => db.collection<SeriesPlayerDoc
 
 export async function ensureSeriesIndexes(db: Db): Promise<void> {
     await seriesCollection(db).createIndex({ memberIds: 1, updatedAt: -1 });
+    await seriesCollection(db).createIndex(
+        { ownerId: 1, legacySaveId: 1 },
+        { unique: true, partialFilterExpression: { legacySaveId: { $exists: true } } },
+    );
     await seriesPlayersCollection(db).createIndex({ seriesId: 1, userId: 1 }, { unique: true });
 }
 

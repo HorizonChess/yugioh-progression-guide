@@ -1,7 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { CreateSeriesBodySchema, InviteBodySchema, resolveSetIndex, seriesRulesProblem, type CardSet } from '@ygo/shared';
+import type { ObjectId } from 'mongodb';
+import { CreateSeriesBodySchema, GuestSaveBodySchema, InviteBodySchema, resolveSetIndex, seriesRulesProblem, type CardSet } from '@ygo/shared';
 import { duelistNames, findUserByDuelistName } from '../auth/users';
 import type { CardCatalog } from '../cards/catalog';
+import { guestSaveCardIds, importGuestSave } from '../game/guest-saves';
 import { inviteByLink, inviteByName } from '../game/invites';
 import { findPendingReport, publicReport } from '../game/matches';
 import { packSessions } from '../game/packs';
@@ -57,9 +59,13 @@ function publicPlayer(player: SeriesPlayerDoc) {
     };
 }
 
+const TOO_MANY = `You can have at most ${MAX_SERIES_PER_USER} series`;
+const ownName = (user: { _id: ObjectId; duelistName: string }) => new Map([[user._id.toHexString(), user.duelistName]]);
+
 /**
  * `/api/series`:
  *   POST   /                      create a solo or duo series
+ *   POST   /import                move a guest save from the browser in, as a solo series
  *   GET    /                      the signed-in player's series, most recent first
  *   GET    /:seriesId             one series, with the caller's own state in it
  *   POST   /:seriesId/invites     invite the rival by name, or get a link (duo owner only)
@@ -91,12 +97,24 @@ export async function seriesRoutes(app: FastifyInstance, options: { catalog: Car
                 rules,
                 startSetName: timeline[rules.startSetIndex]!.set_name,
             });
-            const names = new Map([[user._id.toHexString(), user.duelistName]]);
-            return reply.code(201).send({ series: publicSeries(series, timeline, names), me: publicPlayer(player) });
+            return reply.code(201).send({ series: publicSeries(series, timeline, ownName(user)), me: publicPlayer(player) });
         } catch (error) {
-            if (error instanceof TooManySeriesError) {
-                return reply.code(409).send({ error: `You can have at most ${MAX_SERIES_PER_USER} series` });
-            }
+            if (error instanceof TooManySeriesError) return reply.code(409).send({ error: TOO_MANY });
+            throw error;
+        }
+    });
+
+    // A guest save can be large: a whole run's binder.
+    app.post('/import', { preHandler: requireAuth, bodyLimit: 4 * 1024 * 1024, config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
+        const body = GuestSaveBodySchema.safeParse(request.body);
+        if (!body.success) return reply.code(400).send({ error: "This guest save couldn't be read" });
+        const user = request.user!;
+        const [timeline, known] = await Promise.all([catalog.timeline(), catalog.knownIds(guestSaveCardIds(body.data))]);
+        try {
+            const { series, dropped, created } = await importGuestSave(app.mongo, app.db, user._id, body.data, timeline, known);
+            return reply.code(created ? 201 : 200).send({ series: publicSeries(series, timeline, ownName(user)), dropped });
+        } catch (error) {
+            if (error instanceof TooManySeriesError) return reply.code(409).send({ error: TOO_MANY });
             throw error;
         }
     });

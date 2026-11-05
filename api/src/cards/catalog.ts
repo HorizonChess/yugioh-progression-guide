@@ -22,6 +22,8 @@ export interface CardCatalog {
     cardsInSet(setName: string): Promise<Card[]>;
     /** The cards with these ids that exist in the pool (unknown ids are left out). */
     cardsByIds(ids: readonly number[]): Promise<Card[]>;
+    /** Which of these ids are cards in the pool, without loading the cards. */
+    knownIds(ids: readonly number[]): Promise<Set<number>>;
     /** Drops the caches, e.g. after a sync. */
     invalidate(): void;
 }
@@ -87,6 +89,12 @@ export function createCardCatalog(db: Db): CardCatalog {
             const unique = [...new Set(ids)];
             if (unique.length === 0) return [];
             return (await cardsCollection(db).find({ _id: { $in: unique } }, { projection: { _id: 0 } }).toArray()) as Card[];
+        },
+
+        async knownIds(ids) {
+            const unique = [...new Set(ids)];
+            if (unique.length === 0) return new Set();
+            return new Set(await cardsCollection(db).distinct('_id', { _id: { $in: unique } }));
         },
 
         invalidate() {

@@ -77,6 +77,7 @@ describe('card catalog', () => {
         const found = await catalog.cardsByIds([300, 300, 101, 999_999]);
         expect(found.map((c) => c.id).sort()).toEqual([101, 300]);
         expect(await catalog.cardsByIds([])).toEqual([]);
+        expect(await catalog.knownIds([300, 300, 101, 999_999])).toEqual(new Set([101, 300]));
     });
 
     it('caches until invalidated', async () => {
