@@ -17,10 +17,11 @@ const BLOB = (() => {
     return `M${mid(0)} ` + pts.map((p, i) => `Q${p[0].toFixed(1)} ${p[1].toFixed(1)} ${mid(i)}`).slice(1).join(" ") + ` Q${pts[0]![0].toFixed(1)} ${pts[0]![1].toFixed(1)} ${mid(0)}Z`;
 })();
 
-// The Seal of Orichalcos's shape: a hexagram whose points touch the inner ring.
+// The Seal of Orichalcos's shape: a unicursal hexagram, one line through six points
+// on the inner ring, crossing itself in an X at the centre (top, lower right,
+// upper left, bottom, upper right, lower left, and back to the top).
 const point = (deg: number, r: number) => `${(100 + Math.cos((deg * Math.PI) / 180) * r).toFixed(1)} ${(100 + Math.sin((deg * Math.PI) / 180) * r).toFixed(1)}`;
-const triangle = (start: number) => `M${point(start, 46)} L${point(start + 120, 46)} L${point(start + 240, 46)} Z`;
-const HEXAGRAM = triangle(-90) + triangle(90);
+const HEXAGRAM = "M" + [-90, 30, 210, 90, -30, 150].map((deg) => point(deg, 46)).join(" L") + " Z";
 // Rune-like marks around the band between the rings: alternately long and short.
 const RUNES = Array.from({ length: 32 }, (_, i) => `M${point(i * 11.25, 49)} L${point(i * 11.25, i % 2 ? 52.5 : 55)}`).join(" ");
 
@@ -59,8 +60,7 @@ const WaxSeal = forwardRef<SVGSVGElement, { className?: string }>(function WaxSe
                     <circle cx="100" cy="100" r="58.5" strokeWidth="4" />
                     <circle cx="100" cy="100" r="46.5" strokeWidth="2.5" />
                     <path d={RUNES} strokeWidth="2.2" strokeLinecap="round" />
-                    <path d={HEXAGRAM} strokeWidth="4.5" />
-                    <circle cx="100" cy="100" r="12" strokeWidth="3" />
+                    <path d={HEXAGRAM} strokeWidth="4" />
                 </g>
             </g>
             <g className="ob-seal__cracks" fill="none" stroke="#2a0505" strokeWidth="2.4" strokeLinejoin="round" opacity="0.85">
