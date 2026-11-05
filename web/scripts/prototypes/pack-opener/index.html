@@ -6,7 +6,7 @@
 <title>Pack Opener Prototypes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Barlow+Semi+Condensed:wght@500;600;700&family=Crimson+Pro:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
 :root {
@@ -109,32 +109,64 @@ main {
     box-shadow: 0 2px 6px rgba(0,0,0,.5);
 }
 
-/* card details: the hover panel, and the close-up you get by tapping */
-.det h3 { margin: 0; font: 800 22px/1.15 var(--display); color: #fff3d6; letter-spacing: .02em; }
-.det-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.chip { flex: none; font: 700 11px/1 var(--ui); letter-spacing: .14em; text-transform: uppercase; padding: 5px 8px; border-radius: 4px; color: #1b1406; background: #cfc6b0; }
-.chip.Rare { background: linear-gradient(#ffffff, #b9c4e0); }
-.chip.Super { background: linear-gradient(#bfeaff, #4fc3ff); }
-.chip.Ultra { background: linear-gradient(#fff1bd, #e0b54f); }
-.chip.Secret { background: linear-gradient(90deg, #ff9be4, #ffe98a, #9ff6ff); }
-.det-meta { margin-top: 8px; font: 600 13px/1.4 var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.det-meta .stars { color: #ffcc33; letter-spacing: 0; }
-.det-stats { display: flex; gap: 18px; margin-top: 10px; font: 700 20px/1 var(--ui); }
-.det-stats span { font-size: 12px; letter-spacing: .14em; color: var(--muted); margin-right: 6px; }
-.det-desc { margin: 12px 0 0; padding: 10px 12px; font: 500 15px/1.45 var(--ui); color: #e8dcc0; background: rgba(0,0,0,.3); border-left: 2px solid #8a6a2c; border-radius: 2px; }
-.det-own { margin-top: 12px; display: flex; align-items: center; gap: 8px; font: 600 13px/1 var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--text); }
-.det-own b { padding: 4px 8px; border-radius: 3px; color: #2a1c05; background: linear-gradient(#fff1bd, #e0b54f); letter-spacing: .18em; }
-.panel {
-    background: linear-gradient(#221a0f, #120d07); border: 1px solid #8a6a2c; border-radius: 10px;
-    box-shadow: 0 20px 44px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,230,160,.18);
-    padding: 16px 18px;
+/* card details, styled as the card itself: a frame in the card type's colour,
+   the name plate (silver or gold lettering for rares, as printed), the
+   attribute disc, level stars, and the parchment text box */
+.plate {
+    --frame: #cfa75f; --frame-dark: #8d6a2e;
+    color: #1a1208; border-radius: 10px; padding: 10px 10px 8px;
+    background:
+        repeating-linear-gradient(135deg, rgba(255,255,255,.06) 0 2px, transparent 2px 7px),
+        radial-gradient(ellipse at 30% 0%, rgba(255,255,255,.25), transparent 60%),
+        linear-gradient(160deg, var(--frame), var(--frame-dark));
+    box-shadow: 0 0 0 2px #17110a, 0 0 0 5px #8a8780, 0 0 0 6px #2a2620, 0 24px 46px rgba(0,0,0,.65);
 }
-.peek { position: fixed; z-index: 87; width: 340px; pointer-events: none; }
+.plate.Effect { --frame: #d98a4e; --frame-dark: #9b4e22; }
+.plate.Spell { --frame: #2fa896; --frame-dark: #12675b; }
+.plate.Trap { --frame: #b9579a; --frame-dark: #7a2a62; }
+.plate-name {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 6px 7px 6px 10px; border: 2px solid rgba(23,17,10,.6);
+    background: linear-gradient(rgba(255,255,255,.3), rgba(0,0,0,.08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(0,0,0,.25);
+}
+.plate-name h3 { margin: 0; font: 800 19px/1.15 var(--display); letter-spacing: .01em; color: #140d05; }
+.plate[data-rarity="Rare"] h3, .plate[data-rarity="Ultra"] h3, .plate[data-rarity="Secret"] h3 {
+    -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 1px 0 rgba(0,0,0,.7));
+}
+.plate[data-rarity="Rare"] h3 { background-image: linear-gradient(#ffffff, #a3abbd 55%, #eef1f7); }
+.plate[data-rarity="Ultra"] h3 { background-image: linear-gradient(#fff6cf, #e6b53a 50%, #fff0b0); }
+.plate[data-rarity="Secret"] h3 { background-image: linear-gradient(100deg, #f1f1ff, #ffd3f3, #d3fbff, #fff4c4, #f1f1ff); }
+.attr {
+    flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    font: 700 15px/1 serif; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.6);
+    background: radial-gradient(circle at 35% 28%, rgba(255,255,255,.75) 0 6%, transparent 32%), var(--ac);
+    box-shadow: 0 0 0 2px #17110a, inset 0 -3px 6px rgba(0,0,0,.35);
+}
+.plate-sub { display: flex; justify-content: flex-end; align-items: center; gap: 2px; min-height: 18px; margin: 6px 3px 7px; font: 700 13px/1 "Crimson Pro", Georgia, serif; letter-spacing: .04em; }
+.lv {
+    width: 17px; height: 17px; border-radius: 50%; display: inline-grid; place-items: center;
+    font-size: 11px; color: #ffe27a; background: radial-gradient(circle at 40% 35%, #ffb54a, #d9480f 72%);
+    box-shadow: 0 0 0 1px #5a1a00;
+}
+.plate-box {
+    padding: 8px 10px; border: 2px solid #5b4523; color: #1f150a;
+    background: linear-gradient(#f6ebcd, #e8d5aa);
+    box-shadow: inset 0 0 14px rgba(120,90,40,.28);
+    font: 400 15px/1.38 "Crimson Pro", Georgia, serif;
+}
+.plate-box .tl { font-weight: 700; margin-bottom: 3px; }
+.plate-box p { margin: 0; }
+.plate-box p.flavor { font-style: italic; }
+.plate-stats { margin-top: 7px; padding-top: 4px; border-top: 1px solid #1f150a; text-align: right; font-weight: 700; letter-spacing: .02em; }
+.plate-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 7px 2px 0; font: 700 11px/1 var(--ui); letter-spacing: .12em; text-transform: uppercase; color: rgba(20,13,5,.85); }
+.stamp-new { padding: 4px 8px; color: #fff5d6; background: #b3261e; border-radius: 3px; transform: rotate(-4deg); box-shadow: 0 1px 0 rgba(0,0,0,.45); letter-spacing: .2em; }
+.peek { position: fixed; z-index: 87; width: 330px; pointer-events: none; }
 .inspect { position: fixed; inset: 0; z-index: 95; background: rgba(4,3,8,.86); opacity: 0; cursor: pointer; }
 .inspect .card { cursor: default; }
-.inspect .panel { position: absolute; cursor: default; }
-.inspect .sheet { left: 0; right: 0; bottom: 0; border-radius: 16px 16px 0 0; border-bottom: none; max-height: 46%; overflow-y: auto; padding-bottom: 28px; }
-.inspect .sheet::before { content: ""; display: block; width: 44px; height: 4px; margin: -4px auto 12px; border-radius: 2px; background: #6e5320; }
+.inspect .plate { position: absolute; cursor: default; }
+.inspect .sheet { left: 6px; right: 6px; bottom: 0; border-radius: 14px 14px 0 0; max-height: 48%; overflow-y: auto; padding-bottom: 22px; }
+.inspect .sheet::before { content: ""; display: block; width: 44px; height: 4px; margin: -2px auto 8px; border-radius: 2px; background: rgba(23,17,10,.55); }
 .inspect .close-hint { position: absolute; top: 14px; right: 16px; font: 600 12px/1 var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .card-inner {
     position: absolute; inset: 0;
@@ -478,15 +510,25 @@ function enableTilt(el) {
     el.addEventListener("pointerleave", () => { el.style.rotate = "none"; });
 }
 
-function detailsHTML(c) {
-    const monster = c.type.includes("Monster");
-    const meta = monster
-        ? `${c.code} · ${c.attribute} · ${c.race} / ${c.type.replace(" Monster", "")}<br><span class="stars">${"★".repeat(c.level)}</span> Level ${c.level}`
-        : `${c.code} · ${c.race} ${c.type}`;
-    const stats = monster ? `<div class="det-stats"><div><span>ATK</span>${c.atk}</div><div><span>DEF</span>${c.def}</div></div>` : "";
-    const own = c.isNew ? `<b>NEW</b> First copy in your binder` : `You now own ${c.ownedBefore + 1}`;
-    return `<div class="det"><div class="det-head"><h3>${c.name}</h3><span class="chip ${c.rarity}">${LABEL[c.rarity] || "Common"}</span></div>` +
-        `<div class="det-meta">${meta}</div>${stats}<p class="det-desc">${c.desc}</p><div class="det-own">${own}</div></div>`;
+const ATTR = { LIGHT: ["光", "#d9a400"], DARK: ["闇", "#5b2a86"], EARTH: ["地", "#7a5527"], WATER: ["水", "#1f6fc0"], FIRE: ["炎", "#d23a1e"], WIND: ["風", "#2e9a3c"] };
+const kindOf = (c) => (c.type.startsWith("Spell") ? "Spell" : c.type.startsWith("Trap") ? "Trap" : c.type.includes("Effect") ? "Effect" : "Normal");
+
+/** A details plate for `c`, laid out like the card: name plate, stars, text box, then set code and ownership. */
+function plate(c, extra = "") {
+    const el = document.createElement("div");
+    const kind = kindOf(c), monster = c.type.includes("Monster");
+    el.className = `plate ${kind} ${extra}`;
+    el.dataset.rarity = c.rarity;
+    const [kanji, colour] = monster ? ATTR[c.attribute] : kind === "Spell" ? ["魔", "#1a8d7d"] : ["罠", "#a33b7c"];
+    const sub = monster ? `<span class="lv">★</span>`.repeat(c.level) : `[${kind} Card${c.race !== "Normal" ? " · " + c.race : ""}]`;
+    const box = monster
+        ? `<div class="tl">[${c.race}/${c.type.replace(" Monster", "")}]</div><p class="${kind === "Normal" ? "flavor" : ""}">${c.desc}</p><div class="plate-stats">ATK/${c.atk}&nbsp;&nbsp;DEF/${c.def}</div>`
+        : `<p>${c.desc}</p>`;
+    const own = c.isNew ? `<span class="stamp-new">New</span>` : `<span>Owned ×${c.ownedBefore + 1}</span>`;
+    el.innerHTML = `<div class="plate-name"><h3>${c.name}</h3><span class="attr" style="--ac:${colour}">${kanji}</span></div>` +
+        `<div class="plate-sub">${sub}</div><div class="plate-box">${box}</div>` +
+        `<div class="plate-foot"><span>${c.code} · ${LABEL[c.rarity] || "Common"}</span>${own}</div>`;
+    return el;
 }
 
 let peekEl = null, peekTimer = 0;
@@ -505,10 +547,8 @@ function addPeek(el) {
         hidePeek();
         el.classList.add("lift");
         peekTimer = setTimeout(() => {
-            const b = el.getBoundingClientRect(), w = 340;
-            peekEl = document.createElement("div");
-            peekEl.className = "peek panel";
-            peekEl.innerHTML = detailsHTML(el.card);
+            const b = el.getBoundingClientRect(), w = 330;
+            peekEl = plate(el.card, "peek");
             document.body.appendChild(peekEl);
             const onLeft = b.left + b.width / 2 > innerWidth / 2;
             const left = onLeft ? b.left - w - 16 : b.right + 16;
@@ -527,9 +567,7 @@ function inspect(from) {
     const ov = document.createElement("div");
     ov.className = "inspect";
     ov.innerHTML = `<span class="close-hint">Tap anywhere to close</span>`;
-    const panel = document.createElement("div");
-    panel.className = "panel" + (wide ? "" : " sheet");
-    panel.innerHTML = detailsHTML(c);
+    const panel = plate(c, wide ? "" : "sheet");
     ov.append(panel);
     document.body.appendChild(ov);
     // On phones the card fills the space the sheet leaves above it.
@@ -551,7 +589,7 @@ function inspect(from) {
     gsap.from(panel, wide ? { opacity: 0, x: -20, duration: .35, delay: .2 } : { yPercent: 100, duration: .4, delay: .1, ease: "power3.out" });
     Sfx.whoosh();
     ov.addEventListener("click", (e) => {
-        if (e.target.closest(".panel")) return;
+        if (e.target.closest(".plate")) return;
         const nb = from.getBoundingClientRect();
         gsap.to(el, { x: nb.left + nb.width / 2 - cw / 2, y: nb.top + nb.height / 2 - ch / 2, scale: nb.width / cw, duration: .35, ease: "power3.in" });
         gsap.to(ov, { opacity: 0, duration: .35, onComplete: () => ov.remove() });
