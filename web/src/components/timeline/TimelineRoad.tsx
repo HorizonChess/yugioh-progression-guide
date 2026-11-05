@@ -5,7 +5,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { CardSet } from "@/lib/api";
 import { markLoaded } from "@/lib/utils";
 import RoadChain, { type RoadSpan } from "@/components/timeline/RoadChain";
-import { recordFlight } from "@/lib/pack-flight";
+import { launchFlight } from "@/lib/pack-flight";
 
 type Match = { winner: "player" | "opponent" } | undefined;
 
@@ -89,7 +89,7 @@ export default function TimelineRoad({
                         {idx > 0 && <div className="road-gap" />}
                         <Link
                             href={`/packs?set=${idx}`}
-                            onClick={() => recordFlight(idx)}
+                            onClick={() => launchFlight(idx)}
                             id={`set-${idx}`}
                             className={`road-stop road-stop--${state} ${idx % 2 ? "road-stop--alt" : ""}`}
                         >

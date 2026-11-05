@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { CardSet } from "@/lib/api";
 import { markLoaded } from "@/lib/utils";
-import { takeFlight } from "@/lib/pack-flight";
+import { landFlight } from "@/lib/pack-flight";
 import CartoucheButton from "@/components/ui/CartoucheButton";
 
 /**
@@ -40,17 +40,13 @@ export default function StoreView({
 }) {
     const pack = useRef<HTMLButtonElement>(null);
 
-    // Fly in from the timeline when the player came from there; otherwise rise into place.
+    // Land the pack flying in from the timeline; otherwise rise into place.
     useLayoutEffect(() => {
         const el = pack.current;
         if (!el) return;
-        const from = takeFlight(setIndex);
-        const to = el.getBoundingClientRect();
-        const tween = from && to.width
-            ? gsap.fromTo(el,
-                { x: from.left + from.width / 2 - (to.left + to.width / 2), y: from.top + from.height / 2 - (to.top + to.height / 2), scale: from.width / to.width },
-                { x: 0, y: 0, scale: 1, duration: 0.75, ease: "power3.inOut", clearProps: "transform" })
-            : gsap.from(el, { y: 40, scale: 0.92, opacity: 0, duration: 0.6, ease: "power2.out", clearProps: "transform,opacity" });
+        const landing = landFlight(setIndex, el);
+        if (landing) return landing;
+        const tween = gsap.from(el, { y: 40, scale: 0.92, opacity: 0, duration: 0.6, ease: "power2.out", clearProps: "transform,opacity" });
         return () => {
             tween.kill();
         };
