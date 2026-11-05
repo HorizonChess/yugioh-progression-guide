@@ -1,3 +1,4 @@
+import { transformCardImages } from "@/lib/api";
 import { API_BASE } from "@/lib/auth-client";
 import type { Collection } from "@/lib/collection";
 import type { RewardEntry, WheelPrize } from "@/lib/rewards";
@@ -38,7 +39,8 @@ export async function apiRequest<T = void>(method: string, path: string, body?: 
 
 const api = <T = void>(method: string, path: string, body?: unknown) => apiRequest<T>(method, `/api/series${path}`, body);
 
-const toOpening = (s: Opening): Opening => ({ id: s.id, source: s.source, setName: s.setName, packs: s.packs, flipped: s.flipped });
+// The server's cards keep the card database's image URLs; point them at our image host, as fetched cards are.
+const toOpening = (s: Opening): Opening => ({ id: s.id, source: s.source, setName: s.setName, packs: s.packs.map((p) => p.map(transformCardImages)), flipped: s.flipped });
 
 export class RemoteRepo implements GameRepository {
     readonly kind = "remote";
