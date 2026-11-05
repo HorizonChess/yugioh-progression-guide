@@ -85,8 +85,8 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
         el.className = "ps-card" + (s.owned === 0 ? " ps-card--new" : "");
         el.dataset.tier = s.tier;
         Object.assign(el.style, { width: cw + "px", height: cw / ASPECT + "px", fontSize: Math.max(7, cw * 0.062) + "px" });
-        el.innerHTML = `<div class="ps-inner"><div class="ps-face ps-back"><img alt="" src="${o.cardBack}"></div>` +
-            `<div class="ps-face ps-front"><img alt=""><div class="ps-holo"></div><div class="ps-glare"></div></div></div>`;
+        el.innerHTML = `<div class="ps-tilt"><div class="ps-inner"><div class="ps-face ps-back"><img alt="" src="${o.cardBack}"></div>` +
+            `<div class="ps-face ps-front"><img alt=""><div class="ps-holo"></div><div class="ps-glare"></div></div></div></div>`;
         const front = el.querySelector<HTMLImageElement>(".ps-front img")!;
         front.src = s.image;
         front.alt = s.card.name;
@@ -105,19 +105,26 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
         }
     }
 
-    /** Revealed cards lean toward the pointer (or finger) and the glare follows it. */
+    /**
+     * Revealed cards tip toward the pointer (or finger) like a card held in the hand:
+     * a few degrees about the card's own centre, eased, with the glare following.
+     */
     function enableTilt(el: HTMLElement) {
         el.addEventListener("pointermove", (e) => {
             const b = el.getBoundingClientRect();
-            const dx = (e.clientX - b.left) / b.width - 0.5, dy = (e.clientY - b.top) / b.height - 0.5;
-            el.style.rotate = `${-dy} ${dx} 0 ${Math.min(26, Math.hypot(dx, dy) * 40)}deg`;
+            const dx = Math.max(-0.5, Math.min(0.5, (e.clientX - b.left) / b.width - 0.5));
+            const dy = Math.max(-0.5, Math.min(0.5, (e.clientY - b.top) / b.height - 0.5));
+            el.style.setProperty("--rx", `${(-dy * 12).toFixed(2)}deg`);
+            el.style.setProperty("--ry", `${(dx * 14).toFixed(2)}deg`);
             el.style.setProperty("--mx", (dx + 0.5) * 100 + "%");
             el.style.setProperty("--my", (dy + 0.5) * 100 + "%");
         });
-        el.addEventListener("pointerleave", () => {
-            el.style.rotate = "none";
-        });
+        el.addEventListener("pointerleave", () => untilt(el));
     }
+    const untilt = (el: HTMLElement) => {
+        el.style.removeProperty("--rx");
+        el.style.removeProperty("--ry");
+    };
 
     // ---- details: the hover plate (mouse) and the tap close-up ---------------
     let peekEl: HTMLElement | null = null, peekTimer: ReturnType<typeof setTimeout> | undefined;
@@ -479,10 +486,11 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
             const r = i < cols ? 0 : 1, c = r ? i - cols : i, inRow = rowsOf[r]!;
             return { x: W / 2 + (c - (inRow - 1) / 2) * (cw + gap), y: gridTop + r * (ch + gap) + ch / 2 };
         };
-        stage.insertAdjacentHTML("beforeend", `<div class="ps-backdrop ps-mat"></div><div class="ps-dim"></div>`);
+        stage.insertAdjacentHTML("beforeend", `<div class="ps-backdrop ps-table"></div><div class="ps-dim"></div>`);
         for (let i = 0; i < n; i++) {
             const p = slot(i), s = document.createElement("div");
             s.className = "ps-slot";
+            s.style.animationDelay = `${0.15 + i * 0.04}s`;
             Object.assign(s.style, { left: p.x - cw / 2 - 3 + "px", top: p.y - ch / 2 - 3 + "px", width: cw + 6 + "px", height: ch + 6 + "px" });
             stage.appendChild(s);
         }
@@ -588,7 +596,7 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
             if (!focused) return;
             const { el, i } = focused, p = slot(i);
             focused = null;
-            el.style.rotate = "none";
+            untilt(el);
             dim.classList.remove("ps-dim--on");
             to(dim, { opacity: 0, duration: 0.35 });
             to(el, { x: p.x - cw / 2, y: p.y - ch / 2, scale: 1, duration: 0.5, ease: "power3.inOut", onComplete: () => { el.style.zIndex = String(10 + i); } });
