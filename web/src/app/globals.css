@@ -139,7 +139,7 @@ a:hover {
 
 .stone-panel {
   background-color: var(--wood);
-  background-image: url('../../public/ui/stone_texture.jpg');
+  background-image: url('../../public/ui/stone_texture.webp');
   background-size: cover;
   background-position: center;
 
@@ -365,6 +365,21 @@ html::-webkit-scrollbar-corner,
   @apply relative block aspect-[2/3] rounded-xl overflow-hidden
     shadow-2xl transition-all duration-300 bg-black;
   height: var(--art-h);
+}
+
+/* While pack art downloads, its frame shimmers in warm gold instead of sitting
+   empty; markLoaded() stops it once the image is in. */
+.art-loading:not(.is-loaded) {
+  background: linear-gradient(110deg, #2a1d10 30%, #5a4020 50%, #2a1d10 70%) 0 0 / 220% 100%;
+  animation: art-shimmer 1.3s linear infinite;
+}
+
+@keyframes art-shimmer {
+  to { background-position: -120% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art-loading:not(.is-loaded) { animation: none; }
 }
 
 .timeline-node__art--current {

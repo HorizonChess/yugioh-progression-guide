@@ -14,10 +14,10 @@ export default function GlobalBackground() {
 
     return (
         <>
-            {/* Background Texture - Full Screen */}
-            {/* Background Texture - Full Screen */}
+            {/* The wall; the warm base shows while it loads, instead of grey. */}
             <div className="fixed inset-0 z-[-1]" style={{
-                backgroundImage: `url('${asset("/bg-stone.png")}')`,
+                backgroundColor: '#2a1d10',
+                backgroundImage: `url('${asset("/bg-stone.webp")}')`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundAttachment: 'fixed',
