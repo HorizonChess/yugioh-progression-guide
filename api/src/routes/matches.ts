@@ -4,11 +4,16 @@ import { z } from 'zod';
 import { ClaimError, claimReward } from '../game/claims';
 import { confirmReport, publicReport, rejectReport, reportDuoMatch, reportSoloMatch, spinReward } from '../game/matches';
 import { hydrate } from '../game/packs';
+import { findPlayer } from '../game/series';
 import { requireAuth } from '../middleware/requireAuth';
 import { requireSeriesMember } from '../middleware/requireSeriesMember';
 
 const ReportBodySchema = z.strictObject({ result: z.enum(['win', 'loss']) });
-const ClaimBodySchema = z.strictObject({ cardId: z.number().int().positive().optional() });
+const ClaimBodySchema = z.strictObject({
+    cardId: z.number().int().positive().optional(),
+    /** Snatch Steal: the collection key (`id_setCode_rarity`) of the rival's copy to take. */
+    printing: z.string().max(120).regex(/^\d+_[^.$]+$/).optional(),
+});
 
 const REPORT_ERRORS = {
     finished: 'This series has played every set',
@@ -32,6 +37,7 @@ const RESOLVE_ERRORS = {
  *   POST /matches/:reportId/reject    the rival rejects it
  *   POST /rewards/:rewardId/spin      spin a won wheel
  *   POST /rewards/:rewardId/claim     resolve a reward
+ *   GET  /rival-binder                the rival's cards, while you hold a Snatch Steal
  */
 export async function matchRoutes(app: FastifyInstance): Promise<void> {
     const guard = { preHandler: [requireAuth, requireSeriesMember], config: { rateLimit: { max: 20, timeWindow: '1 minute' } } };
@@ -98,19 +104,39 @@ export async function matchRoutes(app: FastifyInstance): Promise<void> {
         return { prize };
     });
 
+    app.get('/rival-binder', guard, async (request, reply) => {
+        const series = request.series!;
+        const userId = request.user!._id;
+        const rivalId = series.memberIds.find((id) => !id.equals(userId));
+        const me = await findPlayer(app.db, series._id, userId);
+        const canSnatch = me?.rewards.some((r) => r.prizeId === 'snatch-steal' && r.status === 'available');
+        if (!rivalId || !canSnatch) return reply.code(409).send({ error: 'You need a Snatch Steal to look through your rival\'s binder' });
+        return { collection: (await findPlayer(app.db, series._id, rivalId))?.collection ?? {} };
+    });
+
     app.post('/rewards/:rewardId/claim', guard, async (request, reply) => {
         const body = ClaimBodySchema.safeParse(request.body ?? {});
         if (!body.success) return reply.code(400).send({ error: 'Invalid input' });
         const { rewardId } = request.params as { rewardId: string };
+        const series = request.series!;
+        const user = request.user!;
         try {
-            const session = await claimReward(app.mongo, {
+            const { kind, session, cardId } = await claimReward(app.mongo, {
                 db: app.db,
                 catalog: app.catalog,
-                series: request.series!,
-                userId: request.user!._id,
+                series,
+                userId: user._id,
                 rewardId,
                 cardId: body.data.cardId,
+                printing: body.data.printing,
             });
+            // The rival hears about a stolen card and about the banlist they share.
+            const rivalId = series.memberIds.find((id) => !id.equals(user._id));
+            if (rivalId && cardId !== undefined && (kind === 'snatch' || kind === 'ban' || kind === 'unban')) {
+                const about = { seriesName: series.name, from: user.duelistName, cardId };
+                if (kind === 'snatch') app.notify(rivalId, 'snatched', series._id, about);
+                else app.notify(rivalId, 'banlist', series._id, { ...about, banned: kind === 'ban' });
+            }
             return reply.code(201).send({ session: session ? await hydrate(app.catalog, session) : null });
         } catch (error) {
             if (error instanceof ClaimError) return reply.code(error.status).send({ error: error.message });

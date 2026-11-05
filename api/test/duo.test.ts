@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { ObjectId } from 'mongodb';
 import type { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { cardSetsCollection } from '../src/cards/sync';
+import { cardSetsCollection, cardsCollection } from '../src/cards/sync';
 import { invitesCollection } from '../src/game/invites';
 import { packSessions } from '../src/game/packs';
 import { seriesPlayersCollection } from '../src/game/series';
@@ -194,6 +194,54 @@ describe('duo match results', () => {
         const joey = await player('Joey');
         const waiting = await duo(joey);
         expect((await joey.call('POST', `/api/series/${waiting}/matches`, { result: 'win' })).json().error).toMatch(/no rival/);
+    });
+});
+
+describe('rival rewards', () => {
+    /** Books an available reward for `who` and returns its id. */
+    const give = async (seriesId: string, userId: ObjectId, prizeId: string) => {
+        const id = crypto.randomUUID();
+        await seriesPlayersCollection(app.db).updateOne(
+            { seriesId: new ObjectId(seriesId), userId },
+            { $push: { rewards: { id, prizeId, wonFromPackName: TIMELINE[0], wonFromSetIndex: 0, wonDate: new Date().toISOString(), status: 'available' } as never } },
+        );
+        return id;
+    };
+
+    it('Snatch Steal moves one copy from the rival, who is told', async () => {
+        const { yami, kaiba, id, series } = await pair();
+        const [me, rival] = (await series()).series.members.map((m: { id: string }) => new ObjectId(m.id));
+        await seriesPlayersCollection(app.db).updateOne({ userId: rival }, { $set: { collection: { '100_LOB-EN100_Ultra Rare': 2, '101_LOB-EN101_Common': 1 } } });
+
+        expect((await yami.call('GET', `/api/series/${id}/rival-binder`)).statusCode).toBe(409);
+        const reward = await give(id, me!, 'snatch-steal');
+        expect((await yami.call('GET', `/api/series/${id}/rival-binder`)).json().collection).toEqual({ '100_LOB-EN100_Ultra Rare': 2, '101_LOB-EN101_Common': 1 });
+        expect((await kaiba.call('GET', `/api/series/${id}/rival-binder`)).statusCode).toBe(409);
+
+        const claim = (printing?: string) => yami.call('POST', `/api/series/${id}/rewards/${reward}/claim`, printing ? { printing } : {});
+        expect((await claim()).statusCode).toBe(400);
+        expect((await claim('102_LOB-EN102_Common')).statusCode).toBe(400);
+        expect((await claim('101_LOB-EN101_Common')).statusCode).toBe(201);
+        expect((await claim('100_LOB-EN100_Ultra Rare')).statusCode).toBe(409);
+
+        expect((await series(kaiba)).me.collection).toEqual({ '100_LOB-EN100_Ultra Rare': 2 });
+        const mine = (await series()).me;
+        expect(mine.collection).toEqual({ '101_LOB-EN101_Common': 1 });
+        expect(mine.rewards[0]).toMatchObject({ status: 'claimed', grantedCardId: 101 });
+        expect((await kaiba.notifications())[0]).toMatchObject({ type: 'snatched', payload: { from: 'Yami', cardId: 101 } });
+    });
+
+    it('a ban applies to both players, and the rival is told', async () => {
+        const { yami, kaiba, id, series } = await pair();
+        await cardsCollection(app.db).insertOne({
+            _id: 100, id: 100, name: 'Pot of Greed', type: 'Spell Card', frameType: 'spell', desc: '', race: 'Normal',
+            card_sets: [{ set_name: TIMELINE[0]!, set_code: 'LOB-EN100', set_rarity: 'Rare', set_rarity_code: '', set_price: '0' }], card_images: [],
+        } as never);
+        const [me] = (await series()).series.members.map((m: { id: string }) => new ObjectId(m.id));
+        const reward = await give(id, me!, 'ban');
+        expect((await yami.call('POST', `/api/series/${id}/rewards/${reward}/claim`, { cardId: 100 })).statusCode).toBe(201);
+        expect((await series(kaiba)).series.bannedCardIds).toEqual([100]);
+        expect((await kaiba.notifications())[0]).toMatchObject({ type: 'banlist', payload: { from: 'Yami', cardId: 100, banned: true } });
     });
 });
 
