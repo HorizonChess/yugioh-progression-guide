@@ -455,3 +455,5 @@ Phase 7 order and guide (user, 2026-11-05): first make every page look good on d
 Buttons (user, 2026-11-05): option A, the gold cartouche made with Nano Banana 2, becomes the app's button. Each button is one whole painted image, never sliced. The Gemini remaster of today's square button is kept as a future alternative for a visual-options setting. Sources live in `web/scripts/prototypes/buttons/src` (gitignored), and `cutout.mjs` removes the magenta background.
 
 Phone (user, 2026-11-05): the app is unusable on a phone. Before this round of the timeline is finished, it must work at phone size. Phone layout options are being prototyped.
+
+Phone timeline (user, 2026-11-05): the Road layout. Sets zigzag down a vertical path joined by the same physics chain as desktop: taut, glowing gold up to the current set and sagging iron beyond. The top bar gets a gold meander trim and Yugi's portrait, with the painted scoreboard hanging from its right edge. Cartouche buttons are smaller on the phone (two side by side, at most 142 px each) above the tab bar.
