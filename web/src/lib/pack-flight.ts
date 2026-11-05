@@ -80,11 +80,14 @@ export function landFlight(index: number, target: HTMLElement): (() => void) | n
         onComplete: reveal,
     });
     f.timer = setTimeout(reveal, 2000);
+    // Unmounted mid-landing: put the pack back in flight, so a remount (React's
+    // dev mode mounts twice) lands it again; otherwise it drops soon after.
     return () => {
         f.tween?.kill();
         clearTimeout(f.timer);
         target.style.visibility = "";
-        f.el.remove();
-        if (flight === f) flight = null;
+        if (!f.el.isConnected) return;
+        flight = f;
+        f.timer = setTimeout(clear, 1000);
     };
 }
