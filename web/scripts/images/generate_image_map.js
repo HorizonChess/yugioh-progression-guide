@@ -113,7 +113,7 @@ async function main() {
 
             console.log(`Checking ${set.set_code}...`);
             const url = await resolveYugipediaUrl(set.set_code);
-            if (url && url.includes('ms.yugipedia.com')) {
+            if (url && /(ms|img)\.yugipedia\.com/.test(url)) {
                 console.log(`Found: ${set.set_code}`);
                 imageMap[set.set_code] = url;
             } else {

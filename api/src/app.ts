@@ -37,7 +37,8 @@ import { nextSegmentRewrite } from './static-site';
 
 /** Origins the web app loads from besides its own: card data, pack art, card art. */
 const YGOPRODECK_API = 'https://db.ygoprodeck.com';
-const PACK_ART_HOST = 'https://ms.yugipedia.com';
+/** Yugipedia serves pack art from img.; old ms. links redirect there. */
+const PACK_ART_HOSTS = ['https://img.yugipedia.com', 'https://ms.yugipedia.com'];
 
 export interface AppOptions {
     config: Config;
@@ -83,7 +84,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
                 // Next's static export inlines its bootstrap scripts and can't nonce them.
                 scriptSrc: ["'self'", "'unsafe-inline'"],
                 styleSrc: ["'self'", "'unsafe-inline'"],
-                imgSrc: ["'self'", 'data:', 'blob:', PACK_ART_HOST, ...(config.IMAGE_HOST ? [config.IMAGE_HOST] : [])],
+                imgSrc: ["'self'", 'data:', 'blob:', ...PACK_ART_HOSTS, ...(config.IMAGE_HOST ? [config.IMAGE_HOST] : [])],
                 connectSrc: ["'self'", YGOPRODECK_API],
                 fontSrc: ["'self'", 'data:'],
                 objectSrc: ["'none'"],
