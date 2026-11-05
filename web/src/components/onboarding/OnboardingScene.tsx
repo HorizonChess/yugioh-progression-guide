@@ -34,7 +34,7 @@ const textures = {
 /**
  * The title screen and onboarding (route: /). A candlelit desk: press start, and a sealed
  * invitation lands on it; breaking the seal unfolds the letter the account forms are written on.
- * Signing out and EXIT GAME come back here; email links and the Google redirect land here too.
+ * EXIT GAME and the menu's SIGN IN come back here; email links and the Google redirect land here too.
  */
 export default function OnboardingScene() {
     const { user, loading } = useAuth();

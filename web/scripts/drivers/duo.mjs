@@ -117,6 +117,11 @@ try {
     await unread(yugi, 2);
     await yugi.page.getByText(`Waiting for ${kaiba.name}`).waitFor({ state: "detached", timeout: 8000 });
     check(true, "confirm: Yugi's page moves on by itself");
+    await bell(yugi).click();
+    await yugi.page.getByRole("dialog", { name: "Notifications" }).waitFor();
+    await yugi.page.mouse.click(700, 900);
+    await yugi.page.getByRole("dialog", { name: "Notifications" }).waitFor({ state: "detached", timeout: 3000 });
+    check(true, "bell: a click outside the list closes it");
 
     // 5. Snatch Steal from Kaiba's binder.
     await fetch(`${API}/__test/reward`, {

@@ -13,8 +13,8 @@ import MenuItem, { MenuItemData } from "@/components/menu/MenuItem";
 /**
  * The main MENU (route: /menu). A retro terminal-styled screen: skewed menu
  * entries on the left (Campaign flips to the save-slot list), character art on
- * the right, and a status footer. Signing in, signing out and EXIT GAME go to
- * the title screen (/).
+ * the right, and a status footer. Signing out stays here; SIGN IN and EXIT GAME
+ * go to the title screen (/).
  */
 export default function Menu() {
     const [view, setView] = useState<"menu" | "saves">("menu");
@@ -37,10 +37,7 @@ export default function Menu() {
 
     const account: MenuItemData[] = !user
         ? [{ label: "SIGN IN", href: "/?invite", description: "Keep your progress in an account" }]
-        : [
-              ...(user.role === "admin" ? [{ label: "DEV MODE", href: "#", description: "Coming soon", disabled: true }] : []),
-              { label: "SIGN OUT", action: () => void signOut().then(() => router.push("/")), description: `Signed in as ${user.duelistName}` },
-          ];
+        : [{ label: "SIGN OUT", action: () => void signOut(), description: `Signed in as ${user.duelistName}` }];
     const menuItems: MenuItemData[] = loading
         ? []
         : [

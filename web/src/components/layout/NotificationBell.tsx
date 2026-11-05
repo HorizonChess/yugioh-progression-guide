@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
 import { useNotifications } from "@/context/NotificationsContext";
@@ -12,12 +12,26 @@ export default function NotificationBell() {
     const { loadSeries } = useProgression();
     const router = useRouter();
     const [open, setOpen] = useState(false);
+    const root = useRef<HTMLDivElement>(null);
 
     // New ones stay marked while the list is open, and count as read once it closes.
-    const close = () => {
+    const close = useCallback(() => {
         setOpen(false);
         markAllRead();
-    };
+    }, [markAllRead]);
+
+    // A click or tap anywhere else, or Escape, closes it too.
+    useEffect(() => {
+        if (!open) return;
+        const outside = (e: PointerEvent) => !root.current?.contains(e.target as Node) && close();
+        const escape = (e: KeyboardEvent) => e.key === "Escape" && close();
+        document.addEventListener("pointerdown", outside);
+        document.addEventListener("keydown", escape);
+        return () => {
+            document.removeEventListener("pointerdown", outside);
+            document.removeEventListener("keydown", escape);
+        };
+    }, [open, close]);
 
     const go = async (n: AppNotification) => {
         close();
@@ -31,7 +45,7 @@ export default function NotificationBell() {
     };
 
     return (
-        <div className="relative">
+        <div ref={root} className="relative">
             <button
                 type="button"
                 onClick={() => (open ? close() : setOpen(true))}
