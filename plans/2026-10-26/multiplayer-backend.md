@@ -425,3 +425,13 @@ Audit, from `screens.mjs` (every screen at 1440×900 and 390×844):
 Pack opener direction (decided 2026-11-05, from the prototypes in `web/scripts/prototypes/pack-opener/`, published as a private claude.ai page): on phones, tear the pack by swiping its top strip (A), then the cards spiral out of the torn pack into a carousel you swipe through and tap to reveal (C's ring, without the altar). On desktop, the duel table (B): cards dealt onto a mat, tap to flip, the rare gets a dimmed close-up beat. Shared: the rare's back glows its rarity colour first, foil and glare on revealed rares, the whole pack laid out at the end. Still to settle with the user: card hover and card details during and after the reveal.
 
 Card details in the opener (prototyped 2026-11-05, for the user to review): on desktop, resting the mouse on a face-up card lifts it and opens a details panel beside it after 200 ms (as the current tooltip does). Clicking a face-up card, or tapping it on a phone, flies it up into a close-up: details beside it on desktop, in a bottom sheet on phones. This replaces the current detail modal. Details show name, rarity, set code, attribute, type, level, ATK/DEF, card text, and either NEW (first copy) or the count you now own; NEW cards also carry a ribbon on their face.
+
+Card details restyled (2026-11-05, user request): the hover panel and close-up now look like the card itself, with a frame in the card type's colour, a name plate (silver lettering for Rares, gold for Ultras, as printed), the attribute disc, level stars and a parchment text box.
+
+Timeline prototype (2026-11-05, `web/scripts/prototypes/timeline/`, its own private claude.ai page). It is the first screen of the do-over, in the order the user set: timeline, then the pack screen, pack details and the opened-packs overview, then the collection. It covers:
+- The new app bar, with avatar, series and the bell, plus a bottom tab bar on phones.
+- The road of packs: cleared sets carry WON or LOST wax seals, the current set is spotlit, and later sets are dark, chained and padlocked. The chain is a placeholder for `feat/physics-chain`.
+- A history track with year markers, filled to the current set.
+- Stage objectives replacing the floating buttons: open packs, prepare deck, duel and record, with done, next and waiting-on-rival states.
+- A record panel with the rival in duo mode.
+- Yugi in his own corner with a contextual tip; on smaller screens he becomes a portrait beside the tip.

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeline Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --ink: #07060b;
+    --text: #f1e7cc;
+    --muted: #a99d80;
+    --gold: #e0b54f;
+    --gold-hi: #ffe08a;
+    --win: #4fd18b;
+    --loss: #ff6b5e;
+    --display: "Cinzel", Georgia, serif;
+    --ui: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+    display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
+    background: var(--ink); color: var(--text); font-family: var(--ui);
+    -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; }
+
+/* ---------- app bar ---------- */
+.appbar {
+    position: relative; z-index: 20; flex: none; height: 60px;
+    display: flex; align-items: center; gap: 18px; padding: 0 18px;
+    background: linear-gradient(#1b1526, #0d0a14);
+    border-bottom: 1px solid #5b4520;
+    box-shadow: 0 1px 0 rgba(255,214,120,.12), 0 8px 24px rgba(0,0,0,.5);
+}
+.who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex: none;
+    background: url("img/yugi.webp") 50% 8% / 230% auto no-repeat, radial-gradient(#2c2340, #120e1a);
+    box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(224,181,79,.45);
+}
+.who b { display: block; font: 800 16px/1.1 var(--display); letter-spacing: .05em; color: var(--gold-hi); }
+.who small { display: block; font: 600 12px/1.2 var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.tabs { display: flex; gap: 4px; margin: 0 auto; }
+.tabs a {
+    position: relative; padding: 20px 14px; text-decoration: none;
+    font: 700 14px/1 var(--ui); letter-spacing: .16em; text-transform: uppercase; color: #9c917a;
+}
+.tabs a:hover { color: var(--text); }
+.tabs a[aria-current] { color: var(--gold-hi); text-shadow: 0 0 12px rgba(255,204,80,.5); }
+.tabs a[aria-current]::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 3px; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--gold-hi), transparent); }
+.bell { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 1px solid #5b4520; background: #120e19; display: grid; place-items: center; cursor: pointer; }
+.bell svg { width: 20px; height: 20px; }
+.bell i { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #c4302b; font: 700 11px/18px var(--ui); font-style: normal; text-align: center; box-shadow: 0 0 0 2px #0d0a14; }
+
+/* phone bottom tab bar */
+.tabbar { display: none; }
+@media (max-width: 760px) {
+    .appbar { height: 56px; padding: 0 12px; }
+    .tabs { display: none; }
+    .bell { margin-left: auto; }
+    .tabbar {
+        display: flex; flex: none; position: relative; z-index: 20; height: 64px; padding-bottom: env(safe-area-inset-bottom);
+        background: linear-gradient(#15101e, #0b0812); border-top: 1px solid #5b4520;
+    }
+    .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: #8a8070; font: 700 10px/1 var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+    .tabbar a svg { width: 22px; height: 22px; }
+    .tabbar a[aria-current] { color: var(--gold-hi); }
+    .tabbar a[aria-current] svg { filter: drop-shadow(0 0 6px rgba(255,204,80,.7)); }
+}
+
+/* ---------- page ---------- */
+main {
+    flex: 1; position: relative; overflow: hidden auto; min-height: 0;
+    background:
+        radial-gradient(ellipse 60% 45% at 50% 34%, rgba(255,196,96,.16), transparent 70%),
+        radial-gradient(ellipse at 50% 120%, rgba(110,74,30,.55), transparent 60%),
+        linear-gradient(#1c140b, #0b0806 70%);
+}
+main::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .35;
+    background:
+        repeating-linear-gradient(90deg, transparent 0 140px, rgba(0,0,0,.25) 140px 142px),
+        repeating-linear-gradient(0deg, transparent 0 90px, rgba(0,0,0,.2) 90px 92px);
+    -webkit-mask: linear-gradient(#000, transparent 75%); mask: linear-gradient(#000, transparent 75%);
+}
+.page { position: relative; min-height: 100%; display: flex; flex-direction: column; align-items: center; padding: 18px 0 24px; }
+
+.stage-title { text-align: center; padding: 0 16px; }
+.stage-title .eyebrow { font: 700 13px/1 var(--ui); letter-spacing: .3em; text-transform: uppercase; color: var(--gold); }
+.stage-title h1 { margin: 8px 0 6px; font: 800 clamp(26px, 4vw, 42px)/1.05 var(--display); letter-spacing: .03em; color: #fff3d6; text-shadow: 0 3px 0 rgba(0,0,0,.6), 0 0 26px rgba(255,190,80,.28); }
+.stage-title p { margin: 0; font: 600 14px/1.3 var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+/* the road of packs */
+.road { position: relative; width: 100%; margin-top: 8px; }
+.rail {
+    display: flex; align-items: flex-end; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;
+    scrollbar-width: none; padding: 34px calc(50% - var(--pw) / 2) 0; --pw: 150px;
+}
+.rail::-webkit-scrollbar { display: none; }
+.stop { flex: none; width: var(--pw); scroll-snap-align: center; display: flex; flex-direction: column; align-items: center; }
+.pack {
+    position: relative; width: 100%; aspect-ratio: 400 / 733; cursor: pointer; transform-origin: 50% 100%;
+    transition: filter .3s; will-change: transform;
+}
+.pack img { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; filter: drop-shadow(0 14px 18px rgba(0,0,0,.7)); }
+.stop.future .pack img { filter: grayscale(1) brightness(.28) drop-shadow(0 14px 18px rgba(0,0,0,.7)); }
+.stop.current .pack::before {
+    content: ""; position: absolute; left: -40%; right: -40%; top: -30%; bottom: -6%; z-index: -1;
+    background: radial-gradient(ellipse 50% 46% at 50% 55%, rgba(255,210,110,.5), transparent 70%);
+    animation: breathe 3s ease-in-out infinite;
+}
+@keyframes breathe { 50% { opacity: .6; transform: scale(1.05); } }
+.stop.current .pack img { animation: float 3.4s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-6px); } }
+
+/* wax seals on cleared sets */
+.seal {
+    position: absolute; right: -10%; bottom: 8%; width: 52%; aspect-ratio: 1; border-radius: 50%;
+    display: grid; place-items: center; transform: rotate(-14deg);
+    font: 800 13px/1 var(--display); letter-spacing: .06em; color: #fff4dc;
+    text-shadow: 0 1px 0 rgba(0,0,0,.45);
+    box-shadow: inset 0 -4px 8px rgba(0,0,0,.35), inset 0 3px 6px rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.55);
+}
+.seal::before { content: ""; position: absolute; inset: 12%; border-radius: 50%; border: 1.5px dashed rgba(255,240,210,.55); }
+.seal.won { background: radial-gradient(circle at 38% 32%, #f3c75a, #b07a18 70%); color: #3a2604; text-shadow: 0 1px 0 rgba(255,240,200,.5); }
+.seal.lost { background: radial-gradient(circle at 38% 32%, #d84a3c, #7d1c14 70%); }
+
+/* chains and padlocks on locked sets */
+.chains { position: absolute; inset: 0; pointer-events: none; }
+.chains::before, .chains::after {
+    content: ""; position: absolute; left: -12%; right: -12%; height: 9px; top: 44%;
+    background: repeating-linear-gradient(90deg, #5d5a55 0 12px, transparent 12px 14px, #3c3a36 14px 26px, transparent 26px 28px);
+    border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,.7); transform: rotate(-24deg);
+}
+.chains::after { transform: rotate(24deg); }
+.lock {
+    position: absolute; left: 50%; top: 44%; width: 30%; aspect-ratio: .8; transform: translate(-50%, -30%);
+    border-radius: 4px; background: linear-gradient(#8d877c, #4b463e); box-shadow: 0 3px 6px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.3);
+}
+.lock::before { content: ""; position: absolute; left: 20%; right: 20%; top: -46%; height: 56%; border: 4px solid #7b766c; border-bottom: none; border-radius: 50% 50% 0 0; }
+.lock::after { content: ""; position: absolute; left: 50%; top: 35%; width: 18%; height: 34%; transform: translateX(-50%); border-radius: 3px; background: #2b2722; }
+
+.link { flex: none; width: 64px; height: 16px; margin-bottom: calc(var(--pw) * .8); align-self: flex-end; overflow: hidden; }
+.link svg { display: block; height: 100%; filter: drop-shadow(0 2px 2px rgba(0,0,0,.75)); }
+
+/* history track under the road */
+.track { position: relative; height: 54px; }
+.track-line { position: absolute; left: 0; right: 0; top: 18px; height: 3px; background: #3a2e1d; border-radius: 2px; }
+.track-fill { position: absolute; left: 0; top: 18px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, #8a6420, var(--gold-hi)); box-shadow: 0 0 10px rgba(255,204,80,.6); }
+.tick { position: absolute; top: 13px; width: 13px; height: 13px; margin-left: -6.5px; border-radius: 50%; background: #2a2116; border: 2px solid #5b4520; }
+.tick.reached { background: var(--gold); border-color: #fff0b8; }
+.tick.current { width: 19px; height: 19px; margin-left: -9.5px; top: 10px; background: #fff3c6; border-color: var(--gold); box-shadow: 0 0 0 4px rgba(224,181,79,.25), 0 0 16px rgba(255,204,80,.9); }
+.year { position: absolute; top: 34px; transform: translateX(-50%); font: 700 13px/1 var(--display); letter-spacing: .1em; color: var(--muted); }
+.year.reached { color: var(--gold); }
+
+.arrow {
+    position: absolute; top: 38%; z-index: 5; width: 48px; height: 48px; border-radius: 50%;
+    border: 1px solid #8a6a2c; background: radial-gradient(#2b2215, #120d07); color: var(--gold-hi);
+    display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,.6);
+}
+.arrow:active { transform: translateY(2px); }
+.arrow.prev { left: 28px; } .arrow.next { right: 28px; }
+
+/* lower area: objectives, record, guide */
+.lower { width: min(1180px, 100%); display: grid; grid-template-columns: 1fr minmax(0, 560px) 1fr; gap: 24px; align-items: start; padding: 4px 24px 0; }
+.panel {
+    background: linear-gradient(#221a0f, #130e08); border: 1px solid #7a5d27; border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,230,160,.16);
+}
+.objectives { padding: 14px 16px 16px; grid-column: 2; }
+.objectives h2 { margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; font: 700 13px/1 var(--ui); letter-spacing: .26em; text-transform: uppercase; color: var(--gold); }
+.objectives h2 span { letter-spacing: .1em; color: var(--muted); font-weight: 600; }
+.step { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 12px; padding: 10px 6px; border-top: 1px solid rgba(138,106,44,.28); }
+.step:first-of-type { border-top: none; }
+.num {
+    width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+    font: 800 14px/1 var(--display); color: #c9b98f; border: 1.5px solid #6e5524; background: #150f08;
+}
+.step.done .num { color: #10210f; background: radial-gradient(circle at 40% 35%, #8af0b4, #2f9a5d); border-color: #b7ffd3; }
+.step.next .num { color: #2a1c05; background: radial-gradient(circle at 40% 35%, #fff0b5, #d9a63a); border-color: #fff2c4; box-shadow: 0 0 14px rgba(255,204,80,.7); }
+.step b { display: block; font: 700 17px/1.2 var(--ui); letter-spacing: .04em; color: #f6ead0; }
+.step small { display: block; margin-top: 3px; font: 500 14px/1.3 var(--ui); color: var(--muted); }
+.step.done b { color: #cfe9d6; }
+.waiting { display: inline-flex; align-items: center; gap: 6px; color: var(--gold-hi); }
+.waiting::before { content: "⌛"; animation: tip 1.6s ease-in-out infinite; display: inline-block; }
+@keyframes tip { 50% { transform: rotate(180deg); } }
+.extra { display: flex; justify-content: center; gap: 10px; margin-top: 12px; }
+
+.btn {
+    font: 700 14px/1 var(--ui); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap;
+    color: var(--text); padding: 12px 16px; border-radius: 7px; border: 1px solid #8a6a2c;
+    background: linear-gradient(#2d2517, #16110a);
+    box-shadow: inset 0 1px 0 rgba(255,230,160,.25), 0 4px 0 #0a0805, 0 8px 16px rgba(0,0,0,.45);
+    cursor: pointer; transition: transform .07s, box-shadow .07s, filter .15s;
+}
+.btn:hover { filter: brightness(1.18); }
+.btn:active { transform: translateY(4px); box-shadow: inset 0 1px 0 rgba(255,230,160,.2), 0 0 0 #0a0805; }
+.btn.gold {
+    color: #2a1c05; border-color: #ffe08a; background: linear-gradient(#ffe8a6, #e0b54f 55%, #b5852a);
+    box-shadow: inset 0 1px 0 #fff7da, 0 4px 0 #6e4f16, 0 8px 18px rgba(224,181,79,.35);
+}
+.btn.gold:active { box-shadow: inset 0 1px 0 #fff7da, 0 0 0 #6e4f16; }
+.btn.quiet { background: transparent; box-shadow: none; border-color: #4d3b1b; color: var(--muted); }
+.btn.done { background: transparent; box-shadow: none; border-color: #2f6b47; color: #9fdcb7; }
+
+.record { grid-column: 3; padding: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 260px; }
+.record h2 { grid-column: 1 / -1; margin: 0; font: 700 13px/1 var(--ui); letter-spacing: .26em; text-transform: uppercase; color: var(--gold); }
+.gem { position: relative; padding: 10px 8px 9px; border-radius: 8px; text-align: center; overflow: hidden; }
+.gem.w { background: radial-gradient(circle at 50% 20%, rgba(140,255,190,.35), transparent 60%), linear-gradient(#1f6b43, #0f3a23); box-shadow: inset 0 0 0 1px #5fe09a, inset 0 2px 0 rgba(255,255,255,.2); }
+.gem.l { background: radial-gradient(circle at 50% 20%, rgba(255,160,140,.35), transparent 60%), linear-gradient(#7a2219, #3e0f0a); box-shadow: inset 0 0 0 1px #ff8a7b, inset 0 2px 0 rgba(255,255,255,.2); }
+.gem span { display: block; font: 700 11px/1 var(--ui); letter-spacing: .24em; text-transform: uppercase; color: rgba(255,255,255,.75); }
+.gem b { display: block; margin-top: 4px; font: 800 30px/1 var(--display); color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.4); }
+.record .rival { grid-column: 1 / -1; font: 600 13px/1.3 var(--ui); color: var(--muted); }
+.record .rival b { color: var(--text); }
+
+.guide { grid-column: 1; grid-row: 1; justify-self: start; display: flex; align-items: flex-end; gap: 0; position: relative; }
+.guide .sprite { width: 170px; height: 330px; background: url("img/yugi.webp") 50% 100% / auto 112% no-repeat; filter: drop-shadow(0 10px 16px rgba(0,0,0,.6)); margin-left: -20px; }
+.guide .tip {
+    position: relative; max-width: 190px; margin-bottom: 210px; margin-left: -34px; padding: 10px 12px;
+    background: #f6ecd2; color: #23180a; border-radius: 10px; border: 2px solid #2a1d0b;
+    font: 600 14px/1.3 var(--ui); box-shadow: 0 6px 14px rgba(0,0,0,.45);
+}
+.guide .tip::before { content: ""; position: absolute; left: -9px; bottom: 14px; border: 8px solid transparent; border-right-color: #2a1d0b; border-left: none; }
+
+.info { grid-column: 2; padding: 16px; text-align: center; }
+.info p { margin: 0 0 12px; font: 500 15px/1.4 var(--ui); color: var(--muted); }
+.info .result { display: inline-block; margin-bottom: 10px; padding: 6px 12px; border-radius: 4px; font: 800 14px/1 var(--display); letter-spacing: .12em; }
+.info .result.won { color: #3a2604; background: linear-gradient(#f3c75a, #b07a18); }
+.info .result.lost { color: #fff4dc; background: linear-gradient(#d84a3c, #7d1c14); }
+
+@media (max-width: 1100px) {
+    .lower { grid-template-columns: minmax(0, 560px); justify-content: center; }
+    .objectives, .info, .record, .guide { grid-column: 1; grid-row: auto; }
+    .record { max-width: none; grid-template-columns: 1fr 1fr 1.4fr; align-items: center; }
+    .record h2 { display: none; }
+    .record .rival { grid-column: auto; }
+    .guide { justify-self: stretch; order: -1; align-items: center; gap: 10px; }
+    .guide .sprite { width: 54px; height: 54px; border-radius: 50%; margin: 0; flex: none; background-size: 230% auto; background-position: 50% 8%; box-shadow: 0 0 0 2px var(--gold); background-color: #1b1426; }
+    .guide .tip { margin: 0; max-width: none; flex: 1; }
+    .guide .tip::before { bottom: auto; top: 50%; margin-top: -8px; }
+}
+@media (max-width: 760px) {
+    .page { padding-top: 12px; }
+    .rail { --pw: 112px; padding-top: 24px; }
+    .link { width: 34px; }
+    .arrow { display: none; }
+    .lower { padding: 0 12px; gap: 12px; }
+    .step { grid-template-columns: 30px 1fr; }
+    .step .btn { grid-column: 2; justify-self: start; }
+    .stage-title p { font-size: 12px; }
+}
+
+/* the prototype's own controls */
+.proto {
+    position: fixed; right: 14px; bottom: 14px; z-index: 50; font: 600 12px/1 var(--ui); letter-spacing: .1em; text-transform: uppercase;
+    background: rgba(12,9,18,.92); border: 1px dashed #8a6a2c; border-radius: 10px; padding: 8px 10px; display: flex; gap: 8px; align-items: center; color: var(--muted);
+}
+.proto select { font: inherit; color: var(--text); background: #120e19; border: 1px solid #3d3220; border-radius: 5px; padding: 5px; }
+@media (max-width: 760px) { .proto { position: static; margin: 16px 12px 0; justify-content: center; flex-wrap: wrap; } }
+</style>
+</head>
+<body>
+<header class="appbar">
+    <div class="who">
+        <div class="avatar" aria-hidden="true"></div>
+        <div><b>HorizonDev</b><small id="series-label">Solo campaign</small></div>
+    </div>
+    <nav class="tabs" aria-label="Main">
+        <a href="#" aria-current="page">Campaign</a><a href="#">Collection</a><a href="#">Deck Builder</a><a href="#">Rewards</a><a href="#">Menu</a>
+    </nav>
+    <button class="bell" aria-label="Notifications, 2 unread">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ffe08a" stroke-width="1.8" stroke-linecap="round"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+        <i>2</i>
+    </button>
+</header>
+
+<main>
+    <div class="page">
+        <div class="stage-title">
+            <div class="eyebrow" id="eyebrow"></div>
+            <h1 id="set-name"></h1>
+            <p id="set-meta"></p>
+        </div>
+
+        <div class="road">
+            <button class="arrow prev" aria-label="Earlier sets"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 19l-7-7 7-7"/></svg></button>
+            <button class="arrow next" aria-label="Later sets"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 5l7 7-7 7"/></svg></button>
+            <div class="rail" id="rail"></div>
+        </div>
+
+        <div class="lower" id="lower"></div>
+        <div class="proto" aria-label="Prototype controls">
+    Prototype
+    <select id="mode" aria-label="Series mode"><option value="solo">Solo</option><option value="duo">Duo vs Kaiba</option></select>
+    <select id="state" aria-label="Stage state">
+        <option value="start">Stage start</option>
+        <option value="opened" selected>Packs opened</option>
+        <option value="waiting">Waiting on rival</option>
+    </select>
+</div>
+    </div>
+</main>
+
+<nav class="tabbar" aria-label="Main">
+    <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6"/></svg>Campaign</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="11" height="15" rx="1.5"/><path d="M9 21h9.5A1.5 1.5 0 0 0 20 19.5V7"/></svg>Binder</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Deck</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8-4.3-4.1 5.9-.8Z"/></svg>Rewards</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>Menu</a>
+</nav>
+
+
+
+<script>
+const SETS = [
+    { code: "LOB", name: "Legend of Blue Eyes White Dragon", date: "2002-03-08", cards: 126 },
+    { code: "MRD", name: "Metal Raiders", date: "2002-06-26", cards: 144 },
+    { code: "SRL", name: "Spell Ruler", date: "2002-09-16", cards: 104 },
+    { code: "PSV", name: "Pharaoh's Servant", date: "2002-10-20", cards: 105 },
+    { code: "LON", name: "Labyrinth of Nightmare", date: "2003-03-01", cards: 105 },
+    { code: "LOD", name: "Legacy of Darkness", date: "2003-06-06", cards: 101 },
+    { code: "PGD", name: "Pharaonic Guardian", date: "2003-07-18", cards: 105 },
+    { code: "MFC", name: "Magician's Force", date: "2003-10-10", cards: 108 },
+    { code: "DCR", name: "Dark Crisis", date: "2003-12-01", cards: 106 },
+    { code: "IOC", name: "Invasion of Chaos", date: "2004-03-01", cards: 106 },
+    { code: "AST", name: "Ancient Sanctuary", date: "2004-06-01", cards: 106 },
+    { code: "SOD", name: "Soul of the Duelist", date: "2004-10-01", cards: 60 },
+];
+const EXT = { LON: "webp" };
+const CURRENT = 4;
+const RESULTS = ["won", "won", "lost", "won"];
+const $ = (s) => document.querySelector(s);
+const fmtDate = (d) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+
+let focus = CURRENT;
+const rail = $("#rail");
+
+/** A run of chain links, alternating face-on rings and edge-on bars: gold once reached, iron ahead. */
+function chain(reached) {
+    const [hi, lo] = reached ? ["#ffe9a3", "#9a6b1c"] : ["#8a867e", "#3b3832"];
+    const id = "g" + Math.random().toString(36).slice(2, 7);
+    let links = "";
+    for (let x = 0; x < 120; x += 22) {
+        links += `<rect x="${x}" y="3" width="15" height="10" rx="5" fill="none" stroke="url(#${id})" stroke-width="3"/>` +
+            `<rect x="${x + 12}" y="6.5" width="12" height="3" rx="1.5" fill="url(#${id})"/>`;
+    }
+    return `<svg viewBox="0 0 120 16" preserveAspectRatio="xMinYMid slice" width="120"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">` +
+        `<stop offset="0" stop-color="${hi}"/><stop offset="1" stop-color="${lo}"/></linearGradient></defs>${links}</svg>`;
+}
+
+/* ---------- the road ---------- */
+SETS.forEach((s, i) => {
+    if (i > 0) {
+        const l = document.createElement("div");
+        l.className = "link";
+        l.innerHTML = chain(i <= CURRENT);
+        rail.appendChild(l);
+    }
+    const stop = document.createElement("div");
+    stop.className = "stop " + (i < CURRENT ? "past" : i === CURRENT ? "current" : "future");
+    stop.dataset.i = i;
+    stop.innerHTML = `<div class="pack" role="button" tabindex="0" aria-label="${s.name}"><img src="img/${s.code}.webp" alt=""></div>`;
+    const pack = stop.firstChild;
+    if (i < CURRENT) pack.insertAdjacentHTML("beforeend", `<div class="seal ${RESULTS[i]}">${RESULTS[i] === "won" ? "WON" : "LOST"}</div>`);
+    if (i > CURRENT) pack.insertAdjacentHTML("beforeend", `<div class="chains"></div><div class="lock"></div>`);
+    pack.addEventListener("click", () => centre(i));
+    pack.addEventListener("keydown", (e) => { if (e.key === "Enter") centre(i); });
+    rail.appendChild(stop);
+});
+const stops = [...rail.querySelectorAll(".stop")];
+
+// The history track rides inside the rail so its ticks stay under their packs.
+const track = document.createElement("div");
+track.className = "track";
+track.innerHTML = `<div class="track-line"></div><div class="track-fill"></div>`;
+rail.appendChild(track);
+function layoutTrack() {
+    const first = stops[0], last = stops.at(-1);
+    const x0 = first.offsetLeft + first.offsetWidth / 2, x1 = last.offsetLeft + last.offsetWidth / 2;
+    Object.assign(track.style, { position: "absolute", left: x0 + "px", width: x1 - x0 + "px", bottom: "0" });
+    track.querySelectorAll(".tick, .year").forEach((e) => e.remove());
+    let lastYear = "";
+    stops.forEach((st, i) => {
+        const x = st.offsetLeft + st.offsetWidth / 2 - x0;
+        const t = document.createElement("div");
+        t.className = "tick" + (i < CURRENT ? " reached" : i === CURRENT ? " current" : "");
+        t.style.left = x + "px";
+        track.appendChild(t);
+        const y = SETS[i].date.slice(0, 4);
+        if (y !== lastYear) {
+            const yl = document.createElement("div");
+            yl.className = "year" + (i <= CURRENT ? " reached" : "");
+            yl.style.left = x + "px"; yl.textContent = y;
+            track.appendChild(yl);
+            lastYear = y;
+        }
+    });
+    const cur = stops[CURRENT];
+    track.querySelector(".track-fill").style.width = cur.offsetLeft + cur.offsetWidth / 2 - x0 + "px";
+}
+rail.style.position = "relative";
+rail.style.paddingBottom = "62px";
+
+/* Packs grow as they near the centre, like a coverflow. */
+function scaleByDistance() {
+    const mid = rail.scrollLeft + rail.clientWidth / 2;
+    let nearest = 0, best = Infinity;
+    stops.forEach((st, i) => {
+        const c = st.offsetLeft + st.offsetWidth / 2, d = Math.abs(c - mid);
+        if (d < best) { best = d; nearest = i; }
+        const k = Math.max(0, 1 - d / (st.offsetWidth * 3));
+        st.firstChild.style.transform = `scale(${.72 + .58 * k})`;
+        st.style.zIndex = Math.round(k * 10);
+        st.style.opacity = .55 + .45 * k;
+    });
+    if (nearest !== focus) { focus = nearest; render(); }
+}
+rail.addEventListener("scroll", () => requestAnimationFrame(scaleByDistance), { passive: true });
+
+function centre(i, smooth = true) {
+    const st = stops[i];
+    rail.scrollTo({ left: st.offsetLeft + st.offsetWidth / 2 - rail.clientWidth / 2, behavior: smooth ? "smooth" : "auto" });
+}
+$(".arrow.prev").addEventListener("click", () => centre(Math.max(0, focus - 1)));
+$(".arrow.next").addEventListener("click", () => centre(Math.min(SETS.length - 1, focus + 1)));
+
+/* ---------- the panels under the road ---------- */
+function render() {
+    const s = SETS[focus], mode = $("#mode").value, state = $("#state").value, duo = mode === "duo";
+    $("#series-label").textContent = duo ? "Duo series · vs Kaiba" : "Solo campaign";
+    $("#eyebrow").textContent = focus === CURRENT ? `Stage ${focus + 1} of ${SETS.length} · now playing` : focus < CURRENT ? `Stage ${focus + 1} · cleared` : `Stage ${focus + 1} · locked`;
+    $("#set-name").textContent = s.name;
+    $("#set-meta").textContent = `${fmtDate(s.date)} · ${s.cards} cards`;
+
+    const wins = RESULTS.filter((r) => r === "won").length, losses = RESULTS.length - wins;
+    const record = `<section class="panel record" aria-label="Record"><h2>Record</h2>` +
+        `<div class="gem w"><span>Wins</span><b>${wins}</b></div><div class="gem l"><span>Losses</span><b>${losses}</b></div>` +
+        (duo ? `<div class="rival">Rival <b>Kaiba</b> · also on ${SETS[CURRENT].name}</div>` : "") + `</section>`;
+
+    let tip, middle;
+    if (focus === CURRENT) {
+        const opened = state !== "start", waiting = state === "waiting";
+        const step = (n, cls, title, sub, btn) => `<div class="step ${cls}"><div class="num">${cls === "done" ? "✓" : n}</div><div><b>${title}</b><small>${sub}</small></div>${btn}</div>`;
+        middle = `<section class="panel objectives" aria-label="Stage objectives"><h2>Stage objectives <span>${opened ? (waiting ? "3 of 3" : "1 of 3") : "0 of 3"}</span></h2>` +
+            step(1, opened ? "done" : "next", "Open your booster packs", opened ? "24 packs opened · 216 cards added" : "24 packs of " + s.name + " are waiting",
+                `<button class="btn ${opened ? "done" : "gold"}">${opened ? "View pulls" : "Open packs"}</button>`) +
+            step(2, opened ? (waiting ? "done" : "next") : "", "Prepare your deck", opened ? "Deck: Dragon Fury · 41 cards" : "Build from what you own",
+                `<button class="btn ${opened && !waiting ? "" : "quiet"}">Deck builder</button>`) +
+            step(3, waiting ? "done" : opened ? "next" : "", duo ? "Duel Kaiba and record it" : "Duel and record the result",
+                waiting ? `<span class="waiting">Kaiba is confirming your VICTORY</span>` : duo ? "Your rival confirms the result" : "A victory unlocks the next set",
+                `<button class="btn ${opened && !waiting ? "gold" : "quiet"}">${waiting ? "Pending" : "Record match"}</button>`) +
+            `<div class="extra"><button class="btn quiet">Bonus matches</button></div></section>`;
+        tip = !opened ? `Your ${s.name} packs are sealed and waiting. Open them first!` : waiting ? "Nice duel! Once Kaiba confirms, the next set unlocks." : "Build a deck from your new cards, then challenge your rival.";
+    } else if (focus < CURRENT) {
+        const r = RESULTS[focus];
+        middle = `<section class="panel info"><div class="result ${r}">${r === "won" ? "VICTORY" : "DEFEAT"}</div><p>You opened 24 packs and ${r === "won" ? "won" : "lost"} your duel in this era.</p><button class="btn">View pulls</button> <button class="btn quiet" onclick="centre(${CURRENT})">Back to now</button></section>`;
+        tip = `Ah, ${s.name}. ${r === "won" ? "A fine victory." : "We'll do better next time."}`;
+    } else {
+        middle = `<section class="panel info"><p>Locked. Clear ${SETS[focus - 1].name} to break the chains on this set.</p><button class="btn quiet" onclick="centre(${CURRENT})">Back to now</button></section>`;
+        tip = "That era is still sealed. One duel at a time!";
+    }
+    const guide = `<div class="guide"><div class="sprite" aria-hidden="true"></div><div class="tip">${tip}</div></div>`;
+    $("#lower").innerHTML = guide + middle + record;
+}
+
+$("#mode").addEventListener("change", render);
+$("#state").addEventListener("change", render);
+addEventListener("resize", () => { layoutTrack(); scaleByDistance(); });
+
+render();
+requestAnimationFrame(() => { layoutTrack(); centre(CURRENT, false); scaleByDistance(); });
+</script>
+</body>
+</html>
