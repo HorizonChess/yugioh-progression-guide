@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Button Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Cinzel:wght@700;800&family=Barlow+Semi+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --ink: #1f160b;
+    --gold-stone-light: #f6dd94; --gold-stone: #d8b871; --gold-stone-dark: #b59748;
+    --techno: "Russo One", sans-serif;
+    --display: "Cinzel", Georgia, serif;
+    --ui: "Barlow Semi Condensed", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+    min-height: 100vh; color: #f1e7cc; font-family: var(--ui);
+    background: #2a1d10;
+}
+/* Phones ignore background-attachment: fixed, so the wall is its own fixed layer. */
+body::before { content: ""; position: fixed; inset: 0; background: linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)), url("img/wall.webp") center / cover; pointer-events: none; }
+main { position: relative; max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { margin: 0 0 4px; font: 800 28px/1.1 var(--display); color: #ffe08a; letter-spacing: .04em; text-shadow: 0 2px 0 #000; }
+.intro { margin: 0 0 22px; font: 600 15px/1.4 var(--ui); color: #d8ccaf; text-shadow: 0 1px 2px #000; }
+.opt { margin-bottom: 18px; padding: 18px 18px 22px; border-radius: 14px; background: rgba(10,7,4,.55); border: 1px solid rgba(224,181,79,.25); backdrop-filter: blur(2px); }
+.opt h2 { margin: 0; font: 700 14px/1 var(--ui); letter-spacing: .24em; text-transform: uppercase; color: #ffe08a; }
+.opt p { margin: 6px 0 16px; font: 500 14px/1.4 var(--ui); color: #cbbf9f; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 22px; }
+.row + .row { margin-top: 18px; }
+.cap { font: 600 11px/1 var(--ui); letter-spacing: .16em; text-transform: uppercase; color: #9c917a; width: 100%; margin-bottom: -6px; }
+
+/* every option shares size, press and the "next step" pulse */
+.btn {
+    position: relative; display: inline-flex; align-items: center; justify-content: center;
+    width: 16rem; height: 4rem; padding: 0 1.4rem; cursor: pointer; user-select: none; text-decoration: none;
+    transition: transform .12s, filter .15s; -webkit-tap-highlight-color: transparent;
+}
+.btn.wide { width: 18rem; }
+.btn.small { width: 14rem; height: 3.5rem; }
+.btn span { position: relative; z-index: 2; white-space: nowrap; }
+.btn:hover { transform: scale(1.04); filter: brightness(1.08); }
+.btn:active, .btn.pressed { transform: scale(.97) translateY(2px); filter: brightness(.94); }
+.btn[aria-disabled="true"] { opacity: .5; filter: grayscale(.4); cursor: not-allowed; transform: none; }
+.btn.next::after { content: ""; position: absolute; inset: -10px; border-radius: 12px; pointer-events: none; animation: beckon 1.8s ease-out infinite; }
+@keyframes beckon { 0% { box-shadow: 0 0 0 0 rgba(255,214,90,.75); } 100% { box-shadow: 0 0 0 16px rgba(255,214,90,0); } }
+/* gold glint across the face on hover */
+.btn .glint { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; z-index: 1; pointer-events: none; }
+.btn .glint::before {
+    content: ""; position: absolute; top: -30%; bottom: -30%; left: -40%; width: 30%; transform: skewX(-20deg) translateX(-150%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); mix-blend-mode: overlay; opacity: 0;
+}
+.btn:hover .glint::before { transition: transform .7s ease; transform: skewX(-20deg) translateX(560%); opacity: 1; }
+
+/* today: the SVG trace of button_gold.png over a flat gradient */
+.today {
+    border-style: solid; border-width: clamp(.6rem, 1.2vw, .9rem); border-image: url("img/frame-gold.svg") 58 / 1 / 0 round;
+    background: radial-gradient(circle at 50% 42%, var(--gold-stone-light) 0%, var(--gold-stone) 60%, var(--gold-stone-dark) 100%);
+    filter: drop-shadow(0 18px 18px rgba(0,0,0,.45));
+}
+.today span, .remaster span { font: 400 1.02rem/1 var(--techno); text-transform: uppercase; letter-spacing: .03em; color: var(--ink); text-shadow: 0 1px 1px rgba(255,255,255,.5); }
+
+/* A: the Gemini remaster, 9-sliced so corners never stretch and the meander repeats */
+/* The frame is 9-sliced (corners fixed, meander edges repeat); the centre is one uncut panel behind it. */
+.remaster {
+    border-style: solid; border-width: 14px 22px; border-image: url("img/a-frame.webp") 146 147 / 14px 22px / 0 round;
+    background: url("img/a-centre.webp") center / 100% 100% padding-box;
+    filter: drop-shadow(0 14px 14px rgba(0,0,0,.55));
+}
+.remaster.small { border-width: 12px 19px; border-image-width: 12px 19px; }
+.remaster span { color: #2b1a06; text-shadow: 0 1px 0 rgba(255,240,200,.6), 0 -1px 0 rgba(60,35,5,.35); }
+
+/* B: the Gemini basalt tablet, with gold lettering */
+.basalt {
+    border-style: solid; border-width: 15px 22px; border-image: url("img/b-frame.webp") 154 151 / 15px 22px / 0 round;
+    background: url("img/b-centre.webp") center / 100% 100% padding-box;
+    filter: drop-shadow(0 14px 14px rgba(0,0,0,.6));
+}
+.basalt.small { border-width: 13px 19px; border-image-width: 13px 19px; }
+.basalt span {
+    font: 800 1.05rem/1 var(--display); letter-spacing: .1em; text-transform: uppercase;
+    background: linear-gradient(#fff3c4, #e8b94a 45%, #a8741d 55%, #f5d27a); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 1px 0 #000);
+}
+
+/* C: drawn in code, sharp at any size: bevelled gold rim, engraved band, carved sandstone face */
+.vector {
+    border-radius: 6px;
+    background:
+        radial-gradient(120% 140% at 50% 0%, rgba(255,250,225,.45), transparent 55%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .32 0 0 0 0 .12 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"),
+        linear-gradient(#f2d48a, #d9b062 55%, #c19645);
+    box-shadow:
+        inset 0 0 0 2px #5a3a0c,
+        inset 0 0 0 4px #ffe9a6,
+        inset 0 0 0 7px #c8952f,
+        inset 0 0 0 9px #7a520f,
+        inset 0 0 0 10px rgba(255,236,170,.7),
+        inset 0 3px 12px 9px rgba(120,80,20,.35),
+        0 0 0 1px #2b1b05,
+        0 3px 0 #6e4f16,
+        0 14px 18px rgba(0,0,0,.55);
+}
+.vector::before {
+    content: ""; position: absolute; inset: 3px 12px auto; height: 5px; z-index: 1; opacity: .75;
+    background: repeating-linear-gradient(90deg, #7a520f 0 2px, transparent 2px 6px, #7a520f 6px 8px, transparent 8px 14px);
+    box-shadow: 0 calc(4rem - 11px) 0 0 rgba(0,0,0,0);
+}
+.vector span { font: 400 1.02rem/1 var(--techno); text-transform: uppercase; letter-spacing: .03em; color: #2b1a06; text-shadow: 0 1px 0 rgba(255,244,210,.75), 0 -1px 0 rgba(80,50,10,.4); }
+
+@media (max-width: 640px) {
+    .btn, .btn.wide { width: 100%; max-width: 22rem; height: 3.6rem; }
+    .btn.small { width: 100%; max-width: 22rem; height: 3.3rem; }
+    .row { gap: 14px; }
+}
+</style>
+</head>
+<body>
+<main>
+    <h1>Button options</h1>
+    <p class="intro">The same buttons in each style, on the new wall. Hover for the gold glint, press to see the push. The pulsing one is the step Yugi points at; the faded one is disabled.</p>
+    <div id="opts"></div>
+</main>
+<script>
+const OPTS = [
+    ["today", "Today", "The app's current button: a simplified SVG trace of the painted frame over a flat gradient. For comparison."],
+    ["remaster", "A · Remastered gold", "Made with Gemini from the original painting: the same bevelled gold and sandstone, sharp, with the meander repeating along the edges so any width works."],
+    ["basalt", "B · Basalt and gold", "Made with Gemini: dark carved stone with an inlaid gold meander and scarabs in the corners. Gold lettering. Darker and more dramatic."],
+    ["vector", "C · Drawn gold", "Drawn in code instead of an image: a bevelled gold rim with an engraved band over a grainy sandstone face. Sharp at any size and weighs nothing."],
+];
+const btn = (cls, label, extra = "", attrs = "") => `<a href="#" class="btn ${cls} ${extra}" ${attrs}><i class="glint"></i><span>${label}</span></a>`;
+document.getElementById("opts").innerHTML = OPTS.map(([cls, title, text]) => `
+    <section class="opt"><h2>${title}</h2><p>${text}</p>
+        <div class="row">${btn(cls, "Prepare Your Deck", "wide")}${btn(cls, "Open Packs", "next")}${btn(cls, "Record Match")}</div>
+        <div class="row">${btn(cls, "Bonus Matches", "small")}${btn(cls, "Pending", "", 'aria-disabled="true"')}${btn(cls, "Pressed", "pressed")}</div>
+    </section>`).join("");
+document.querySelectorAll(".btn").forEach((b) => b.addEventListener("click", (e) => e.preventDefault()));
+</script>
+</body>
+</html>
