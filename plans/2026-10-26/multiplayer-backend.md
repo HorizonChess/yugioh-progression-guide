@@ -408,3 +408,16 @@ Prepared 2026-11-05 (branch `chore/alpha-deploy`, merged into `main`):
 Steps for the user: Atlas network access `0.0.0.0/0`; push `main`; Render → New → Blueprint on this repo; fill the env vars (`PUBLIC_URL` = the service's URL); add `<PUBLIC_URL>/api/auth/google/callback` to the Google OAuth client; add the friend as a Google test user (or they sign up with email).
 
 Deployed 2026-11-05 at https://ygo-progression.onrender.com. `smoke.mjs` against it found pages loading blank after a prefetch: Next 16 prefetches each linked page with `Range: bytes=0-63`, Render's Cloudflare compressed the 206, and Chrome cached that as the whole page. The static server now ignores ranges (`acceptRanges: false`). The GitHub Pages site was replaced by a note linking to Render (`pages-note/`, also served as its 404 page), and CI runs on `main` by itself.
+
+### Phase 7: audit (2026-11-05, branch `feat/mobile-redesign`)
+The user's brief: every screen should feel like a game; fix the fonts and the generic effects; the rewards screen gets a full redesign; the pack opener gets a do-over (the user picks from options); hunt deck builder bugs, keeping its careful layout.
+
+Fixed first, on their own branches off `main`:
+- Pack opener: a card sometimes flipped face up and back down at the start of a pack, showing the last pack's card. Cards were keyed by card id and slot, so a card repeated in the same slot reused the face-up element. They're now keyed by pack (`fix/pack-card-flash`, merged).
+- Deck builder: quick drops sometimes don't land (user report). Not reproduced: Playwright's drags (`deck-builder-drops.mjs`, centres, slot boundaries, gaps and corners, released on arrival, CPU slowed 8×) all land, but Playwright fires drag events in strict order, so it can't produce a real-input race. Found instead: a deck card dropped on the main grid's 1px border is deleted (it counts as a drag-out). The deck builder runs on native HTML5 drag-and-drop, which is unreliable for quick drops on Windows and doesn't work on touch at all, so Phase 7 needs pointer-event dragging there anyway (same look, same preview).
+
+Audit, from `screens.mjs` (every screen at 1440×900 and 390×844):
+- Fonts: the body is Arial, parchment buttons are Times New Roman, and Inter, Outfit, Russo One, Cinzel, IM Fell, a script and a comic face are all in use, plus 13 monospace spots (dates, IDs, the rewards subtitle). Headings are plain heavy sans with drop shadows.
+- Generic effects: white hover overlays, plain drop shadows and the same gold-ticket button everywhere; nothing reacts like a game (no press, glow or sound).
+- Phone: the deck builder is the desktop board scaled to 390px, unreadable and undraggable. The pack opener's title wraps one word per line over the Back/Open All buttons and the cards overlap. Rewards truncates every name ("Wh…"). The GuideSprite covers buttons on the timeline, rewards and record-match screens.
+- Desktop: the collection and rewards screens are lists on parchment with no sense of reward; the pack summary is a plain grid with no rarity moment.
