@@ -187,7 +187,7 @@ Multi-document mutations (confirming a result, snatch-steal, saving a session, a
 
 ### Duelist Kingdom onboarding (its own scene, at `/`)
 Revised with the user on 2026-11-04: the onboarding has its own look, unlike the menu, and the letter theme runs through all of it. The first version (panels in the menu's left column) was replaced.
-- **Title screen (`/`).** A candlelit desk with the logo and PRESS START. Signed in, it greets the duelist and goes to the menu. Signing out and EXIT GAME come back here, and email links and the Google redirect land here (`AUTH_PAGE_PATH = '/'`).
+- **Title screen (`/`).** A candlelit desk with the logo and PRESS START. Signed in, it greets the duelist and goes to the menu. EXIT GAME and the menu's SIGN IN come back here (signing out stays on the menu, since 2026-11-05), and email links and the Google redirect land here (`AUTH_PAGE_PATH = '/'`).
 - **Sign-up**
   1. A sealed envelope lands on the desk front up and writes "Welcome to the Yu-Gi-Oh! Progression Series" on itself, then turns over.
   2. Breaking the wax seal shatters it into pieces that skid across the desk. The flap opens and the letter slides out and unfolds (tri-fold).
@@ -376,3 +376,14 @@ Small commits, each tested:
 Verified: lint, typecheck, 112 API + 34 web tests, both builds, and the drivers: `duo.mjs` (18 checks, two browsers: invite by name and by link, live bell, the saved-packs gate, confirm, rewards, Snatch Steal, leaving), `auth.mjs`, `pack-session.mjs`, `smoke.mjs` and the reward drivers. The test API gained `POST /__test/reward` so drivers can claim prizes the wheel only gives at random.
 
 Not covered yet: a collection import prompt on joining (the Collection page's import already allows one import in a duo series that skips early sets), and two real players on two machines. That needs the Render deploy, plus the Google app out of Testing mode for Google sign-in.
+
+Changes after the user's review (2026-11-05):
+- The bell's list also closes on a click outside it, or Escape.
+- SIGN OUT stays on the menu, which then offers SIGN IN; EXIT GAME goes to the title screen.
+- DEV MODE is gone from the menu while 3b is skipped.
+- A stolen card may stay in the rival's saved decks: what matters is that the thief gains it.
+
+Merged into `main` on 2026-11-05; not pushed. Real two-player testing waits for the deploy.
+
+### Release plan (decided 2026-11-05)
+After Phase 6, the app is deployed to Render as **0.6 alpha**, before Phase 7's mobile redesign and UI do-over. The user and a friend test the duo flow on two machines there.
