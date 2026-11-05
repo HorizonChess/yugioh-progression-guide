@@ -40,6 +40,8 @@ try {
     check(signup.ok(), "signed up through the API");
 
     await page.goto(`${BASE}/menu/`, { waitUntil: "networkidle" });
+    // The save list loads the set list; leaving before it lands would abort it and log an error.
+    const setList = page.waitForResponse((r) => r.url().includes("cardsets.php"), { timeout: 30000 });
     await page.getByRole("button", { name: /^CAMPAIGN MODE/ }).click();
     check(await page.getByText("Your Series").isVisible(), "signed in: the save list shows server series");
     await page.getByRole("button", { name: "+ NEW GAME" }).click();
@@ -52,6 +54,7 @@ try {
 
     await page.getByText("Driver Run").click();
     await page.waitForURL(/timeline/);
+    await (await setList).finished();
     await page.goto(`${BASE}/packs/`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Open 12 Packs" }).click();
     await page.getByText("Pack 1 of 12").waitFor();
