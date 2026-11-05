@@ -25,6 +25,20 @@ services:
         value: https://pub-9397530dccf24d04a56c8eafb6e3edd0.r2.dev
       - key: NEXT_PUBLIC_IMAGE_HOST
         value: https://pub-9397530dccf24d04a56c8eafb6e3edd0.r2.dev
-      # Secret: entered in the Render dashboard, never committed.
+      # Entered in the Render dashboard, never committed (Render asks for each one).
       - key: MONGODB_URI
+        sync: false
+      # The service's own https URL, e.g. https://ygo-progression.onrender.com:
+      # email links and the Google redirect are built from it.
+      - key: PUBLIC_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
         sync: false
