@@ -4,7 +4,9 @@ import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type Reac
 import gsap from "gsap";
 import { EmailSchema, PasswordSchema, type PublicUser } from "@ygo/shared";
 import { useAuth } from "@/context/AuthContext";
+import { useProgression } from "@/context/ProgressionContext";
 import * as auth from "@/lib/auth-client";
+import { describeMove, guestSaves, moveGuestSaves } from "@/lib/guest-saves";
 import StarCuff from "./StarCuff";
 import { Field, NoticeLine, StarChip, StrengthMeter, WaxButton, useNameCheck, type Notice } from "./parts";
 
@@ -36,8 +38,11 @@ const Links = ({ children }: { children: ReactNode }) => <p className="ob-letter
 /** Every account form, written on the letter. `onEnter` leaves for the menu once signed in. */
 export default function LetterForms({ start, landing, reduce, onEnter, onGuest }: { start: LetterView; landing?: Landing; reduce: boolean; onEnter: () => void; onGuest: () => void }) {
     const { signedIn } = useAuth();
+    const { refresh } = useProgression();
     const [view, setView] = useState<LetterView>(start);
     const [accepted, setAccepted] = useState<PublicUser | null>(null);
+    const [guestCount, setGuestCount] = useState(0);
+    const [bringSaves, setBringSaves] = useState(true);
     const [notice, setNotice] = useState<Notice | null>(null);
     const [busy, setBusy] = useState(false);
     const [claim, setClaim] = useState<auth.GoogleClaim | null>(null);
@@ -105,7 +110,22 @@ export default function LetterForms({ start, landing, reduce, onEnter, onGuest }
             const result = await auth.signUp({ email, password, duelistName });
             if (!result.ok) return { kind: "error", text: result.message };
             signedIn(result.data);
+            setGuestCount(guestSaves().length);
             setAccepted(result.data);
+        });
+
+    // Guest saves from before signing up come along unless unticked; any that fail stay offered in Campaign Mode.
+    const onAccepted = (e: FormEvent) =>
+        run(e, async () => {
+            if (guestCount && bringSaves) {
+                const result = await moveGuestSaves(guestSaves());
+                await refresh().catch(() => undefined);
+                if (result.failed.length) {
+                    setGuestCount(guestSaves().length);
+                    return { kind: "error", text: describeMove(result) };
+                }
+            }
+            onEnter();
         });
 
     const onSignIn = (e: FormEvent) =>
@@ -149,16 +169,23 @@ export default function LetterForms({ start, landing, reduce, onEnter, onGuest }
     let page: ReactNode;
     if (accepted) {
         page = (
-            <>
+            <form onSubmit={onAccepted} aria-label="Enter the Kingdom">
                 <Heading kicker="Invitation accepted" title={`Welcome, ${accepted.duelistName}`} />
                 <StarCuff chips={chips.length} reduce={reduce} />
                 <p className="ob-letter__text ob-ink">
                     Your star chips are set. We sent a confirmation link to <b>{accepted.email}</b>. Check your email to confirm it.
                 </p>
+                {guestCount > 0 && (
+                    <label className="ob-check ob-ink">
+                        <input type="checkbox" checked={bringSaves} onChange={(e) => setBringSaves(e.target.checked)} />
+                        Bring the {guestCount} guest save{guestCount === 1 ? "" : "s"} on this device into your account
+                    </label>
+                )}
+                <NoticeLine notice={notice} />
                 <div className="ob-letter__actions">
-                    <WaxButton type="button" onClick={onEnter}>Enter the Kingdom</WaxButton>
+                    <WaxButton disabled={busy}>Enter the Kingdom</WaxButton>
                 </div>
-            </>
+            </form>
         );
     } else if (view === "invite") {
         page = (

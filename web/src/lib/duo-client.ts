@@ -113,7 +113,7 @@ export function describeNotification({ type, payload: p }: AppNotification): str
         case "report-rejected":
             return `${p.from} rejected your result on ${p.setName}. Report it again.`;
         case "snatched":
-            return `${p.from} used Snatch Steal on one of your cards in ${series}.`;
+            return `${p.from} used Snatch Steal to copy one of your cards in ${series}.`;
         case "banlist":
             return `${p.from} ${p.banned ? "banned" : "unbanned"} a card in ${series}.`;
         case "rival-left":

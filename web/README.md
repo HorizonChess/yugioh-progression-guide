@@ -20,8 +20,8 @@ A Next.js application designed to track and simulate a "Progression Series" styl
     -   [Framer Motion](https://www.framer.com/motion/): Handles smooth page transitions (fade/slide effects) in `template.tsx`.
     -   **Tailwind Animate**: Used for micro-interactions (pulse, spin, bounce) and UI feedback.
 -   **Language**: [TypeScript](https://www.typescriptlang.org/)
--   **State Management**: React Context API (`ProgressionContext`)
--   **Data Persistence**: LocalStorage (Save slots, Collection, History)
+-   **State Management**: React Context API (`AuthContext`, `ProgressionContext`, `NotificationsContext`)
+-   **Data Persistence**: the API for signed-in players (series, collections, decks, rewards); LocalStorage for guests (save slots, collection, history)
 
 ## Design System
 
@@ -193,11 +193,13 @@ export default function MyPage() {
 
 ### Project layout
 -   `src/app/<route>/page.tsx`: each route's page component (state, data loading, handlers).
--   `src/components/<feature>/`: components for one feature (`deck-builder`, `packs`, `rewards`, ...); `ui/`, `card/` and `layout/` are shared; `dev/` holds the temporary account test page.
--   `src/lib/`: pure logic and API access; `src/hooks/`: shared hooks; `src/context/`: the save-state provider.
+-   `src/components/<feature>/`: components for one feature (`deck-builder`, `packs`, `rewards`, `onboarding`, ...); `ui/`, `card/` and `layout/` are shared.
+-   `src/lib/`: pure logic and API access (`repo/` holds the `GameRepository` with `RemoteRepo` and `LocalRepo`); `src/hooks/`: shared hooks; `src/context/`: the providers.
 
 ### `src/app` (Routes)
--   **`/menu`**: Save slot management.
+-   **`/`**: Title screen and the Duelist Kingdom onboarding (sign up on the invitation letter, sign in, password reset, Google name claim). Email links and the Google redirect land here. A new account can bring this browser's guest saves along.
+-   **`/menu`**: Main menu. Campaign Mode lists your series (solo or duo), with the new-series form (mode, rival, starting set, packs per set), invites from rivals, and any guest saves left in this browser to move into the account.
+-   **`/join`**: An invitation to a duo series, from a link (`?code=`) or a named invite (`?invite=`). Signed out, it keeps the code through sign-in.
 -   **`/timeline`**: Timeline visualization of unlocked sets.
 -   **`/record-match`**: Match recording interface.
 -   **`/rewards`**: Reward ledger (claim wheel prizes and pity packs).
@@ -218,13 +220,12 @@ export default function MyPage() {
     -   **Card Info Panel**: Left-side panel displaying full card image and scrollable description text for long card effects.
     -   **Double-Click to Add**: Quickly add cards to deck by double-clicking in the search panel.
 
--   **`/dev/auth`**: A deliberately plain account test page (sign up, sign in, Google, email confirmation, password reset). It is also where emailed links and the Google redirect land (`?verify=`, `?reset=`, `?google=`). It is temporary: the styled Duelist Kingdom sign-up replaces it in a later phase. It talks to the API through `src/lib/auth-client.ts`; set `NEXT_PUBLIC_API_URL` (e.g. `http://localhost:4100`) when the API is on another origin, and list the web origin in the API's `ALLOWED_ORIGINS`.
+The app talks to the API through `src/lib/auth-client.ts` and `src/lib/repo/remote.ts`; set `NEXT_PUBLIC_API_URL` (e.g. `http://localhost:4100`) when the API is on another origin, and list the web origin in the API's `ALLOWED_ORIGINS`.
 
 ### `src/context`
--   **`ProgressionContext`**: Global state manager.
-    -   **Saves**: Handles multiple save files.
-    -   **Collection**: Tracks card ownership counts.
-    -   **History**: Logs match results (Winner, Date, Set).
+-   **`AuthContext`**: The signed-in account (or none, for a guest), sign-in and sign-out.
+-   **`ProgressionContext`**: The active series and the player's own state in it, as async commands (open packs, report a match, spin, claim a reward, save a deck). It runs them through `RemoteRepo` when signed in and `LocalRepo` (localStorage) for guests.
+-   **`NotificationsContext`**: The rival's moves, kept on the server and pushed live over a WebSocket, shown by the bell in the nav; pending invites.
 
 ## Recent Improvements
 
@@ -271,7 +272,8 @@ export default function MyPage() {
 ## Future Roadmap
 
 -   **[✓] Loser's Circle**: ~~Implement the "Pity Pack" opening flow for defeated players~~ (Completed)
--   **[ ] Winner's Circle**: Implement the Reward Wheel (Spin animation, prize logic).
+-   **[✓] Winner's Circle**: The Reward Wheel (the server picks the prize for signed-in players).
+-   **[✓] Accounts and duo series**: Server-side series, rival invites, confirmed results, live notifications.
 -   **[✓] Deck Builder**: Integrated DuelingBook-style deck constructor with Drag-and-Drop, card details on hover and basic filtering.
 -   **[ ] Mobile Optimization**: Improve touch targets and layout for phone users.
 -   **[ ] Box Opening Mode**: Simulate opening full boxes with guaranteed distribution (4 Supers, 2 Ultras per LOB box, etc.).

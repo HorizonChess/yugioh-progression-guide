@@ -25,7 +25,7 @@ interface SnatchModalProps {
     onClose: () => void;
 }
 
-/** Snatch Steal: pick any card from the rival's binder, and one copy becomes yours. */
+/** Snatch Steal: pick any card from the rival's binder and get a copy; the rival keeps theirs. */
 export default function SnatchModal({ loadBinder, onChoose, onClose }: SnatchModalProps) {
     const [printings, setPrintings] = useState<Printing[] | null>(null);
     const [failed, setFailed] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export default function SnatchModal({ loadBinder, onChoose, onClose }: SnatchMod
             {hoveredCard && <CardTooltip card={hoveredCard} x={tooltipPosition.x} y={tooltipPosition.y} />}
             <div className="shrink-0 px-6 py-4 border-b border-white/10">
                 <h2 className="text-2xl font-black text-white">Snatch Steal</h2>
-                <p className="text-primary text-sm font-bold">Take one copy of any card in your rival&apos;s binder.</p>
+                <p className="text-primary text-sm font-bold">Pick any card in your rival&apos;s binder to get a copy of it.</p>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar p-6">

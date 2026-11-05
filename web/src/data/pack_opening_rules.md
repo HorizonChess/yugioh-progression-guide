@@ -34,11 +34,6 @@ Unlike loose packs, packs in a box have a "guaranteed" distribution of rarity pu
 For example, the in a 24-Pack LOB Box - which has a 1:6 Super Rare Chance, a 1:12 Ultra Rare Chance, and a 1:32 Secret Rare Chance:
 The Box would have 4 Super Rares, 2 Ultra Rares, and 1 or 0 Secret Rares.
 
-### Reporting Incorrect Ratios
-The ratios for our pack simulator are the one of our biggest reasons for making this tool, and making sure they are as accurate as possible is the goal.
-If you believe we have our ratios wrong for any pack or era please reach out to us via our email admin@ygoprog.com with sources!
-The sources part is extremely important here, a large amount of our data on the earlier eras of yugioh involve debates about pack ratios on forums and extrapolation of ratios from watching bulk set openings.
-
 ## Pack Ratios Per Set
 
 ### Core Sets

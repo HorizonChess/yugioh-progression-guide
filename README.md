@@ -15,7 +15,14 @@ new set in release order by winning duels.
   filters, and `.ydk` import/export for use in EDOPro or DuelingBook.
 - **Campaign map and timeline** that track which set you are on and your match history.
 - **Rewards**: a prize wheel after a win, and "pity packs" after a loss.
-- **Save slots** stored in the browser, so several runs can exist side by side.
+- **Accounts** (email and password, or Google), signed up on a Duelist Kingdom
+  invitation letter. Signed in, every series lives on the server, which rolls the
+  packs, spins the wheel and checks each reward, so the rules can't be bent.
+- **Duo series**: invite a rival by duelist name or link. You share the set
+  progression and banlist, each result waits for the rival to confirm, Snatch
+  Steal copies a card from their binder, and a bell shows their moves live.
+- **Guest play** with saves stored in the browser. Signing up (or in) offers to
+  move them into the account.
 - A custom stone-and-parchment design with an animated guide character.
 
 ## Tech stack
@@ -24,11 +31,11 @@ new set in release order by winning duels.
 | --- | --- |
 | App | Next.js 16 (App Router), React 19, TypeScript |
 | Styling | Tailwind CSS, Framer Motion |
-| Server (in progress) | Fastify and MongoDB Atlas, with game rules shared with the app in `shared/` |
-| Data | [YGOPRODeck API](https://ygoprodeck.com/api-guide/) for cards and sets, localStorage for saves |
+| Server | Fastify and MongoDB Atlas (transactions), live notifications over a WebSocket, game rules shared with the app in `shared/` |
+| Data | [YGOPRODeck API](https://ygoprodeck.com/api-guide/) for cards and sets (mirrored into MongoDB for the server), localStorage for guest saves |
 | Images | Cloudflare R2, with Node and Python scripts to fetch, crop and optimise artwork |
 | Testing | Jest and React Testing Library (web), Vitest (shared, api), Playwright drivers |
-| Hosting | GitHub Pages (static export), deployed by GitHub Actions on every push to `main`; moving to one Render service (`render.yaml`) |
+| Hosting | GitHub Pages (static export), deployed by GitHub Actions on every push to `main`; moving to one Render service (`render.yaml`) for the 0.6 alpha |
 
 ## Running it locally
 
@@ -48,24 +55,27 @@ npm run sync-cards -w @ygo/api   # mirror YGOPRODeck sets and cards into MongoDB
 npm run dev -w @ygo/api          # the API at http://localhost:4000
 ```
 
-Accounts (sign-up, sign-in, Google, email confirmation, password reset) are in
-the API; the plain test page is at `/dev/auth/`. Google sign-in and outgoing
-email are optional and switched on by the `GOOGLE_*` and `SMTP_*` settings in
-`api/.env.example`. To make yourself an admin (dev mode), sign up, then:
+The title screen at `/` is where you sign up or sign in (or play as a guest).
+Google sign-in and outgoing email are optional and switched on by the `GOOGLE_*`
+and `SMTP_*` settings in `api/.env.example`. Admins can open any set's packs; to
+make yourself one, sign up, then:
 
 ```bash
 npm run promote-admin -w @ygo/api -- <your email or duelist name>
 ```
 
-To try accounts in a browser without touching your real database or sending any
-email, run the API on a throwaway in-memory database with captured mail, then
-the web app pointed at it:
+To try it in a browser without touching your real database or sending any
+email, run the API on a throwaway in-memory database with captured mail (it
+copies the card data from `api/.env`'s database), then the web app pointed at it.
+Two browser windows (one private) make two players for a duo series.
 
 ```bash
 npm run test-server -w @ygo/api                                   # http://localhost:4100
-NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web      # then open /dev/auth/
-node web/scripts/drivers/auth.mjs                                 # (from web/) drives it end to end
+NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web      # then open http://localhost:3000
 ```
+
+The Playwright drivers in [web/scripts/drivers/](web/scripts/drivers/README.md)
+drive these flows end to end against that setup.
 
 More detail on the architecture, pack logic and design system is in
 [web/README.md](web/README.md) and

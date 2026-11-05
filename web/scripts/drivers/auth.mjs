@@ -51,17 +51,16 @@ const signedInAs = () => page.getByText(`Signed in as ${NAME}`);
 const me = async () => (await (await context.request.get(`${API}/api/auth/me`)).json()).user;
 const onTitle = () => button("Press Start").waitFor({ timeout: 8000 });
 
-/** From the signed-out menu to the sign-in letter. */
+/** From the signed-out menu to its sign-in box. */
 async function toSignIn() {
     await item("SIGN IN").click();
-    await button("I already have an invitation").click();
     await page.getByRole("form", { name: "Sign in" }).waitFor();
 }
 
 async function signInWith(identifier, password) {
     await page.getByLabel("Email or duelist name").fill(identifier);
     await page.getByLabel("Password", { exact: true }).fill(password);
-    await button("Sign In").click();
+    await page.getByRole("button", { name: /^sign in$/i }).click();
 }
 
 async function signOut() {
@@ -115,10 +114,10 @@ try {
     await signedInAs().waitFor({ timeout: 8000 });
     check(true, "title: Press Start takes a signed-in duelist to the menu");
 
-    // 4. Sign out stays on the menu; exit to the title; a taken name is flagged; sign in by name and by email.
+    // 4. Sign out stays on the menu; back to the title; a taken name is flagged; sign in by name and by email.
     await signOut();
     check(new URL(page.url()).pathname.startsWith("/menu"), "sign out: stays on the menu, which offers SIGN IN");
-    await item("EXIT GAME").click();
+    await item("BACK TO TITLE").click();
     await onTitle();
     await button("Press Start").click();
     await button("Break the seal").click();
@@ -137,9 +136,9 @@ try {
     await page.reload({ waitUntil: "networkidle" });
     await signedInAs().waitFor({ timeout: 8000 });
     check(true, "session: still signed in after a reload (the cookie persists)");
-    await item("EXIT GAME").click();
+    await item("BACK TO TITLE").click();
     await onTitle();
-    check(new URL(page.url()).pathname === "/", "exit game: back on the title screen");
+    check(new URL(page.url()).pathname === "/", "back to title: on the title screen");
     await button("Press Start").click();
     await signOut();
     await toSignIn();
@@ -153,11 +152,11 @@ try {
     await toSignIn();
     await button("Forgot password?").click();
     await page.getByLabel("Email", { exact: true }).fill(EMAIL);
-    await button("Send Reset Link").click();
+    await page.getByRole("button", { name: /^send reset link$/i }).click();
     await notice().getByText(/reset link is on its way/).waitFor({ timeout: 5000 });
     check(true, "forgot: the request is acknowledged");
     await page.getByLabel("Email", { exact: true }).fill("nobody@example.com");
-    await button("Send Reset Link").click();
+    await page.getByRole("button", { name: /^send reset link$/i }).click();
     await notice().getByText(/reset link is on its way/).waitFor({ timeout: 5000 });
     check(true, "forgot: an unknown email gets the very same answer");
 

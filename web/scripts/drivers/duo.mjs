@@ -131,15 +131,15 @@ try {
     });
     await yugi.page.goto(`${BASE}/rewards/`, { waitUntil: "networkidle" });
     await yugi.page.getByRole("button", { name: "Steal a Card" }).click();
-    await yugi.page.getByText("Take one copy of any card").waitFor();
+    await yugi.page.getByText("Pick any card in your rival's binder").waitFor();
     await yugi.page.locator(".collection-card__name").first().waitFor({ timeout: 15000 });
-    const before = Object.values((await kaiba.api("GET", `/api/series/${series.id}`)).me.collection).reduce((a, b) => a + b, 0);
+    const total = async (p) => Object.values((await p.api("GET", `/api/series/${series.id}`)).me.collection).reduce((a, b) => a + b, 0);
+    const [rivalBefore, mineBefore] = [await total(kaiba), await total(yugi)];
     await yugi.page.locator(".collection-card__name").first().click();
     await yugi.page.screenshot({ path: outPath("duo-4-snatch.png") });
     await yugi.page.getByRole("button", { name: "Snatch It" }).click();
-    await yugi.page.getByText("Take one copy of any card").waitFor({ state: "detached" });
-    const left = Object.values((await kaiba.api("GET", `/api/series/${series.id}`)).me.collection).reduce((a, b) => a + b, 0);
-    check(left === before - 1, "snatch: one card moved out of Kaiba's binder");
+    await yugi.page.getByText("Pick any card in your rival's binder").waitFor({ state: "detached" });
+    check((await total(yugi)) === mineBefore + 1 && (await total(kaiba)) === rivalBefore, "snatch: Yugi gets a copy and Kaiba keeps his");
     await unread(kaiba, 1);
     check(true, "snatch: Kaiba is told");
 

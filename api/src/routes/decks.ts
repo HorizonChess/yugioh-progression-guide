@@ -59,7 +59,7 @@ export async function deckRoutes(app: FastifyInstance): Promise<void> {
         const duo = series.mode !== 'solo';
         if (duo && series.rules.startSetIndex === 0) return reply.code(409).send({ error: 'This series starts at the first set' });
 
-        const known = new Set((await app.catalog.cardsByIds(body.data.cardIds)).map((c) => c.id));
+        const known = await app.catalog.knownIds(body.data.cardIds);
         if (body.data.cardIds.some((id) => !known.has(id))) return reply.code(400).send({ error: 'The list has unknown cards' });
 
         const counts: Record<string, number> = {};

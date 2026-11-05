@@ -208,7 +208,7 @@ describe('rival rewards', () => {
         return id;
     };
 
-    it('Snatch Steal moves one copy from the rival, who is told', async () => {
+    it('Snatch Steal copies a card from the rival, who keeps it and is told', async () => {
         const { yami, kaiba, id, series } = await pair();
         const [me, rival] = (await series()).series.members.map((m: { id: string }) => new ObjectId(m.id));
         await seriesPlayersCollection(app.db).updateOne({ userId: rival }, { $set: { collection: { '100_LOB-EN100_Ultra Rare': 2, '101_LOB-EN101_Common': 1 } } });
@@ -224,7 +224,7 @@ describe('rival rewards', () => {
         expect((await claim('101_LOB-EN101_Common')).statusCode).toBe(201);
         expect((await claim('100_LOB-EN100_Ultra Rare')).statusCode).toBe(409);
 
-        expect((await series(kaiba)).me.collection).toEqual({ '100_LOB-EN100_Ultra Rare': 2 });
+        expect((await series(kaiba)).me.collection).toEqual({ '100_LOB-EN100_Ultra Rare': 2, '101_LOB-EN101_Common': 1 });
         const mine = (await series()).me;
         expect(mine.collection).toEqual({ '101_LOB-EN101_Common': 1 });
         expect(mine.rewards[0]).toMatchObject({ status: 'claimed', grantedCardId: 101 });

@@ -37,7 +37,7 @@ interface Context {
     reward: RewardEntry;
     anchor: CardSet;
     cardId: number | undefined;
-    /** Snatch Steal: the collection key of the rival's copy to take. */
+    /** Snatch Steal: the collection key of the rival's card to copy. */
     printing: string | undefined;
 }
 
@@ -153,7 +153,7 @@ async function banlist(ctx: Context, kind: 'ban' | 'unban'): Promise<Effect> {
     };
 }
 
-/** Moves one copy of a card the rival owns into the player's collection. */
+/** Gives the player a copy of a card the rival owns; the rival keeps theirs. */
 async function snatch(ctx: Context): Promise<Effect> {
     const rivalId = ctx.series.memberIds.find((id) => !id.equals(ctx.userId));
     if (!rivalId) throw new ClaimError(409, 'Snatch Steal needs a rival in the series');
@@ -163,17 +163,10 @@ async function snatch(ctx: Context): Promise<Effect> {
     const rival = await findPlayer(ctx.db, ctx.series._id, rivalId);
     if (!rival?.collection[key] || /[.$]/.test(key)) throw notEligible();
 
-    const field = `collection.${key}`;
-    const players = seriesPlayersCollection(ctx.db);
-    const filter = (userId: ObjectId) => ({ seriesId: ctx.series._id, userId });
     return {
         payload: { grantedCardId: entry.id },
-        apply: async (tx) => {
-            const taken = await players.updateOne({ ...filter(rivalId), [field]: { $gte: 1 } }, { $inc: { [field]: -1 } }, { session: tx });
-            if (!taken.modifiedCount) throw new ClaimError(409, 'Your rival no longer has that card');
-            await players.updateOne({ ...filter(rivalId), [field]: { $lte: 0 } }, { $unset: { [field]: '' } }, { session: tx });
-            await players.updateOne(filter(ctx.userId), { $inc: { [field]: 1 } }, { session: tx });
-        },
+        apply: (tx) =>
+            seriesPlayersCollection(ctx.db).updateOne({ seriesId: ctx.series._id, userId: ctx.userId }, { $inc: { [`collection.${key}`]: 1 } }, { session: tx }),
     };
 }
 
