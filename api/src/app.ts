@@ -16,6 +16,7 @@ import { registerBackground } from './background';
 import { createCardCatalog, type CardCatalog } from './cards/catalog';
 import type { Config } from './config';
 import { connectDb } from './db';
+import { ensureInviteIndexes } from './game/invites';
 import { createNotifier, ensureNotificationIndexes, type NotificationPayload, type NotificationType, type Notifier } from './game/notifications';
 import { ensurePackIndexes } from './game/packs';
 import { ensureSeriesIndexes } from './game/series';
@@ -26,6 +27,7 @@ import { authRoutes } from './routes/auth';
 import { deckRoutes } from './routes/decks';
 import { googleRoutes } from './routes/google';
 import { healthRoutes } from './routes/health';
+import { inviteRoutes } from './routes/invites';
 import { matchRoutes } from './routes/matches';
 import { notificationRoutes } from './routes/notifications';
 import { packRoutes } from './routes/packs';
@@ -99,6 +101,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
     await ensureSeriesIndexes(app.db);
     await ensurePackIndexes(app.db);
     await ensureNotificationIndexes(app.db);
+    await ensureInviteIndexes(app.db);
     app.decorate('catalog', createCardCatalog(app.db));
     registerBackground(app);
     app.decorate('notifier', createNotifier(app.db));
@@ -128,6 +131,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
         await api.register(matchRoutes, { prefix: '/series/:seriesId' });
         await api.register(deckRoutes, { prefix: '/series/:seriesId' });
         await api.register(notificationRoutes, { prefix: '/notifications' });
+        await api.register(inviteRoutes, { prefix: '/invites' });
         if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
             await api.register(googleRoutes, {
                 prefix: '/auth/google',

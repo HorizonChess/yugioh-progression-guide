@@ -63,7 +63,7 @@ describe('POST /api/series', () => {
             bannedCardIds: [],
             matchHistory: [],
         });
-        expect(series.memberIds).toHaveLength(1);
+        expect(series.members).toEqual([{ id: series.ownerId, duelistName: 'Yami' }]);
         expect(me).toEqual({ collection: {}, savedDecks: [], rewards: [], ydkImportUsed: false });
         expect(await seriesPlayersCollection(app.db).countDocuments()).toBe(1);
     });
@@ -74,7 +74,7 @@ describe('POST /api/series', () => {
         expect((await create(yami, { packsPerSet: 25 })).statusCode).toBe(400);
         // The client never chooses where a series currently stands, only where it starts.
         expect((await create(yami, { currentSetIndex: 3 })).statusCode).toBe(400);
-        expect((await create(yami, { mode: 'duo' })).statusCode).toBe(400);
+        expect((await create(yami, { mode: 'trio' })).statusCode).toBe(400);
         expect((await create('')).statusCode).toBe(401);
         expect(await seriesCollection(app.db).countDocuments()).toBe(0);
     });

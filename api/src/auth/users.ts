@@ -83,6 +83,12 @@ export async function setPasswordAfterReset(db: Db, userId: ObjectId, email: str
     return result.matchedCount === 1;
 }
 
+/** Duelist names by user id (hex), for showing who's who in a series. */
+export async function duelistNames(db: Db, ids: readonly ObjectId[]): Promise<Map<string, string>> {
+    const users = await usersCollection(db).find({ _id: { $in: [...ids] } }, { projection: { duelistName: 1 } }).toArray();
+    return new Map(users.map((u) => [u._id.toHexString(), u.duelistName]));
+}
+
 export function findUserByGoogleSub(db: Db, sub: string) {
     return usersCollection(db).findOne({ googleSub: sub });
 }
