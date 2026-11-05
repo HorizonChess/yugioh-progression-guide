@@ -451,3 +451,7 @@ Fixes on `main` (2026-11-05, pushed):
 - Envelope seal: the five-pointed star became the Seal of Orichalcos shape, a unicursal hexagram in a ring of rune marks (corrected after the user pointed out a first, two-triangle version).
 
 Phase 7 order and guide (user, 2026-11-05): first make every page look good on desktop and phone (timeline, pack screen, pack details, opened-packs overview, collection, then the rest). The Yugi walkthrough details come after that. Direction for the guide: today's `GuideSprite` is fixed-position and overlaps the page; it becomes a character who slides in from the left edge when the game has something to say, like old games, overlays briefly with the speech bubble, then leaves. The buttons should get a higher-quality version of the same gold frame.
+
+Buttons (user, 2026-11-05): option A, the gold cartouche made with Nano Banana 2, becomes the app's button. Each button is one whole painted image, never sliced. The Gemini remaster of today's square button is kept as a future alternative for a visual-options setting. Sources live in `web/scripts/prototypes/buttons/src` (gitignored), and `cutout.mjs` removes the magenta background.
+
+Phone (user, 2026-11-05): the app is unusable on a phone. Before this round of the timeline is finished, it must work at phone size. Phone layout options are being prototyped.
