@@ -56,10 +56,17 @@ export function landFlight(index: number, target: HTMLElement): (() => void) | n
     clearTimeout(f.timer);
     target.style.visibility = "hidden";
     const from = f.el.getBoundingClientRect(), p = { t: 0 };
-    const reveal = () => {
+    // Show the real pack under the copy, then lift the copy off a couple of frames
+    // later, so the swap never shows an empty frame.
+    const swap = () => {
         target.style.visibility = "";
-        f.el.remove();
+        requestAnimationFrame(() => requestAnimationFrame(() => f.el.remove()));
         if (flight === f) flight = null;
+    };
+    const reveal = () => {
+        const img = target.querySelector("img");
+        if (img) void img.decode().catch(() => undefined).then(swap);
+        else swap();
     };
     f.tween = gsap.to(p, {
         t: 1, duration: 0.55, ease: "power2.inOut",
@@ -76,6 +83,8 @@ export function landFlight(index: number, target: HTMLElement): (() => void) | n
     return () => {
         f.tween?.kill();
         clearTimeout(f.timer);
-        reveal();
+        target.style.visibility = "";
+        f.el.remove();
+        if (flight === f) flight = null;
     };
 }

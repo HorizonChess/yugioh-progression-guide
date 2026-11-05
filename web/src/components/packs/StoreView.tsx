@@ -3,7 +3,6 @@
 import { useLayoutEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { CardSet } from "@/lib/api";
-import { markLoaded } from "@/lib/utils";
 import { landFlight } from "@/lib/pack-flight";
 import CartoucheButton from "@/components/ui/CartoucheButton";
 
@@ -64,9 +63,9 @@ export default function StoreView({
 
             <div className="store__stagecenter">
                 <div className="store__light" aria-hidden="true" />
-                <button ref={pack} onClick={onViewDetails} className="store__pack art-loading" aria-label={`${set.set_name}: view the card list`}>
+                <button ref={pack} onClick={onViewDetails} className="store__pack" aria-label={`${set.set_name}: view the card list`}>
                     {set.set_image ? (
-                        <img ref={markLoaded} onLoad={markLoaded} src={set.set_image} alt="" fetchPriority="high" />
+                        <img src={set.set_image} alt="" fetchPriority="high" decoding="sync" />
                     ) : (
                         <span className="store__noart">No pack art</span>
                     )}
