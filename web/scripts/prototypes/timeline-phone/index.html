@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Phone Timeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Outfit:wght@500;700;800&family=Russo+One&family=Barlow+Semi+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root { --gold: #d4af37; --gold-hi: #ffe08a; --win: #4ade80; --loss: #f87171; --display: "Cinzel", Georgia, serif; --heading: "Outfit", sans-serif; --ui: "Barlow Semi Condensed", sans-serif; --techno: "Russo One", sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; background: #2a1d10; color: #fff; font-family: var(--heading); -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; }
+
+/* prototype switcher */
+.proto { flex: none; display: flex; gap: 4px; padding: 6px 8px; background: #110c18; border-bottom: 1px dashed #6e5320; position: relative; z-index: 60; }
+.proto button { flex: 1; font: 700 12px/1 var(--ui); letter-spacing: .08em; text-transform: uppercase; color: #a99d80; background: transparent; border: 1px solid #3d3220; border-radius: 6px; padding: 8px 4px; }
+.proto button[aria-selected="true"] { color: #ffe08a; border-color: #8a6a2c; background: rgba(224,181,79,.12); }
+
+/* app bar, shared */
+.bar { flex: none; height: 54px; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: linear-gradient(#0f172a, #020617); border-bottom: 1px solid #1e293b; position: relative; z-index: 40; }
+.bar .name { font: 800 18px/1 var(--heading); color: var(--gold); letter-spacing: .04em; }
+.bar .sub { font: 600 11px/1.3 var(--ui); letter-spacing: .12em; color: #94a3b8; text-transform: uppercase; }
+.score { margin-left: auto; display: flex; gap: 6px; }
+.score b { min-width: 42px; padding: 4px 8px; border-radius: 6px; font: 400 15px/1 var(--techno); text-align: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), inset 0 2px 0 rgba(255,255,255,.15); }
+.score b small { display: block; font: 700 8px/1 var(--ui); letter-spacing: .18em; opacity: .8; margin-bottom: 3px; }
+.score .w { background: linear-gradient(#1f6b43, #0f3a23); color: #d7ffe7; }
+.score .l { background: linear-gradient(#7a2219, #3e0f0a); color: #ffe1dc; }
+
+main { flex: 1; position: relative; min-height: 0; overflow: hidden; }
+main::before { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.55)), url("img/wall-gemini-1.webp") center / cover; }
+.view { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+/* tab bar, shared */
+.tabs { flex: none; display: flex; height: 60px; padding-bottom: env(safe-area-inset-bottom); background: linear-gradient(#0f172a, #020617); border-top: 1px solid #1e293b; position: relative; z-index: 40; }
+.tabs a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #94a3b8; text-decoration: none; font: 700 10px/1 var(--heading); letter-spacing: .1em; }
+.tabs svg { width: 22px; height: 22px; }
+.tabs a[aria-current] { color: var(--gold); }
+
+/* cartouche button: one whole painted object */
+.cb { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1376 / 620; background: url("img/cartouche.webp") center / 100% 100% no-repeat; filter: drop-shadow(0 8px 10px rgba(0,0,0,.6)); border: 0; cursor: pointer; transition: transform .12s, filter .15s; padding: 0 12%; text-decoration: none; }
+.cb span { font: 800 clamp(12px, 3.6vw, 15px)/1.05 var(--display); letter-spacing: .08em; text-transform: uppercase; color: #3a2405; text-shadow: 0 1px 0 rgba(255,243,200,.7); text-align: center; }
+.cb:active { transform: scale(.96) translateY(2px); filter: drop-shadow(0 3px 4px rgba(0,0,0,.6)) brightness(.95); }
+.cb.next::after { content: ""; position: absolute; inset: 8% 4%; border-radius: 999px; animation: beckon 1.8s ease-out infinite; pointer-events: none; }
+@keyframes beckon { 0% { box-shadow: 0 0 0 0 rgba(255,214,90,.8); } 100% { box-shadow: 0 0 0 14px rgba(255,214,90,0); } }
+.cb.quiet { filter: drop-shadow(0 6px 8px rgba(0,0,0,.6)) saturate(.75) brightness(.9); }
+
+/* bottom action dock, used by Road and Focus */
+.dock { flex: none; position: relative; z-index: 5; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 12px 12px; background: linear-gradient(transparent, rgba(0,0,0,.75) 35%); }
+.dock .cb { width: 100%; }
+.dock .small { grid-column: 1 / -1; display: flex; justify-content: center; gap: 18px; font: 700 12px/1 var(--ui); letter-spacing: .14em; text-transform: uppercase; }
+.dock .small a { color: #e9d9ad; text-decoration: none; padding: 6px 2px; border-bottom: 1px solid rgba(233,217,173,.4); }
+
+.stamp { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.stamp span { font: 900 15px/1 var(--heading); transform: rotate(-12deg); border: 3px solid; padding: 4px 9px; border-radius: 8px; letter-spacing: .06em; }
+.stamp .won { color: var(--win); border-color: var(--win); background: rgba(20,83,45,.55); }
+.stamp .lost { color: var(--loss); border-color: var(--loss); background: rgba(127,29,29,.55); }
+.lock { position: absolute; left: 50%; top: 45%; width: 34%; transform: translate(-50%, -50%); filter: drop-shadow(0 3px 5px #000); }
+
+/* ---------- 1 · Road: packs climb a vertical path ---------- */
+.road, .f-rail, .hub { outline: none; }
+.road { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 18px 0 30px; scrollbar-width: none; }
+.road::-webkit-scrollbar { display: none; }
+.r-stop { position: relative; display: flex; align-items: center; gap: 14px; padding: 0 22px; }
+.r-stop:nth-child(even) { flex-direction: row-reverse; text-align: right; }
+.r-art { position: relative; flex: none; width: 88px; aspect-ratio: 400 / 733; border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 10px 18px rgba(0,0,0,.7); }
+.r-art img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.r-stop.future .r-art img { filter: grayscale(1) brightness(.4); }
+.r-stop.current .r-art { width: 132px; box-shadow: 0 0 0 3px var(--gold), 0 0 34px rgba(212,175,55,.6); }
+.r-info h3 { margin: 0; font: 700 16px/1.15 var(--heading); color: #e5e7eb; text-shadow: 0 2px 4px #000; }
+.r-info span { display: block; margin-top: 4px; font: 600 12px/1 var(--ui); letter-spacing: .1em; color: #b8ab8b; }
+.r-stop.current .r-info h3 { font-size: 20px; color: #fff; }
+.r-stop.current .r-info .now { display: inline-block; margin-top: 8px; padding: 4px 8px; border-radius: 4px; background: var(--gold); color: #2a1c05; font: 700 11px/1 var(--ui); letter-spacing: .16em; }
+.r-stop.future .r-info { opacity: .55; }
+.r-link { height: 48px; position: relative; }
+.r-link::before { content: ""; position: absolute; left: 50%; top: 2px; bottom: 2px; width: 14px; margin-left: -7px; background: repeating-linear-gradient(#ffe9a3 0 3px, #c9a032 3px 9px, #5a3d08 9px 11px, transparent 11px 13px); border-radius: 5px; filter: drop-shadow(0 2px 2px #000); }
+.r-link.locked::before { background: repeating-linear-gradient(#dfe3e8 0 3px, #5b626c 3px 9px, #16191d 9px 11px, transparent 11px 13px); }
+
+/* ---------- 2 · Focus: one big pack at a time ---------- */
+.f-rail { flex: 1; min-height: 0; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.f-rail::-webkit-scrollbar { display: none; }
+.f-slide { flex: none; width: 100%; scroll-snap-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 12px 24px 0; }
+.f-art { position: relative; height: min(52vh, 360px); aspect-ratio: 400 / 733; border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 20px 34px rgba(0,0,0,.75); }
+.f-art img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.f-slide.current .f-art { box-shadow: 0 0 0 4px var(--gold), 0 0 50px rgba(212,175,55,.55), 0 20px 34px rgba(0,0,0,.75); }
+.f-slide.future .f-art img { filter: grayscale(1) brightness(.4); }
+.f-slide .stage { font: 700 12px/1 var(--ui); letter-spacing: .24em; color: var(--gold-hi); text-transform: uppercase; }
+.f-slide h2 { margin: 0; font: 800 22px/1.15 var(--heading); text-align: center; text-shadow: 0 2px 6px #000; }
+.f-slide .date { font: 600 13px/1 var(--ui); letter-spacing: .12em; color: #c7b99a; }
+.dots { flex: none; display: flex; justify-content: center; gap: 5px; padding: 8px 0 0; position: relative; z-index: 2; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.25); transition: width .2s, background .2s; }
+.dots i.won { background: rgba(74,222,128,.6); } .dots i.lost { background: rgba(248,113,113,.6); }
+.dots i.on { width: 20px; border-radius: 4px; background: var(--gold-hi); }
+
+/* ---------- 3 · Hub: the current set first, the road as a strip ---------- */
+.hub { flex: 1; overflow-y: auto; padding: 14px 14px 20px; display: flex; flex-direction: column; gap: 14px; scrollbar-width: none; }
+.hero { display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 14px; background: rgba(10,7,4,.6); border: 1px solid rgba(224,181,79,.35); }
+.hero .f-art { height: 190px; flex: none; }
+.hero .stage { font: 700 11px/1 var(--ui); letter-spacing: .22em; color: var(--gold-hi); text-transform: uppercase; }
+.hero h2 { margin: 6px 0 4px; font: 800 20px/1.15 var(--heading); }
+.hero .date { font: 600 12px/1 var(--ui); letter-spacing: .1em; color: #c7b99a; }
+.steps { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font: 600 13px/1.2 var(--ui); color: #ddd2b6; }
+.steps li::before { content: "○"; display: inline-block; width: 18px; color: #8a7d60; }
+.steps li.done::before { content: "✓"; color: var(--win); }
+.steps li.next { color: #fff; } .steps li.next::before { content: "▸"; color: var(--gold-hi); }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.actions .wide { grid-column: 1 / -1; width: min(66%, 260px); justify-self: center; }
+.strip-h { display: flex; justify-content: space-between; align-items: baseline; font: 700 12px/1 var(--ui); letter-spacing: .2em; text-transform: uppercase; color: var(--gold-hi); }
+.strip-h span { color: #a99d80; letter-spacing: .08em; }
+.strip { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: none; }
+.strip::-webkit-scrollbar { display: none; }
+.strip .r-art { width: 62px; }
+.strip .r-art.current { box-shadow: 0 0 0 2px var(--gold), 0 0 16px rgba(212,175,55,.6); }
+.strip .stamp span { font-size: 10px; border-width: 2px; padding: 2px 5px; }
+.panel-score { display: flex; justify-content: center; }
+.panel-score .stats { position: relative; height: 120px; aspect-ratio: 952 / 792; background: url("img/stats-panel.webp") center / contain no-repeat; }
+.gem { position: absolute; top: 46%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.gem.w { left: 30%; } .gem.l { left: 70%; }
+.gem small { font: 400 8px/1 var(--techno); letter-spacing: .2em; text-transform: uppercase; }
+.gem.w small { color: var(--win); } .gem.l small { color: var(--loss); }
+.gem b { font: 400 22px/1 var(--techno); text-shadow: 0 2px 4px #000; }
+
+/* Yugi slides in from the left edge when the game has something to say, then leaves */
+.yugi { position: absolute; left: 0; bottom: 118px; z-index: 30; display: flex; align-items: flex-end; pointer-events: none; transform: translateX(-110%); transition: transform .45s cubic-bezier(.2,.9,.3,1.15); }
+.yugi.in { transform: none; pointer-events: auto; }
+.yugi .sprite { width: 160px; aspect-ratio: 1; background: url("img/yugi-neutral.webp") center bottom / contain no-repeat; filter: drop-shadow(0 8px 12px rgba(0,0,0,.7)); margin-left: -10px; }
+.yugi .bubble { position: relative; max-width: 210px; margin: 0 0 70px -14px; padding: 10px 12px; background: #fff; color: #000; border: 3px solid #000; border-radius: 14px; font: 700 13px/1.3 var(--heading); }
+.yugi .bubble::before { content: ""; position: absolute; left: -12px; bottom: 14px; border: 9px solid transparent; border-right: 10px solid #000; border-left: none; }
+.yugi .bubble::after { content: ""; position: absolute; left: -6px; bottom: 17px; border: 6px solid transparent; border-right: 7px solid #fff; border-left: none; }
+.yugi .bubble small { display: block; margin-top: 6px; font: 600 11px/1 var(--ui); letter-spacing: .1em; color: #666; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div class="proto" role="tablist" aria-label="Phone layout">
+    <button role="tab" data-v="road">1 · Road</button>
+    <button role="tab" data-v="focus">2 · Focus</button>
+    <button role="tab" data-v="hub">3 · Hub</button>
+</div>
+<header class="bar">
+    <div><div class="name">HORIZONDEV</div><div class="sub">Stage 5 of 12</div></div>
+    <div class="score" aria-label="3 wins, 1 loss"><b class="w"><small>WINS</small>3</b><b class="l"><small>LOSSES</small>1</b></div>
+</header>
+<main id="main"></main>
+<nav class="tabs" aria-label="Main">
+    <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6"/></svg>CAMPAIGN</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="11" height="15" rx="1.5"/><path d="M9 21h9.5A1.5 1.5 0 0 0 20 19.5V7"/></svg>COLLECTION</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>DECK</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8-4.3-4.1 5.9-.8Z"/></svg>REWARDS</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>MENU</a>
+</nav>
+<script>
+const SETS = [["LOB", "Legend of Blue Eyes White Dragon", "2002-03-08"], ["MRD", "Metal Raiders", "2002-06-26"], ["SRL", "Spell Ruler", "2002-09-16"], ["PSV", "Pharaoh's Servant", "2002-10-20"], ["LON", "Labyrinth of Nightmare", "2003-03-01"], ["LOD", "Legacy of Darkness", "2003-06-06"], ["PGD", "Pharaonic Guardian", "2003-07-18"], ["MFC", "Magician's Force", "2003-10-10"], ["DCR", "Dark Crisis", "2003-12-01"], ["IOC", "Invasion of Chaos", "2004-03-01"], ["AST", "Ancient Sanctuary", "2004-06-01"], ["SOD", "Soul of the Duelist", "2004-10-01"]].map(([code, name, date]) => ({ code, name, date }));
+const CUR = 4, RES = ["won", "won", "lost", "won"];
+const LOCK = `<svg class="lock" viewBox="0 0 40 48" aria-hidden="true"><path d="M10 22V14a10 10 0 0 1 20 0v8" fill="none" stroke="#8d877c" stroke-width="5"/><rect x="4" y="21" width="32" height="25" rx="4" fill="#77716a" stroke="#2b2722" stroke-width="1.5"/><circle cx="20" cy="31" r="3.5" fill="#2b2722"/><rect x="18.5" y="32" width="3" height="8" rx="1" fill="#2b2722"/></svg>`;
+const state = (i) => (i < CUR ? "past" : i === CUR ? "current" : "future");
+const art = (s, i, cls) => `<div class="${cls}${i === CUR ? " current" : ""}"><img src="img/${s.code}.webp" alt="${s.name}" loading="${Math.abs(i - CUR) < 3 ? "eager" : "lazy"}">` +
+    (i < CUR ? `<div class="stamp"><span class="${RES[i]}">${RES[i] === "won" ? "WON" : "LOST"}</span></div>` : "") + (i > CUR ? LOCK : "") + `</div>`;
+const cb = (label, cls = "") => `<a href="#" class="cb ${cls}"><span>${label}</span></a>`;
+const dock = () => `<div class="dock">${cb("Open Packs")}${cb("Record Match", "next")}<div class="small"><a href="#">Prepare deck</a><a href="#">Bonus matches</a></div></div>`;
+const stageOf = (i) => (i === CUR ? "Now playing" : i < CUR ? `Cleared · ${RES[i] === "won" ? "Victory" : "Defeat"}` : "Locked");
+
+const VIEWS = {
+    road: () => {
+        const stops = SETS.map((s, i) => `${i ? `<div class="r-link ${i > CUR ? "locked" : ""}"></div>` : ""}<div class="r-stop ${state(i)}" id="r${i}">${art(s, i, "r-art")}
+            <div class="r-info"><h3>${s.name}</h3><span>${s.date}</span>${i === CUR ? '<span class="now">NOW PLAYING</span>' : ""}</div></div>`).join("");
+        return { html: `<div class="view"><div class="road" id="road">${stops}</div>${dock()}</div>`,
+            after: () => { const el = document.getElementById("r" + CUR), road = document.getElementById("road"); road.scrollTop = el.offsetTop - road.clientHeight / 2 + el.offsetHeight / 2; } };
+    },
+    focus: () => {
+        const slides = SETS.map((s, i) => `<div class="f-slide ${state(i)}" data-i="${i}"><div class="stage">Stage ${i + 1} · ${stageOf(i)}</div>${art(s, i, "f-art")}<h2>${s.name}</h2><div class="date">${s.date}</div></div>`).join("");
+        const dots = SETS.map((s, i) => `<i class="${i < CUR ? RES[i] : ""}"></i>`).join("");
+        return { html: `<div class="view"><div class="f-rail" id="rail">${slides}</div><div class="dots" id="dots">${dots}</div>${dock()}</div>`,
+            after: () => {
+                const rail = document.getElementById("rail"), dots = [...document.querySelectorAll("#dots i")];
+                const mark = () => { const k = Math.round(rail.scrollLeft / rail.clientWidth); dots.forEach((d, i) => d.classList.toggle("on", i === k)); };
+                rail.scrollLeft = CUR * rail.clientWidth; mark();
+                rail.addEventListener("scroll", () => requestAnimationFrame(mark), { passive: true });
+            } };
+    },
+    hub: () => {
+        const s = SETS[CUR];
+        const strip = SETS.map((t, i) => art(t, i, "r-art")).join("");
+        return { html: `<div class="view"><div class="hub">
+            <section class="hero">${art(s, CUR, "f-art")}<div><div class="stage">Stage ${CUR + 1} · now playing</div><h2>${s.name}</h2><div class="date">${s.date}</div>
+                <ul class="steps"><li class="done">24 packs opened</li><li class="done">Deck ready · 41 cards</li><li class="next">Duel and record it</li></ul></div></section>
+            <div class="actions">${cb("Record Match", "next wide")}${cb("Open Packs", "quiet")}${cb("Prepare Deck", "quiet")}</div>
+            <div><div class="strip-h">Your journey <span>4 of 12 cleared</span></div><div class="strip" id="strip">${strip}</div></div>
+            <div class="panel-score"><div class="stats"><div class="gem w"><small>Wins</small><b>3</b></div><div class="gem l"><small>Losses</small><b>1</b></div></div></div>
+            <div style="text-align:center">${cb("Bonus Matches", "quiet").replace('class="cb', 'style="width:56%;margin:0 auto" class="cb')}</div>
+        </div></div>`,
+            after: () => { const st = document.getElementById("strip"), c = st.children[CUR]; st.scrollLeft = c.offsetLeft - st.clientWidth / 2 + c.offsetWidth / 2; } };
+    },
+};
+
+const main = document.getElementById("main");
+function yugi() {
+    const y = document.createElement("div");
+    y.className = "yugi";
+    y.innerHTML = `<div class="sprite" aria-hidden="true"></div><div class="bubble" role="status">Your deck is ready. Duel your rival, then record the result!<small>Tap to dismiss</small></div>`;
+    main.appendChild(y);
+    const hide = () => y.classList.remove("in");
+    y.addEventListener("click", hide);
+    setTimeout(() => y.classList.add("in"), 700);
+    setTimeout(hide, 6500);
+}
+function show(name) {
+    const v = VIEWS[name] ? name : "road";
+    const { html, after } = VIEWS[v]();
+    main.innerHTML = html;
+    after();
+    yugi();
+    document.querySelectorAll(".proto button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === v)));
+}
+document.querySelectorAll(".proto button").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.v; }));
+addEventListener("hashchange", () => show(location.hash.slice(1)));
+document.addEventListener("click", (e) => { if (e.target.closest("a")) e.preventDefault(); });
+show(location.hash.slice(1));
+</script>
+</body>
+</html>
