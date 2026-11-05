@@ -1,6 +1,7 @@
 "use client";
 
 import { CardSet } from "@/lib/api";
+import { markLoaded } from "@/lib/utils";
 import QuantitySelector from "@/components/ui/QuantitySelector";
 
 /**
@@ -37,16 +38,16 @@ export default function StoreView({
                 <div className="absolute inset-0 bg-primary opacity-20 blur-[60px] animate-pulse" />
                 <div className="relative transform transition-transform duration-500 hover:rotate-y-12 hover:rotate-x-12 transform-style-3d">
                     {set.set_image ? (
-                        <img
-                            src={set.set_image}
-                            alt={set.set_name}
-                            className="w-full max-w-[280px] mx-auto rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/10"
-                            onError={(e) => {
-                                if (set.original_image && e.currentTarget.src !== set.original_image) {
-                                    e.currentTarget.src = set.original_image;
-                                }
-                            }}
-                        />
+                        <div className="art-loading w-full max-w-[280px] mx-auto aspect-[400/733] rounded-xl overflow-hidden">
+                            <img
+                                ref={markLoaded}
+                                onLoad={markLoaded}
+                                src={set.set_image}
+                                alt={set.set_name}
+                                fetchPriority="high"
+                                className="w-full h-full object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/10"
+                            />
+                        </div>
                     ) : (
                         <div className="w-full max-w-[280px] mx-auto aspect-[2/3] bg-gray-800 rounded-xl flex items-center justify-center border border-white/10">
                             <span className="text-gray-500">No Pack Art</span>

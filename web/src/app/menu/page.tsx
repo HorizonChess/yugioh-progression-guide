@@ -91,7 +91,7 @@ export default function Menu() {
                     <div className="flex-1 h-[600px] relative hidden lg:block">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--primary)_0%,transparent_70%)] opacity-5 animate-pulse" />
                         <img
-                            src={asset("/sprites/yugi_v2.png")}
+                            src={asset("/sprites/yugi_v2.webp")}
                             alt="Yugi"
                             className="absolute bottom-0 right-0 h-full object-contain drop-shadow-[0_0_50px_rgba(0,0,0,0.8)]"
                             style={{ maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)" }}

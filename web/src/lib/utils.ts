@@ -45,5 +45,14 @@ export function sortCardsByRarity(cards: Card[], setCodePrefix?: string): Card[]
 /** Prefix a file from /public with the site's base path (needed when hosted under a subfolder, e.g. GitHub Pages). */
 export const asset = (path: string) => `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}${path}`;
 
+/**
+ * Marks an image's `.art-loading` frame as loaded. Use as both `ref` and `onLoad`:
+ * the ref covers images that finished loading before React hydrated.
+ */
+export function markLoaded(target: HTMLImageElement | null | { currentTarget: HTMLImageElement }) {
+    const img = target && "currentTarget" in target ? target.currentTarget : target;
+    if (img?.complete && img.naturalWidth > 0) img.closest(".art-loading")?.classList.add("is-loaded");
+}
+
 /** Type guard for filtering out null/undefined, e.g. `ids.map(lookup).filter(isDefined)`. */
 export const isDefined = <T>(value: T | null | undefined): value is T => value != null;

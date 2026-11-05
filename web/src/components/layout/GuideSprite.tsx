@@ -6,25 +6,25 @@ import { useProgression } from "@/context/ProgressionContext";
 
 const SPRITES = [
     {
-        url: asset("/sprites/yugi_neutral_v2_transparent.png?v=4"),
+        url: asset("/sprites/yugi_neutral_v2_transparent.webp"),
         alt: "Yugi Muto (Neutral)",
         quote: "Believe in the heart of the cards!",
         style: {}
     },
     {
-        url: asset("/sprites/yugi_happy_v2_transparent.png?v=4"),
+        url: asset("/sprites/yugi_happy_v2_transparent.webp"),
         alt: "Yugi Muto (Happy)",
         quote: "We did it! The puzzle is complete!",
         style: {}
     },
     {
-        url: asset("/sprites/yugi_sad_v2_transparent.png?v=4"),
+        url: asset("/sprites/yugi_sad_v2_transparent.webp"),
         alt: "Yugi Muto (Sad)",
         quote: "I... I can't lose now...",
         style: {}
     },
     {
-        url: asset("/sprites/yugi_happy_v2_transparent.png?v=4"), // Placeholder until Action sprite is regenerated
+        url: asset("/sprites/yugi_happy_v2_transparent.webp"), // Placeholder until Action sprite is regenerated
         alt: "Yugi Muto (Action)",
         quote: "My grandpa's deck has no pathetic cards!",
         style: {}
