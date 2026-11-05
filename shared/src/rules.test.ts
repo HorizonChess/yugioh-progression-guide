@@ -52,7 +52,7 @@ describe('CreateSeriesBodySchema', () => {
 
     it.each([
         ['an unknown pack count', { packsPerSet: 20 }],
-        ['a duo series (Phase 4)', { mode: 'duo' }],
+        ['an unknown mode', { mode: 'trio' }],
         ['a blank name', { name: '   ' }],
         ['a fractional start', { startSetIndex: 0.5 }],
         ['an extra key', { currentSetIndex: 9 }],
