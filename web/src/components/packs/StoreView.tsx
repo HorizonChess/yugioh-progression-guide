@@ -1,16 +1,22 @@
 "use client";
 
+import { useLayoutEffect, useRef } from "react";
+import { gsap } from "gsap";
 import { CardSet } from "@/lib/api";
 import { markLoaded } from "@/lib/utils";
-import QuantitySelector from "@/components/ui/QuantitySelector";
+import { takeFlight } from "@/lib/pack-flight";
+import CartoucheButton from "@/components/ui/CartoucheButton";
 
 /**
- * The pack STORE (default /packs state): pack art on the left (click to view the
- * full card list), set info + a quantity selector on the right. Fits the viewport
- * — no page scroll.
+ * The pack screen between the timeline and the opener (default /packs state).
+ * The pack the player tapped on the timeline flies from where it sat to centre
+ * stage, under its own light, and the set's name and the choices gather around
+ * it: open the packs, or read the set's card list (also by tapping the pack).
+ * Fits the viewport, no scroll.
  */
 export default function StoreView({
     set,
+    setIndex,
     cardCount,
     isLocked,
     lockedMessage = "You must complete previous sets to unlock pack opening for this set.",
@@ -21,6 +27,7 @@ export default function StoreView({
     onBack,
 }: {
     set: CardSet;
+    setIndex: number;
     cardCount: number;
     isLocked: boolean;
     lockedMessage?: string;
@@ -31,85 +38,84 @@ export default function StoreView({
     onViewDetails: () => void;
     onBack: () => void;
 }) {
+    const pack = useRef<HTMLButtonElement>(null);
+
+    // Fly in from the timeline when the player came from there; otherwise rise into place.
+    useLayoutEffect(() => {
+        const el = pack.current;
+        if (!el) return;
+        const from = takeFlight(setIndex);
+        const to = el.getBoundingClientRect();
+        const tween = from && to.width
+            ? gsap.fromTo(el,
+                { x: from.left + from.width / 2 - (to.left + to.width / 2), y: from.top + from.height / 2 - (to.top + to.height / 2), scale: from.width / to.width },
+                { x: 0, y: 0, scale: 1, duration: 0.75, ease: "power3.inOut", clearProps: "transform" })
+            : gsap.from(el, { y: 40, scale: 0.92, opacity: 0, duration: 0.6, ease: "power2.out", clearProps: "transform,opacity" });
+        return () => {
+            tween.kill();
+        };
+    }, [setIndex]);
+
     return (
-        <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center mx-auto">
-            {/* Pack art — click to view the full set list */}
-            <div className="relative group perspective-1000 cursor-pointer" onClick={onViewDetails}>
-                <div className="absolute inset-0 bg-primary opacity-20 blur-[60px] animate-pulse" />
-                <div className="relative transform transition-transform duration-500 hover:rotate-y-12 hover:rotate-x-12 transform-style-3d">
+        <div className="store">
+            <button onClick={onBack} className="store__back">‹ Back to the campaign</button>
+
+            <header className="store__title">
+                <p className="store__stage">Stage {setIndex + 1}{isLocked ? " · Locked" : ""}</p>
+                <h1>{set.set_name}</h1>
+                <p className="store__meta">{set.tcg_date} · {cardCount} cards</p>
+            </header>
+
+            <div className="store__stagecenter">
+                <div className="store__light" aria-hidden="true" />
+                <button ref={pack} onClick={onViewDetails} className="store__pack art-loading" aria-label={`${set.set_name}: view the card list`}>
                     {set.set_image ? (
-                        <div className="art-loading w-full max-w-[280px] mx-auto aspect-[400/733] rounded-xl overflow-hidden">
-                            <img
-                                ref={markLoaded}
-                                onLoad={markLoaded}
-                                src={set.set_image}
-                                alt={set.set_name}
-                                fetchPriority="high"
-                                className="w-full h-full object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/10"
-                            />
-                        </div>
+                        <img ref={markLoaded} onLoad={markLoaded} src={set.set_image} alt="" fetchPriority="high" />
                     ) : (
-                        <div className="w-full max-w-[280px] mx-auto aspect-[2/3] bg-gray-800 rounded-xl flex items-center justify-center border border-white/10">
-                            <span className="text-gray-500">No Pack Art</span>
-                        </div>
+                        <span className="store__noart">No pack art</span>
                     )}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-white font-bold uppercase tracking-widest border-2 border-white px-4 py-2 rounded-lg bg-black/60 shadow-lg">
-                            View Details
-                        </span>
-                    </div>
-                </div>
+                    <span className="store__peek">Card list</span>
+                </button>
             </div>
 
-            {/* Set info + open controls */}
-            <div className="space-y-8">
-                <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <button onClick={onBack} className="text-gray-500 hover:text-white flex items-center gap-2 transition-colors">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                            Back to Map
-                        </button>
-                    </div>
-                    <h1 className="text-5xl font-black text-white mb-2 leading-tight">{set.set_name}</h1>
-                    <p className="text-xl text-primary font-bold">{cardCount} Cards in Set</p>
-                    <p className="text-gray-400 mt-2">Released: {set.tcg_date}</p>
-                    {isLocked && (
-                        <div className="mt-2 inline-block px-3 py-1 bg-red-500/20 border border-red-500/50 rounded text-red-400 text-xs font-bold tracking-widest uppercase">
-                            Locked Set
-                        </div>
-                    )}
-                </div>
-
+            <div className="store__actions">
                 {isLocked ? (
-                    <div className="p-6 stone-panel text-center">
-                        <p className="text-gray-400 mb-6">{lockedMessage}</p>
-                        <button
-                            onClick={onViewDetails}
-                            className="w-full px-6 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all flex items-center justify-center gap-2"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                            View Card List
-                        </button>
-                    </div>
+                    <>
+                        <p className="store__locked">{lockedMessage}</p>
+                        <CartoucheButton onClick={onViewDetails} className="store__btn">Card List</CartoucheButton>
+                    </>
                 ) : (
-                    <div className="p-6 stone-panel">
-                        {setQuantity ? (
-                            <>
-                                <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-4 drop-shadow-md">Select Quantity</h3>
-                                <QuantitySelector quantity={quantity} setQuantity={setQuantity} onOpen={onOpen} />
-                            </>
-                        ) : (
-                            <button onClick={onOpen} className="w-full px-6 py-4 bg-primary text-black font-black rounded-xl uppercase tracking-widest hover:brightness-110 transition-all">
-                                Open {quantity} Packs
-                            </button>
+                    <>
+                        {setQuantity && (
+                            <div className="store__qty" role="group" aria-label="How many packs">
+                                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="One fewer">−</button>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    value={quantity}
+                                    onChange={(e) => {
+                                        const v = parseInt(e.target.value, 10);
+                                        if (!Number.isNaN(v)) setQuantity(Math.max(1, v));
+                                    }}
+                                    aria-label="Packs to open"
+                                />
+                                <button onClick={() => setQuantity(quantity + 1)} aria-label="One more">+</button>
+                                {[1, 5, 10, 24].map((n) => (
+                                    <button key={n} onClick={() => setQuantity(n)} className={quantity === n ? "store__chip store__chip--on" : "store__chip"}>
+                                        {n}
+                                    </button>
+                                ))}
+                            </div>
                         )}
-                    </div>
+                        <div className="store__row">
+                            <CartoucheButton onClick={onOpen} next className="store__btn">
+                                Open {quantity} {quantity === 1 ? "Pack" : "Packs"}
+                            </CartoucheButton>
+                            <CartoucheButton onClick={onViewDetails} className="store__btn">Card List</CartoucheButton>
+                        </div>
+                    </>
                 )}
-
-                <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <p>Cards are automatically added to your collection.</p>
-                </div>
+                <p className="store__note">Opened cards go straight into your collection.</p>
             </div>
         </div>
     );
