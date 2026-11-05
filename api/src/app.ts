@@ -4,6 +4,8 @@ import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
+import websocket from '@fastify/websocket';
+import type { ObjectId } from 'mongodb';
 import { createEmailFlows } from './auth/email-flows';
 import { AUTH_PAGE_PATH } from './auth/landing';
 import { ensureGoogleIndexes } from './auth/google/pending';
@@ -14,6 +16,7 @@ import { registerBackground } from './background';
 import { createCardCatalog, type CardCatalog } from './cards/catalog';
 import type { Config } from './config';
 import { connectDb } from './db';
+import { createNotifier, ensureNotificationIndexes, type NotificationPayload, type NotificationType, type Notifier } from './game/notifications';
 import { ensurePackIndexes } from './game/packs';
 import { ensureSeriesIndexes } from './game/series';
 import { createMailer, type Mailer } from './mail/mailer';
@@ -24,6 +27,7 @@ import { deckRoutes } from './routes/decks';
 import { googleRoutes } from './routes/google';
 import { healthRoutes } from './routes/health';
 import { matchRoutes } from './routes/matches';
+import { notificationRoutes } from './routes/notifications';
 import { packRoutes } from './routes/packs';
 import { seriesRoutes } from './routes/series';
 import { nextSegmentRewrite } from './static-site';
@@ -46,6 +50,9 @@ declare module 'fastify' {
     interface FastifyInstance {
         /** The synced card data, read and cached for game rules. */
         catalog: CardCatalog;
+        notifier: Notifier;
+        /** Stores a notification and pushes it live, without holding up the response. */
+        notify(userId: ObjectId, type: NotificationType, seriesId: ObjectId, payload: NotificationPayload): void;
     }
 }
 
@@ -91,8 +98,14 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
     await ensureTokenIndexes(app.db);
     await ensureSeriesIndexes(app.db);
     await ensurePackIndexes(app.db);
+    await ensureNotificationIndexes(app.db);
     app.decorate('catalog', createCardCatalog(app.db));
     registerBackground(app);
+    app.decorate('notifier', createNotifier(app.db));
+    app.decorate('notify', (userId: ObjectId, type: NotificationType, seriesId: ObjectId, payload: NotificationPayload) =>
+        app.runInBackground(() => app.notifier.send(userId, type, seriesId, payload)),
+    );
+    await app.register(websocket, { options: { maxPayload: 1024 } });
 
     const publicUrl = config.PUBLIC_URL ?? `http://localhost:${config.PORT}`;
     const emailFlows = createEmailFlows(app, mailer ?? createMailer(config, app.log), config.WEB_URL ?? publicUrl);
@@ -114,6 +127,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
         await api.register(packRoutes, { prefix: '/series/:seriesId/packs' });
         await api.register(matchRoutes, { prefix: '/series/:seriesId' });
         await api.register(deckRoutes, { prefix: '/series/:seriesId' });
+        await api.register(notificationRoutes, { prefix: '/notifications' });
         if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
             await api.register(googleRoutes, {
                 prefix: '/auth/google',
