@@ -12,18 +12,24 @@ export default function GlobalBackground() {
         return null;
     }
 
+    const wall = (src: string) => ({
+        backgroundColor: '#2a1d10',
+        backgroundImage: `url('${asset(src)}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        filter: 'brightness(1.15) contrast(1.15) saturate(1.05)',
+    });
+
     return (
         <>
-            {/* The wall; the warm base shows while it loads, instead of grey. */}
-            <div className="fixed inset-0 z-[-1]" style={{
-                backgroundColor: '#2a1d10',
-                backgroundImage: `url('${asset("/bg-stone.webp")}')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundAttachment: 'fixed',
-                filter: 'brightness(1.3) contrast(1.1)'
-            }}></div>
-            <div className="fixed inset-0 bg-black/50 z-[-1] pointer-events-none"></div>
+            {/* The hieroglyph wall (a sharper repaint of the original stone); the warm
+                base shows while it loads, instead of grey. Phones get a portrait crop. */}
+            <div className="fixed inset-0 z-[-1] hidden md:block" style={wall("/bg-wall.webp")}></div>
+            <div className="fixed inset-0 z-[-1] md:hidden" style={wall("/bg-wall-phone.webp")}></div>
+            {/* Torchlight flickering over it, then a vignette so the middle stays readable. */}
+            <div className="wall-torch hidden md:block" style={{ left: '12%', top: '30%' }}></div>
+            <div className="wall-torch wall-torch--b hidden md:block" style={{ left: '88%', top: '26%' }}></div>
+            <div className="fixed inset-0 z-[-1] pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,0,0,.25), rgba(0,0,0,.72) 100%)' }}></div>
         </>
     );
 }

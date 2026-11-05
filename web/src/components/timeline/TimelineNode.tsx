@@ -10,7 +10,7 @@ type Match = { winner: "player" | "opponent" } | undefined;
 /**
  * One booster-pack tile in the timeline carousel: chain connector (except
  * first), pack art with an optional WON/LOST stamp, and the set name/date.
- * The `current` set is scaled up and gold-ringed; others are dimmed + greyed.
+ * Every tile is the same size: the `current` set is gold-ringed; others are dimmed + greyed.
  */
 export default function TimelineNode({
     set,
@@ -62,7 +62,7 @@ export default function TimelineNode({
 
                     {match && (
                         <div className="timeline-node__stamp-overlay">
-                            <span className={`timeline-stamp ${match.winner === "player" ? "timeline-stamp--won" : "timeline-stamp--lost"}`}>
+                            <span className={`timeline-stamp timeline-stamp--inked ${match.winner === "player" ? "timeline-stamp--won" : "timeline-stamp--lost"}`}>
                                 {match.winner === "player" ? "WON" : "LOST"}
                             </span>
                         </div>

@@ -12,7 +12,7 @@ import { asset } from '@/lib/utils';
  */
 export default function StatsPanel({ wins, losses }: { wins: number; losses: number }) {
     return (
-        <div className="relative h-[clamp(6.5rem,16vh,12rem)] aspect-[952/792] bg-contain bg-center bg-no-repeat animate-in slide-in-from-bottom-10 duration-700 lg:mx-auto" style={{ backgroundImage: `url('${asset("/ui/stats_panel_cropped.webp")}')` }}>
+        <div className="stats-living relative h-[clamp(6.5rem,16vh,12rem)] aspect-[952/792] bg-contain bg-center bg-no-repeat animate-in slide-in-from-bottom-10 duration-700 lg:mx-auto" style={{ backgroundImage: `url('${asset("/ui/stats_panel_cropped.webp")}')` }}>
             {/* Green gem ~ 30% x, ~46% y */}
             <div className="stats-gem top-[46%] left-[30%]">
                 <span className="stats-gem__label text-win">Wins</span>
