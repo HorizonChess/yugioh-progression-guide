@@ -406,3 +406,5 @@ Prepared 2026-11-05 (branch `chore/alpha-deploy`, merged into `main`):
 - GitHub Pages keeps deploying on each push until Render is verified; signed-out guest play still works there, accounts don't.
 
 Steps for the user: Atlas network access `0.0.0.0/0`; push `main`; Render → New → Blueprint on this repo; fill the env vars (`PUBLIC_URL` = the service's URL); add `<PUBLIC_URL>/api/auth/google/callback` to the Google OAuth client; add the friend as a Google test user (or they sign up with email).
+
+Deployed 2026-11-05 at https://ygo-progression.onrender.com. `smoke.mjs` against it found pages loading blank after a prefetch: Next 16 prefetches each linked page with `Range: bytes=0-63`, Render's Cloudflare compressed the 206, and Chrome cached that as the whole page. The static server now ignores ranges (`acceptRanges: false`). The GitHub Pages site was replaced by a note linking to Render (`pages-note/`, also served as its 404 page), and CI runs on `main` by itself.
