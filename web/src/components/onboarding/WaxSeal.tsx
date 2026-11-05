@@ -17,9 +17,14 @@ const BLOB = (() => {
     return `M${mid(0)} ` + pts.map((p, i) => `Q${p[0].toFixed(1)} ${p[1].toFixed(1)} ${mid(i)}`).slice(1).join(" ") + ` Q${pts[0]![0].toFixed(1)} ${pts[0]![1].toFixed(1)} ${mid(0)}Z`;
 })();
 
-const STAR = "M100 62 L109.4 87.1 L136.1 88.2 L115.2 104.9 L122.4 130.8 L100 116 L77.6 130.8 L84.8 104.9 L63.9 88.2 L90.6 87.1 Z";
+// The Seal of Orichalcos's shape: a hexagram whose points touch the inner ring.
+const point = (deg: number, r: number) => `${(100 + Math.cos((deg * Math.PI) / 180) * r).toFixed(1)} ${(100 + Math.sin((deg * Math.PI) / 180) * r).toFixed(1)}`;
+const triangle = (start: number) => `M${point(start, 46)} L${point(start + 120, 46)} L${point(start + 240, 46)} Z`;
+const HEXAGRAM = triangle(-90) + triangle(90);
+// Rune-like marks around the band between the rings: alternately long and short.
+const RUNES = Array.from({ length: 32 }, (_, i) => `M${point(i * 11.25, 49)} L${point(i * 11.25, i % 2 ? 52.5 : 55)}`).join(" ");
 
-/** Wax with a pressed star: lighting comes from SVG filters, so it has real gloss and an embossed rim. */
+/** Wax pressed with the Orichalcos seal: lighting comes from SVG filters, so it has real gloss and an embossed rim. */
 const WaxSeal = forwardRef<SVGSVGElement, { className?: string }>(function WaxSeal({ className }, ref) {
     return (
         <svg ref={ref} viewBox="0 0 200 200" className={className} aria-hidden>
@@ -50,11 +55,13 @@ const WaxSeal = forwardRef<SVGSVGElement, { className?: string }>(function WaxSe
             </defs>
             <g filter="url(#ob-seal-wax)">
                 <path d={BLOB} fill="#000" />
-                <g fill="none" stroke="#f00">
-                    <circle cx="100" cy="100" r="56" strokeWidth="7" />
-                    <circle cx="100" cy="100" r="47" strokeWidth="2" />
+                <g fill="none" stroke="#f00" strokeLinejoin="round">
+                    <circle cx="100" cy="100" r="58.5" strokeWidth="4" />
+                    <circle cx="100" cy="100" r="46.5" strokeWidth="2.5" />
+                    <path d={RUNES} strokeWidth="2.2" strokeLinecap="round" />
+                    <path d={HEXAGRAM} strokeWidth="4.5" />
+                    <circle cx="100" cy="100" r="12" strokeWidth="3" />
                 </g>
-                <path d={STAR} fill="#f00" />
             </g>
             <g className="ob-seal__cracks" fill="none" stroke="#2a0505" strokeWidth="2.4" strokeLinejoin="round" opacity="0.85">
                 <path d="M100 100 L112 84 L108 66 L121 47 L118 24" />
