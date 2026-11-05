@@ -88,7 +88,8 @@ export default function PackOpeningView({
                                 : `pack-grid__cell--bottom${idx === topCount ? " pack-grid__cell--bottom-start" : ""}`;
 
                             return (
-                                <div key={`${card.id}-${idx}`} className={cell}>
+                                // Keyed by pack: a reused face-up card would flip down on screen.
+                                <div key={`${packIndex}-${idx}`} className={cell}>
                                     <PackCard
                                         card={card}
                                         isFlipped={flippedCards.has(idx)}
