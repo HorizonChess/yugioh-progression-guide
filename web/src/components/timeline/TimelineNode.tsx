@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CardSet } from "@/lib/api";
+import { markLoaded } from "@/lib/utils";
 import ChainConnector from "@/components/timeline/ChainConnector";
 
 type Match = { winner: "player" | "opponent" } | undefined;
@@ -43,12 +44,15 @@ export default function TimelineNode({
                     className={`timeline-node__art ${current ? "timeline-node__art--current" : "timeline-node__art--other"}`}
                 >
                     {set.set_image ? (
-                        <div className="timeline-node__art-inner">
+                        <div className="timeline-node__art-inner art-loading">
                             <img
+                                ref={markLoaded}
+                                onLoad={markLoaded}
                                 src={set.set_image}
                                 alt={set.set_name}
                                 className="timeline-node__img"
-                                loading="lazy"
+                                loading={current ? "eager" : "lazy"}
+                                fetchPriority={current ? "high" : "auto"}
                                 style={{ imageRendering: "auto" }}
                             />
                         </div>

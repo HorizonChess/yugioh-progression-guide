@@ -55,7 +55,7 @@ export default function AppNav() {
                     title={isGuideVisible ? "Hide Guide" : "Show Guide"}
                 >
                     <img
-                        src={asset("/sprites/yugi_neutral_v2_transparent.png?v=4")}
+                        src={asset("/sprites/yugi_neutral_v2_transparent.webp")}
                         alt="Toggle Guide"
                         className="w-full h-full object-cover object-top scale-150 translate-y-1"
                     />

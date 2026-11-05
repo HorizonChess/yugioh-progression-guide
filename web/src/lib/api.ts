@@ -7,12 +7,16 @@ import {
     type Card,
     type CardSet,
 } from '@ygo/shared';
+import { asset } from '@/lib/utils';
 
 // Card/set types and the timeline filters live in @ygo/shared so the API uses the same rules.
 export type { Card, CardSet, PulledCard } from '@ygo/shared';
 export { existedByCutoff, earliestPrintingDate } from '@ygo/shared';
 
 const boosterImages = boosterImagesData as Record<string, string>;
+
+/** Pack art the site serves itself: small WebP copies of booster_images.json (scripts/images/pack-art.mjs). */
+const packArt = (code: string) => (boosterImages[code] ? asset(`/packs/${code}.webp`) : undefined);
 
 const BASE_URL = 'https://db.ygoprodeck.com/api/v7';
 
@@ -66,15 +70,12 @@ export async function fetchAllSets(): Promise<CardSet[]> {
     try {
         const data = await fetchRawSets();
 
-        return timelineSets(data).map(set => {
-            const fandomImage = boosterImages[set.set_code];
-            // STRICT: Do not use set.set_image from API to avoid hotlinking YGOPRODeck
-            return {
-                ...set,
-                original_image: undefined, // Don't keep the original URL either
-                set_image: fandomImage || undefined // Only use safe image or undefined
-            };
-        });
+        // Never the API's own set_image: that would hotlink YGOPRODeck.
+        return timelineSets(data).map(set => ({
+            ...set,
+            original_image: undefined,
+            set_image: packArt(set.set_code),
+        }));
     } catch (error) {
         console.error('Error fetching sets:', error);
         return [];
@@ -95,7 +96,7 @@ export async function fetchTournamentSets(): Promise<CardSet[]> {
         return tournamentSets(data).map(set => ({
             ...set,
             original_image: undefined,
-            set_image: boosterImages[set.set_code] || undefined,
+            set_image: packArt(set.set_code),
         }));
     } catch (error) {
         console.error('Error fetching tournament sets:', error);
