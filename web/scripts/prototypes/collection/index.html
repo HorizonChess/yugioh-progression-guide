@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Collection Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Outfit:wght@500;700;800&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="plate.css">
+<style>
+:root {
+    --primary: #d4af37; --gold-hi: #ffe08a;
+    --font-display: "Cinzel", Georgia, serif; --font-heading: "Outfit", sans-serif; --font-main: "Inter", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; background: #2a1d10; color: #f1e7cc; font-family: var(--font-main); -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; background: radial-gradient(ellipse 70% 60% at 50% 40%, rgba(0,0,0,.25), rgba(0,0,0,.72)), url("img/wall-gemini-1.webp") center / cover; }
+button, input, select { font: inherit; color: inherit; }
+[data-tier="Secret"] { --tc: #ff6ad5; } [data-tier="Ultra"] { --tc: #ffcc33; } [data-tier="Super"] { --tc: #4fc3ff; } [data-tier="Rare"] { --tc: #cdd8ff; } [data-tier="Common"] { --tc: #a99d80; }
+
+/* prototype switcher */
+.proto { flex: none; display: flex; gap: 4px; padding: 6px 8px; background: #110c18; border-bottom: 1px dashed #6e5320; position: relative; z-index: 60; }
+.proto button { flex: 1; font: 700 12px/1 var(--font-main); letter-spacing: .08em; text-transform: uppercase; color: #a99d80; background: transparent; border: 1px solid #3d3220; border-radius: 6px; padding: 8px 4px; cursor: pointer; }
+.proto button[aria-selected="true"] { color: var(--gold-hi); border-color: #8a6a2c; background: rgba(224,181,79,.12); }
+
+/* the app's phone top bar / desktop title row */
+.bar { flex: none; height: 58px; display: flex; align-items: center; gap: 10px; padding: 0 12px; position: relative; z-index: 40;
+    background: radial-gradient(120% 140% at 20% 0%, #2a1f3a, transparent 60%), linear-gradient(#1a1324, #0a070f); box-shadow: 0 6px 14px rgba(0,0,0,.6); }
+.bar::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 7px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='7'%3E%3Cpath d='M0 6H4V1H12V4H8V6H16' fill='none' stroke='%233a2405' stroke-width='1.2'/%3E%3C/svg%3E") 0 0 / 16px 7px repeat-x, linear-gradient(#fff1bf, #d4af37 45%, #8a6420); }
+.bar .face { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #1b1426 url("img/yugi-neutral.webp") center 8% / 250% auto no-repeat; box-shadow: 0 0 0 2px var(--primary), 0 0 0 4px #3a2405; }
+.bar .name { font: 800 17px/1 var(--font-display); color: var(--gold-hi); }
+.bar .sub { margin-top: 3px; font: 700 11px/1.2 var(--font-main); letter-spacing: .14em; color: #c7b99a; text-transform: uppercase; }
+main { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+.view { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.tabs { flex: none; display: flex; height: 60px; background: linear-gradient(#0f172a, #020617); border-top: 1px solid #1e293b; position: relative; z-index: 40; }
+.tabs a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #94a3b8; text-decoration: none; font: 700 10px/1 var(--font-heading); letter-spacing: .1em; }
+.tabs svg { width: 22px; height: 22px; } .tabs a[aria-current] { color: var(--primary); }
+@media (min-width: 768px) { .tabs { display: none; } }
+
+/* shared: page head, toolbar, chips, the actions menu */
+.head { flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 14px 16px 8px; }
+.head h1 { margin: 0; font: 800 clamp(22px, 2vw + 12px, 36px)/1.05 var(--font-display); color: #fff; text-shadow: 0 3px 10px #000; }
+.kicker { margin: 0 0 4px; font: 800 11px/1 var(--font-main); letter-spacing: .26em; text-transform: uppercase; color: var(--gold-hi); }
+.meta { margin: 6px 0 0; font: 600 12px/1 var(--font-main); letter-spacing: .1em; color: #c7b99a; }
+.btn { font: 700 12px/1 var(--font-main); letter-spacing: .12em; text-transform: uppercase; color: #f1e7cc; padding: 10px 12px; border-radius: 7px; border: 1px solid #8a6a2c; cursor: pointer;
+    background: linear-gradient(#2d2517, #16110a); box-shadow: inset 0 1px 0 rgba(255,230,160,.2), 0 3px 0 #0a0805; white-space: nowrap; }
+.btn.on { color: #2a1c05; background: linear-gradient(#ffe8a6, #e0b54f 55%, #b5852a); border-color: #ffe08a; }
+.menu { position: relative; }
+.menu-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 70; min-width: 210px; padding: 6px; border-radius: 10px; background: #15100a; box-shadow: 0 0 0 1px #6e5320, 0 18px 30px rgba(0,0,0,.6); display: none; }
+.menu.open .menu-list { display: block; }
+.menu-list button { display: block; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 6px; background: none; cursor: pointer; font: 600 14px/1 var(--font-main); }
+.menu-list button:hover { background: rgba(224,181,79,.12); }
+.menu-list .danger { color: #f87171; }
+.toolbar { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 16px 10px; }
+.search { flex: 1 1 200px; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 999px; background: rgba(10,7,4,.7); box-shadow: 0 0 0 1px rgba(224,181,79,.4); }
+.search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: 600 14px var(--font-main); }
+.search svg { width: 16px; height: 16px; color: #c7b99a; flex: none; }
+.chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; padding: 8px 12px; border-radius: 999px; border: 0; cursor: pointer; font: 700 12px/1 var(--font-main); letter-spacing: .08em; text-transform: uppercase; color: #e9d9ad; background: rgba(10,7,4,.65); box-shadow: 0 0 0 1px rgba(224,181,79,.35); }
+.chip.on { color: #2a1c05; background: linear-gradient(#ffe8a6, #e0b54f 55%, #b5852a); }
+.chip[data-tier]:not(.on) { box-shadow: 0 0 0 1px color-mix(in srgb, var(--tc) 65%, transparent); }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px; }
+.empty { padding: 40px 10px; text-align: center; color: #a99d80; font: 600 14px var(--font-main); }
+
+/* the filters drawer: a side panel on desktop, a sheet on phones */
+.drawer-bg { position: fixed; inset: 0; z-index: 80; background: rgba(4,3,8,.6); opacity: 0; pointer-events: none; transition: opacity .25s; }
+.drawer { position: fixed; z-index: 81; top: 0; right: 0; bottom: 0; width: min(360px, 92vw); padding: 18px 16px; overflow-y: auto; background: linear-gradient(#1a1324, #0d0a07); box-shadow: -2px 0 0 #8a6420, -20px 0 40px rgba(0,0,0,.6); transform: translateX(105%); transition: transform .3s cubic-bezier(.2,.9,.3,1); }
+.drawer-open .drawer-bg { opacity: 1; pointer-events: auto; } .drawer-open .drawer { transform: none; }
+@media (max-width: 767px) { .drawer { top: auto; left: 0; width: auto; max-height: 78vh; border-radius: 16px 16px 0 0; box-shadow: 0 -2px 0 #8a6420, 0 -20px 40px rgba(0,0,0,.6); transform: translateY(105%); } }
+.drawer h2 { margin: 0 0 12px; font: 800 18px/1 var(--font-display); color: var(--gold-hi); }
+.drawer label { display: block; margin: 12px 0 6px; font: 700 11px/1 var(--font-main); letter-spacing: .18em; text-transform: uppercase; color: #c7b99a; }
+.drawer select, .drawer input { width: 100%; height: 38px; padding: 0 10px; border-radius: 6px; border: 1px solid #6e5320; background: #0f0b07; }
+.drawer .two { display: flex; gap: 8px; }
+.drawer .row { display: flex; gap: 8px; margin-top: 18px; }
+
+/* tiles, shared by B and C */
+.grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 10px; }
+.tile { flex: 0 0 calc((100% - 20px) / 3); display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer; color: inherit; text-align: center; }
+@media (min-width: 768px) { .grid { gap: 18px 14px; } .tile { flex-basis: 122px; } }
+.art { position: relative; display: block; aspect-ratio: 813 / 1185; border-radius: 4.5% / 3.2%; overflow: hidden; background: #111; box-shadow: 0 8px 16px rgba(0,0,0,.6); transition: transform .2s; }
+.tile:not([data-tier="Common"]) .art { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--tc) 70%, transparent), 0 0 10px -1px color-mix(in srgb, var(--tc) 45%, transparent), 0 8px 16px rgba(0,0,0,.6); }
+.tile:hover .art { transform: translateY(-4px); }
+.art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.count { position: absolute; right: 5px; bottom: 5px; min-width: 26px; padding: 4px 6px; border-radius: 999px; font: 800 12px/1 var(--font-main); color: var(--gold-hi); background: rgba(10,7,4,.85); box-shadow: 0 0 0 1px rgba(224,181,79,.7); }
+.tname { font: 700 11px/1.2 var(--font-heading); color: #e5e7eb; text-shadow: 0 1px 3px #000; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.missing .art { background: linear-gradient(#1c150c, #0e0a06); box-shadow: inset 0 3px 10px rgba(0,0,0,.8), 0 0 0 1px rgba(224,181,79,.18); display: grid; place-items: center; }
+.missing .art span { font: 800 11px/1.2 var(--font-display); color: rgba(224,181,79,.4); letter-spacing: .06em; padding: 6px; }
+.missing .tname { opacity: .45; }
+.band { display: flex; align-items: center; gap: 12px; margin: 18px 0 12px; font: 800 15px/1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--gold-hi); text-shadow: 0 2px 6px #000; }
+.band::before, .band::after { content: ""; flex: 1; height: 2px; background: linear-gradient(90deg, transparent, #b58a2e 30%, var(--tc, #e0b54f)); }
+.band::after { background: linear-gradient(270deg, transparent, #b58a2e 30%, var(--tc, #e0b54f)); }
+.band small { font: 700 12px/1 var(--font-main); color: #c7b99a; letter-spacing: .1em; }
+
+/* ---------- A · Binder ---------- */
+.chapters { flex: none; display: flex; gap: 10px; padding: 4px 16px 8px; overflow-x: auto; scrollbar-width: none; }
+.chapter { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 10px; border: 0; cursor: pointer; background: rgba(10,7,4,.6); box-shadow: 0 0 0 1px rgba(224,181,79,.3); text-align: left; }
+.chapter img { width: 26px; height: 46px; object-fit: contain; }
+.chapter b { display: block; font: 800 13px/1.1 var(--font-display); color: #fff; }
+.chapter small { font: 600 11px/1 var(--font-main); color: #c7b99a; letter-spacing: .06em; }
+.chapter.on { background: linear-gradient(rgba(224,181,79,.28), rgba(10,7,4,.7)); box-shadow: 0 0 0 1.5px var(--primary); }
+.binder-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 10px 8px; perspective: 1800px; touch-action: pan-y; }
+.binder { position: relative; display: flex; gap: 0; height: min(100%, 640px); aspect-ratio: 1.42; max-width: 100%;
+    filter: drop-shadow(0 24px 30px rgba(0,0,0,.7)); }
+@media (max-width: 767px) { .binder { aspect-ratio: .71; } .binder .page.left { display: none; } }
+.page { position: relative; flex: 1; padding: 5.5% 5% 6%; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); gap: 3.2% 4%;
+    background: radial-gradient(ellipse at 50% 30%, #3b2a17, #1d140a 70%); border: 1px solid #5a4220; }
+.page.left { border-radius: 14px 4px 4px 14px; box-shadow: inset -18px 0 24px -12px rgba(0,0,0,.8); }
+.page.right { border-radius: 4px 14px 14px 4px; box-shadow: inset 18px 0 24px -12px rgba(0,0,0,.8); }
+@media (max-width: 767px) { .page.right { border-radius: 8px 14px 14px 8px; } }
+/* the rings down the spine */
+.binder::before { content: ""; position: absolute; left: 50%; top: 6%; bottom: 6%; width: 22px; margin-left: -11px; z-index: 5;
+    background: repeating-linear-gradient(transparent 0 14%, transparent 14%), radial-gradient(circle, transparent 0, transparent 0);
+    background-image: radial-gradient(ellipse 11px 8px at 50% 50%, #fff1bf, #b58a2e 50%, #3a2405 72%, transparent 76%); background-size: 22px 25%; background-repeat: repeat-y; }
+@media (max-width: 767px) { .binder::before { left: 4px; margin: 0; width: 16px; background-size: 16px 20%; } }
+.pocket { position: relative; border-radius: 5px; background: linear-gradient(rgba(255,255,255,.06), rgba(255,255,255,.02)); box-shadow: inset 0 0 0 1px rgba(255,230,170,.12), inset 0 -2px 6px rgba(0,0,0,.5); display: grid; place-items: center; cursor: pointer; overflow: hidden; min-height: 0; }
+.pocket img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.pocket::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, rgba(255,255,255,.1), transparent 38%, transparent 70%, rgba(255,255,255,.05)); }
+.pocket .num { font: 800 clamp(9px, 1vw, 12px)/1.2 var(--font-display); color: rgba(224,181,79,.35); text-align: center; padding: 4px; }
+.pocket .count { font-size: 10px; min-width: 22px; padding: 3px 5px; right: 4px; bottom: 4px; }
+.pocket:not([data-tier="Common"]) img { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--tc) 70%, transparent), 0 0 10px -1px color-mix(in srgb, var(--tc) 45%, transparent); }
+.pocket img { border-radius: 4px; height: auto; max-height: 100%; aspect-ratio: 813/1185; width: auto; max-width: 100%; }
+.flipper { position: absolute; top: 0; bottom: 0; right: 0; width: 50%; transform-origin: left center; transform-style: preserve-3d; z-index: 6; pointer-events: none; }
+@media (max-width: 767px) { .flipper { width: 100%; } }
+.flipper .page { position: absolute; inset: 0; backface-visibility: hidden; }
+.flipper .page.back { transform: rotateY(180deg); border-radius: 14px 4px 4px 14px; }
+.pager { flex: none; display: flex; align-items: center; justify-content: center; gap: 14px; padding: 6px 0 10px; }
+.pager span { font: 700 12px/1 var(--font-main); letter-spacing: .14em; text-transform: uppercase; color: #c7b99a; min-width: 130px; text-align: center; }
+.progress { width: min(320px, 70vw); height: 6px; border-radius: 3px; background: rgba(0,0,0,.5); box-shadow: 0 0 0 1px rgba(224,181,79,.3); overflow: hidden; margin: 6px auto 0; }
+.progress i { display: block; height: 100%; background: linear-gradient(90deg, #8a6420, #ffe08a); }
+
+/* ---------- B · Vault: a shelf per set ---------- */
+.shelf { margin: 0 0 14px; border-radius: 14px; background: rgba(10,7,4,.55); box-shadow: 0 0 0 1px rgba(224,181,79,.28); overflow: hidden; }
+.shelf-head { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px; border: 0; background: none; cursor: pointer; text-align: left; }
+.shelf-head img { flex: none; width: 58px; aspect-ratio: 400/733; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(0,0,0,.6)); }
+.shelf-head h2 { margin: 0; font: 800 clamp(15px, 1vw + 11px, 20px)/1.15 var(--font-display); color: #fff; }
+.shelf-head .meta { margin-top: 4px; }
+.shelf-head .progress { margin: 8px 0 0; width: min(360px, 100%); }
+.shelf-head .chev { margin-left: auto; flex: none; width: 22px; height: 22px; color: var(--gold-hi); transition: transform .25s; }
+.shelf.open .chev { transform: rotate(180deg); }
+.tally { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tally span { padding: 4px 8px; border-radius: 999px; font: 700 10px/1 var(--font-main); letter-spacing: .1em; text-transform: uppercase; color: #e9d9ad; box-shadow: 0 0 0 1px color-mix(in srgb, var(--tc) 60%, transparent); }
+.strip { display: flex; gap: 8px; padding: 0 12px 12px; overflow-x: auto; scrollbar-width: none; }
+.strip::-webkit-scrollbar { display: none; }
+.strip .tile { flex: 0 0 74px; }
+.strip .tname { display: none; }
+.shelf.open .strip { display: none; }
+.shelf-body { display: none; padding: 0 12px 16px; }
+.shelf.open .shelf-body { display: block; }
+.toggle { display: flex; justify-content: center; gap: 6px; margin: 4px 0 2px; }
+</style>
+</head>
+<body>
+<div class="proto" role="tablist" aria-label="Collection layout">
+    <button role="tab" data-v="binder">A · Binder</button>
+    <button role="tab" data-v="vault">B · Vault</button>
+    <button role="tab" data-v="gallery">C · Gallery</button>
+</div>
+<header class="bar"><div class="face" aria-hidden="true"></div><div><div class="name">HORIZONDEV</div><div class="sub">Stage 5 · Solo</div></div></header>
+<main id="main"></main>
+<nav class="tabs" aria-label="Main">
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6"/></svg>CAMPAIGN</a>
+    <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 3h11v15H4zM9 21h9.5A1.5 1.5 0 0 0 20 19.5V7"/></svg>COLLECTION</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>DECK</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8-4.3-4.1 5.9-.8Z"/></svg>REWARDS</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg>MENU</a>
+</nav>
+<div class="drawer-bg" id="drawerBg"></div>
+<aside class="drawer" id="drawer" aria-label="Filters"></aside>
+<script src="data.js"></script>
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const TIERS = ["Secret", "Ultra", "Super", "Rare", "Common"];
+const LABEL = { Secret: "Secret Rare", Ultra: "Ultra Rare", Super: "Super Rare", Rare: "Rare", Common: "Common" };
+const tierOf = (r) => { r = r.toLowerCase(); return r.includes("secret") ? "Secret" : r.includes("ultra") ? "Ultra" : r.includes("super rare") ? "Super" : r === "rare" ? "Rare" : "Common"; };
+const ALL = SETS.flatMap((s) => s.cards.map((c) => ({ ...c, set: s.code, setName: s.name, tier: tierOf(c.rarity) })));
+const OWNED = ALL.filter((c) => c.owned);
+const img = (c) => `img/${c.id}.jpg`;
+const isPhone = () => innerWidth < 768;
+
+/* ---------- the shared filters (what the app's filter panel does) ---------- */
+const F = { q: "", cat: "All", tier: "All", set: "All", attr: "All", level: "All", atkMin: "", atkMax: "", sort: "set" };
+const kind = (c) => (c.type.includes("Spell") ? "Spell" : c.type.includes("Trap") ? "Trap" : "Monster");
+function match(c) {
+    const q = F.q.trim().toLowerCase();
+    if (q && !c.name.toLowerCase().includes(q) && !c.desc.toLowerCase().includes(q)) return false;
+    if (F.cat !== "All" && kind(c) !== F.cat) return false;
+    if (F.tier !== "All" && c.tier !== F.tier) return false;
+    if (F.set !== "All" && c.set !== F.set) return false;
+    if (F.attr !== "All" && c.attribute !== F.attr) return false;
+    if (F.level !== "All" && String(c.level) !== F.level) return false;
+    if (F.atkMin && !(c.atk >= +F.atkMin)) return false;
+    if (F.atkMax && !(c.atk <= +F.atkMax)) return false;
+    return true;
+}
+const SORTS = { set: (a, b) => a.code.localeCompare(b.code), name: (a, b) => a.name.localeCompare(b.name), atk: (a, b) => (b.atk ?? -1) - (a.atk ?? -1), rarity: (a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier) || a.name.localeCompare(b.name) };
+const filtering = () => F.q || F.cat !== "All" || F.tier !== "All" || F.set !== "All" || F.attr !== "All" || F.level !== "All" || F.atkMin || F.atkMax;
+
+function drawer() {
+    const opt = (v, l = v) => `<option value="${v}">${l}</option>`;
+    $("#drawer").innerHTML = `<h2>Filters</h2>
+        <label>Set</label><select data-f="set">${opt("All", "All sets")}${SETS.map((s) => opt(s.code, s.name)).join("")}</select>
+        <label>Attribute</label><select data-f="attr">${["All", "LIGHT", "DARK", "EARTH", "WATER", "FIRE", "WIND"].map((a) => opt(a)).join("")}</select>
+        <label>Level</label><select data-f="level">${["All", 1, 2, 3, 4, 5, 6, 7, 8].map((a) => opt(a)).join("")}</select>
+        <label>ATK</label><div class="two"><input data-f="atkMin" placeholder="min" inputmode="numeric"><input data-f="atkMax" placeholder="max" inputmode="numeric"></div>
+        <label>Sort by</label><select data-f="sort">${opt("set", "Set number")}${opt("name", "Name")}${opt("rarity", "Rarity")}${opt("atk", "ATK")}</select>
+        <p class="meta" style="margin-top:14px">The app's other filters (card type, subtype, scale, DEF) would sit here too.</p>
+        <div class="row"><button class="btn" id="fReset">Reset</button><button class="btn on" id="fDone">Show cards</button></div>`;
+    $("#drawer").querySelectorAll("[data-f]").forEach((el) => { el.value = F[el.dataset.f]; el.addEventListener("input", () => { F[el.dataset.f] = el.value; render(); }); });
+    $("#fReset").onclick = () => { Object.assign(F, { set: "All", attr: "All", level: "All", atkMin: "", atkMax: "", sort: "set" }); drawer(); render(); };
+    $("#fDone").onclick = closeDrawer;
+}
+const openDrawer = () => { drawer(); document.body.classList.add("drawer-open"); };
+const closeDrawer = () => document.body.classList.remove("drawer-open");
+$("#drawerBg").onclick = closeDrawer;
+
+const SEARCH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`;
+const head = (kicker, title, meta) => `<div class="head"><div><p class="kicker">${kicker}</p><h1>${title}</h1><p class="meta" id="meta">${meta}</p></div>
+    <div class="menu" id="menu"><button class="btn" aria-haspopup="true">⋯ More</button><div class="menu-list">
+    <button>Import YDK</button><button>Export YDK</button><button class="danger">Delete collection</button></div></div></div>`;
+const toolbar = (placeholder = "Search name or text") => `<div class="toolbar"><label class="search">${SEARCH}<input id="q" placeholder="${placeholder}" value="${esc(F.q)}"></label>
+    <div class="chips">${["All", "Monster", "Spell", "Trap"].map((k) => `<button class="chip ${F.cat === k ? "on" : ""}" data-cat="${k}">${k}</button>`).join("")}
+    ${TIERS.slice(0, 4).map((t) => `<button class="chip ${F.tier === t ? "on" : ""}" data-tier="${t}" data-tf="${t}">${LABEL[t].replace(" Rare", "")}</button>`).join("")}
+    <button class="chip" id="more">Filters</button></div></div>`;
+function wire(view) {
+    $("#menu").addEventListener("click", (e) => { e.stopPropagation(); $("#menu").classList.toggle("open"); if (e.target.closest(".menu-list button")) { $("#menu").classList.remove("open"); toast(e.target.textContent + " — works as today"); } });
+    const q = $("#q");
+    if (q) q.addEventListener("input", () => { F.q = q.value; view.update(); });
+    view.root.querySelectorAll("[data-cat]").forEach((b) => b.onclick = () => { F.cat = b.dataset.cat; view.root.querySelectorAll("[data-cat]").forEach((x) => x.classList.toggle("on", x === b)); view.update(); });
+    view.root.querySelectorAll("[data-tf]").forEach((b) => b.onclick = () => { F.tier = F.tier === b.dataset.tf ? "All" : b.dataset.tf; view.root.querySelectorAll("[data-tf]").forEach((x) => x.classList.toggle("on", x.dataset.tf === F.tier)); view.update(); });
+    $("#more")?.addEventListener("click", openDrawer);
+}
+document.addEventListener("click", () => $("#menu")?.classList.remove("open"));
+function toast(t) { const el = document.createElement("div"); el.textContent = t; Object.assign(el.style, { position: "fixed", left: "50%", bottom: "84px", transform: "translateX(-50%)", zIndex: 99, padding: "10px 14px", borderRadius: "8px", background: "#15100a", boxShadow: "0 0 0 1px #8a6420", font: "600 13px Inter, sans-serif" }); document.body.appendChild(el); setTimeout(() => el.remove(), 1600); }
+
+/* ---------- details: the card-styled plate, the hover peek and the close-up ---------- */
+const ATTR = { LIGHT: ["光", "#d9a400"], DARK: ["闇", "#5b2a86"], EARTH: ["地", "#7a5527"], WATER: ["水", "#1f6fc0"], FIRE: ["炎", "#d23a1e"], WIND: ["風", "#2e9a3c"], DIVINE: ["神", "#b8892a"] };
+function plate(c, extra = "") {
+    const k = c.type.startsWith("Spell") ? "Spell" : c.type.startsWith("Trap") ? "Trap" : c.frameType === "fusion" ? "Fusion" : c.frameType === "ritual" ? "Ritual" : c.frameType === "effect" ? "Effect" : "Normal";
+    const mon = c.type.includes("Monster"), [kj, col] = mon ? ATTR[c.attribute] ?? ["?", "#6b6256"] : k === "Spell" ? ["魔", "#1a8d7d"] : ["罠", "#a33b7c"];
+    const el = document.createElement("div");
+    el.className = `ps-plate ps-plate--${k} ${extra}`; el.dataset.tier = c.tier;
+    el.innerHTML = `<div class="ps-plate__name"><h3>${esc(c.name)}</h3><span class="ps-attr" style="--ac:${col}">${kj}</span></div>
+        <div class="ps-plate__sub">${mon ? '<span class="ps-lv">★</span>'.repeat(c.level ?? 0) : `[${k} Card${c.race !== "Normal" ? " · " + esc(c.race) : ""}]`}</div>
+        <div class="ps-plate__box">${mon ? `<div class="ps-tl">[${esc(c.race)}/${esc(c.type.replace(" Monster", "").replace(/ /g, "/"))}]</div><p class="${k === "Normal" ? "ps-flavor" : ""}">${esc(c.desc)}</p><div class="ps-plate__stats">ATK/${c.atk ?? "?"}  DEF/${c.def ?? "?"}</div>` : `<p>${esc(c.desc)}</p>`}</div>
+        <div class="ps-plate__foot"><span>${c.code} · ${esc(c.rarity)}</span><span>${c.owned ? `Owned ×${c.owned}` : "Not owned yet"}</span></div>`;
+    return el;
+}
+let peekEl, peekT;
+function peekOn(el, c) {
+    el.addEventListener("pointerenter", (e) => {
+        if (e.pointerType !== "mouse") return;
+        clearTimeout(peekT);
+        peekT = setTimeout(() => {
+            peekEl?.remove();
+            const b = el.getBoundingClientRect(), w = 330, onLeft = b.left + b.width / 2 > innerWidth / 2;
+            peekEl = plate(c, "ps-peek");
+            document.body.appendChild(peekEl);
+            peekEl.style.left = Math.max(8, Math.min(innerWidth - w - 8, onLeft ? b.left - w - 14 : b.right + 14)) + "px";
+            peekEl.style.top = Math.max(8, Math.min(innerHeight - peekEl.offsetHeight - 8, b.top)) + "px";
+        }, 220);
+    });
+    el.addEventListener("pointerleave", () => { clearTimeout(peekT); peekEl?.remove(); peekEl = null; });
+}
+function closeUp(c) {
+    peekEl?.remove(); clearTimeout(peekT);
+    if (!c.owned) return toast("Not owned yet · " + c.code);
+    const ov = document.createElement("div");
+    ov.className = "ps-inspect"; ov.style.opacity = 1;
+    ov.innerHTML = `<span class="ps-close-hint">Tap anywhere to close</span>`;
+    const wide = innerWidth >= 700, panel = plate(c, wide ? "" : "ps-sheet");
+    ov.append(panel); document.body.appendChild(ov);
+    const above = wide ? innerHeight : innerHeight - panel.offsetHeight;
+    const ch = wide ? Math.min(innerHeight * .72, 560) : Math.min(above - 64, innerWidth * .72 / (813 / 1185)), cw = ch * 813 / 1185;
+    const card = document.createElement("div");
+    card.className = "ps-card ps-card--flipped" + (c.tier !== "Common" ? " ps-card--revealed" : "");
+    card.dataset.tier = c.tier;
+    const panelW = Math.min(400, innerWidth - cw - 120), tx = wide ? innerWidth / 2 - (cw + 32 + panelW) / 2 : innerWidth / 2 - cw / 2, ty = wide ? (innerHeight - ch) / 2 : 40 + (above - 40 - ch) / 2;
+    Object.assign(card.style, { width: cw + "px", height: ch + "px", transform: `translate(${tx}px, ${ty}px)` });
+    card.innerHTML = `<div class="ps-tilt"><div class="ps-face" style="transform:none"><img src="${img(c)}" alt=""><div class="ps-glare"></div></div></div>`;
+    if (wide) Object.assign(panel.style, { width: panelW + "px", left: tx + cw + 32 + "px", top: (innerHeight - Math.min(ch, 460)) / 2 + "px" });
+    card.addEventListener("pointermove", (e) => { const b = card.getBoundingClientRect(), dx = (e.clientX - b.left) / b.width - .5, dy = (e.clientY - b.top) / b.height - .5; const t = $(".ps-tilt", card); t.style.setProperty("--rx", -dy * 10 + "deg"); t.style.setProperty("--ry", dx * 12 + "deg"); card.style.setProperty("--mx", (dx + .5) * 100 + "%"); card.style.setProperty("--my", (dy + .5) * 100 + "%"); });
+    card.addEventListener("pointerleave", () => { const t = $(".ps-tilt", card); t.style.removeProperty("--rx"); t.style.removeProperty("--ry"); });
+    ov.prepend(card);
+    ov.addEventListener("click", (e) => { if (!e.target.closest(".ps-plate, .ps-card")) ov.remove(); });
+}
+function tile(c, extra = "") {
+    const b = document.createElement("button");
+    b.className = `tile ${c.owned ? "" : "missing"} ${extra}`; b.dataset.tier = c.tier;
+    b.innerHTML = c.owned ? `<span class="art"><img src="${img(c)}" alt="" loading="lazy">${c.owned > 1 ? `<span class="count">×${c.owned}</span>` : ""}</span><span class="tname">${esc(c.name)}</span>`
+        : `<span class="art"><span>${c.code}</span></span><span class="tname">${esc(c.name)}</span>`;
+    b.onclick = () => closeUp(c);
+    if (c.owned) peekOn(b, c);
+    return b;
+}
+
+/* ---------- A · Binder: a 3×3 page per pocket sheet, a chapter per set ---------- */
+function binder(root) {
+    let set = SETS[0], spread = 0;
+    root.innerHTML = head("Your binder", "Collection", "") + toolbar() + `<div class="chapters" id="chapters"></div><div class="binder-wrap" id="bw"><div class="binder" id="binder"></div></div>
+        <div class="pager"><button class="btn" id="prev" aria-label="Previous page">‹</button><span id="pg"></span><button class="btn" id="next" aria-label="Next page">›</button></div>`;
+    const per = () => (isPhone() ? 9 : 18);
+    const cards = () => (filtering() ? OWNED.filter(match).sort(SORTS[F.sort]) : set.cards);
+    const pages = () => Math.max(1, Math.ceil(cards().length / per()));
+    const pageEl = (side, list) => { const p = document.createElement("div"); p.className = "page " + side; for (let i = 0; i < 9; i++) { const c = list[i], k = document.createElement("div"); k.className = "pocket"; if (c) { k.dataset.tier = c.tier; k.innerHTML = c.owned ? `<img src="${img(c)}" alt="${esc(c.name)}" loading="lazy">${c.owned > 1 ? `<span class="count">×${c.owned}</span>` : ""}` : `<span class="num">${c.code}</span>`; k.onclick = () => closeUp(c); if (c.owned) peekOn(k, c); } p.appendChild(k); } return p; };
+    function chapters() {
+        $("#chapters").innerHTML = SETS.map((s) => { const own = s.cards.filter((c) => c.owned).length; return `<button class="chapter ${s === set && !filtering() ? "on" : ""}" data-s="${s.code}"><img src="img/${s.code}.webp" alt=""><span><b>${s.code}</b><small>${own}/${s.cards.length}</small></span></button>`; }).join("");
+        $("#chapters").querySelectorAll("[data-s]").forEach((b) => b.onclick = () => { set = SETS.find((s) => s.code === b.dataset.s); F.q = ""; $("#q").value = ""; spread = 0; draw(); });
+    }
+    function draw() {
+        const list = cards(), n = per(), at = spread * n, bd = $("#binder");
+        bd.innerHTML = "";
+        if (!isPhone()) bd.appendChild(pageEl("left", list.slice(at, at + 9)));
+        bd.appendChild(pageEl("right", list.slice(isPhone() ? at : at + 9, (isPhone() ? at : at + 9) + 9)));
+        const own = set.cards.filter((c) => c.owned).length;
+        $("#meta").innerHTML = filtering() ? `${list.length} matching cards you own` : `${set.name} · ${own} of ${set.cards.length} · <span style="color:#ffe08a">${Math.round(own / set.cards.length * 100)}%</span>`;
+        $("#pg").textContent = `Page ${spread + 1} of ${pages()}`;
+        chapters();
+    }
+    /** Turn a page: the sheet swings over the spine like a real binder page. */
+    function turn(dir) {
+        const next = spread + dir;
+        if (next < 0 || next >= pages()) return;
+        const bd = $("#binder"), list = cards(), n = per(), f = document.createElement("div");
+        f.className = "flipper";
+        const front = (dir > 0 ? bd.lastElementChild : bd.firstElementChild).cloneNode(true);
+        const at = next * n, back = pageEl(dir > 0 ? "left back" : "right back", list.slice(dir > 0 || isPhone() ? at : at + 9, (dir > 0 || isPhone() ? at : at + 9) + 9));
+        f.append(front, back);
+        if (dir < 0 && !isPhone()) { f.style.left = 0; f.style.right = "auto"; f.style.transformOrigin = "right center"; }
+        spread = next;
+        draw();
+        // Keep the old page under the turning sheet until it passes the spine.
+        bd.appendChild(f);
+        f.animate([{ transform: "rotateY(0deg)" }, { transform: `rotateY(${dir > 0 ? -180 : 180}deg)` }], { duration: 650, easing: "cubic-bezier(.45,.05,.3,1)" }).onfinish = () => f.remove();
+    }
+    $("#prev").onclick = () => turn(-1);
+    $("#next").onclick = () => turn(1);
+    let sx = null;
+    $("#bw").addEventListener("pointerdown", (e) => (sx = e.clientX));
+    $("#bw").addEventListener("pointerup", (e) => { if (sx != null && Math.abs(e.clientX - sx) > 50) turn(e.clientX < sx ? 1 : -1); sx = null; });
+    addEventListener("keydown", (e) => { if (view !== "binder") return; if (e.key === "ArrowRight") turn(1); if (e.key === "ArrowLeft") turn(-1); });
+    draw();
+    return { root, update: () => { spread = 0; draw(); } };
+}
+
+/* ---------- B · Vault: each set a shelf with its pack, completion and best cards ---------- */
+function vault(root) {
+    const open = new Set();
+    root.innerHTML = head("Your vault", "Collection", "") + toolbar() + `<div class="scroll" id="sc"></div>`;
+    const chev = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>`;
+    function draw() {
+        const sc = $("#sc"); sc.innerHTML = "";
+        let shown = 0;
+        for (const s of SETS) {
+            const list = s.cards.filter((c) => c.owned && match(c)).sort(SORTS[F.sort]), own = s.cards.filter((c) => c.owned).length;
+            if (filtering() && !list.length) continue;
+            shown += list.length;
+            const sh = document.createElement("section");
+            sh.className = "shelf" + (open.has(s.code) || filtering() ? " open" : "");
+            const tally = TIERS.slice(0, 4).map((t) => { const all = s.cards.filter((c) => c.tier === t); return all.length ? `<span data-tier="${t}">${LABEL[t]} ${all.filter((c) => c.owned).length}/${all.length}</span>` : ""; }).join("");
+            sh.innerHTML = `<button class="shelf-head"><img src="img/${s.code}.webp" alt=""><span style="min-width:0;flex:1"><h2>${s.name}</h2><p class="meta">${s.date} · ${own} of ${s.cards.length} cards</p>
+                <div class="progress"><i style="width:${own / s.cards.length * 100}%"></i></div><div class="tally">${tally}</div></span>${chev}</button>
+                <div class="strip"></div><div class="shelf-body"><div class="toggle"><button class="chip on" data-m="owned">Owned</button><button class="chip" data-m="all">Whole set</button></div><div class="body"></div></div>`;
+            const best = s.cards.filter((c) => c.owned).sort(SORTS.rarity).slice(0, 14);
+            best.forEach((c) => $(".strip", sh).appendChild(tile(c)));
+            const fill = (mode) => {
+                const body = $(".body", sh); body.innerHTML = "";
+                const cards = mode === "all" ? s.cards.filter(match) : list;
+                for (const t of TIERS) {
+                    const g = cards.filter((c) => c.tier === t);
+                    if (!g.length) continue;
+                    body.insertAdjacentHTML("beforeend", `<h3 class="band" data-tier="${t}">${LABEL[t]} <small>${g.filter((c) => c.owned).length}/${g.length}</small></h3>`);
+                    const grid = document.createElement("div"); grid.className = "grid";
+                    g.forEach((c) => grid.appendChild(tile(c)));
+                    body.appendChild(grid);
+                }
+            };
+            sh.querySelectorAll("[data-m]").forEach((b) => b.onclick = () => { sh.querySelectorAll("[data-m]").forEach((x) => x.classList.toggle("on", x === b)); fill(b.dataset.m); });
+            fill("owned");
+            $(".shelf-head", sh).onclick = () => { open.has(s.code) ? open.delete(s.code) : open.add(s.code); sh.classList.toggle("open"); };
+            sc.appendChild(sh);
+        }
+        if (!sc.children.length) sc.innerHTML = `<p class="empty">No cards match. Try fewer filters.</p>`;
+        $("#meta").textContent = filtering() ? `${shown} matching cards` : `${OWNED.length} cards across ${SETS.length} sets`;
+    }
+    draw();
+    return { root, update: draw };
+}
+
+/* ---------- C · Gallery: one searchable wall of cards, grouped under bands ---------- */
+function gallery(root) {
+    let group = "rarity";
+    root.innerHTML = head("Your cards", "Collection", "") + toolbar() + `<div class="toggle" style="padding:0 16px 6px"><span class="meta" style="margin:0 6px 0 0;align-self:center">Group by</span>
+        <button class="chip on" data-g="rarity">Rarity</button><button class="chip" data-g="set">Set</button><button class="chip" data-g="none">None</button></div><div class="scroll" id="sc"></div>`;
+    root.querySelectorAll("[data-g]").forEach((b) => b.onclick = () => { group = b.dataset.g; root.querySelectorAll("[data-g]").forEach((x) => x.classList.toggle("on", x === b)); draw(); });
+    function draw() {
+        const sc = $("#sc"); sc.innerHTML = "";
+        const list = OWNED.filter(match).sort(SORTS[F.sort]);
+        const groups = group === "rarity" ? TIERS.map((t) => [LABEL[t], t, list.filter((c) => c.tier === t)]) : group === "set" ? SETS.map((s) => [s.name, null, list.filter((c) => c.set === s.code)]) : [[null, null, list]];
+        for (const [title, tier, cards] of groups) {
+            if (!cards.length) continue;
+            if (title) sc.insertAdjacentHTML("beforeend", `<h3 class="band" ${tier ? `data-tier="${tier}"` : ""}>${title} <small>${cards.length}</small></h3>`);
+            const grid = document.createElement("div"); grid.className = "grid";
+            cards.forEach((c) => grid.appendChild(tile(c)));
+            sc.appendChild(grid);
+        }
+        if (!list.length) sc.innerHTML = `<p class="empty">No cards match. Try fewer filters.</p>`;
+        $("#meta").textContent = `${list.length} of ${OWNED.length} cards`;
+    }
+    draw();
+    return { root, update: draw };
+}
+
+const VIEWS = { binder, vault, gallery };
+let view = "binder", current;
+function render() { current?.update(); }
+function show(name) {
+    view = VIEWS[name] ? name : "binder";
+    closeDrawer();
+    document.querySelectorAll(".ps-inspect, .ps-peek").forEach((el) => el.remove());
+    const v = document.createElement("div"); v.className = "view";
+    $("#main").replaceChildren(v);
+    current = VIEWS[view](v);
+    wire(current);
+    document.querySelectorAll(".proto button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === view)));
+}
+document.querySelectorAll(".proto button").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.v; }));
+addEventListener("hashchange", () => show(location.hash.slice(1)));
+let lastW = innerWidth;
+addEventListener("resize", () => { if ((innerWidth < 768) !== (lastW < 768)) show(view); lastW = innerWidth; });
+show(location.hash.slice(1));
+</script>
+</body>
+</html>
