@@ -237,7 +237,7 @@ Revised with the user on 2026-11-04: the onboarding has its own look, unlike the
    - Redesign it so every flow works on a phone, with great UX that keeps the app's 90s Yu-Gi-Oh! look and feel. This includes the parked items: GuideSprite overlapping the VICTORY/DEFEAT buttons, and the mobile deck builder.
    - Verify every route and flow at phone widths with the Playwright drivers.
 
-**UI do-over (decided 2026-11-04):** the whole app gets a UI do-over: art, animation and layout on every screen, keeping the 90s Yu-Gi-Oh! vibe. It's done together with Phase 7, since both touch every screen. The onboarding scene (Phase 5) and the physics chains (`feat/physics-chain`) are the first pieces in the new style. Until then, new screens in Phases 4 and 6 stay plain and functional.
+**UI do-over (decided 2026-11-04):** the whole app gets a UI do-over: art, animation and layout on every screen, keeping the 90s Yu-Gi-Oh! vibe. It's done together with Phase 7, since both touch every screen. The onboarding scene (Phase 5) is the first piece in the new style. The physics chains (`feat/physics-chain`) wait on their branch and go in with the do-over. Until then, new screens in Phases 4 and 6 stay plain and functional.
 
 The plan also gets copied into the repo at `plans/2026-10-26/multiplayer-backend.md`, per the plans convention.
 
@@ -355,7 +355,7 @@ Moved ahead of Phase 4 by the user (2026-11-04): signing in and out from the men
 - `/onboarding`, the stored `duelistName` and `/dev/auth` are gone. Guests are named "Guest" in the nav.
 - The "import local saves" step waits for Phase 6.
 - `auth.mjs` drives all of it through the title screen (31 checks); `smoke.mjs` covers the guest path and EXIT GAME.
-- Visual makeover of the rest of the app: done with Phase 7 (mobile redesign), since both touch every screen. The first piece, physics chains between timeline packs, is on `feat/physics-chain`.
+- Visual makeover of the rest of the app: done with Phase 7 (mobile redesign), since both touch every screen. The first piece, physics chains between timeline packs, is on `feat/physics-chain` and merges with that work.
 
 Merged into `main` on 2026-11-04 after the user's go-ahead; not pushed. Phase 3b was skipped at the same time, so Phase 4 is next.
 
