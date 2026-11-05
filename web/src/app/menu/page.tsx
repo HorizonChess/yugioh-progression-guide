@@ -9,15 +9,16 @@ import SaveSlotList from "@/components/layout/SaveSlotList";
 import { useAuth } from "@/context/AuthContext";
 import { useProgression } from "@/context/ProgressionContext";
 import MenuItem, { MenuItemData } from "@/components/menu/MenuItem";
+import MenuSignIn from "@/components/menu/MenuSignIn";
 
 /**
  * The main MENU (route: /menu). A retro terminal-styled screen: skewed menu
  * entries on the left (Campaign flips to the save-slot list), character art on
- * the right, and a status footer. Signing out stays here; SIGN IN and EXIT GAME
- * go to the title screen (/).
+ * the right, and a status footer. SIGN IN and SIGN OUT stay here; BACK TO
+ * TITLE goes to the title screen (/), where new players sign up.
  */
 export default function Menu() {
-    const [view, setView] = useState<"menu" | "saves">("menu");
+    const [view, setView] = useState<"menu" | "saves" | "signin">("menu");
     const { activeSeriesId } = useProgression();
     const { user, loading, signOut } = useAuth();
     const router = useRouter();
@@ -36,7 +37,7 @@ export default function Menu() {
     }, [loading, user, router]);
 
     const account: MenuItemData[] = !user
-        ? [{ label: "SIGN IN", href: "/?invite", description: "Keep your progress in an account" }]
+        ? [{ label: "SIGN IN", action: () => setView("signin"), description: "Keep your progress in an account" }]
         : [{ label: "SIGN OUT", action: () => void signOut(), description: `Signed in as ${user.duelistName}` }];
     const menuItems: MenuItemData[] = loading
         ? []
@@ -50,7 +51,7 @@ export default function Menu() {
               },
               { label: "OPTIONS", href: "#", description: "Configure game settings", disabled: true },
               ...account,
-              { label: "EXIT GAME", href: "/", description: "Return to title screen" },
+              { label: "BACK TO TITLE", href: "/", description: user ? "Return to the title screen" : "Return to the title screen, to sign up or play as a guest" },
           ];
 
     return (
@@ -62,12 +63,12 @@ export default function Menu() {
                 <div className="flex gap-12 w-full max-w-6xl items-center">
                     {/* Left: menu, or the save-slot list once Campaign is chosen */}
                     <div className="flex-1 space-y-4">
-                        {view === "saves" ? (
+                        {view !== "menu" ? (
                             <div className="animate-in slide-in-from-left-10 fade-in duration-300">
                                 <button onClick={() => setView("menu")} className="mb-6 text-gray-500 hover:text-white flex items-center gap-2 transition-colors">
                                     ◀ BACK TO MENU
                                 </button>
-                                <SaveSlotList />
+                                {view === "saves" ? <SaveSlotList /> : <MenuSignIn onDone={() => setView("menu")} />}
                             </div>
                         ) : (
                             <div className="space-y-4 animate-in slide-in-from-left-10 fade-in duration-300">

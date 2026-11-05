@@ -1,6 +1,6 @@
 // App-wide smoke test: every route renders without uncaught errors, the nav
 // highlights the right tab, removed routes 404, the title screen leads a guest to
-// the menu and EXIT GAME back, and
+// the menu and BACK TO TITLE back, and
 // the deck builder's add / drag / drag-to-remove still work.
 //
 // The seeded save is deliberately PARTIAL (no matchHistory/settings, collection
@@ -64,7 +64,7 @@ async function seededPage(seed = save) {
     await page.close();
 }
 
-// 2. Removed routes 404; a guest goes title → envelope → menu, and EXIT GAME comes back.
+// 2. Removed routes 404; a guest goes title → envelope → menu, and BACK TO TITLE comes back.
 {
     const { page, errors } = await seededPage(null);
     for (const route of ["/map", "/start", "/onboarding", "/dev/auth"]) {
@@ -78,9 +78,9 @@ async function seededPage(seed = save) {
     await page.waitForURL(/\/menu\/?$/, { timeout: 8000 });
     const item = (label) => page.getByRole("button", { name: new RegExp(`^${label}`) }).or(page.getByRole("link", { name: new RegExp(`^${label}`) }));
     check((await item("CAMPAIGN MODE").isVisible()) && (await item("SIGN IN").isVisible()), "a guest reaches the menu, with Campaign Mode and Sign In");
-    await item("EXIT GAME").click();
+    await item("BACK TO TITLE").click();
     await page.getByRole("button", { name: "Press Start" }).waitFor({ timeout: 8000 });
-    check(new URL(page.url()).pathname === "/", `EXIT GAME returns to the title screen (at ${page.url()})`);
+    check(new URL(page.url()).pathname === "/", `BACK TO TITLE returns to the title screen (at ${page.url()})`);
     check(errors.length === 0, `the title and envelope raised no page errors ${errors.join(" | ")}`);
     await page.close();
 }

@@ -114,7 +114,7 @@ try {
     // 3. Signed out again, the guest list is empty: the saves moved, they weren't copied.
     await croquet.page.getByRole("button", { name: "◀ BACK TO MENU" }).click();
     await croquet.page.getByRole("button", { name: /^SIGN OUT/ }).click();
-    await croquet.page.getByRole("link", { name: /^SIGN IN/ }).waitFor();
+    await croquet.page.getByRole("button", { name: /^SIGN IN/ }).waitFor();
     await croquet.page.getByRole("button", { name: /^CAMPAIGN MODE/ }).click();
     await croquet.page.getByText("No save files found.").waitFor({ timeout: 8000 });
     check(true, "signed out: the guest list no longer has the moved save");
