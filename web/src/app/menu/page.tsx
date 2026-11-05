@@ -101,7 +101,7 @@ export default function Menu() {
 
             <div className="bg-gray-900 border-t border-gray-800 p-2 flex justify-between text-xs text-gray-500 font-mono uppercase">
                 <span>SYSTEM: ONLINE</span>
-                <span>VERSION 1.0.0</span>
+                <span>VERSION 0.6 ALPHA</span>
             </div>
         </main>
     );
