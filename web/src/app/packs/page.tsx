@@ -13,7 +13,8 @@ import ParchmentButton from "@/components/ui/ParchmentButton";
 import CardTooltip from "@/components/card/CardTooltip";
 import RarityCardGrid from "@/components/packs/RarityCardGrid";
 import StoreView from "@/components/packs/StoreView";
-import PackOpeningView from "@/components/packs/PackOpeningView";
+import PackStageView from "@/components/packs/PackStageView";
+import { ownedCountsById } from "@/lib/collection";
 import PackDetails from "@/components/packs/PackDetails";
 import { processCardsForRarityGrid } from "@/lib/card-utils";
 import { useCardTooltip } from "@/hooks/useCardTooltip";
@@ -22,7 +23,8 @@ import { usePackOpening } from "@/hooks/usePackOpening";
 /**
  * The PACKS screen (route: /packs). Four states:
  *  - store      (default): pack art + quantity selector — fits viewport, no scroll
- *  - opening    : the 5-4 card reveal — fits viewport, no scroll
+ *  - opening    : the pack stage (tear + ring on phones, the duel table on
+ *                 wider screens) — fits viewport, no scroll
  *  - summary    : all opened cards by rarity — scrolls normally (can be 100+ cards)
  *  - details    : the whole set's card list — scrolls normally
  *
@@ -31,7 +33,7 @@ import { usePackOpening } from "@/hooks/usePackOpening";
  * scrollable shell. The reveal lifecycle lives in `usePackOpening`.
  */
 function PacksPageContent() {
-    const { currentSetIndex, series, rewards, repo, hasLoaded, openPacks, activeOpening, flip, saveOpening, reroll } = useProgression();
+    const { currentSetIndex, series, rewards, repo, hasLoaded, openPacks, activeOpening, flip, saveOpening, reroll, collection } = useProgression();
     const { user } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -156,27 +158,33 @@ function PacksPageContent() {
         );
     }
 
-    // --- The 5-4 reveal + the store both fit the viewport (fixed shell, no scroll).
+    // --- The reveal + the store both fit the viewport (fixed shell, no scroll).
     if (pack.isOpening && !pack.showSummary) {
+        const current = pack.currentPack ?? [];
+        // How many of each card the player had before it: the collection, the packs
+        // already opened this time, and the cards before it in this pack.
+        const ownedBefore = (index: number) => {
+            const id = current[index]?.id;
+            if (id === undefined) return 0;
+            const earlier = [...pack.allOpenedCards, ...current.slice(0, index)].filter((c) => c.id === id).length;
+            return (ownedCountsById(collection).get(id) ?? 0) + earlier;
+        };
         return (
-            <PacksShell fixed>
-                {(hoveredCard || selectedCard) && renderOverlays()}
-                <PackOpeningView
+            <div className="h-full overflow-hidden pb-1">
+                <PackStageView
                     set={currentSet}
-                    pack={pack.currentPack ?? []}
+                    pack={current}
                     packIndex={pack.currentPackIndex}
                     packCount={pack.packsToOpen.length}
                     flippedCards={pack.flippedCards}
                     fullyOpened={pack.isPackFullyOpened}
-                    onCardClick={(index, card) => pack.handleCardClick(index, card, setSelectedCard)}
-                    onFlipAll={pack.handleFlipAll}
+                    ownedBefore={ownedBefore}
+                    onFlip={(index) => pack.flip([index])}
                     onNextPack={pack.handleNextPack}
                     onOpenAll={pack.handleOpenAll}
                     onBack={handleDiscardAndExit}
-                    onHover={onHover}
-                    onLeave={onLeave}
                 />
-            </PacksShell>
+            </div>
         );
     }
 
