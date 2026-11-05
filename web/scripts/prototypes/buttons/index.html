@@ -63,23 +63,17 @@ h1 { margin: 0 0 4px; font: 800 28px/1.1 var(--display); color: #ffe08a; letter-
 }
 .today span, .remaster span { font: 400 1.02rem/1 var(--techno); text-transform: uppercase; letter-spacing: .03em; color: var(--ink); text-shadow: 0 1px 1px rgba(255,255,255,.5); }
 
-/* A: the Gemini remaster, 9-sliced so corners never stretch and the meander repeats */
-/* The frame is 9-sliced (corners fixed, meander edges repeat); the centre is one uncut panel behind it. */
-.remaster {
-    border-style: solid; border-width: 14px 22px; border-image: url("img/a-frame.webp") 146 147 / 14px 22px / 0 round;
-    background: url("img/a-centre.webp") center / 100% 100% padding-box;
-    filter: drop-shadow(0 14px 14px rgba(0,0,0,.55));
-}
-.remaster.small { border-width: 12px 19px; border-image-width: 12px 19px; }
+/* Image options: each button is ONE whole painted object, scaled as a unit and never
+   sliced or stretched. Every button in a style has the same shape; labels shrink to fit. */
+.whole { height: auto !important; background: center / 100% 100% no-repeat; filter: drop-shadow(0 12px 12px rgba(0,0,0,.6)); }
+.whole span { font-size: clamp(.8rem, 1.05vw + .35rem, 1.05rem); }
+.remaster { background-image: url("img/w-a-remaster.webp"); aspect-ratio: 1357 / 755; }
 .remaster span { color: #2b1a06; text-shadow: 0 1px 0 rgba(255,240,200,.6), 0 -1px 0 rgba(60,35,5,.35); }
+.cartouche { background-image: url("img/w-cartouche.webp"); aspect-ratio: 1376 / 620; }
+.cartouche span { font: 800 clamp(.8rem, 1vw + .35rem, 1.02rem)/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: #3a2405; text-shadow: 0 1px 0 rgba(255,243,200,.7), 0 -1px 0 rgba(70,40,5,.35); }
 
 /* B: the Gemini basalt tablet, with gold lettering */
-.basalt {
-    border-style: solid; border-width: 15px 22px; border-image: url("img/b-frame.webp") 154 151 / 15px 22px / 0 round;
-    background: url("img/b-centre.webp") center / 100% 100% padding-box;
-    filter: drop-shadow(0 14px 14px rgba(0,0,0,.6));
-}
-.basalt.small { border-width: 13px 19px; border-image-width: 13px 19px; }
+.basalt { background-image: url("img/w-b-basalt.webp"); aspect-ratio: 1338 / 734; }
 .basalt span {
     font: 800 1.05rem/1 var(--display); letter-spacing: .1em; text-transform: uppercase;
     background: linear-gradient(#fff3c4, #e8b94a 45%, #a8741d 55%, #f5d27a); -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -121,15 +115,16 @@ h1 { margin: 0 0 4px; font: 800 28px/1.1 var(--display); color: #ffe08a; letter-
 <body>
 <main>
     <h1>Button options</h1>
-    <p class="intro">The same buttons in each style, on the new wall. Hover for the gold glint, press to see the push. The pulsing one is the step Yugi points at; the faded one is disabled.</p>
+    <p class="intro">The same buttons in each style, on the new wall. The image styles are now each one whole picture, so there are no joins; every button in a style keeps the same shape. Hover for the gold glint, press to see the push. The pulsing one is the step Yugi points at; the faded one is disabled.</p>
     <div id="opts"></div>
 </main>
 <script>
 const OPTS = [
     ["today", "Today", "The app's current button: a simplified SVG trace of the painted frame over a flat gradient. For comparison."],
-    ["remaster", "A · Remastered gold", "Made with Gemini from the original painting: the same bevelled gold and sandstone, sharp, with the meander repeating along the edges so any width works."],
-    ["basalt", "B · Basalt and gold", "Made with Gemini: dark carved stone with an inlaid gold meander and scarabs in the corners. Gold lettering. Darker and more dramatic."],
-    ["vector", "C · Drawn gold", "Drawn in code instead of an image: a bevelled gold rim with an engraved band over a grainy sandstone face. Sharp at any size and weighs nothing."],
+    ["cartouche whole", "A · Gold cartouche (new)", "Made with Nano Banana 2 with no reference: one solid gold cartouche with a hieroglyph band around a smooth face. A single painted object, never cut up."],
+    ["remaster whole", "B · Remastered gold", "The Gemini remaster of today's painted button, now used as one whole image instead of being sliced."],
+    ["basalt whole", "C · Basalt and gold", "The Gemini basalt tablet with scarab corners, now one whole image with gold lettering."],
+    ["vector", "D · Drawn gold", "Drawn in code: one continuous rim and face, so there is nothing to join. Sharp at any size."],
 ];
 const btn = (cls, label, extra = "", attrs = "") => `<a href="#" class="btn ${cls} ${extra}" ${attrs}><i class="glint"></i><span>${label}</span></a>`;
 document.getElementById("opts").innerHTML = OPTS.map(([cls, title, text]) => `
