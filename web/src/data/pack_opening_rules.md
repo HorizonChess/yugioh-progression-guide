@@ -36,7 +36,7 @@ The Box would have 4 Super Rares, 2 Ultra Rares, and 1 or 0 Secret Rares.
 
 ### Reporting Incorrect Ratios
 The ratios for our pack simulator are the one of our biggest reasons for making this tool, and making sure they are as accurate as possible is the goal.
-If you believe we have our ratios wrong for any pack or era please reach out to us via our email admin@ygoprog.com with sources!
+If you believe we have our ratios wrong for any pack or era, please open an issue on [this project's GitHub](https://github.com/HorizonChess/yugioh-progression-guide/issues) with sources!
 The sources part is extremely important here, a large amount of our data on the earlier eras of yugioh involve debates about pack ratios on forums and extrapolation of ratios from watching bulk set openings.
 
 ## Pack Ratios Per Set

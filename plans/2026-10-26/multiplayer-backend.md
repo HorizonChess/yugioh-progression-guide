@@ -385,5 +385,15 @@ Changes after the user's review (2026-11-05):
 
 Merged into `main` on 2026-11-05; not pushed. Real two-player testing waits for the deploy.
 
+### Phase 6: guests and import (built 2026-11-05, branch `feat/guest-and-import`)
+- Guest mode under the new context was already done in Phase 3 (`LocalRepo`); nothing more was needed.
+- `POST /api/series/import` moves one guest save into the account as a solo series flagged `legacy`. The server places it on today's timeline by set name, leaves cards outside its catalog behind (and says how many), gives rewards fresh ids, and keeps the binder, decks, banlist, rewards and match history. Each save moves in once: a unique index on (owner, save id) makes a second try return the series it already became.
+- "One-time import" is per save, not per account: a save moves rather than copies, leaving the browser once it's in the account. So there's nothing to import twice, and saves from another device can still come in.
+- Web: the sign-up letter offers the device's guest saves (ticked by default) before ENTER THE KINGDOM; the Campaign list offers any that are left to a signed-in player (covering password and Google sign-in), with NOT NOW for the session.
+- The stray `admin@ygoprog.com` line in `pack_opening_rules.md` now points to the project's GitHub issues. Root and web READMEs are brought up to date (accounts, duo series, routes, contexts; `/dev/auth` is gone).
+- Also fixed: a shared test still expected duo series to be refused (stale since Phase 4, fixed on `main`), and `pack-session.mjs` could log an aborted set-list fetch when it left the timeline too early.
+
+Verified: lint, typecheck, 53 shared + 115 API + 34 web tests, and the drivers: `guest-import.mjs` (13 checks: the letter, the Campaign offer with NOT NOW, set placement by name, unknown cards dropped, decks and history kept, the saves leaving the browser), `auth.mjs`, `duo.mjs`, `pack-session.mjs`, `smoke.mjs` and the reward drivers.
+
 ### Release plan (decided 2026-11-05)
 After Phase 6, the app is deployed to Render as **0.6 alpha**, before Phase 7's mobile redesign and UI do-over. The user and a friend test the duo flow on two machines there.
