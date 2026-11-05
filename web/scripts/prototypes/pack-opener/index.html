@@ -97,9 +97,45 @@ main {
     position: absolute; left: 0; top: 0;
     perspective: 1000px;
     cursor: pointer;
-    transition: rotate .25s ease-out;
+    transition: rotate .25s ease-out, translate .2s ease-out;
     will-change: transform;
 }
+.card.lift { translate: 0 -8px; }
+.card.lift .front { box-shadow: 0 0 0 2px rgba(255,224,138,.8), 0 18px 30px rgba(0,0,0,.65); }
+.card.new .front::after {
+    content: "NEW"; position: absolute; top: 7%; right: -12%; transform: rotate(38deg);
+    padding: .25em 2.6em; font: 700 1em/1 var(--ui); letter-spacing: .2em;
+    color: #2a1c05; background: linear-gradient(#fff1bd, #e0b54f 60%, #b5852a);
+    box-shadow: 0 2px 6px rgba(0,0,0,.5);
+}
+
+/* card details: the hover panel, and the close-up you get by tapping */
+.det h3 { margin: 0; font: 800 22px/1.15 var(--display); color: #fff3d6; letter-spacing: .02em; }
+.det-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.chip { flex: none; font: 700 11px/1 var(--ui); letter-spacing: .14em; text-transform: uppercase; padding: 5px 8px; border-radius: 4px; color: #1b1406; background: #cfc6b0; }
+.chip.Rare { background: linear-gradient(#ffffff, #b9c4e0); }
+.chip.Super { background: linear-gradient(#bfeaff, #4fc3ff); }
+.chip.Ultra { background: linear-gradient(#fff1bd, #e0b54f); }
+.chip.Secret { background: linear-gradient(90deg, #ff9be4, #ffe98a, #9ff6ff); }
+.det-meta { margin-top: 8px; font: 600 13px/1.4 var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.det-meta .stars { color: #ffcc33; letter-spacing: 0; }
+.det-stats { display: flex; gap: 18px; margin-top: 10px; font: 700 20px/1 var(--ui); }
+.det-stats span { font-size: 12px; letter-spacing: .14em; color: var(--muted); margin-right: 6px; }
+.det-desc { margin: 12px 0 0; padding: 10px 12px; font: 500 15px/1.45 var(--ui); color: #e8dcc0; background: rgba(0,0,0,.3); border-left: 2px solid #8a6a2c; border-radius: 2px; }
+.det-own { margin-top: 12px; display: flex; align-items: center; gap: 8px; font: 600 13px/1 var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--text); }
+.det-own b { padding: 4px 8px; border-radius: 3px; color: #2a1c05; background: linear-gradient(#fff1bd, #e0b54f); letter-spacing: .18em; }
+.panel {
+    background: linear-gradient(#221a0f, #120d07); border: 1px solid #8a6a2c; border-radius: 10px;
+    box-shadow: 0 20px 44px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,230,160,.18);
+    padding: 16px 18px;
+}
+.peek { position: fixed; z-index: 87; width: 340px; pointer-events: none; }
+.inspect { position: fixed; inset: 0; z-index: 95; background: rgba(4,3,8,.86); opacity: 0; cursor: pointer; }
+.inspect .card { cursor: default; }
+.inspect .panel { position: absolute; cursor: default; }
+.inspect .sheet { left: 0; right: 0; bottom: 0; border-radius: 16px 16px 0 0; border-bottom: none; max-height: 46%; overflow-y: auto; padding-bottom: 28px; }
+.inspect .sheet::before { content: ""; display: block; width: 44px; height: 4px; margin: -4px auto 12px; border-radius: 2px; background: #6e5320; }
+.inspect .close-hint { position: absolute; top: 14px; right: 16px; font: 600 12px/1 var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .card-inner {
     position: absolute; inset: 0;
     transform-style: preserve-3d;
@@ -307,10 +343,14 @@ const COMMONS = [53153481, 17535588, 89091579, 32452818, 9159938, 53375573, 4350
 const HITS = { Rare: 66788016, Super: 12580477, Ultra: 89631139, Secret: 39111158 };
 const LABEL = { Rare: "Rare", Super: "Super Rare", Ultra: "Ultra Rare", Secret: "Secret Rare" };
 
+const INFO = {"2863439":{"type":"Normal Monster","race":"Winged Beast","attribute":"LIGHT","level":4,"atk":1100,"def":1400,"desc":"A bird-beast that summons reinforcements with a hand mirror.","code":"LOB-021"},"9159938":{"type":"Normal Monster","race":"Beast","attribute":"EARTH","level":3,"atk":800,"def":900,"desc":"Entirely gray, this beast has rarely been seen by mortal eyes.","code":"LOB-011"},"12580477":{"type":"Spell Card","race":"Normal","attribute":null,"level":null,"atk":null,"def":null,"desc":"Destroy all monsters your opponent controls.","code":"LOB-053"},"16353197":{"type":"Normal Monster","race":"Reptile","attribute":"EARTH","level":3,"atk":900,"def":800,"desc":"A blood-sucking snake in human form that attacks any living being that passes nearby.","code":"LOB-115"},"17535588":{"type":"Normal Monster","race":"Aqua","attribute":"WATER","level":4,"atk":850,"def":1400,"desc":"A bluish starfish with a solid hide capable of fending off attacks.","code":"LOB-116"},"32452818":{"type":"Normal Monster","race":"Beast-Warrior","attribute":"EARTH","level":4,"atk":1200,"def":1500,"desc":"What this creature lacks in size it makes up for in defense when battling in the prairie.","code":"LOB-064"},"37820550":{"type":"Spell Card","race":"Equip","attribute":null,"level":null,"atk":null,"def":null,"desc":"Increase the ATK and DEF of a Thunder-Type monster equipped with this card by 300 points.","code":"LOB-093"},"39111158":{"type":"Normal Monster","race":"Dragon","attribute":"DARK","level":8,"atk":2850,"def":2350,"desc":"An unworthy dragon with three sharp horns sprouting from its head.","code":"LOB-000"},"40826495":{"type":"Normal Monster","race":"Rock","attribute":"EARTH","level":3,"atk":900,"def":1000,"desc":"A monster born in the lava pits, it generates intense heat that can melt away its enemies.","code":"LOB-031"},"43500484":{"type":"Normal Monster","race":"Plant","attribute":"EARTH","level":3,"atk":1200,"def":900,"desc":"A thorny plant found in the darklands that wraps itself around any unwary traveler.","code":"LOB-114"},"53153481":{"type":"Normal Monster","race":"Warrior","attribute":"EARTH","level":3,"atk":700,"def":1300,"desc":"A strange warrior who manipulates three deadly blades with both hands and his tail.","code":"LOB-079"},"53375573":{"type":"Normal Monster","race":"Fiend","attribute":"DARK","level":3,"atk":1200,"def":800,"desc":"It's said that this King of the Netherworld once had the power to rule over the dark.","code":"LOB-020"},"66788016":{"type":"Spell Card","race":"Normal","attribute":null,"level":null,"atk":null,"def":null,"desc":"Destroy the 1 face-up monster your opponent controls that has the lowest ATK (your choice, if tied).","code":"LOB-057"},"75376965":{"type":"Normal Monster","race":"Fish","attribute":"WATER","level":3,"atk":1200,"def":900,"desc":"A beautiful mermaid that lures voyagers to a watery grave.","code":"LOB-084"},"89091579":{"type":"Normal Monster","race":"Insect","attribute":"EARTH","level":2,"atk":500,"def":700,"desc":"Usually found traveling in swarms, this creature's ideal environment is the forest.","code":"LOB-008"},"89631139":{"type":"Normal Monster","race":"Dragon","attribute":"LIGHT","level":8,"atk":3000,"def":2500,"desc":"This legendary dragon is a powerful engine of destruction. Virtually invincible, very few have faced this awesome creature and lived to tell the tale.","code":"LOB-001"}};
+
+/** A pack of 8 commons and one hit. Each card knows how many you owned before, for NEW and owned counts. */
 function newPack() {
     const luck = $("#luck").value;
-    const commons = [...COMMONS].sort(() => Math.random() - .5).slice(0, 8).map((id) => ({ id, name: NAMES[id], rarity: "Common" }));
-    return [...commons, { id: HITS[luck], name: NAMES[HITS[luck]], rarity: luck }];
+    const commons = [...COMMONS].sort(() => Math.random() - .5).slice(0, 8).map((id) => ({ id, name: NAMES[id], rarity: "Common", ownedBefore: Math.random() < .35 ? 0 : 1 + Math.floor(Math.random() * 2) }));
+    const cards = [...commons, { id: HITS[luck], name: NAMES[HITS[luck]], rarity: luck, ownedBefore: 0 }];
+    return cards.map((c) => ({ ...c, ...INFO[c.id], isNew: c.ownedBefore === 0 }));
 }
 
 const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
@@ -415,10 +455,12 @@ const centerOf = (el) => { const b = el.getBoundingClientRect(); return { x: b.l
 
 function cardEl(c, cw) {
     const el = document.createElement("div");
-    el.className = "card";
+    el.className = "card" + (c.isNew ? " new" : "");
+    el.card = c;
     el.dataset.rarity = c.rarity;
     el.style.width = cw + "px";
     el.style.height = cw / ASPECT + "px";
+    el.style.fontSize = Math.max(7, cw * .062) + "px";
     el.innerHTML = `<div class="card-inner"><div class="face back"><img src="img/back.jpg" alt=""></div>` +
         `<div class="face front"><img src="img/${c.id}.jpg" alt="${c.name}"><div class="holo"></div><div class="glare"></div></div></div>`;
     return el;
@@ -434,6 +476,86 @@ function enableTilt(el) {
         el.style.setProperty("--my", (dy + .5) * 100 + "%");
     });
     el.addEventListener("pointerleave", () => { el.style.rotate = "none"; });
+}
+
+function detailsHTML(c) {
+    const monster = c.type.includes("Monster");
+    const meta = monster
+        ? `${c.code} · ${c.attribute} · ${c.race} / ${c.type.replace(" Monster", "")}<br><span class="stars">${"★".repeat(c.level)}</span> Level ${c.level}`
+        : `${c.code} · ${c.race} ${c.type}`;
+    const stats = monster ? `<div class="det-stats"><div><span>ATK</span>${c.atk}</div><div><span>DEF</span>${c.def}</div></div>` : "";
+    const own = c.isNew ? `<b>NEW</b> First copy in your binder` : `You now own ${c.ownedBefore + 1}`;
+    return `<div class="det"><div class="det-head"><h3>${c.name}</h3><span class="chip ${c.rarity}">${LABEL[c.rarity] || "Common"}</span></div>` +
+        `<div class="det-meta">${meta}</div>${stats}<p class="det-desc">${c.desc}</p><div class="det-own">${own}</div></div>`;
+}
+
+let peekEl = null, peekTimer = 0;
+function hidePeek() {
+    clearTimeout(peekTimer);
+    peekEl?.remove(); peekEl = null;
+    document.querySelectorAll(".card.lift").forEach((e) => e.classList.remove("lift"));
+}
+
+/** Desktop: resting the mouse on a face-up card lifts it and opens its details beside it. */
+function addPeek(el) {
+    if (el.dataset.peek) return;
+    el.dataset.peek = "1";
+    el.addEventListener("pointerenter", (e) => {
+        if (e.pointerType !== "mouse" || !el.classList.contains("flipped") || document.querySelector(".inspect, .dim.on")) return;
+        hidePeek();
+        el.classList.add("lift");
+        peekTimer = setTimeout(() => {
+            const b = el.getBoundingClientRect(), w = 340;
+            peekEl = document.createElement("div");
+            peekEl.className = "peek panel";
+            peekEl.innerHTML = detailsHTML(el.card);
+            document.body.appendChild(peekEl);
+            const onLeft = b.left + b.width / 2 > innerWidth / 2;
+            const left = onLeft ? b.left - w - 16 : b.right + 16;
+            peekEl.style.left = Math.max(8, Math.min(innerWidth - w - 8, left)) + "px";
+            peekEl.style.top = Math.max(8, Math.min(innerHeight - peekEl.offsetHeight - 8, b.top)) + "px";
+            gsap.from(peekEl, { opacity: 0, x: onLeft ? 10 : -10, duration: .18 });
+        }, 200);
+    });
+    el.addEventListener("pointerleave", hidePeek);
+}
+
+/** Tap a face-up card: it flies up into a close-up, details beside it (desktop) or in a sheet (phone). */
+function inspect(from) {
+    hidePeek();
+    const c = from.card, W = innerWidth, H = innerHeight, wide = W >= 700;
+    const ov = document.createElement("div");
+    ov.className = "inspect";
+    ov.innerHTML = `<span class="close-hint">Tap anywhere to close</span>`;
+    const panel = document.createElement("div");
+    panel.className = "panel" + (wide ? "" : " sheet");
+    panel.innerHTML = detailsHTML(c);
+    ov.append(panel);
+    document.body.appendChild(ov);
+    // On phones the card fills the space the sheet leaves above it.
+    const above = wide ? H : H - panel.offsetHeight;
+    const ch = wide ? Math.min(H * .72, 560) : Math.min(above - 64, (W * .72) / ASPECT), cw = ch * ASPECT;
+    const el = cardEl(c, cw);
+    el.classList.add("flipped");
+    if (c.rarity !== "Common") el.classList.add("revealed");
+    enableTilt(el);
+    ov.prepend(el);
+    const panelW = Math.min(400, W - cw - 120);
+    const tx = wide ? W / 2 - (cw + 32 + panelW) / 2 : W / 2 - cw / 2;
+    const ty = wide ? (H - ch) / 2 : 40 + (above - 40 - ch) / 2;
+    if (wide) Object.assign(panel.style, { width: panelW + "px", left: tx + cw + 32 + "px", top: (H - Math.min(ch, 460)) / 2 + "px" });
+    const b = from.getBoundingClientRect();
+    gsap.to(ov, { opacity: 1, duration: .25 });
+    gsap.fromTo(el, { x: b.left + b.width / 2 - cw / 2, y: b.top + b.height / 2 - ch / 2, scale: b.width / cw },
+        { x: tx, y: ty, scale: 1, duration: .45, ease: "power3.out" });
+    gsap.from(panel, wide ? { opacity: 0, x: -20, duration: .35, delay: .2 } : { yPercent: 100, duration: .4, delay: .1, ease: "power3.out" });
+    Sfx.whoosh();
+    ov.addEventListener("click", (e) => {
+        if (e.target.closest(".panel")) return;
+        const nb = from.getBoundingClientRect();
+        gsap.to(el, { x: nb.left + nb.width / 2 - cw / 2, y: nb.top + nb.height / 2 - ch / 2, scale: nb.width / cw, duration: .35, ease: "power3.in" });
+        gsap.to(ov, { opacity: 0, duration: .35, onComplete: () => ov.remove() });
+    });
 }
 
 const GLYPHS = (() => {
@@ -535,6 +657,8 @@ function summary(stage, els, cw) {
         const x = W / 2 + (c - (inRow - 1) / 2) * (sw + gap), y = top + r * (sh + gap) + sh / 2;
         el.classList.remove("glowing");
         el.style.zIndex = 10 + i;
+        el.onclick = () => inspect(el);
+        addPeek(el);
         gsap.to(el, { x: x - cw / 2, y: y - ch / 2, scale: sw / cw, rotation: 0, opacity: 1, duration: .55, delay: i * .035, ease: "power3.inOut" });
     });
     later(() => {
@@ -711,6 +835,7 @@ function deal(stage) {
                   onStart: hit ? Sfx.whoosh : Sfx.deal,
                   onComplete: hit ? () => { Sfx.thump(); buzz(30); el.classList.add("glowing"); } : null });
             el.addEventListener("click", (e) => { e.stopPropagation(); tap(el, c, i); });
+            addPeek(el);
         });
         later(() => {
             gsap.to(pk, { opacity: 0, duration: .4 });
@@ -731,7 +856,7 @@ function deal(stage) {
         if (focused) return putDown();
         setHint(stage, "");
         if (!el.classList.contains("flipped")) { c.rarity === "Common" ? (liftFlip(el), checkDone()) : beat(el, c, i); }
-        else if (c.rarity !== "Common") focus(el, i);
+        else inspect(el);
     }
 
     function focus(el, i) {
@@ -755,6 +880,7 @@ function deal(stage) {
 
     function beat(el, c, i) {
         busy = true;
+        hidePeek();
         el.classList.remove("glowing");
         focus(el, i);
         Sfx.rise(.9);
@@ -779,6 +905,7 @@ function deal(stage) {
         if (els.length && els.every((el) => el.classList.contains("flipped")) && !focused) {
             const [fa, next] = $(".bar", stage).children;
             fa.disabled = true; next.disabled = false;
+            setHint(stage, matchMedia("(hover: hover)").matches ? "Hover a card for details, click for a close-up" : "Tap a card for a close-up");
         }
     }
 }
@@ -868,13 +995,14 @@ function ring(stage, pack, { cw, R, ringY, bannerTop, enter, enterMs, onReady, o
     const onFront = () => {
         if (!ready || gathered) return;
         const el = els[front()];
-        setHint(stage, el.classList.contains("flipped") ? (els.every((e) => e.classList.contains("flipped")) ? "Every card is revealed" : "Swipe to turn the ring") : "Tap the front card to reveal it");
+        setHint(stage, el.classList.contains("flipped") ? (els.every((e) => e.classList.contains("flipped")) ? "All revealed · tap a card for details" : "Tap it for details · swipe to turn") : "Tap the front card to reveal it");
     };
 
     const els = pack.map((c) => {
         const el = cardEl(c, cw);
         if (c.rarity !== "Common") el.classList.add("glowing");
         stage.appendChild(el);
+        addPeek(el);
         return el;
     });
     enter(els, pos);
@@ -900,7 +1028,7 @@ function ring(stage, pack, { cw, R, ringY, bannerTop, enter, enterMs, onReady, o
         const el = e.target.closest(".card");
         if (!el) return;
         const i = els.indexOf(el);
-        if (i === front()) reveal(i);
+        if (i === front()) el.classList.contains("flipped") ? inspect(el) : reveal(i);
         else { const k = Math.round(state.t / step), off = ((i - ((k % n) + n) % n) + n + Math.floor(n / 2)) % n - Math.floor(n / 2); spinTo((k + off) * step); }
     });
 
@@ -982,7 +1110,8 @@ let view = "chosen";
 function start() {
     gen++;
     gsap.globalTimeline.clear();
-    document.querySelectorAll("body > .rays, body > .banner, body > .flash").forEach((el) => el.remove());
+    hidePeek();
+    document.querySelectorAll("body > .rays, body > .banner, body > .flash, body > .inspect").forEach((el) => el.remove());
     const old = $("#stage");
     const stage = old.cloneNode(false);   // drops every listener the last prototype added
     old.replaceWith(stage);
