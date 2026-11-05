@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PENDING_JOIN_KEY } from "@/lib/duo-client";
 import { asset } from '@/lib/utils';
 import SaveSlotList from "@/components/layout/SaveSlotList";
 import { useAuth } from "@/context/AuthContext";
@@ -20,6 +21,19 @@ export default function Menu() {
     const { activeSeriesId } = useProgression();
     const { user, loading, signOut } = useAuth();
     const router = useRouter();
+
+    // A join link opened while signed out picks up again once signed in.
+    useEffect(() => {
+        if (loading || !user) return;
+        let code: string | null = null;
+        try {
+            code = sessionStorage.getItem(PENDING_JOIN_KEY);
+            sessionStorage.removeItem(PENDING_JOIN_KEY);
+        } catch {
+            // Storage blocked: there's nothing to resume.
+        }
+        if (code) router.replace(`/join/?code=${encodeURIComponent(code)}`);
+    }, [loading, user, router]);
 
     const account: MenuItemData[] = !user
         ? [{ label: "SIGN IN", href: "/?invite", description: "Keep your progress in an account" }]

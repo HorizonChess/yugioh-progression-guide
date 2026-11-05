@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useProgression } from "@/context/ProgressionContext";
 import { asset } from '@/lib/utils';
+import NotificationBell from "@/components/layout/NotificationBell";
 
 /* AppNav — the app's single persistent nav bar. It's hoisted into the root layout
    and rendered ONCE, above the routed content and outside the page-transition
@@ -29,7 +30,8 @@ export default function AppNav() {
     // trailingSlash (for static hosting) makes this "/timeline/"; strip it so route lookups match
     const pathname = usePathname().replace(/(.)\/$/, "$1");
     const { isGuideVisible, toggleGuide, activeSeriesId } = useProgression();
-    const duelistName = useAuth().user?.duelistName ?? "Guest";
+    const user = useAuth().user;
+    const duelistName = user?.duelistName ?? "Guest";
 
     if (!NAV_ROUTES.has(pathname)) return null;
 
@@ -77,6 +79,7 @@ export default function AppNav() {
                         </Link>
                     ))}
                 </div>
+                {user && <NotificationBell />}
                 <div className="text-right">
                     <h1 className="text-xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pr-1">
                         PROGRESSION

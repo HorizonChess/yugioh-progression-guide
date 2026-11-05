@@ -3,6 +3,7 @@ import { Inter, Outfit, Russo_One } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProgressionProvider } from "@/context/ProgressionContext";
+import { NotificationsProvider } from "@/context/NotificationsContext";
 import GlobalBackground from "@/components/layout/GlobalBackground";
 import AppNav from "@/components/layout/AppNav";
 import SeriesGate from "@/components/layout/SeriesGate";
@@ -29,6 +30,7 @@ export default function RootLayout({
       >
         <AuthProvider>
         <ProgressionProvider>
+        <NotificationsProvider>
           <GlobalBackground />
           {/* Row 1 (auto): the ONE persistent nav. AppNav shows it only on the
               app-zone pages that opted in; it never unmounts or animates across
@@ -38,6 +40,7 @@ export default function RootLayout({
               inner scroll containers work; relative anchors deck-builder's
               absolutely-positioned ScaleWrapper to this row (below the nav). */}
           <main className="relative min-h-0 min-w-0"><SeriesGate>{children}</SeriesGate></main>
+        </NotificationsProvider>
         </ProgressionProvider>
         </AuthProvider>
       </body>

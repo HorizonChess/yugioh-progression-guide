@@ -1,7 +1,7 @@
 "use client";
 
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
-import { RepoError } from "@/lib/repo/types";
+import { RepoError, type PendingReport } from "@/lib/repo/types";
 import { fetchAllSets, CardSet } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,8 @@ import RecordMatch from "@/components/record-match/RecordMatch";
 import WinnersWheel from "@/components/record-match/WinnersWheel";
 import DefeatAct from "@/components/record-match/DefeatAct";
 import GuideSprite from "@/components/layout/GuideSprite";
+import PendingReportPanel from "@/components/record-match/PendingReportPanel";
+import { useAuth } from "@/context/AuthContext";
 import { wheelPrizesFor } from "@ygo/shared";
 
 /**
@@ -36,7 +38,8 @@ import { wheelPrizesFor } from "@ygo/shared";
 type Stage = "board" | "wheel" | "defeat";
 
 export default function RecordMatchPage() {
-    const { matchHistory, reportMatch, spin, currentSetIndex, series } = useProgression();
+    const { matchHistory, reportMatch, confirmReport, rejectReport, spin, currentSetIndex, series } = useProgression();
+    const userId = useAuth().user?.id;
     const router = useRouter();
     const reduceMotion = useReducedMotion();
     const [sets, setSets] = useState<CardSet[]>([]);
@@ -78,12 +81,32 @@ export default function RecordMatchPage() {
 
     // Reporting advances the set and books the reward (a wheel spin or pity
     // packs) at once; the act that follows only spends it.
+    // In duo the result waits for the rival; the page then shows it as pending.
     const handleRecordMatch = async (winner: "player" | "opponent") => {
         try {
             const outcome = await reportMatch(winner === "player");
-            if (outcome.status === "applied") setSpinRewardId(outcome.reward.id);
+            if (outcome.status === "pending") return;
+            setSpinRewardId(outcome.reward.id);
             setStage(winner === "player" ? "wheel" : "defeat");
         } catch (error) {
+            alertRepoError(error);
+        }
+    };
+
+    // Confirming the rival's report books both rewards; this player's then plays out here.
+    // The answered report stays on screen until the next act takes over.
+    const [answered, setAnswered] = useState<PendingReport | null>(null);
+    const answerReport = async (confirm: boolean) => {
+        const report = series?.pendingReport;
+        if (!report) return;
+        try {
+            if (!confirm) return await rejectReport(report.id);
+            setAnswered(report);
+            const reward = await confirmReport(report.id);
+            setSpinRewardId(reward.id);
+            setStage(reward.prizeId === "wheel-spin" ? "wheel" : "defeat");
+        } catch (error) {
+            setAnswered(null);
             alertRepoError(error);
         }
     };
@@ -100,6 +123,8 @@ export default function RecordMatchPage() {
     }
 
     const currentSet = sets[currentSetIndex];
+    const pending = series?.mode === "duo" ? (series.pendingReport ?? answered) : null;
+    const rival = series?.members.find((m) => m.id !== userId)?.duelistName ?? "Your rival";
 
     // Content transitions INSIDE the stable panel. Board content vortexes out
     // (collapse + spin inward); wheel content curtains in (open from a slit).
@@ -119,7 +144,19 @@ export default function RecordMatchPage() {
             <div className="win-panel">
                 <div className="win-panel__stage">
                     <AnimatePresence mode="wait" initial={false}>
-                        {stage === "board" && currentSet && (
+                        {stage === "board" && pending && (
+                            <motion.div key="pending" className="win-panel__act" exit={vortexExit}>
+                                <PendingReportPanel
+                                    report={pending}
+                                    rival={rival}
+                                    mine={pending.reporterId === userId}
+                                    onAnswer={answerReport}
+                                    onBack={toTimeline}
+                                />
+                            </motion.div>
+                        )}
+
+                        {stage === "board" && !pending && currentSet && (
                             <motion.div
                                 key="board"
                                 className="win-panel__act"

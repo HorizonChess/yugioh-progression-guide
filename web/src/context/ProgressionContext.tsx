@@ -38,9 +38,12 @@ interface ProgressionContextType {
     bannedCardIds: number[];
     savedDecks: SavedDeck[];
 
-    createSeries: (input: CreateSeriesInput) => Promise<void>;
+    /** Creates a series, makes it the active one and returns its id. */
+    createSeries: (input: CreateSeriesInput) => Promise<string>;
     loadSeries: (id: string) => Promise<void>;
     deleteSeries: (id: string) => Promise<void>;
+    /** Re-reads the list, and the active series if it's `seriesId` (or none is named): a rival moved. */
+    refresh: (seriesId?: string) => Promise<void>;
 
     // Commands on the active series; refusals throw RepoError with a message to show.
     openPacks: (options?: OpenOptions) => Promise<Opening>;
@@ -49,8 +52,11 @@ interface ProgressionContextType {
     saveOpening: (openingId: string) => Promise<void>;
     reroll: (openingId: string) => Promise<Opening>;
     reportMatch: (won: boolean) => Promise<ReportOutcome>;
+    confirmReport: (reportId: string) => Promise<RewardEntry>;
+    rejectReport: (reportId: string) => Promise<void>;
     spin: (rewardId: string) => Promise<WheelPrize>;
-    claimReward: (rewardId: string, cardId?: number) => Promise<Opening | null>;
+    claimReward: (rewardId: string, cardId?: number, printing?: string) => Promise<Opening | null>;
+    rivalBinder: () => Promise<Collection>;
     saveDeck: (deck: SavedDeck) => Promise<void>;
     deleteDeck: (deckId: string) => Promise<void>;
     importCollection: (cardIds: number[], mode: 'add' | 'replace') => Promise<void>;
@@ -99,7 +105,12 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         };
     }, [repo, authLoading]);
 
-    const refreshList = async () => setSeriesList(await repo.listSeries());
+    const refreshList = useCallback(async () => setSeriesList(await repo.listSeries()), [repo]);
+
+    const refresh = useCallback(async (seriesId?: string) => {
+        await refreshList();
+        if (activeSeriesId && (!seriesId || seriesId === activeSeriesId)) await reloadActive(activeSeriesId);
+    }, [refreshList, reloadActive, activeSeriesId]);
 
     const loadSeries = async (id: string) => {
         repo.setActiveSeriesId(id);
@@ -111,6 +122,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         const id = await repo.createSeries(input);
         await refreshList();
         await loadSeries(id);
+        return id;
     };
 
     const deleteSeries = async (id: string) => {
@@ -153,6 +165,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             createSeries,
             loadSeries,
             deleteSeries,
+            refresh,
 
             openPacks: (options) => onActive((id) => repo.openPacks(id, options), false)(),
             activeOpening: (kind) => onActive((id) => repo.activeOpening(id, kind), false)(),
@@ -160,8 +173,11 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             saveOpening: (openingId) => onActive((id) => repo.saveOpening(id, openingId))(),
             reroll: (openingId) => onActive((id) => repo.reroll(id, openingId))(),
             reportMatch: (won) => onActive((id) => repo.reportMatch(id, won))(),
+            confirmReport: (reportId) => onActive((id) => repo.confirmReport(id, reportId))(),
+            rejectReport: (reportId) => onActive((id) => repo.rejectReport(id, reportId))(),
             spin: (rewardId) => onActive((id) => repo.spin(id, rewardId))(),
-            claimReward: (rewardId, cardId) => onActive((id) => repo.claimReward(id, rewardId, cardId))(),
+            claimReward: (rewardId, cardId, printing) => onActive((id) => repo.claimReward(id, rewardId, cardId, printing))(),
+            rivalBinder: () => onActive((id) => repo.rivalBinder(id), false)(),
             saveDeck: (deck) => onActive((id) => repo.saveDeck(id, deck))(),
             deleteDeck: (deckId) => onActive((id) => repo.deleteDeck(id, deckId))(),
             importCollection: (cardIds, mode) => onActive((id) => repo.importCollection(id, cardIds, mode))(),

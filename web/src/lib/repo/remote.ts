@@ -1,29 +1,26 @@
 import { API_BASE } from "@/lib/auth-client";
+import type { Collection } from "@/lib/collection";
 import type { RewardEntry, WheelPrize } from "@/lib/rewards";
 import type { SavedDeck } from "@/lib/storage";
-import { RepoError, type GameRepository, type Opening, type OpenOptions, type PlayerView, type SeriesView } from "./types";
+import { RepoError, type CreateSeriesInput, type GameRepository, type Opening, type OpenOptions, type PlayerView, type SeriesView } from "./types";
 
-interface ServerSeries {
-    id: string;
-    name: string;
-    mode: SeriesView["mode"];
-    rules: SeriesView["rules"];
-    currentSetIndex: number;
-    currentSetName: string | null;
-    finished: boolean;
-    bannedCardIds: number[];
+interface ServerSeries extends Omit<SeriesView, "lastPlayed" | "matchHistory" | "pendingReport" | "openingsSaved"> {
     matchHistory: { setName: string; winnerId: string | null; at: string }[];
     updatedAt: string;
+    /** Only on a single series. */
+    pendingReport?: SeriesView["pendingReport"];
+    openingsSaved?: string[];
 }
 
 interface ServerPlayer extends Omit<PlayerView, "savedDecks"> {
     savedDecks: (Omit<SavedDeck, "createdAt"> & { createdAt: string })[];
 }
 
-async function api<T = void>(method: string, path: string, body?: unknown): Promise<T> {
+/** Calls the API with the session cookie; a refusal becomes a RepoError with the server's message. */
+export async function apiRequest<T = void>(method: string, path: string, body?: unknown): Promise<T> {
     let response: Response;
     try {
-        response = await fetch(`${API_BASE}/api/series${path}`, {
+        response = await fetch(`${API_BASE}${path}`, {
             method,
             credentials: "include",
             ...(body === undefined ? {} : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
@@ -39,6 +36,8 @@ async function api<T = void>(method: string, path: string, body?: unknown): Prom
     return data as T;
 }
 
+const api = <T = void>(method: string, path: string, body?: unknown) => apiRequest<T>(method, `/api/series${path}`, body);
+
 const toOpening = (s: Opening): Opening => ({ id: s.id, source: s.source, setName: s.setName, packs: s.packs, flipped: s.flipped });
 
 export class RemoteRepo implements GameRepository {
@@ -50,10 +49,12 @@ export class RemoteRepo implements GameRepository {
         this.activeKey = `activeSeriesId:${userId}`;
     }
 
-    private series(s: ServerSeries): SeriesView {
+    private series({ updatedAt, pendingReport, openingsSaved, ...s }: ServerSeries): SeriesView {
         return {
             ...s,
-            lastPlayed: Date.parse(s.updatedAt),
+            lastPlayed: Date.parse(updatedAt),
+            pendingReport: pendingReport ?? null,
+            openingsSaved: openingsSaved ?? [],
             matchHistory: s.matchHistory.map((m) => ({
                 winner: m.winnerId === this.userId ? "player" : "opponent",
                 packName: m.setName,
@@ -67,8 +68,8 @@ export class RemoteRepo implements GameRepository {
         return series.map((s) => this.series(s));
     }
 
-    async createSeries(input: { name: string; startSetIndex: number; packsPerSet: number }) {
-        const { series } = await api<{ series: ServerSeries }>("POST", "", { ...input, mode: "solo" });
+    async createSeries({ mode = "solo", ...input }: CreateSeriesInput) {
+        const { series } = await api<{ series: ServerSeries }>("POST", "", { ...input, mode });
         return series.id;
     }
 
@@ -117,17 +118,27 @@ export class RemoteRepo implements GameRepository {
     }
 
     async reportMatch(id: string, won: boolean) {
-        const { reward } = await api<{ reward: RewardEntry }>("POST", `/${id}/matches`, { result: won ? "win" : "loss" });
-        return { status: "applied" as const, reward };
+        const { reward } = await api<{ reward?: RewardEntry }>("POST", `/${id}/matches`, { result: won ? "win" : "loss" });
+        return reward ? { status: "applied" as const, reward } : { status: "pending" as const };
     }
+
+    async confirmReport(id: string, reportId: string) {
+        return (await api<{ reward: RewardEntry }>("POST", `/${id}/matches/${reportId}/confirm`)).reward;
+    }
+
+    rejectReport = (id: string, reportId: string) => api("POST", `/${id}/matches/${reportId}/reject`);
 
     async spin(id: string, rewardId: string) {
         return (await api<{ prize: WheelPrize }>("POST", `/${id}/rewards/${rewardId}/spin`)).prize;
     }
 
-    async claimReward(id: string, rewardId: string, cardId?: number) {
-        const { session } = await api<{ session: Opening | null }>("POST", `/${id}/rewards/${rewardId}/claim`, cardId === undefined ? {} : { cardId });
+    async claimReward(id: string, rewardId: string, cardId?: number, printing?: string) {
+        const { session } = await api<{ session: Opening | null }>("POST", `/${id}/rewards/${rewardId}/claim`, { cardId, printing });
         return session && toOpening(session);
+    }
+
+    async rivalBinder(id: string) {
+        return (await api<{ collection: Collection }>("GET", `/${id}/rival-binder`)).collection;
     }
 
     saveDeck = (id: string, { id: deckId, name, mainDeck, extraDeck, sideDeck }: SavedDeck) =>
