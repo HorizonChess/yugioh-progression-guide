@@ -107,7 +107,8 @@ export async function fetchTournamentSets(): Promise<CardSet[]> {
 
 const IMAGE_HOST = process.env.NEXT_PUBLIC_IMAGE_HOST || '';
 
-function transformCardImages(card: Card): Card {
+/** Points a card's images at our own image host (the only one the page may load from). */
+export function transformCardImages<C extends Card>(card: C): C {
     if (!IMAGE_HOST) return card;
 
     return {
