@@ -17,6 +17,7 @@ import { createCardCatalog, type CardCatalog } from './cards/catalog';
 import type { Config } from './config';
 import { connectDb } from './db';
 import { ensureInviteIndexes } from './game/invites';
+import { ensureMatchIndexes } from './game/matches';
 import { createNotifier, ensureNotificationIndexes, type NotificationPayload, type NotificationType, type Notifier } from './game/notifications';
 import { ensurePackIndexes } from './game/packs';
 import { ensureSeriesIndexes } from './game/series';
@@ -102,6 +103,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
     await ensurePackIndexes(app.db);
     await ensureNotificationIndexes(app.db);
     await ensureInviteIndexes(app.db);
+    await ensureMatchIndexes(app.db);
     app.decorate('catalog', createCardCatalog(app.db));
     registerBackground(app);
     app.decorate('notifier', createNotifier(app.db));

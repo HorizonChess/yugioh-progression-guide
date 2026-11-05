@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
+import { ObjectId } from 'mongodb';
 import type { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { cardSetsCollection } from '../src/cards/sync';
 import { invitesCollection } from '../src/game/invites';
+import { packSessions } from '../src/game/packs';
 import { seriesPlayersCollection } from '../src/game/series';
 import { startMongo, testApp } from './helpers';
 
@@ -119,6 +121,79 @@ describe('duo series invites', () => {
         expect((await kaiba.call('POST', `/api/invites/${invite.id}/decline`)).statusCode).toBe(204);
         expect((await yami.notifications())[0]).toMatchObject({ type: 'invite-declined', payload: { from: 'Kaiba' } });
         expect((await kaiba.call('POST', '/api/invites/accept', { inviteId: invite.id })).statusCode).toBe(404);
+    });
+});
+
+/** A duo series both players are in. */
+async function pair() {
+    const yami = await player('Yami');
+    const kaiba = await player('Kaiba');
+    const id = await duo(yami);
+    const { code } = (await yami.call('POST', `/api/series/${id}/invites`)).json();
+    await kaiba.call('POST', '/api/invites/accept', { code });
+    const members = await seriesPlayersCollection(app.db).find({}).toArray();
+    /** Stands in for opening and saving the current set's packs. */
+    const saveSet = (who: 'Yami' | 'Kaiba', setIndex = 0) =>
+        packSessions(app.db).insertOne({
+            _id: new ObjectId(), seriesId: new ObjectId(id), userId: members[who === 'Yami' ? 0 : 1]!.userId, setIndex, setName: TIMELINE[setIndex]!,
+            source: 'set', packs: [], flipped: [], stage: 'saved', active: true, createdAt: new Date(),
+        });
+    const series = async (as: Player = yami) => (await as.call('GET', `/api/series/${id}`)).json();
+    return { yami, kaiba, id, saveSet, series };
+}
+
+describe('duo match results', () => {
+    it('wait for the rival, then advance the set and reward both players', async () => {
+        const { yami, kaiba, id, saveSet, series } = await pair();
+        const report = (who: Player, result: 'win' | 'loss') => who.call('POST', `/api/series/${id}/matches`, { result });
+
+        expect((await report(yami, 'win')).json().error).toMatch(/^Save this set/);
+        await saveSet('Yami');
+        expect((await report(yami, 'win')).json().error).toMatch(/rival hasn't saved/);
+        await saveSet('Kaiba');
+        expect((await series()).series.openingsSaved).toHaveLength(2);
+
+        const reported = await report(yami, 'win');
+        expect(reported.statusCode).toBe(202);
+        const { report: pending } = reported.json();
+        expect((await kaiba.notifications())[0]).toMatchObject({ type: 'report', payload: { from: 'Yami', setName: TIMELINE[0], reportId: pending.id, youWon: false } });
+        expect((await series(kaiba)).series.pendingReport).toMatchObject({ id: pending.id, setName: TIMELINE[0] });
+        expect((await report(kaiba, 'loss')).json().error).toMatch(/already waiting/);
+        expect((await yami.call('POST', `/api/series/${id}/matches/${pending.id}/confirm`)).json().error).toMatch(/Your rival confirms/);
+
+        const confirmed = await kaiba.call('POST', `/api/series/${id}/matches/${pending.id}/confirm`);
+        expect(confirmed.json().reward).toMatchObject({ prizeId: 'pity-packs', wonFromPackName: TIMELINE[0] });
+        expect((await kaiba.call('POST', `/api/series/${id}/matches/${pending.id}/confirm`)).statusCode).toBe(409);
+
+        const after = await series();
+        expect(after.series).toMatchObject({ currentSetIndex: 1, pendingReport: null, openingsSaved: [] });
+        expect(after.series.matchHistory[0]).toMatchObject({ setName: TIMELINE[0], winnerId: after.series.members[0].id, loserId: after.series.members[1].id });
+        expect(after.me.rewards).toEqual([expect.objectContaining({ prizeId: 'wheel-spin', status: 'available' })]);
+        expect((await yami.notifications())[0]).toMatchObject({ type: 'report-confirmed', payload: { from: 'Kaiba', youWon: true } });
+    });
+
+    it('lets the rival reject a result, after which either player reports again', async () => {
+        const { yami, kaiba, id, saveSet, series } = await pair();
+        await saveSet('Yami');
+        await saveSet('Kaiba');
+        const { report } = (await kaiba.call('POST', `/api/series/${id}/matches`, { result: 'win' })).json();
+        expect((await kaiba.call('POST', `/api/series/${id}/matches/${report.id}/reject`)).statusCode).toBe(409);
+        expect((await yami.call('POST', `/api/series/${id}/matches/${report.id}/reject`)).statusCode).toBe(204);
+        expect((await kaiba.notifications())[0]).toMatchObject({ type: 'report-rejected', payload: { from: 'Yami' } });
+        expect((await series()).series).toMatchObject({ currentSetIndex: 0, pendingReport: null });
+        expect((await yami.call('POST', `/api/series/${id}/matches`, { result: 'win' })).statusCode).toBe(202);
+    });
+
+    it('takes one of two reports sent at once, and none without a rival', async () => {
+        const { yami, kaiba, id, saveSet } = await pair();
+        await saveSet('Yami');
+        await saveSet('Kaiba');
+        const both = await Promise.all([yami, kaiba].map((p) => p.call('POST', `/api/series/${id}/matches`, { result: 'win' })));
+        expect(both.map((r) => r.statusCode).sort()).toEqual([202, 409]);
+
+        const joey = await player('Joey');
+        const waiting = await duo(joey);
+        expect((await joey.call('POST', `/api/series/${waiting}/matches`, { result: 'win' })).json().error).toMatch(/no rival/);
     });
 });
 

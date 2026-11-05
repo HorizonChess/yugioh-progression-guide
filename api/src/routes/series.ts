@@ -3,6 +3,8 @@ import { CreateSeriesBodySchema, InviteBodySchema, resolveSetIndex, seriesRulesP
 import { duelistNames, findUserByDuelistName } from '../auth/users';
 import type { CardCatalog } from '../cards/catalog';
 import { inviteByLink, inviteByName } from '../game/invites';
+import { findPendingReport, publicReport } from '../game/matches';
+import { packSessions } from '../game/packs';
 import {
     TooManySeriesError,
     createSeries,
@@ -18,7 +20,7 @@ import { requireAuth } from '../middleware/requireAuth';
 import { requireSeriesMember } from '../middleware/requireSeriesMember';
 
 /** What any member may see about a series. */
-export function publicSeries(series: SeriesDoc, timeline: readonly CardSet[], names: ReadonlyMap<string, string>) {
+function publicSeries(series: SeriesDoc, timeline: readonly CardSet[], names: ReadonlyMap<string, string>) {
     const currentSetIndex = resolveSetIndex(timeline, series.currentSetName, series.currentSetIndex);
     return {
         id: series._id.toHexString(),
@@ -116,7 +118,20 @@ export async function seriesRoutes(app: FastifyInstance, options: { catalog: Car
             request.log.error({ seriesId: series._id }, 'series member has no player record');
             return reply.code(500).send({ error: 'This series is missing your player record' });
         }
-        return { series: publicSeries(series, timeline, names), me: publicPlayer(player) };
+        const shown = publicSeries(series, timeline, names);
+        const [pending, saved] = await Promise.all([
+            findPendingReport(app.db, series._id),
+            packSessions(app.db).distinct('userId', { seriesId: series._id, setIndex: shown.currentSetIndex, source: 'set', active: true, stage: 'saved' }),
+        ]);
+        return {
+            series: {
+                ...shown,
+                pendingReport: pending && publicReport(pending),
+                /** Members who've saved the current set's packs; a match needs all of them. */
+                openingsSaved: saved.map((id) => id.toHexString()),
+            },
+            me: publicPlayer(player),
+        };
     });
 
     app.post('/:seriesId/invites', { preHandler: [requireAuth, requireSeriesMember], ...limited }, async (request, reply) => {
