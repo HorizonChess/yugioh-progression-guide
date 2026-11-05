@@ -84,6 +84,17 @@ h1 { margin: 4px 0 0; font: 800 clamp(24px, 2.2vw + 12px, 40px)/1.1 var(--font-d
 .trophy small { display: block; margin-top: 3px; font: 600 12px/1.3 var(--font-main); color: #c7b99a; }
 .trophy em { display: block; margin-top: 3px; font: 700 12px/1.2 var(--font-main); font-style: normal; color: var(--gold-hi); }
 
+/* which set's wheel a reward came from (or the loss a pity reward was for) */
+.origin { display: inline-flex; align-items: center; gap: 6px; font: 700 11px/1.2 var(--font-main); letter-spacing: .06em; }
+.origin img { flex: none; width: 14px; height: 25px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.plaque .origin { justify-content: center; margin-top: 4px; color: #3a2405; }
+.trophy .origin, .stage .origin, .altar-info .origin { color: #e9d9ad; }
+.hall-head { display: flex; align-items: center; gap: 10px; max-width: 1100px; margin: 18px auto 10px; font: 800 13px/1 var(--font-main); letter-spacing: .18em; text-transform: uppercase; color: #c7b99a; }
+.hall-head .who { width: 28px; height: 28px; border-radius: 50%; background: #1b1426 center 8% / 250% auto no-repeat; box-shadow: 0 0 0 2px var(--primary); }
+.hall-head .who.rival { box-shadow: 0 0 0 2px #b04f4f; background-image: none; background: radial-gradient(circle at 40% 35%, #6b2a2a, #2a0e0e); display: grid; place-items: center; color: #ffd0c8; font: 800 13px/1 var(--font-display); }
+.trophy.rival { box-shadow: 0 0 0 1px rgba(176,79,79,.45); background: rgba(30,8,8,.55); }
+.trophy.rival em { color: #ffb4a8; }
+
 /* ---------- B · the altar ---------- */
 .altar-wrap { min-height: 100%; display: flex; flex-direction: column; align-items: center; }
 .altar-stage { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 900px; margin-top: 6px; }
@@ -129,6 +140,9 @@ h1 { margin: 4px 0 0; font: 800 clamp(24px, 2.2vw + 12px, 40px)/1.1 var(--font-d
 .entry .stamp { flex: none; padding: 5px 9px; border: 2px solid #6b4a12; border-radius: 4px; transform: rotate(-6deg); font: 800 11px/1 var(--font-display); letter-spacing: .14em; color: #6b4a12; opacity: .8; }
 .entry .stamp.lock { color: #8a1c10; border-color: #8a1c10; }
 .entry.done b { color: #4a3920; }
+.entry .origin { color: #5a4220; font-family: var(--fell); font-style: italic; font-size: 14px; letter-spacing: 0; font-weight: 400; }
+.entry.rival b::first-letter { color: #3a2405; }
+.entry.rival .stamp { color: #8a1c10; border-color: #8a1c10; }
 @media (max-width: 520px) { .entry { flex-wrap: wrap; } .entry .cb { margin-left: 68px; } }
 
 /* claim animations */
@@ -236,12 +250,28 @@ const AVAILABLE = [
     { id: 9, kind: "redoer", from: "Legend of Blue Eyes White Dragon", won: "1 Nov" },
 ];
 const C = (n) => CARDS[n];
+const CODE = { "Legend of Blue Eyes White Dragon": "LOB", "Metal Raiders": "MRD", "Spell Ruler": "SRL" };
+const RIVAL = "Yami";
+const day = (on) => { const [d, m] = on.split(" "); return (m === "Nov" ? 100 : 0) + Number(d); };
+/** Which set's wheel a reward came from: pity packs come from a loss, not the wheel. */
+const origin = (r, long = false) => {
+    const code = CODE[r.from] ?? "", pity = r.kind === "pity";
+    const text = long ? (pity ? `Pity for losing ${r.from}` : `Won on the ${r.from} wheel`) : pity ? `Pity · ${code}` : `${code} wheel`;
+    return `<span class="origin"><img src="img/${code}.webp" alt="">${esc(text)}</span>`;
+};
 const CLAIMED = [
     { kind: "wildcard-ultra", from: "Legend of Blue Eyes White Dragon", on: "2 Nov", card: C("Blue-Eyes White Dragon"), note: "Picked from the won pack" },
     { kind: "ban", from: "Legend of Blue Eyes White Dragon", on: "2 Nov", card: C("Dark Hole"), banned: true, note: "Banned for your rival" },
     { kind: "tournament", from: "Legend of Blue Eyes White Dragon", on: "1 Nov", opened: 27 },
     { kind: "snatch", from: "Legend of Blue Eyes White Dragon", on: "1 Nov", card: C("Red-Eyes Black Dragon"), note: "Copied from your rival" },
     { kind: "wildcard-rare", from: "Legend of Blue Eyes White Dragon", on: "31 Oct", card: C("Man-Eater Bug"), note: "Picked from the won pack" },
+];
+// What your rival has claimed (read-only: what they still hold stays theirs to see).
+const RIVAL_CLAIMED = [
+    { kind: "ban", from: "Metal Raiders", on: "4 Nov", card: C("Polymerization"), banned: true, note: "Banned for you" },
+    { kind: "wildcard-ultra", from: "Metal Raiders", on: "4 Nov", card: C("Dark Magician"), note: "Picked from the won pack" },
+    { kind: "snatch", from: "Legend of Blue Eyes White Dragon", on: "2 Nov", card: C("Gaia The Fierce Knight"), note: "Copied from your binder" },
+    { kind: "pity", from: "Legend of Blue Eyes White Dragon", on: "1 Nov", opened: 27 },
 ];
 const toast = (t) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = t; document.body.appendChild(el); setTimeout(() => el.remove(), 2200); };
 
@@ -260,12 +290,20 @@ function closeUp(card, banned) {
     ov.onclick = () => ov.remove();
     document.body.appendChild(ov);
 }
-function trophy(c) {
-    const p = PRIZES[c.kind], el = document.createElement("div"); el.className = "trophy";
+function trophy(c, rival = false) {
+    const p = PRIZES[c.kind], el = document.createElement("div"); el.className = "trophy" + (rival ? " rival" : "");
     el.innerHTML = (c.card ? `<button class="thumb ${c.banned ? "banned" : ""}" aria-label="View ${esc(c.card.name)}"><img src="img/${c.card.id}.jpg" alt=""></button>` : `<span class="mini">${p.relic()}</span>`) +
-        `<span style="min-width:0"><b>${p.label}</b><small>from ${esc(c.from)} · claimed ${c.on}</small><em>${c.card ? esc(c.card.name) + " · " + c.note : `Opened ${c.opened} cards`}</em></span>`;
+        `<span style="min-width:0"><b>${p.label}</b><small>${origin(c)} · claimed ${c.on}</small><em>${c.card ? esc(c.card.name) + " · " + c.note : `Opened ${c.opened} cards`}</em></span>`;
     $(".thumb", el)?.addEventListener("click", () => closeUp(c.card, c.banned));
     return el;
+}
+
+/** The trophy halls: yours, then your rival's. */
+function halls(root, mine, rivals) {
+    root.insertAdjacentHTML("beforeend", `<div class="hall-head"><span class="who" style="background-image:url(img/yugi-neutral.webp)"></span>Your trophies · ${mine.length}</div><div class="hall" data-h="me"></div>
+        <div class="hall-head"><span class="who rival">${RIVAL[0]}</span>${RIVAL}'s trophies · ${rivals.length}</div><div class="hall" data-h="rival"></div>`);
+    mine.forEach((c) => root.querySelector('[data-h="me"]').appendChild(trophy(c)));
+    rivals.forEach((c) => root.querySelector('[data-h="rival"]').appendChild(trophy(c, true)));
 }
 
 /* ---------- A · the vault: every reward a relic in a niche ---------- */
@@ -273,20 +311,20 @@ function vault(root) {
     let left = AVAILABLE.slice();
     const draw = () => {
         root.innerHTML = `<div class="headc"><p class="kicker">The vault</p><h1>Rewards</h1><p class="meta">${left.filter((r) => !PRIZES[r.kind].locked).length} treasures waiting · won on the road through history</p></div>
-            <div class="shelves" id="shelves"></div><h3 class="band">Trophy hall <small>${CLAIMED.length}</small></h3><div class="hall" id="hall"></div>`;
+            <div class="shelves" id="shelves"></div><h3 class="band">Trophy hall</h3><div id="halls"></div>`;
         for (const r of left) {
             const p = PRIZES[r.kind], b = document.createElement("button");
             b.className = "niche" + (p.locked ? " locked" : "");
-            b.innerHTML = `<span class="art">${p.relic()}${p.locked ? LOCK : ""}</span><span class="plaque"><b>${p.label}</b><small>${esc(r.from)}</small></span>`;
+            b.innerHTML = `<span class="art">${p.relic()}${p.locked ? LOCK : ""}</span><span class="plaque"><b>${p.label}</b>${origin(r)}</span>`;
             b.onclick = () => pedestal(r);
             $("#shelves").appendChild(b);
         }
-        CLAIMED.forEach((c) => $("#hall").appendChild(trophy(c)));
+        halls($("#halls"), CLAIMED, RIVAL_CLAIMED);
     };
     function pedestal(r) {
         const p = PRIZES[r.kind], st = document.createElement("div"); st.className = "stage";
         st.innerHTML = `<div class="lightpool"></div><div class="big">${p.relic()}${p.locked ? LOCK : ""}</div><div class="pedestal"></div><h2>${p.label}</h2>
-            <p>${p.does}<br><span style="color:#a99d80">Won from ${esc(r.from)} · ${r.won}</span></p>
+            <p>${p.does}</p><p>${origin(r, true)} · ${r.won}</p>
             <div class="row">${p.locked ? `<span class="lock-note">${p.does}</span>` : `<button class="cb" id="go"><span>${p.action}</span></button>`}<button class="ghost-btn" id="back">Not now</button></div>`;
         document.body.appendChild(st);
         $("#back", st).onclick = () => st.remove();
@@ -302,15 +340,19 @@ function altar(root) {
     const draw = () => {
         const r = left[Math.min(at, left.length - 1)], p = r && PRIZES[r.kind];
         root.innerHTML = `<div class="altar-wrap"><div class="headc" style="padding-bottom:4px"><p class="kicker">The altar · ${left.filter((x) => !PRIZES[x.kind].locked).length} waiting</p></div>
-            <div style="display:flex;gap:8px;margin-bottom:6px"><button class="ghost-btn" data-t="now" style="${tab === "now" ? "color:#ffe08a" : ""}">Waiting</button><button class="ghost-btn" data-t="past" style="${tab === "past" ? "color:#ffe08a" : ""}">Chronicle · ${CLAIMED.length}</button></div>
+            <div style="display:flex;gap:8px;margin-bottom:6px"><button class="ghost-btn" data-t="now" style="${tab === "now" ? "color:#ffe08a" : ""}">Waiting</button><button class="ghost-btn" data-t="past" style="${tab === "past" ? "color:#ffe08a" : ""}">Chronicle · ${CLAIMED.length + RIVAL_CLAIMED.length}</button></div>
             ${tab === "now" ? (r ? `<div class="altar-stage"><div class="lightpool"></div><button class="arrow" id="pv" ${at === 0 ? "disabled" : ""} aria-label="Previous">‹</button>
                 <div style="display:flex;flex-direction:column;align-items:center"><div class="altar-relic" id="relic">${p.relic()}${p.locked ? LOCK : ""}</div><div class="altar-top"></div></div>
                 <button class="arrow" id="nx" ${at >= left.length - 1 ? "disabled" : ""} aria-label="Next">›</button></div>
-                <div class="altar-info"><h2>${p.label}</h2><p>${p.does}<br><span style="color:#a99d80">Won from ${esc(r.from)} · ${r.won}</span></p>
+                <div class="altar-info"><h2>${p.label}</h2><p>${p.does}</p><p>${origin(r, true)} · ${r.won}</p>
                 <div class="row">${p.locked ? `<span class="lock-note" style="color:#e9d9ad">Locked here</span>` : `<button class="cb" id="go"><span>${p.action}</span></button>`}</div></div>
                 <div class="queue" id="queue"></div>` : `<p class="meta" style="margin-top:40px">Nothing waiting. Win or lose a match to earn some.</p>`) : `<div class="chron" id="chron"></div>`}</div>`;
         root.querySelectorAll("[data-t]").forEach((b) => b.onclick = () => { tab = b.dataset.t; draw(); });
-        if (tab === "past") return CLAIMED.forEach((c) => $("#chron").appendChild(trophy(c)));
+        if (tab === "past") {
+            // Both players' claims on one timeline, newest first, each marked as yours or your rival's.
+            const all = [...CLAIMED.map((c) => [c, false]), ...RIVAL_CLAIMED.map((c) => [c, true])].sort((a, b) => day(b[0].on) - day(a[0].on));
+            return all.forEach(([c, rival]) => { const t = trophy(c, rival); t.querySelector("b").insertAdjacentHTML("afterbegin", rival ? `<span style="color:#ffb4a8">${RIVAL} · </span>` : `<span style="color:#ffe08a">You · </span>`); $("#chron").appendChild(t); });
+        }
         if (!r) return;
         left.forEach((x, i) => { const q = document.createElement("button"); q.className = (i === at ? "on " : "") + (PRIZES[x.kind].locked ? "locked" : ""); q.innerHTML = PRIZES[x.kind].relic(); q.title = PRIZES[x.kind].label; q.onclick = () => { at = i; draw(); }; $("#queue").appendChild(q); });
         $("#pv").onclick = () => { at--; draw(); };
@@ -328,21 +370,23 @@ function scroll(root) {
     let left = AVAILABLE.slice();
     const draw = () => {
         root.innerHTML = `<div class="headc"><p class="kicker">The ledger</p><h1>Rewards</h1></div><div class="scroll"><h2>Spoils of the Road</h2><p class="sub">${left.filter((r) => !PRIZES[r.kind].locked).length} awaiting their claim</p>
-            <div class="sec">Awaiting</div><div id="aw"></div><div class="sec">Claimed</div><div id="cl"></div></div>`;
+            <div class="sec">Awaiting</div><div id="aw"></div><div class="sec">Claimed</div><div id="cl"></div><div class="sec">${RIVAL}'s spoils</div><div id="rv"></div></div>`;
         for (const r of left) {
             const p = PRIZES[r.kind], el = document.createElement("div"); el.className = "entry";
-            el.innerHTML = `<span class="medal">${p.relic()}</span><span class="text"><b>${p.label}</b><small>won from ${esc(r.from)}, ${r.won}</small></span>` +
+            el.innerHTML = `<span class="medal">${p.relic()}</span><span class="text"><b>${p.label}</b><small>${origin(r, true)}, ${r.won}</small></span>` +
                 (p.locked ? `<span class="stamp lock" title="${esc(p.does)}">Locked</span>` : `<button class="cb sm"><span>${p.action}</span></button>`);
             $(".cb", el)?.addEventListener("click", () => claim(r, $(".medal", el), () => { left = left.filter((x) => x !== r); draw(); }));
             $("#aw").appendChild(el);
         }
-        for (const c of CLAIMED) {
-            const p = PRIZES[c.kind], el = document.createElement("div"); el.className = "entry done";
+        const ledger = (list, into, rival) => list.forEach((c) => {
+            const p = PRIZES[c.kind], el = document.createElement("div"); el.className = "entry done" + (rival ? " rival" : "");
             el.innerHTML = (c.card ? `<button class="thumb ${c.banned ? "banned" : ""}"><img src="img/${c.card.id}.jpg" alt=""></button>` : `<span class="medal" style="width:40px;height:40px">${p.relic()}</span>`) +
-                `<span class="text"><b>${p.label}</b><small>${c.card ? esc(c.card.name) + " · " + c.note : `opened ${c.opened} cards`} · ${c.on}</small></span><span class="stamp">Claimed</span>`;
+                `<span class="text"><b>${p.label}</b><small>${c.card ? esc(c.card.name) + " · " + c.note : `opened ${c.opened} cards`} · ${c.on}</small><small>${origin(c, true)}</small></span><span class="stamp">${rival ? RIVAL : "Claimed"}</span>`;
             $(".thumb", el)?.addEventListener("click", () => closeUp(c.card, c.banned));
-            $("#cl").appendChild(el);
-        }
+            $(into).appendChild(el);
+        });
+        ledger(CLAIMED, "#cl", false);
+        ledger(RIVAL_CLAIMED, "#rv", true);
     };
     draw();
 }
