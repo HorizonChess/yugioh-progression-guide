@@ -237,7 +237,7 @@ Revised with the user on 2026-11-04: the onboarding has its own look, unlike the
    - Redesign it so every flow works on a phone, with great UX that keeps the app's 90s Yu-Gi-Oh! look and feel. This includes the parked items: GuideSprite overlapping the VICTORY/DEFEAT buttons, and the mobile deck builder.
    - Verify every route and flow at phone widths with the Playwright drivers.
 
-**UI do-over (decided 2026-11-04):** the whole app gets a UI do-over: art, animation and layout on every screen, keeping the 90s Yu-Gi-Oh! vibe. It's done together with Phase 7, since both touch every screen. The onboarding scene (Phase 5) and the physics chains (`feat/physics-chain`) are the first pieces in the new style. Until then, new screens in Phases 4 and 6 stay plain and functional.
+**UI do-over (decided 2026-11-04):** the whole app gets a UI do-over: art, animation and layout on every screen, keeping the 90s Yu-Gi-Oh! vibe. It's done together with Phase 7, since both touch every screen. The onboarding scene (Phase 5) is the first piece in the new style. The physics chains (`feat/physics-chain`) wait on their branch and go in with the do-over. Until then, new screens in Phases 4 and 6 stay plain and functional.
 
 The plan also gets copied into the repo at `plans/2026-10-26/multiplayer-backend.md`, per the plans convention.
 
@@ -355,7 +355,7 @@ Moved ahead of Phase 4 by the user (2026-11-04): signing in and out from the men
 - `/onboarding`, the stored `duelistName` and `/dev/auth` are gone. Guests are named "Guest" in the nav.
 - The "import local saves" step waits for Phase 6.
 - `auth.mjs` drives all of it through the title screen (31 checks); `smoke.mjs` covers the guest path and EXIT GAME.
-- Visual makeover of the rest of the app: done with Phase 7 (mobile redesign), since both touch every screen. The first piece, physics chains between timeline packs, is on `feat/physics-chain`.
+- Visual makeover of the rest of the app: done with Phase 7 (mobile redesign), since both touch every screen. The first piece, physics chains between timeline packs, is on `feat/physics-chain` and merges with that work.
 
 Merged into `main` on 2026-11-04 after the user's go-ahead; not pushed. Phase 3b was skipped at the same time, so Phase 4 is next.
 
@@ -363,3 +363,16 @@ Decided with the user (2026-11-04):
 - Snatch Steal is left off the wheel in solo series; there's no rival to steal from. The wheel the server spins depends on the series mode (step 5).
 - A saved position keeps the set's name as well as its index, on series (server) and guest saves (web), and the name wins when the two disagree. Guest saves written before this are translated once using the old date-only order, so they stay on the set they meant.
 - The 50-series cap is per player (how many runs one account can have), a guard against scripted creation; reads aren't limited beyond the normal rate limit.
+
+### Phase 4: duo series (built 2026-11-05, branch `feat/duo-series`)
+Small commits, each tested:
+1. **Notifications**: stored in `notifications` (kept 60 days) and pushed live over a WebSocket at `/api/notifications/live` (`@fastify/websocket`; session cookie, and the `Origin` check now covers upgrades). `GET /api/notifications`, `POST /api/notifications/read`. Sending happens in the background after the change commits, so a failed notification never fails the move.
+2. **Duo series and invites**: `POST /api/series` takes `mode: 'duo'`; the series waits (`awaiting_rival`) until the rival joins. The owner invites by duelist name (the rival gets a notification) or gets a link code (`/join?code=`, stored hashed). A new invite of either kind replaces the old one; invites expire after 14 days. `/api/invites` lists, previews (no sign-in needed for a link), accepts and declines. Series now show their members by name.
+3. **Results**: in duo, `POST /matches` creates a pending report (one per series, enforced by a unique index) and tells the rival; the rival confirms (the set advances, the winner gets a wheel spin and the loser pity packs, in one transaction) or rejects (either player reports again). Reporting needs both players' openings saved for the current set, with separate messages for "you" and "your rival". `GET /series/:id` adds `pendingReport` and `openingsSaved`.
+4. **Snatch Steal**: `GET /rival-binder` (only while holding an unclaimed Snatch Steal) and a claim by printing (`id_setCode_rarity`) that moves one copy in a transaction. The rival is told about steals and about bans or unbans on the shared banlist.
+5. **Leaving**: deleting a duo series leaves it. The leaver's cards and openings go, a pending report is voided, the series pauses for the rival (who is told), and it's deleted once nobody is left.
+6. **Web**: plain and functional until the UI do-over. Duo mode and an optional rival name in the new-series form, the invite link to copy, invites at the top of the series list, duo status lines, `/join` (signed out, the code is kept through sign-in and the menu brings the player back), a bell in the nav with live notifications, the pending-result panel on Record Match (wait, or confirm/reject), and the Snatch Steal binder picker on Rewards. `NotificationsContext` refreshes the active series when a rival's move arrives.
+
+Verified: lint, typecheck, 112 API + 34 web tests, both builds, and the drivers: `duo.mjs` (18 checks, two browsers: invite by name and by link, live bell, the saved-packs gate, confirm, rewards, Snatch Steal, leaving), `auth.mjs`, `pack-session.mjs`, `smoke.mjs` and the reward drivers. The test API gained `POST /__test/reward` so drivers can claim prizes the wheel only gives at random.
+
+Not covered yet: a collection import prompt on joining (the Collection page's import already allows one import in a duo series that skips early sets), and two real players on two machines. That needs the Render deploy, plus the Google app out of Testing mode for Google sign-in.

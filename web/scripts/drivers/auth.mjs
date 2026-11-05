@@ -51,9 +51,9 @@ const signedInAs = () => page.getByText(`Signed in as ${NAME}`);
 const me = async () => (await (await context.request.get(`${API}/api/auth/me`)).json()).user;
 const onTitle = () => button("Press Start").waitFor({ timeout: 8000 });
 
-/** From the title screen to the sign-in letter. */
+/** From the signed-out menu to the sign-in letter. */
 async function toSignIn() {
-    await button("Press Start").click();
+    await item("SIGN IN").click();
     await button("I already have an invitation").click();
     await page.getByRole("form", { name: "Sign in" }).waitFor();
 }
@@ -66,7 +66,7 @@ async function signInWith(identifier, password) {
 
 async function signOut() {
     await item("SIGN OUT").click();
-    await onTitle();
+    await item("SIGN IN").waitFor({ timeout: 8000 });
 }
 
 try {
@@ -115,10 +115,11 @@ try {
     await signedInAs().waitFor({ timeout: 8000 });
     check(true, "title: Press Start takes a signed-in duelist to the menu");
 
-    // 4. Sign out goes to the title; a taken name is flagged; sign in by name and by email.
+    // 4. Sign out stays on the menu; exit to the title; a taken name is flagged; sign in by name and by email.
     await signOut();
-    check(new URL(page.url()).pathname === "/", "sign out: back on the title screen");
-
+    check(new URL(page.url()).pathname.startsWith("/menu"), "sign out: stays on the menu, which offers SIGN IN");
+    await item("EXIT GAME").click();
+    await onTitle();
     await button("Press Start").click();
     await button("Break the seal").click();
     await page.getByLabel("Duelist name", { exact: true }).fill(` ${NAME.toLowerCase()} `);

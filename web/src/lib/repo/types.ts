@@ -11,13 +11,31 @@ import type { MatchResult, SavedDeck } from "@/lib/storage";
 
 export type SeriesMode = "solo" | "duo";
 
+export interface Member {
+    id: string;
+    duelistName: string;
+}
+
 export interface SeriesSummary {
     id: string;
     name: string;
     mode: SeriesMode;
+    /** A duo series waits for its rival, and pauses if one leaves. */
+    status: "active" | "awaiting_rival" | "paused";
+    /** Null for guest saves. */
+    ownerId: string | null;
+    members: Member[];
     currentSetIndex: number;
     currentSetName: string | null;
     lastPlayed: number;
+}
+
+/** A duo result waiting for the other player to confirm it. */
+export interface PendingReport {
+    id: string;
+    setName: string;
+    reporterId: string;
+    winnerId: string;
 }
 
 export interface SeriesView extends SeriesSummary {
@@ -25,6 +43,9 @@ export interface SeriesView extends SeriesSummary {
     finished: boolean;
     bannedCardIds: number[];
     matchHistory: MatchResult[];
+    pendingReport: PendingReport | null;
+    /** Members who saved the current set's packs; a match needs all of them. */
+    openingsSaved: string[];
 }
 
 export interface PlayerView {
@@ -43,13 +64,15 @@ export interface Opening {
     flipped: number[];
 }
 
-/** Duo reports wait for the rival (Phase 4); solo ones apply at once. */
+/** Duo reports wait for the rival; solo ones apply at once. */
 export type ReportOutcome = { status: "applied"; reward: RewardEntry } | { status: "pending" };
 
 export interface CreateSeriesInput {
     name: string;
     startSetIndex: number;
     packsPerSet: number;
+    /** Guests play solo only. */
+    mode?: SeriesMode;
 }
 
 export interface OpenOptions {
@@ -80,9 +103,14 @@ export interface GameRepository {
     reroll(id: string, openingId: string): Promise<Opening>;
 
     reportMatch(id: string, won: boolean): Promise<ReportOutcome>;
+    /** Duo only: the other player's answer to a pending report. Confirming returns your reward. */
+    confirmReport(id: string, reportId: string): Promise<RewardEntry>;
+    rejectReport(id: string, reportId: string): Promise<void>;
     spin(id: string, rewardId: string): Promise<WheelPrize>;
-    /** Pity and tournament rewards answer with the packs they open. */
-    claimReward(id: string, rewardId: string, cardId?: number): Promise<Opening | null>;
+    /** Pity and tournament rewards answer with the packs they open. Snatch Steal takes a `printing` (collection key). */
+    claimReward(id: string, rewardId: string, cardId?: number, printing?: string): Promise<Opening | null>;
+    /** Duo only, while holding a Snatch Steal. */
+    rivalBinder(id: string): Promise<Collection>;
 
     saveDeck(id: string, deck: SavedDeck): Promise<void>;
     deleteDeck(id: string, deckId: string): Promise<void>;

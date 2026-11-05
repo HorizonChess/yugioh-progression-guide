@@ -1,6 +1,7 @@
 import { ObjectId, type ClientSession, type Db, type MongoClient } from 'mongodb';
 import {
     existedByCutoff,
+    parseCollectionKey,
     REWARD_PACKS,
     resolvePrizeKind,
     resolveSetIndex,
@@ -8,6 +9,7 @@ import {
     tournamentSetFor,
     wildcardGrant,
     type CardSet,
+    type PrizeKind,
     type RewardEntry,
 } from '@ygo/shared';
 import type { CardCatalog } from '../cards/catalog';
@@ -35,13 +37,23 @@ interface Context {
     reward: RewardEntry;
     anchor: CardSet;
     cardId: number | undefined;
+    /** Snatch Steal: the collection key of the rival's copy to take. */
+    printing: string | undefined;
 }
 
-/** Validates and resolves one available reward. Returns the opened packs for pity and tournament. */
+export interface Claimed {
+    kind: PrizeKind;
+    /** The opened packs, for pity and tournament. */
+    session: PackSessionDoc | null;
+    /** The card picked, banned or taken. */
+    cardId?: number;
+}
+
+/** Validates and resolves one available reward. */
 export async function claimReward(
     mongo: MongoClient,
-    { db, catalog, series, userId, rewardId, cardId }: Omit<Context, 'reward' | 'anchor'> & { rewardId: string },
-): Promise<PackSessionDoc | null> {
+    { db, catalog, series, userId, rewardId, cardId, printing }: Omit<Context, 'reward' | 'anchor'> & { rewardId: string },
+): Promise<Claimed> {
     const reward = (await findPlayer(db, series._id, userId))?.rewards.find((r) => r.id === rewardId);
     if (!reward) throw new ClaimError(404, 'No such reward');
     if (reward.status !== 'available') throw new ClaimError(409, 'This reward was already claimed');
@@ -49,7 +61,7 @@ export async function claimReward(
     const anchor = timeline[resolveSetIndex(timeline, reward.wonFromPackName, reward.wonFromSetIndex)];
     if (!anchor) throw new ClaimError(409, 'The set this reward came from is no longer available');
 
-    const effect = await resolveEffect({ db, catalog, series, userId, reward, anchor, cardId });
+    const effect = await resolveEffect({ db, catalog, series, userId, reward, anchor, cardId, printing });
     const tx = mongo.startSession();
     try {
         await tx.withTransaction(async () => {
@@ -66,12 +78,15 @@ export async function claimReward(
     } finally {
         await tx.endSession();
     }
-    return effect.session ?? null;
+    const card = effect.payload.grantedCardId ?? effect.payload.bannedCardId;
+    return { kind: resolvePrizeKind(reward.prizeId), session: effect.session ?? null, ...(card === undefined ? {} : { cardId: card }) };
 }
 
 async function resolveEffect(ctx: Context): Promise<Effect> {
     const kind = resolvePrizeKind(ctx.reward.prizeId);
     switch (kind) {
+        case 'snatch':
+            return snatch(ctx);
         case 'wildcard':
             return wildcard(ctx);
         case 'starlight':
@@ -135,6 +150,30 @@ async function banlist(ctx: Context, kind: 'ban' | 'unban'): Promise<Effect> {
                 { ...change, $set: { updatedAt: new Date() }, $inc: { version: 1 } },
                 { session: tx },
             ),
+    };
+}
+
+/** Moves one copy of a card the rival owns into the player's collection. */
+async function snatch(ctx: Context): Promise<Effect> {
+    const rivalId = ctx.series.memberIds.find((id) => !id.equals(ctx.userId));
+    if (!rivalId) throw new ClaimError(409, 'Snatch Steal needs a rival in the series');
+    const key = ctx.printing;
+    const entry = key === undefined ? null : parseCollectionKey(key);
+    if (!key || !entry) throw new ClaimError(400, 'Pick a card');
+    const rival = await findPlayer(ctx.db, ctx.series._id, rivalId);
+    if (!rival?.collection[key] || /[.$]/.test(key)) throw notEligible();
+
+    const field = `collection.${key}`;
+    const players = seriesPlayersCollection(ctx.db);
+    const filter = (userId: ObjectId) => ({ seriesId: ctx.series._id, userId });
+    return {
+        payload: { grantedCardId: entry.id },
+        apply: async (tx) => {
+            const taken = await players.updateOne({ ...filter(rivalId), [field]: { $gte: 1 } }, { $inc: { [field]: -1 } }, { session: tx });
+            if (!taken.modifiedCount) throw new ClaimError(409, 'Your rival no longer has that card');
+            await players.updateOne({ ...filter(rivalId), [field]: { $lte: 0 } }, { $unset: { [field]: '' } }, { session: tx });
+            await players.updateOne(filter(ctx.userId), { $inc: { [field]: 1 } }, { session: tx });
+        },
     };
 }
 

@@ -28,6 +28,8 @@ function addCards(collection: Collection, cards: { id: number; setCode: string; 
     return next;
 }
 
+const DUO_ONLY = "Duo series need an account";
+
 const pulled = (cards: PulledCard[]) => cards.map((c) => ({ id: c.id, setCode: c.pulled_set_code, rarity: c.pulled_rarity }));
 
 async function rollPacks(set: CardSet, count: number): Promise<PulledCard[][]> {
@@ -69,6 +71,9 @@ export class LocalRepo implements GameRepository {
             id: save.id,
             name: save.name,
             mode: "solo" as const,
+            status: "active" as const,
+            ownerId: null,
+            members: [],
             currentSetIndex: save.currentSetIndex,
             currentSetName: save.currentSetName ?? timeline[save.currentSetIndex]?.set_name ?? null,
             lastPlayed: save.lastPlayed,
@@ -116,6 +121,8 @@ export class LocalRepo implements GameRepository {
                 finished: save.currentSetIndex >= timeline.length,
                 bannedCardIds: save.bannedCardIds,
                 matchHistory: save.matchHistory,
+                pendingReport: null,
+                openingsSaved: [],
             },
             me: { collection: save.collection, savedDecks: save.savedDecks, rewards: save.rewards, ydkImportUsed: false },
         };
@@ -207,6 +214,19 @@ export class LocalRepo implements GameRepository {
             };
         });
         return { status: "applied" as const, reward: reward! };
+    }
+
+    // Guests play solo, so there's never a rival to answer or rob.
+    async confirmReport(): Promise<RewardEntry> {
+        throw new RepoError(DUO_ONLY);
+    }
+
+    async rejectReport(): Promise<void> {
+        throw new RepoError(DUO_ONLY);
+    }
+
+    async rivalBinder(): Promise<Collection> {
+        throw new RepoError(DUO_ONLY);
     }
 
     async spin(id: string, rewardId: string) {

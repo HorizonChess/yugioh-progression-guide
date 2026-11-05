@@ -13,6 +13,7 @@ import PackRevealModal from "@/components/rewards/PackRevealModal";
 import WildcardModal from "@/components/rewards/WildcardModal";
 import StarlightSearchModal from "@/components/rewards/StarlightSearchModal";
 import BanInput from "@/components/rewards/BanInput";
+import SnatchModal from "@/components/rewards/SnatchModal";
 import CardDetailModal from "@/components/card/CardDetailModal";
 
 /**
@@ -35,15 +36,16 @@ import CardDetailModal from "@/components/card/CardDetailModal";
  *                  `bannedCardIds` and blocks/greys the add).
  *  - starlight   → the `StarlightSearchModal`: a full-catalog typeahead gated to
  *                  cards released before the won pack, granted at Starlight Rare.
- * Snatch-steal is the only prize still locked (pending multiplayer).
+ *  - snatch      → the `SnatchModal`: take one copy of a card from the rival's
+ *                  binder (duo series only; solo wheels leave it off).
  */
 
-/** Shown on prizes whose claim flow isn't built yet (snatch-steal). */
-const LOCKED_NOTE = "Requires multiplayer — coming soon";
 const REDOER_NOTE = "Spend it from the pack summary to reroll an opening";
 
 export default function RewardsPage() {
-    const { rewards, bannedCardIds, hasLoaded, claimReward, activeOpening, flip, saveOpening } = useProgression();
+    const { rewards, bannedCardIds, hasLoaded, claimReward, rivalBinder, activeOpening, flip, saveOpening } = useProgression();
+    /** The reward whose rival-binder picker is open, if any. */
+    const [snatchEntry, setSnatchEntry] = useState<RewardEntry | null>(null);
     const router = useRouter();
     /** The pity or tournament packs being opened, if any. */
     const [revealOpening, setRevealOpening] = useState<Opening | null>(null);
@@ -107,9 +109,9 @@ export default function RewardsPage() {
     }, [hasLoaded]);
 
     /** Claims `entry` (with a picked card for single-card prizes) and closes its modal. */
-    const claim = async (entry: RewardEntry, cardId: number | undefined, close: () => void) => {
+    const claim = async (entry: RewardEntry, cardId: number | undefined, close: () => void, printing?: string) => {
         try {
-            const opening = await claimReward(entry.id, cardId);
+            const opening = await claimReward(entry.id, cardId, printing);
             close();
             if (opening) setRevealOpening(opening);
         } catch (error) {
@@ -144,6 +146,7 @@ export default function RewardsPage() {
             case "spin":
                 return { label: "Spin the Wheel", onClick: () => router.push(`/record-match?spin=${entry.id}`) };
             case "snatch":
+                return { label: "Steal a Card", onClick: () => setSnatchEntry(entry) };
             case "redoer":
                 return null;
         }
@@ -151,11 +154,10 @@ export default function RewardsPage() {
 
     const renderAvailable = (entry: RewardEntry) => {
         const action = claimAction(entry);
-        const note = resolvePrizeKind(entry.prizeId) === "redoer" ? REDOER_NOTE : LOCKED_NOTE;
         return action ? (
             <RewardCard key={entry.id} entry={entry} actionLabel={action.label} onAction={action.onClick} />
         ) : (
-            <RewardCard key={entry.id} entry={entry} locked lockedNote={note} />
+            <RewardCard key={entry.id} entry={entry} locked lockedNote={REDOER_NOTE} />
         );
     };
 
@@ -239,6 +241,14 @@ export default function RewardsPage() {
                     bannedCardIds={bannedCardIds}
                     onPick={(card) => claim(banEntry, card.id, () => setBanEntry(null))}
                     onClose={() => setBanEntry(null)}
+                />
+            )}
+
+            {snatchEntry && (
+                <SnatchModal
+                    loadBinder={rivalBinder}
+                    onChoose={(printing) => claim(snatchEntry, undefined, () => setSnatchEntry(null), printing)}
+                    onClose={() => setSnatchEntry(null)}
                 />
             )}
 

@@ -46,6 +46,11 @@ reports the assertions each driver checks.
   it (see the header of the script, or `npm run test-server -w @ygo/api`); it does
   not touch your real database and sends no email. Google sign-in needs a real
   Google account, so the API tests cover it with a fake instead.
+- `pack-session.mjs` — a server series: open, resume after a reload, save, the
+  once-per-set refusal, and a win spun on the server. Same test API as `auth.mjs`.
+- `duo.mjs` — two players in two browsers: invite by name and by link (opened
+  signed out, then signed in), live notifications in the bell, the rival
+  confirming a result, Snatch Steal, and leaving. Same test API as `auth.mjs`.
 
 Extend these rather than writing throwaway drivers. Keep the scripts checked in;
 keep generated images out of git.

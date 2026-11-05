@@ -44,7 +44,7 @@ try {
     check(await page.getByText("Your Series").isVisible(), "signed in: the save list shows server series");
     await page.getByRole("button", { name: "+ NEW GAME" }).click();
     await page.getByPlaceholder("Enter Name...").fill("Driver Run");
-    await page.locator("select").nth(1).selectOption("12");
+    await page.getByLabel("Packs per Set").selectOption("12");
     await page.getByRole("button", { name: "CREATE" }).click();
     await page.getByText("Driver Run").waitFor();
     const [created] = (await api("")).series;
