@@ -155,6 +155,9 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
             root: path.resolve(config.WEB_DIST),
             // The export uses trailing slashes (`/menu/` → `menu/index.html`); redirect `/menu` there.
             redirect: true,
+            // Next prefetches pages with `Range: bytes=0-63`; behind Render's Cloudflare
+            // the 206 gets compressed and Chrome caches it as the whole page (blank screen).
+            acceptRanges: false,
         });
     }
 

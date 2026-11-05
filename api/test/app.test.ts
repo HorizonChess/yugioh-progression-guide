@@ -101,6 +101,15 @@ describe('static site', () => {
         await app.close();
     });
 
+    it('answers range requests with the whole file', async () => {
+        const { app } = await testApp(mongo, { WEB_DIST: webDist });
+
+        const res = await app.inject({ url: '/menu/', headers: { range: 'bytes=0-3' } });
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toBe('<p>menu</p>');
+        await app.close();
+    });
+
     it("maps Next's dotted segment-prefetch requests onto the exported folders", async () => {
         const { app } = await testApp(mongo, { WEB_DIST: webDist });
 
