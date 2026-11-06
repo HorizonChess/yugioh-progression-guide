@@ -42,10 +42,12 @@ We use CSS variables to define the theme:
 -   **Body**: `Outfit` (Google Fonts) - Clean, modern sans-serif.
 -   **Parchment**: `Times New Roman` - Used within parchment elements for authenticity.
 
-### Guide Sprite
-A reactive character helper (Yugi) implemented in `src/components/layout/GuideSprite.tsx`.
--   **States**: Neutral, Happy, Sad, Action.
--   **Interaction**: Reacts to game events (opening packs, winning/losing) with speech bubbles.
+### The Guide (Yugi)
+Yugi slides in from the left with his words typed into a stone tablet, then leaves; nothing on the page moves for him.
+-   **When he speaks**: opening a set's card list, looking at a card, a notable card flipping in the opener, the haul, and a recorded duel (solo and duo lines differ). Several lines play as a dialogue he waits on (▼, tap for the next).
+-   **What he says**: [src/lib/guide/lines.ts](src/lib/guide/lines.ts) picks the line; [src/lib/guide/store.ts](src/lib/guide/store.ts) queues them (priorities, a gap between tips, no repeats in a visit); [src/components/layout/GuideSprite.tsx](src/components/layout/GuideSprite.tsx) shows them.
+-   **Facts, not memory**: comparisons ("nothing hits harder for no tribute") come from `src/data/guide/facts.json`, built from each stage's real card pool by `scripts/guide/build.mjs`, which also checks the hand-written notes in `src/data/guide/sets.json` against each set.
+-   **Options**: the main menu's Options turn him, the sound and his typewriter keys on or off.
 
 ## Data & APIs
 
@@ -246,7 +248,7 @@ The app talks to the API through `src/lib/auth-client.ts` and `src/lib/repo/remo
 -   **[✓] Inline Documentation**: Added extensive comments linking code to pack_opening_rules.md
 -   **[✓] Type Safety**: Fixed rewards page type errors (CardSet vs string)
 -   **[✓] Suspense Boundaries**: Resolved Next.js static generation issues with useSearchParams
--   **[✓] Custom Hook Refactor**: Extracted card tooltip logic into reusable `useCardTooltip` hook ([src/hooks/useCardTooltip.ts](src/hooks/useCardTooltip.ts))
+-   **[✓] Custom Hook Refactor**: Extracted card tooltip logic into a reusable `useCardTooltip` hook (since replaced by `useCardPeek` in `src/components/card/CardPlate.tsx`)
 
 ### Drag and Drop Optimization & Testing (December 2025)
 -   **[✓] Performance Optimization**: Refactored drag preview to use `useRef` + `requestAnimationFrame` + CSS `translate3d()` for GPU-accelerated rendering (eliminates re-renders on mouse move)
