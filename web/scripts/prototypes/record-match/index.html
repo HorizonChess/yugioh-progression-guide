@@ -48,7 +48,8 @@ body.A .optA, body.B .optB { display: flex; }
 .gilt { font-family: var(--font-display); color: transparent; background: linear-gradient(#fff1bf, #d4af37 55%, #8a6420); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 2px 2px rgba(0,0,0,.8)); }
 .ochre { font-family: var(--font-display); color: transparent; background: linear-gradient(#ffd2c2, #c8452e 60%, #6e1e10); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 2px 2px rgba(0,0,0,.8)); }
 /* letters cut into the stone: dark in the groove, a light lip below */
-.carved { font-family: var(--font-display); text-transform: uppercase; color: #3a3226; text-shadow: 0 1px 0 rgba(255,244,220,.35), 0 -1px 0 rgba(0,0,0,.45); }
+.carved { font-family: var(--font-display); text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255,244,220,.4), 0 -1px 0 rgba(0,0,0,.5); }
+.carved.red { color: #5c1a10; }
 .linkback { border: 0; background: none; cursor: pointer; font: 700 11px/1 var(--font-main); letter-spacing: .16em; text-transform: uppercase; color: #e9d9ad; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233,217,173,.4); padding: 6px; }
 .guide { position: absolute; left: 1.5%; bottom: 0; z-index: 8; height: min(42%, 380px); pointer-events: none; }
 .guide img { height: 100%; filter: drop-shadow(0 8px 14px rgba(0,0,0,.7)); }
@@ -70,8 +71,8 @@ body.A .optA, body.B .optB { display: flex; }
 .wheel__wedges { position: absolute; inset: 0; border-radius: 50%; }
 .wheel__wedges::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 38% 28%, rgba(255,255,255,.24), transparent 46%), radial-gradient(circle, transparent 62%, rgba(0,0,0,.38)); }
 .wheel__lines { position: absolute; inset: 0; border-radius: 50%; }
-.wheel__label { position: absolute; left: 50%; top: 50%; width: 50%; height: 0; transform-origin: 0 0; display: flex; align-items: center; justify-content: center; padding: 0 7% 0 24%; }
-.wheel__label span { font: 800 3.6cqi/1 var(--font-display); letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; transform: translateY(-50%); }
+.wheel__label { position: absolute; left: 50%; top: 50%; width: 50%; height: 0; transform-origin: 0 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 9%; }
+.wheel__label span { font: 800 3.3cqi/1 var(--font-display); letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; transform: translateY(-50%); }
 .wheel__label.l span { color: #3a2608; text-shadow: 0 1px 0 rgba(255,240,190,.55); }
 .wheel__label.d span { color: transparent; background: linear-gradient(#fff3c4, #d9b45a 60%, #a37a28); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 1px 1px #000); }
 .wheel__glow { position: absolute; inset: 0; border-radius: 50%; opacity: 0; transition: opacity .5s; pointer-events: none; mix-blend-mode: screen; }
@@ -110,19 +111,19 @@ body.A .optA, body.B .optB { display: flex; }
 .niche img { width: 82%; filter: drop-shadow(0 1cqi 1.2cqi rgba(0,0,0,.75)); transition: transform .5s, opacity .4s; }
 .niche .medal { position: absolute; opacity: 0; transform: scale(.6); transition: .5s .15s; }
 .won .niche img { opacity: 0; transform: scale(.6) rotate(-14deg); } .won .niche .medal { opacity: 1; transform: none; }
-.foe small { font: 800 1cqi/1 var(--font-main); letter-spacing: .3em; text-transform: uppercase; color: #3a3226; text-shadow: 0 1px 0 rgba(255,244,220,.35); }
+.foe small { font: 800 1.05cqi/1 var(--font-display); letter-spacing: .3em; text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255,244,220,.4); }
 .foe .name { margin-top: -.6cqi; font: 900 3cqi/1.05 var(--font-display); }
 .stats { display: flex; gap: 1cqi; justify-content: center; }
 .stat { min-width: 7.4cqi; padding: .8cqi 1cqi; border-radius: 4px; background: rgba(28,22,15,.78); box-shadow: inset 0 2px 5px rgba(0,0,0,.7), 0 1px 0 rgba(255,240,210,.3); }
-.stat small { display: block; font: 800 .78cqi/1 var(--font-main); letter-spacing: .2em; text-transform: uppercase; color: #a99d80; text-shadow: none; }
+.stat small { display: block; font: 800 .8cqi/1 var(--font-display); letter-spacing: .2em; text-transform: uppercase; color: #a99d80; text-shadow: none; }
 .stat b { display: block; margin-top: .4cqi; font: 900 2cqi/1 var(--font-display); color: var(--gold-hi); text-shadow: 0 2px 3px #000; }
 .medal { display: grid; place-items: center; width: 80%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 38% 30%, #fff3c4, #d9b45a 45%, #7a5418); box-shadow: 0 0 0 .35cqi #3b2a10, 0 0 0 .6cqi #c9a14a, 0 0 3cqi rgba(255,214,90,.6); }
 .medal b { font: 900 1.5cqi/1.05 var(--font-display); color: #2a1c05; text-align: center; text-transform: uppercase; padding: 0 12%; text-shadow: 0 1px 0 rgba(255,240,190,.6); }
 /* the choice */
 .choice { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2cqi; }
-.choice .ask { font: 900 2.2cqi/1 var(--font-display); letter-spacing: .14em; text-align: center; }
+.choice .ask { margin-bottom: 1cqi; font: 900 2cqi/1 var(--font-display); letter-spacing: .16em; text-align: center; }
 .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3cqi; width: 100%; }
-.pick { display: flex; flex-direction: column; align-items: center; gap: 1.1cqi; padding: 0; border: 0; background: none; cursor: pointer; }
+.pick { display: flex; flex-direction: column; align-items: center; gap: 2cqi; padding: 0; border: 0; background: none; cursor: pointer; }
 .tablet { position: relative; width: 100%; aspect-ratio: 1229 / 905; background: center / contain no-repeat; transition: transform .2s cubic-bezier(.2,.9,.3,1.3), filter .3s; filter: drop-shadow(0 1.2cqi 1.4cqi rgba(0,0,0,.6)); }
 .pick.win .tablet { background-image: url("img/tablet-win.webp"); } .pick.lose .tablet { background-image: url("img/tablet-lose.webp"); }
 /* the inlay catches the light on hover and when chosen */
@@ -133,10 +134,10 @@ body.A .optA, body.B .optB { display: flex; }
 .pick:active .tablet, .pick.pressed .tablet { transform: translateY(2%) scale(.97); filter: drop-shadow(0 .4cqi .6cqi rgba(0,0,0,.6)) brightness(.95); }
 .pick.chosen .tablet::after { opacity: 1; } .pick.chosen .tablet { filter: drop-shadow(0 0 2.4cqi rgba(255,200,90,.55)) drop-shadow(0 1.2cqi 1.4cqi rgba(0,0,0,.6)); }
 .pick.lose.chosen .tablet { filter: drop-shadow(0 0 2.4cqi rgba(230,80,50,.55)) drop-shadow(0 1.2cqi 1.4cqi rgba(0,0,0,.6)); }
-.pick .word { font: 900 2.6cqi/1 var(--font-display); letter-spacing: .2em; }
+.pick .word { font: 900 2.3cqi/1 var(--font-display); letter-spacing: .22em; padding-bottom: .6cqi; }
 .pick.dim { opacity: .35; filter: grayscale(1); pointer-events: none; }
 .b-foot { display: flex; justify-content: center; align-items: center; min-height: 4cqi; }
-.b-foot .linkback { color: #3a3226; text-decoration-color: rgba(58,50,38,.4); text-shadow: 0 1px 0 rgba(255,244,220,.35); font-size: .95cqi; }
+.b-foot .linkback { font-family: var(--font-display); color: #2f281e; text-decoration-color: rgba(58,50,38,.4); text-shadow: 0 1px 0 rgba(255,244,220,.35); font-size: .95cqi; }
 /* the acts replace the choice in the same place */
 .act { display: none; flex-direction: column; align-items: center; gap: 1.6cqi; width: 100%; }
 .board[data-st="wheel"] .tabs, .board[data-st="wheel"] .ask, .board[data-st="defeat"] .ask { display: none; }
@@ -144,11 +145,11 @@ body.A .optA, body.B .optB { display: flex; }
 .board[data-st="defeat"] .act-defeat, .board[data-st="duo"] .act-duo, .board[data-st="duo2"] .act-duo { display: flex; }
 .act-wheel .wheel { flex: none; width: 31cqi; }
 .act-wheel .row { display: flex; align-items: center; gap: 3cqi; }
-.prize { min-height: 5cqi; text-align: center; } .prize small { display: block; font: 800 .9cqi/1 var(--font-main); letter-spacing: .3em; text-transform: uppercase; color: #3a3226; text-shadow: 0 1px 0 rgba(255,244,220,.35); } .prize b { display: block; margin-top: .6cqi; font: 900 2.4cqi/1 var(--font-display); }
+.prize { min-height: 5cqi; text-align: center; } .prize small { display: block; font: 800 .95cqi/1 var(--font-display); letter-spacing: .3em; text-transform: uppercase; color: #3a3226; text-shadow: 0 1px 0 rgba(255,244,220,.35); } .prize b { display: block; margin-top: .6cqi; font: 900 2.4cqi/1 var(--font-display); }
 .board .cartouche { min-width: 0; width: 19cqi; height: 4.8cqi; } .board .cartouche span { font-size: 1.15cqi; }
 .board[data-st="defeat"] .tabs { width: 72%; }
 .act-defeat .packs3 img { height: 9cqi; }
-.act-defeat p, .act-duo p { margin: 0; font: 700 1.25cqi/1.4 var(--font-main); color: #2e271d; text-shadow: 0 1px 0 rgba(255,244,220,.3); text-align: center; }
+.act-defeat p, .act-duo p { margin: 0; font: 700 1.35cqi/1.45 var(--font-display); color: #2e271d; text-shadow: 0 1px 0 rgba(255,244,220,.3); text-align: center; }
 .act-defeat p b, .act-duo p b { color: #6e1e10; }
 .packs3 { display: flex; justify-content: center; } .packs3 img { margin-left: -2.4cqi; filter: drop-shadow(0 .8cqi 1cqi rgba(0,0,0,.7)); transform: rotate(var(--r)) translateY(var(--y)); animation: dealt .6s cubic-bezier(.2,.9,.3,1.2) both; animation-delay: var(--d); }
 .packs3 img:first-child { margin-left: 0; }
@@ -165,12 +166,12 @@ body.A .optA, body.B .optB { display: flex; }
   .b-main { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; justify-content: space-evenly; }
   .foe { display: grid; grid-template-columns: 74px 1fr; grid-template-rows: auto auto auto; column-gap: 12px; row-gap: 4px; text-align: left; align-items: center; width: 100%; }
   .niche { grid-row: 1 / 4; width: 74px; } .niche .medal b { font-size: 8px; }
-  .foe small { font-size: 9px; } .foe .name { margin: 0; font-size: 22px; }
+  .foe small { font-size: 9.5px; } .foe .name { margin: 0; font-size: 22px; }
   .stats { justify-content: flex-start; gap: 6px; } .stat { min-width: 0; padding: 5px 7px; } .stat small { font-size: 7.5px; } .stat b { font-size: 15px; margin-top: 3px; }
-  .choice { gap: 8px; } .choice .ask { font-size: 15px; }
+  .choice { gap: 10px; } .choice .ask { font-size: 14px; margin-bottom: 2px; }
   .tabs { grid-template-columns: 1fr; gap: 8px; width: 100%; }
   .tablet { width: auto; height: 21cqh; max-width: 100%; }
-  .pick { gap: 2px; } .pick .word { font-size: 16px; letter-spacing: .24em; }
+  .pick { gap: 8px; } .pick .word { font-size: 15px; letter-spacing: .24em; padding-bottom: 2px; }
   .b-foot { min-height: 28px; } .b-foot .linkback { font-size: 10px; }
   .act { gap: 10px; }
   .act-wheel .row { flex-direction: column; gap: 10px; }
@@ -181,7 +182,7 @@ body.A .optA, body.B .optB { display: flex; }
   .board[data-st="defeat"] .tabs, .board[data-st="duo"] .tabs, .board[data-st="duo2"] .tabs { width: 100%; }
   .board[data-st="defeat"] .pick.win, .board[data-st="duo"] .pick.lose, .board[data-st="duo2"] .pick.lose { display: none; }
   .act-defeat .packs3 img { height: 92px; margin-left: -24px; } .act-defeat .packs3 img:first-child { margin-left: 0; }
-  .act-defeat p, .act-duo p { font-size: 13px; }
+  .act-defeat p, .act-duo p { font-size: 13.5px; }
   .duo-btns { gap: 8px; } .duo-btns .cartouche { width: 150px; }
 }
 
@@ -251,10 +252,10 @@ body.A .optA, body.B .optB { display: flex; }
           <div class="stats"><div class="stat"><small>Win rate</small><b>62%</b></div><div class="stat"><small>Streak</small><b>+3</b></div><div class="stat"><small>Record</small><b>8–5</b></div></div>
         </div>
         <div class="choice">
-          <b class="ask gilt" id="aAsk">How did the duel go?</b>
+          <b class="ask carved" id="aAsk">How did the duel go?</b>
           <div class="tabs">
             <button class="pick win" data-pick="win" aria-label="Record a victory"><div class="tablet"></div><b class="word carved">Victory</b></button>
-            <button class="pick lose" data-pick="lose" aria-label="Record a defeat"><div class="tablet"></div><b class="word ochre">Defeat</b></button>
+            <button class="pick lose" data-pick="lose" aria-label="Record a defeat"><div class="tablet"></div><b class="word carved red">Defeat</b></button>
           </div>
           <div class="act act-wheel"><div class="row"><div class="wheel-slot" id="aWheelSlot" style="display:contents"></div><div style="display:flex;flex-direction:column;align-items:center;gap:1.6cqi"><div class="prize" id="aPrize"><small>Spin for your prize</small><b class="gilt">Winner's Wheel</b></div><button class="cartouche" id="aSpin"><span>Spin the wheel</span></button></div></div></div>
           <div class="act act-defeat"><div class="packs3"><img src="img/SRL.webp" style="--r:-10deg;--y:5%;--d:.05s"><img src="img/SRL.webp" style="--r:0deg;--y:0;--d:.18s"><img src="img/SRL.webp" style="--r:10deg;--y:5%;--d:.31s"></div><p>You get <b>3 Pity Packs</b> of Spell Ruler to rebuild your deck.</p><button class="cartouche"><span>Claim pity packs</span></button></div>
@@ -339,7 +340,7 @@ function render() {
   $("#aHead").textContent = st === "wheel" ? "Victory reward" : st === "defeat" ? "Match result" : st.startsWith("duo") ? "Duo series" : "Record the duel";
   $("#bEyebrow").textContent = $("#aHead").textContent;
   $("#aAsk").textContent = st === "defeat" ? "The shadows win this round" : st === "duo" ? "Waiting for Kaiba" : st === "duo2" ? "Kaiba reports a result" : "How did the duel go?";
-  $("#aAsk").className = "ask " + (st === "defeat" ? "ochre" : "gilt");
+  $("#aAsk").className = "ask carved" + (st === "defeat" ? " red" : "");
   const duo = st === "duo" ? `<span class="hourglass">⌛</span> You reported a <b>victory</b>. Kaiba has to confirm it before the wheel turns.` : st === "duo2" ? `Kaiba says <b>you won</b>. Confirm it to spin the wheel, or reject it.` : "";
   $("#aDuo").innerHTML = $("#bDuo").innerHTML = duo; $("#aDuoBtns").style.display = st === "duo2" ? "flex" : "none";
   for (const k in wheels) { wheels[k].classList.remove("won"); wheels[k].querySelector(".wheel__glow").style.background = ""; }
