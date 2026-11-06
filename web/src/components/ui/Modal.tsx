@@ -50,7 +50,8 @@ export default function Modal({
 
     return (
         <div
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+            style={{ height: "var(--app-h, 100dvh)" }}
+            className="fixed inset-x-0 top-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={onClose}
         >
             <div

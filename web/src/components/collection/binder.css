@@ -53,10 +53,12 @@
 
 /* a pocket of the sleeve: its opening lip, and a sheen across the plastic */
 .binder-pocket {
-  position: relative; min-height: 0; min-width: 0; display: grid; place-items: center; padding: 0; border: 0; color: inherit; border-radius: 3px;
+  container-type: size; position: relative; min-height: 0; min-width: 0; display: grid; place-items: center; padding: 0; border: 0; color: inherit; border-radius: 3px;
   background: linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 2px 0 rgba(255, 255, 255, 0.12), 0 1px 0 rgba(0, 0, 0, 0.6);
 }
+/* the card's height in its pocket: whole, whichever of the pocket's sides is the tighter */
+.binder-pocket { --fit: min(92cqh, 92cqw * 1185 / 813); }
 button.binder-pocket { cursor: pointer; }
 .binder-pocket::before { content: ""; position: absolute; left: 6%; right: 6%; top: 5%; height: 1px; background: rgba(255, 255, 255, 0.22); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); z-index: 2; pointer-events: none; }
 .binder-pocket::after {
@@ -64,7 +66,7 @@ button.binder-pocket { cursor: pointer; }
   background: linear-gradient(118deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 26%, transparent 42%, transparent 72%, rgba(255, 255, 255, 0.07) 86%, transparent 100%);
 }
 .binder-pocket img {
-  position: relative; z-index: 1; display: block; height: 92%; width: auto; max-width: 92%; aspect-ratio: 813 / 1185; object-fit: cover;
+  position: relative; z-index: 1; display: block; height: var(--fit); width: auto; aspect-ratio: 813 / 1185; object-fit: cover;
   border-radius: 3.5% / 2.5%; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); transition: transform 0.2s;
 }
 .binder-pocket:hover img { transform: translateY(-2%); }
@@ -73,7 +75,7 @@ button.binder-pocket { cursor: pointer; }
 }
 /* a light foil sheen on the rares, under the plastic */
 .binder-foil {
-  position: absolute; z-index: 2; height: 92%; aspect-ratio: 813 / 1185; max-width: 92%; border-radius: 3.5% / 2.5%; pointer-events: none; mix-blend-mode: soft-light; opacity: 0.55;
+  position: absolute; z-index: 2; height: var(--fit); aspect-ratio: 813 / 1185; border-radius: 3.5% / 2.5%; pointer-events: none; mix-blend-mode: soft-light; opacity: 0.55;
   background: linear-gradient(115deg, transparent 30%, color-mix(in srgb, var(--tc) 80%, white) 46%, transparent 60%) 0 0 / 250% 100%; animation: binder-foil 5s ease-in-out infinite;
 }
 @keyframes binder-foil { 50% { background-position: 100% 0; } }
@@ -83,7 +85,7 @@ button.binder-pocket { cursor: pointer; }
 }
 /* an empty pocket: the faint printed outline of the card that belongs there */
 .binder-ghost {
-  position: relative; z-index: 1; height: 92%; aspect-ratio: 813 / 1185; max-width: 92%; border-radius: 3.5% / 2.5%;
+  position: relative; z-index: 1; height: var(--fit); aspect-ratio: 813 / 1185; border-radius: 3.5% / 2.5%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6%; padding: 8%; text-align: center;
   border: 1px dashed rgba(224, 181, 79, 0.22); background: radial-gradient(ellipse at 50% 40%, rgba(224, 181, 79, 0.06), transparent 70%);
 }
@@ -207,7 +209,25 @@ button.binder-pocket { cursor: pointer; }
   .binder-sheets--r, .binder-leaf--r { left: 11.5%; right: 2.4%; }
   .binder-page { padding: 8.5% 4% 7.5%; gap: 2.2% 3%; }
   .binder-rings i { height: 10%; }
-  .binder-pocket img, .binder-ghost, .binder-foil { height: 95%; max-width: 95%; }
-  .binder-pager { padding: 2px 0 0; gap: 10px; }
-  .binder-pager .ps-btn { padding-top: 6px; padding-bottom: 6px; }
+  .binder-pocket { --fit: min(95cqh, 95cqw * 1185 / 813); }
+  .binder-page__foot { display: none; }
+  /* the heading is one row: title and stats, then search (a button), filters, more */
+  .coll__head { gap: 6px; padding: 6px 10px 0; }
+  .coll__title h1 { font-size: 19px; }
+  .coll__head .store__meta { margin-top: 2px; font-size: 10.5px; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .coll__head .ps-btn { padding: 7px 10px; font-size: 12px; }
+  .coll__icon { display: grid; place-items: center; width: 36px; padding: 0 !important; height: 33px; }
+  .coll__icon svg { width: 16px; height: 16px; }
+  .coll__bar { padding: 6px 10px 0; }
+  /* the sheet takes more of the width: a slimmer spine and rings, tighter page margins */
+  .binder-stage { padding: 0 4px; }
+  .binder-spine { width: 8%; }
+  .binder-rings { left: 4.2%; width: 7.6%; }
+  .binder-sheets--r, .binder-leaf--r { left: 9.2%; right: 1.6%; }
+  .binder-page { padding: 7.5% 2.6% 6.5%; gap: 1.6% 2.2%; }
+  /* the pager sits at the right of the chapter tabs */
+  .binder-tabs { left: 10%; right: 104px; }
+  .binder-pager--tabs { position: absolute; top: -31px; right: 0; z-index: 7; gap: 4px; padding: 0; }
+  .binder-pager--tabs span { min-width: 40px; font-size: 11px; letter-spacing: 0.04em; }
+  .binder-pager--tabs .ps-btn { padding: 4px 9px; font-size: 15px; line-height: 1; }
 }

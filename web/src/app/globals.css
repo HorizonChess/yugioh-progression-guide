@@ -1312,9 +1312,10 @@ html::-webkit-scrollbar-corner,
 @media (min-width: 768px) { .gallery__name { font-size: 12px; } }
 
 /* the close-up: the card large, its plate beside it (or a sheet under it on phones) */
-.closeup { touch-action: pan-y; position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 48px 16px 16px; background: rgba(4, 3, 8, 0.86); cursor: pointer; animation: ps-fade-in 0.25s ease-out both; }
+/* sized to the visible height (--app-h), so a phone browser's bottom bar never covers the plate */
+.closeup { touch-action: pan-y; position: fixed; inset: 0 0 auto; height: var(--app-h, 100dvh); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 48px 16px 16px; background: rgba(4, 3, 8, 0.86); cursor: pointer; animation: ps-fade-in 0.25s ease-out both; }
 .closeup__body { display: flex; align-items: center; gap: 32px; max-height: 100%; }
-.closeup__card { position: relative !important; flex: none; height: min(72vh, 560px); aspect-ratio: 813 / 1185; cursor: default; animation: closeup-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.closeup__card { position: relative !important; flex: none; height: min(calc(var(--app-h, 100dvh) * 0.72), 560px); aspect-ratio: 813 / 1185; cursor: default; animation: closeup-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
 .closeup__face { transform: none; }
 .closeup__card:not([data-tier="Common"]) .closeup__face { box-shadow: 0 0 0 1.5px var(--rc), 0 0 16px 0 var(--rc), 0 12px 24px rgba(0, 0, 0, 0.6); }
 .closeup__card:not([data-tier="Common"]) .closeup__glare { opacity: 1; }
@@ -1337,12 +1338,12 @@ html::-webkit-scrollbar-corner,
 @media (max-width: 767px) {
   .closeup { align-items: stretch; padding: 40px 0 0; }
   .closeup__body { flex-direction: column; justify-content: space-between; gap: 16px; width: 100%; }
-  .closeup__card { height: auto; width: min(72vw, 52vh * 0.686); margin: 0 auto; }
+  .closeup__card { height: auto; width: min(72vw, var(--app-h, 100dvh) * 0.52 * 0.686); margin: 0 auto; }
   .closeup__side { width: 100%; }
   .closeup__nav { top: 40%; width: 38px; height: 38px; font-size: 20px; background: rgba(10, 7, 4, 0.55); }
   .closeup__nav--prev { left: 6px; }
   .closeup__nav--next { right: 6px; }
-  .closeup__side .ps-plate { border-radius: 14px 14px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom)); max-height: 46vh; overflow-y: auto; }
+  .closeup__side .ps-plate { border-radius: 14px 14px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom)); max-height: calc(var(--app-h, 100dvh) * 0.46); overflow-y: auto; }
 }
 .ps-peek--react .ps-plate { animation: ps-fade-in 0.18s ease-out both; }
 
