@@ -3,12 +3,14 @@
 // that scrolls sideways at phone width. Images land in out/screens/.
 //
 //   node scripts/drivers/screens.mjs            (WIDTHS=phone to skip desktop)
+//   HIDE_GUIDE=1 leaves Yugi out (clean backdrops for guide prototypes); the images then land in out/screens-no-guide/.
 
 import { mkdirSync } from "fs";
 import { join } from "path";
 import { BASE, OUT_DIR, STORE_KEY, launchBrowser, makeSave, reward, seedStorage } from "./_lib.mjs";
 
-const DIR = join(OUT_DIR, "screens");
+const HIDE_GUIDE = !!process.env.HIDE_GUIDE;
+const DIR = join(OUT_DIR, HIDE_GUIDE ? "screens-no-guide" : "screens");
 mkdirSync(DIR, { recursive: true });
 
 const SIZES = {
@@ -34,6 +36,11 @@ const wanted = (process.env.WIDTHS || "desktop,phone").split(",");
 for (const [size, options] of Object.entries(SIZES).filter(([s]) => wanted.includes(s))) {
     const page = await browser.newPage(options);
     await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }) });
+    if (HIDE_GUIDE) await page.addInitScript(() => addEventListener("DOMContentLoaded", () => {
+        const style = document.createElement("style");
+        style.textContent = '.fixed:has(> div > img[alt^="Yugi Muto"]), .fixed:has(img[alt^="Yugi Muto"]) { display: none !important; }';
+        document.head.append(style);
+    }));
     const shot = (name) => page.screenshot({ path: join(DIR, `${size}-${name}.png`) });
 
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
