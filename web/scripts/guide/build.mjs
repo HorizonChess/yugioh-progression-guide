@@ -1,74 +1,66 @@
-// Builds what Yugi knows, from the real card pool at each stage of the series.
+// Checks Yugi's notes against the real card pool, and writes the timeline he reads them by.
 //
 //   node scripts/guide/build.mjs
 //
-// Writes src/data/guide/facts.json: for every timeline set (keyed by set code), the
-// strongest monsters in the pool up to and including that set, by how many tributes
-// they need. Yugi's "nothing hits harder" lines read these, never memory.
+// Writes src/data/guide/timeline.json: the timeline's set codes in order, so a note's
+// "until" (a set code) can be compared with the player's stage.
 //
-// Also checks src/data/guide/sets.json (the hand-written notes): every card a note
-// names must be printed in that set, and the run fails if one isn't.
+// Checks src/data/guide/sets.json (the hand-written notes) and fails if:
+//  - a note names a card that isn't printed in that set;
+//  - an "until" isn't a timeline set, or comes before the set the note is in;
+//  - a _multiples card isn't printed on the timeline;
+//  - a line (with any wording it's used in) is over 140 characters.
+// For checking what a note claims about the pool at a stage, see pool.mjs.
 import { readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { poolAt, timeline } from "./pool.mjs";
 
 const DATA = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "src", "data", "guide");
-const ONLY = process.argv[2] ? Number(process.argv[2]) : undefined; // stages to build, for a quick run
-
-/** A monster you can Normal Summon (no fusion, ritual or "Cannot be Normal Summoned"), and how many tributes it needs. */
-function tributes(card) {
-    if (!card.type.includes("Monster") || /Fusion|Ritual|Synchro|XYZ|Link|Token/.test(card.type)) return null;
-    if (/[Cc]annot be Normal Summoned/.test(card.desc)) return null;
-    const lv = card.level ?? 0;
-    return lv <= 4 ? 0 : lv <= 6 ? 1 : 2;
-}
-
-/**
- * A monster whose ATK comes with a catch: a coin toss, a Life Point cost, destroying itself,
- * shrinking, or not attacking. It isn't counted as "hits hardest"; Yugi mentions it as the catch.
- */
-const CATCH = /toss a coin|pay \d+ (Life Points|LP)|cost of \d+ of your own Life Points|destroy this card|Summoned, destroy it|this card loses|decrease the ATK|opponent draws|changed to Defense Position|cannot (declare an )?attack/i;
-const notes0 = JSON.parse(readFileSync(join(DATA, "sets.json"), "utf8"));
-const hasCatch = (card) => notes0._catch?.includes(card.name) || (card.type.includes("Effect") && !notes0._noCatch?.includes(card.name) && CATCH.test(card.desc));
 
 const sets = await timeline();
-const stages = ONLY === undefined ? sets.length : Math.min(ONLY, sets.length);
-const facts = {};
-const printed = {}; // set code → card names printed in it
-for (let i = 0; i < stages; i++) {
-    const { pool } = await poolAt(i);
-    const top = [[], [], []], risky = [[], [], []];
-    for (const { card, rarity } of pool.values()) {
-        const t = tributes(card);
-        if (t !== null && card.atk != null) (hasCatch(card) ? risky : top)[t].push({ id: card.id, name: card.name, atk: card.atk, common: rarity === "Common" });
-    }
-    const byAtk = (a, b) => b.atk - a.atk || a.name.localeCompare(b.name);
-    // Each tier: the strongest monsters without a catch, and the strongest one with a catch that outhits them (if any).
-    const tier = (t) => {
-        const clean = top[t].sort(byAtk).slice(0, 4);
-        const catchy = risky[t].sort(byAtk)[0];
-        return { top: clean, ...(catchy && clean[0] && catchy.atk > clean[0].atk && { catch: catchy }) };
-    };
-    facts[sets[i].set_code] = { stage: i, name: sets[i].set_name, tiers: [tier(0), tier(1), tier(2)] };
-    printed[sets[i].set_code] = new Set([...pool.values()].filter((e) => e.firstSet === sets[i].set_code || e.card.card_sets?.some((p) => p.set_name === sets[i].set_name)).map((e) => e.card.name));
-    process.stdout.write(`\r${i + 1}/${stages} ${sets[i].set_code}   `);
-}
-writeFileSync(join(DATA, "facts.json"), JSON.stringify(facts) + "\n");
-console.log(`\nfacts.json: ${Object.keys(facts).length} sets`);
+const codes = sets.map((s) => s.set_code);
+writeFileSync(join(DATA, "timeline.json"), JSON.stringify(codes) + "\n");
+console.log(`timeline.json: ${codes.length} sets`);
 
-// Check the notes.
+// Card names printed in each set that has notes.
 const notes = JSON.parse(readFileSync(join(DATA, "sets.json"), "utf8"));
+const noted = Object.keys(notes).filter((k) => !k.startsWith("_"));
+const last = Math.max(...noted.map((c) => codes.indexOf(c)));
+const printed = {};
+const { pool } = await poolAt(Math.max(last, 0));
+for (const code of noted) {
+    const set = sets.find((s) => s.set_code === code);
+    printed[code] = new Set([...pool.values()].filter((e) => e.firstSet === code || e.card.card_sets?.some((p) => p.set_name === set?.set_name)).map((e) => e.card.name));
+}
+
 let bad = 0;
-for (const [code, note] of Object.entries(notes)) {
-    if (code.startsWith("_")) continue;
-    if (!printed[code]) { console.log(`  ${code}: not a built timeline set`); bad++; continue; }
-    for (const name of Object.keys(note.cards ?? {}).flatMap((n) => n.split(" | "))) {
-        if (!printed[code].has(name)) { console.log(`  ${code}: "${name}" isn't printed in ${facts[code].name}`); bad++; }
-    }
-    for (const line of [...(note.intro ?? []), ...Object.values(note.cards ?? {}).flat()]) {
-        if (line.length > 140) { console.log(`  ${code}: over 140 characters: "${line.slice(0, 50)}…"`); bad++; }
+const fail = (msg) => (console.log(`  ${msg}`), bad++);
+const checkUntil = (where, until, from) => {
+    if (until === undefined) return;
+    const at = codes.indexOf(until);
+    if (at === -1) fail(`${where}: until "${until}" isn't a timeline set`);
+    else if (from !== undefined && at < from) fail(`${where}: until "${until}" is before the set it's in`);
+};
+for (const code of noted) {
+    const note = notes[code];
+    if (!codes.includes(code)) { fail(`${code}: not a timeline set`); continue; }
+    for (const line of note.intro ?? []) if (line.length > 140) fail(`${code}: intro over 140 characters: "${line.slice(0, 50)}…"`);
+    for (const [names, entry] of Object.entries(note.cards ?? {})) {
+        const { lines, until } = Array.isArray(entry) ? { lines: entry } : entry;
+        for (const name of names.split(" | ")) if (!printed[code].has(name)) fail(`${code}: "${name}" isn't printed in ${code}`);
+        for (const line of lines) if (line.length > 140) fail(`${code}: over 140 characters: "${line.slice(0, 50)}…"`);
+        checkUntil(`${code} "${names}"`, until, codes.indexOf(code));
     }
 }
-console.log(bad ? `${bad} problem(s) in sets.json` : "sets.json: every card is in its set");
+// Cards worth several copies: printed in a noted set, and every wording fits.
+const everywhere = new Set(Object.values(printed).flatMap((names) => [...names]));
+for (const [name, m] of Object.entries(notes._multiples ?? {})) {
+    if (!everywhere.has(name)) fail(`_multiples: "${name}" isn't printed in any noted set`);
+    checkUntil(`_multiples "${name}"`, m.until);
+    for (const head of [`That's 3 ${name}, a full set!`, `Your third ${name}!`, `A second ${name}!`, `Another ${name}!`]) {
+        if (head.length + 1 + m.why.length > 140) fail(`_multiples: "${head} ${m.why.slice(0, 30)}…" is over 140 characters`);
+    }
+}
+console.log(bad ? `${bad} problem(s) in sets.json` : "sets.json: every card is in its set, every line fits");
 process.exit(bad ? 1 : 0);

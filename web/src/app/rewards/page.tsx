@@ -358,7 +358,8 @@ export default function RewardsPage() {
                 </div>
             </div>
 
-            <GuideSprite />
+            {/* While packs are open, Yugi is inside the chamber instead. */}
+            {!revealOpening && <GuideSprite />}
 
             {revealOpening && (
                 <PackRevealModal

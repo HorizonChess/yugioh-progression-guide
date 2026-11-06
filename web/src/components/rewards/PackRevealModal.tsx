@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CardSet, fetchAllSets, fetchTournamentSets } from "@/lib/api";
 import type { Opening } from "@/lib/repo/types";
 import type { PrizeId } from "@/lib/rewards";
@@ -10,6 +10,9 @@ import { usePackOpening } from "@/hooks/usePackOpening";
 import PackStageView from "@/components/packs/PackStageView";
 import OpeningSummary from "@/components/packs/OpeningSummary";
 import RewardRite, { RiteNote } from "@/components/rewards/RewardRite";
+import GuideSprite from "@/components/layout/GuideSprite";
+import { pullLine } from "@/lib/guide/lines";
+import { guide, seed } from "@/lib/guide/store";
 
 interface PackRevealModalProps {
     /** A pity or tournament reward's packs, as the repository rolled them. */
@@ -24,10 +27,13 @@ interface PackRevealModalProps {
  * The shared "open 3 packs" reward reveal, in the claiming chamber: the same pack
  * opener as /packs (a tear and a ring on phones, the duel table on wider
  * screens), then the haul with "Add to Collection". Closing keeps the opening, so
- * the rewards page resumes it.
+ * the rewards page resumes it. Yugi comes along inside it (the page's own Yugi is
+ * under the chamber) and talks about the pulls as on /packs.
  */
 export default function PackRevealModal({ opening, onFlip, onCollect, onClose }: PackRevealModalProps) {
-    const { collection } = useProgression();
+    const { collection, currentSetIndex } = useProgression();
+    /** Cards Yugi already talked about as they flipped, so the haul doesn't repeat him. */
+    const saidOnFlip = useRef<Set<number>>(new Set());
     const [set, setSet] = useState<CardSet | null>(null);
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
     const pack = usePackOpening(onFlip);
@@ -73,8 +79,11 @@ export default function PackRevealModal({ opening, onFlip, onCollect, onClose }:
                         onBack={onClose}
                         saveLabel="Add to Collection"
                         backLabel="Not now"
+                        stage={currentSetIndex}
+                        alreadySaid={saidOnFlip.current}
                     />
                 </div>
+                <GuideSprite />
             </RewardRite>
         );
     }
@@ -98,12 +107,22 @@ export default function PackRevealModal({ opening, onFlip, onCollect, onClose }:
                 flippedCards={pack.flippedCards}
                 fullyOpened={pack.isPackFullyOpened}
                 ownedBefore={ownedBefore}
-                onFlip={(index) => pack.flip([index])}
+                onFlip={(index) => {
+                    pack.flip([index]);
+                    const card = current[index];
+                    if (!card) return;
+                    const before = ownedBefore(index);
+                    const line = pullLine({ id: card.id, name: card.name, rarity: card.pulled_rarity, isNew: before === 0, copies: before + 1 }, currentSetIndex, seed());
+                    if (!line) return;
+                    saidOnFlip.current.add(card.id);
+                    setTimeout(() => guide.say(line), 700);
+                }}
                 onNextPack={pack.handleNextPack}
                 onOpenAll={pack.handleOpenAll}
                 onBack={onClose}
                 backLabel="Not now"
             />
+            <GuideSprite />
         </RewardRite>
     );
 }

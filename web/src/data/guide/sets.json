@@ -1,10 +1,129 @@
 {
-  "_about": "Yugi's notes on each set. intro: said when you open a set's card list before you own any of it. cards: a few lines per card (names joined by ' | ' share lines), said when you look at the card or pull it. Every name is checked against the set by scripts/guide/build.mjs. Keep lines under 140 characters, in Yugi's voice, and true for the cards both duelists can have at this point.",
-  "_catch": [],
-  "_noCatch": [
-    "Barrel Dragon"
-  ],
-  "_catchAbout": "Monsters whose ATK comes with a drawback aren't ranked as the hardest hitters. build.mjs spots most from their text; _catch adds ones it misses, _noCatch removes ones it wrongly flags.",
+  "_about": "Yugi's notes on each set. intro: said when you open a set's card list before you own any of it. cards: lines per card (names joined by ' | ' share lines), said when you look at the card or pull it. Only cards that mattered in real decks of the era, or that Yugi remembers from his, Kaiba's or Joey's duels. A card's worth depends on where the series is: a note with 'until' (a set code) is only said up to that set, since Fissure is great at the start and not twenty sets later. Memories never expire. _multiples: cards a deck wants more than one of, with why (and 'until'); Yugi speaks up on a 2nd or later copy, up to want. Every name is checked by scripts/guide/build.mjs. Keep lines under 140 characters, in Yugi's voice.",
+  "_multiples": {
+    "Pot of Greed": {
+      "want": 3,
+      "why": "Tournaments only allowed one, but here every copy is two free cards!"
+    },
+    "Raigeki": {
+      "want": 3,
+      "why": "Tournaments only allowed one. Here, every copy can wipe their whole field!"
+    },
+    "Monster Reborn": {
+      "want": 3,
+      "why": "Tournaments only allowed one. Here you can bring back their best monster again and again!"
+    },
+    "Change of Heart": {
+      "want": 3,
+      "why": "Tournaments only allowed one, but nothing stops us running more here!"
+    },
+    "Dark Hole": {
+      "want": 2,
+      "why": "It hits your monsters too, but a second one gives you another way out when they're ahead."
+    },
+    "Snatch Steal": {
+      "want": 3,
+      "why": "Stealing their best monster for good never gets old. Every copy counts!"
+    },
+    "Mirror Force": {
+      "want": 3,
+      "why": "Each one can wipe out their whole attack. They'll be scared to swing at all!"
+    },
+    "Heavy Storm": {
+      "want": 2,
+      "why": "Clearing their back row twice can win a duel all by itself."
+    },
+    "Tribute to the Doomed": {
+      "want": 2,
+      "why": "Monster removal is never wasted. A second answer is always welcome!",
+      "until": "IOC"
+    },
+    "Mystical Space Typhoon": {
+      "want": 3,
+      "why": "Real decks ran two or three of these, so their traps never feel safe."
+    },
+    "Sangan": {
+      "want": 2,
+      "why": "It replaces itself every time. Almost every deck ran these searchers."
+    },
+    "Witch of the Black Forest": {
+      "want": 2,
+      "why": "She replaces herself and finds your best monster. Almost every deck ran her!"
+    },
+    "Delinquent Duo": {
+      "want": 2,
+      "why": "Two cards from their hand for one of yours. That trade adds up fast!"
+    },
+    "The Forceful Sentry": {
+      "want": 2,
+      "why": "Seeing their hand and taking their best card is worth doing twice."
+    },
+    "Nobleman of Crossout": {
+      "want": 2,
+      "why": "Face-down monsters are everywhere. A second Nobleman always finds a target.",
+      "until": "IOC"
+    },
+    "Mystic Tomato": {
+      "want": 3,
+      "why": "It floats into a new monster when it's destroyed. Three keeps your field full!",
+      "until": "IOC"
+    },
+    "Nimble Momonga": {
+      "want": 3,
+      "why": "It calls its own copies from your deck, so it really wants all three!",
+      "until": "IOC"
+    },
+    "Magician of Faith": {
+      "want": 2,
+      "why": "Getting your best spell back again is pure card advantage.",
+      "until": "IOC"
+    },
+    "Drop Off": {
+      "want": 2,
+      "why": "Top decks ran more than one. Throwing away their fresh draw never stops hurting!",
+      "until": "IOC"
+    },
+    "Don Zaloog": {
+      "want": 2,
+      "why": "Every hit costs them a card. Two Don Zaloogs keep the pressure on!",
+      "until": "IOC"
+    },
+    "Spirit Reaper": {
+      "want": 2,
+      "why": "It can't be destroyed in battle, so a second one is twice the wall."
+    },
+    "Exiled Force": {
+      "want": 2,
+      "why": "A monster that trades itself for anything is worth a second slot."
+    },
+    "Torrential Tribute": {
+      "want": 2,
+      "why": "One trap that clears the whole field. Two makes them scared to summon!"
+    },
+    "Book of Moon": {
+      "want": 2,
+      "why": "It stops an attack, saves your monster, or resets a flip. Always useful!"
+    },
+    "Summoned Skull": {
+      "want": 2,
+      "why": "2500 ATK for one tribute. A second Skull means you draw into one sooner.",
+      "until": "IOC"
+    },
+    "Gemini Elf": {
+      "want": 3,
+      "why": "The best monster you can summon for free. Decks ran all three!",
+      "until": "IOC"
+    },
+    "Blue-Eyes White Dragon": {
+      "want": 3,
+      "why": "Kaiba ran three of these. Now you know how it feels!"
+    },
+    "Axe of Despair": {
+      "want": 2,
+      "why": "It comes back every time, so a second Axe makes even small monsters scary.",
+      "until": "IOC"
+    }
+  },
   "LOB": {
     "intro": [
       "This is where it all began! Grandpa's Blue-Eyes is in here somewhere... but Pot of Greed and Fissure will win you more duels.",
@@ -20,9 +139,6 @@
       "Red-Eyes Black Dragon": [
         "Red-Eyes Black Dragon! Joey's favorite. It's got potential, just like him."
       ],
-      "Exodia the Forbidden One | Left Arm of the Forbidden One | Right Arm of the Forbidden One | Left Leg of the Forbidden One | Right Leg of the Forbidden One": [
-        "A piece of Exodia! Get all five in your hand and you win on the spot. It's a long road, though."
-      ],
       "Monster Reborn": [
         "Monster Reborn! Bring back the best monster in either Graveyard. Hardly anyone will have one of these."
       ],
@@ -32,29 +148,56 @@
       "Dark Hole": [
         "Dark Hole clears the whole field, yours too. Save it for when they're ahead."
       ],
-      "Man-Eater Bug": [
-        "Man-Eater Bug looks goofy, but when it flips, any monster on the field is gone. Set it and wait!"
-      ],
-      "Trap Hole": [
-        "Trap Hole! When they summon something with 1000 ATK or more, it's gone before it can swing."
-      ],
-      "Swords of Revealing Light": [
-        "Swords of Revealing Light flips their monsters up and stops their attacks for three turns. That's time to build!"
-      ],
+      "Man-Eater Bug": {
+        "lines": [
+          "Man-Eater Bug looks goofy, but when it flips, any monster on the field is gone. Set it and wait!"
+        ],
+        "until": "LOD"
+      },
+      "Trap Hole": {
+        "lines": [
+          "Trap Hole! When they summon something with 1000 ATK or more, it's gone before it can swing."
+        ],
+        "until": "LON"
+      },
       "Pot of Greed": [
         "Pot of Greed! Two free cards, no catch. Every deck wants this one."
       ],
-      "Fissure": [
-        "Fissure takes out their weakest face-up monster. Simple, but it clears the way to attack!"
-      ],
-      "Hane-Hane": [
-        "Hane-Hane flips and bounces any monster back to the hand. Great against their tribute monsters!"
+      "Fissure": {
+        "lines": [
+          "Fissure takes out their weakest face-up monster. Simple, but it clears the way to attack!"
+        ],
+        "until": "PGD"
+      },
+      "Hane-Hane": {
+        "lines": [
+          "Hane-Hane flips and bounces any monster back to the hand. Great against their tribute monsters!"
+        ],
+        "until": "PGD"
+      },
+      "Exodia the Forbidden One | Left Arm of the Forbidden One | Right Arm of the Forbidden One | Left Leg of the Forbidden One | Right Leg of the Forbidden One": [
+        "A piece of Exodia! I beat Kaiba with all five the very first time we dueled. Get them all and you win!"
       ],
       "Gaia The Fierce Knight": [
-        "Gaia the Fierce Knight! Fuse him with Curse of Dragon and you get Gaia the Dragon Champion."
+        "Gaia the Fierce Knight! He rode with me against Kaiba. Fuse him with Curse of Dragon for the Dragon Champion!"
+      ],
+      "Curse of Dragon": [
+        "Curse of Dragon! I fused it with Gaia to make Gaia the Dragon Champion. A great team!"
       ],
       "Celtic Guardian": [
-        "Celtic Guardian! 1400 ATK and no tribute. A loyal swordsman for the front line."
+        "Celtic Guardian! He fought for me in Duelist Kingdom. 1400 ATK and no tribute, a loyal swordsman."
+      ],
+      "Swords of Revealing Light": [
+        "Swords of Revealing Light! It bought me time in so many duels. Three turns with no attacks from them!"
+      ],
+      "Polymerization": [
+        "Polymerization! Kaiba used one to fuse three Blue-Eyes into the Ultimate Dragon. I'll never forget that."
+      ],
+      "Hitotsu-Me Giant": [
+        "Hitotsu-Me Giant! Kaiba played this one in our very first duel. Feels like a long time ago."
+      ],
+      "Flame Swordsman": [
+        "Flame Swordsman! Joey's ace in Duelist Kingdom. He won so many duels with that sword."
       ]
     }
   },
@@ -64,9 +207,6 @@
       "Summoned Skull and Kuriboh are both in here! And 7 Colored Fish is a common now... 1800 ATK with no tribute."
     ],
     "cards": {
-      "Summoned Skull": [
-        "Summoned Skull! 2500 ATK for a single tribute. That's a monster they'll have to answer right away."
-      ],
       "Mirror Force": [
         "Mirror Force! When they attack, all their Attack Position monsters are destroyed. Let them come!"
       ],
@@ -76,23 +216,29 @@
       "Solemn Judgment": [
         "Solemn Judgment stops anything, at the cost of half your Life Points. Use it when it really counts."
       ],
-      "Magic Jammer": [
-        "Magic Jammer! Toss a card and their spell is gone. Save it for their Raigeki or Dark Hole."
-      ],
-      "Horn of Heaven": [
-        "Horn of Heaven stops a summon cold. Tribute a weak monster and their big play is wasted!"
-      ],
+      "Magic Jammer": {
+        "lines": [
+          "Magic Jammer! Toss a card and their spell is gone. Save it for their Raigeki or Dark Hole."
+        ],
+        "until": "IOC"
+      },
+      "Horn of Heaven": {
+        "lines": [
+          "Horn of Heaven stops a summon cold. Tribute a weak monster and their big play is wasted!"
+        ],
+        "until": "PGD"
+      },
       "Heavy Storm": [
         "Heavy Storm clears every spell and trap on the field. Perfect before you attack into their back row."
       ],
-      "Tribute to the Doomed": [
-        "Tribute to the Doomed! Discard a card and destroy any monster. That's an answer to almost everything."
-      ],
+      "Tribute to the Doomed": {
+        "lines": [
+          "Tribute to the Doomed! Discard a card and destroy any monster. That's an answer to almost everything."
+        ],
+        "until": "IOC"
+      },
       "Kuriboh": [
         "Kuriboh! Discard him and you take no damage from that attack. He's saved me more times than I can count."
-      ],
-      "Time Wizard": [
-        "Time Wizard is a coin toss... call it right and their whole field is gone. I like those odds!"
       ],
       "Barrel Dragon": [
         "Barrel Dragon shoots down a monster with a few lucky coin flips. Bandit Keith's favorite, though..."
@@ -101,13 +247,43 @@
         "Catapult Turtle launches your monsters for damage. Fun, but it costs you cards. Think before you fire!"
       ],
       "Gate Guardian": [
-        "Gate Guardian! You need Sanga, Kazejin and Suijin on the field to call it. Tough, but what a sight!"
+        "Gate Guardian! The Paradox Brothers threw it at Joey and me in the labyrinth. What a duel that was!"
       ],
       "Sanga of the Thunder | Kazejin | Suijin": [
         "One of the three guardians! When it's attacked, it can drop the attacker's ATK to 0."
       ],
-      "7 Colored Fish": [
-        "7 Colored Fish! 1800 ATK, no tribute, and it's a common. Expect to see a few across the table too."
+      "7 Colored Fish": {
+        "lines": [
+          "7 Colored Fish! 1800 ATK, no tribute, and it's a common. Expect to see a few across the table too."
+        ],
+        "until": "PSV"
+      },
+      "Summoned Skull": {
+        "lines": [
+          "Summoned Skull! One of my favorites. 2500 ATK for a single tribute, and they'll have to answer it fast."
+        ],
+        "until": "IOC"
+      },
+      "Time Wizard | Baby Dragon | Thousand Dragon": [
+        "Time Wizard and Baby Dragon fuse into Thousand Dragon! Joey and I loved that combo."
+      ],
+      "Sangan": [
+        "Sangan! When it leaves the field, you search a monster with 1500 or less ATK. It replaces itself, so it's never a wasted card."
+      ],
+      "Witch of the Black Forest": [
+        "Witch of the Black Forest! When she leaves the field, grab a monster with 1500 or less DEF. Even Summoned Skull!"
+      ],
+      "Magician of Faith": [
+        "Magician of Faith flips and gets a spell back from your Graveyard. Imagine getting Pot of Greed twice!"
+      ],
+      "Saggi the Dark Clown": [
+        "Saggi the Dark Clown! Kaiba opened with it in our first duel. He's come a long way since then."
+      ],
+      "Harpie Lady | Harpie Lady Sisters": [
+        "Mai's Harpie Ladies! Joey had a tough time with them in Duelist Kingdom."
+      ],
+      "Elegant Egotist": [
+        "With a Harpie Lady out, Elegant Egotist calls the Harpie Lady Sisters. Mai's favorite trick!"
       ]
     }
   },
@@ -127,7 +303,8 @@
         "Toon World! Pegasus's favorite. The Toons can't be played without it, so build around it carefully."
       ],
       "Blue-Eyes Toon Dragon | Toon Summoned Skull | Toon Mermaid": [
-        "A Toon! It needs Toon World on the field first. Pegasus made it look easy... it isn't."
+        "A Toon! It needs Toon World on the field first. Pegasus made it look easy... it isn't.",
+        "Another of Pegasus's Toons! Without Toon World it can't even come out, so don't play it alone."
       ],
       "Relinquished": [
         "Relinquished absorbs one of their monsters and takes its strength. Pegasus used it on me... scary!"
@@ -135,35 +312,310 @@
       "Black Illusion Ritual": [
         "Black Illusion Ritual summons Relinquished. Without it, he can't come out to play."
       ],
-      "Confiscation": [
-        "Confiscation lets you peek at their hand and throw away their best card. Knowing their plan is half the duel!"
-      ],
+      "Confiscation": {
+        "lines": [
+          "Confiscation lets you peek at their hand and throw away their best card. Knowing their plan is half the duel!"
+        ],
+        "until": "IOC"
+      },
       "Delinquent Duo": [
         "Delinquent Duo! Pay 1000 and they lose two cards from their hand. That's a huge swing."
       ],
       "The Forceful Sentry": [
         "The Forceful Sentry! See their hand and send their best card back to the deck."
       ],
-      "Painful Choice": [
-        "Painful Choice digs through your deck for the card you need. Whatever they pick, you win something."
-      ],
-      "Axe of Despair": [
-        "Axe of Despair gives 1000 ATK, and it keeps coming back. Your monsters will hit like dragons!"
-      ],
-      "Messenger of Peace": [
-        "Messenger of Peace stops anything with 1500 ATK or more from attacking. Great if your deck is full of walls!"
-      ],
+      "Painful Choice": {
+        "lines": [
+          "Painful Choice digs through your deck for the card you need. Whatever they pick, you win something."
+        ],
+        "until": "IOC"
+      },
+      "Axe of Despair": {
+        "lines": [
+          "Axe of Despair gives 1000 ATK, and it keeps coming back. Your monsters will hit like dragons!"
+        ],
+        "until": "IOC"
+      },
       "Giant Trunade": [
         "Giant Trunade sends every spell and trap back to the hand. Clear their traps, then attack!"
       ],
-      "Invader of the Throne": [
-        "Invader of the Throne swaps itself for one of their monsters when it flips. Sneaky!"
+      "Banisher of the Light": {
+        "lines": [
+          "Banisher of the Light banishes anything that would go to the Graveyard. No Monster Reborn for anyone!"
+        ],
+        "until": "IOC"
+      },
+      "Spellbinding Circle": [
+        "Spellbinding Circle! I used it to hold back some huge monsters. They can't attack or change position!"
       ],
-      "Maha Vailo": [
-        "Maha Vailo gains 500 ATK for every equip on it. Give it an Axe of Despair and watch out!"
+      "Mystic Tomato": {
+        "lines": [
+          "Mystic Tomato! When it's destroyed in battle, a DARK monster with 1500 or less ATK comes out from your deck to replace it."
+        ],
+        "until": "IOC"
+      },
+      "Nimble Momonga": {
+        "lines": [
+          "Nimble Momonga! Destroyed in battle, it gives you 1000 Life Points and calls more Momongas from your deck."
+        ],
+        "until": "IOC"
+      }
+    }
+  },
+  "PSV": {
+    "intro": [
+      "Pharaoh's Servant! Call of the Haunted and Premature Burial finally give Monster Reborn some company.",
+      "Jinzo and Imperial Order are both in here. One stops every trap, the other every spell. They're Secret Rares, though!"
+    ],
+    "cards": {
+      "Jinzo": [
+        "Jinzo! While he's face-up, nobody can activate traps. Espa Roba used him against Joey... it was scary!"
       ],
-      "Banisher of the Light": [
-        "Banisher of the Light banishes anything that would go to the Graveyard. No Monster Reborn for anyone!"
+      "Imperial Order": [
+        "Imperial Order shuts down every spell on the field. Just remember the 700 Life Points each Standby Phase!"
+      ],
+      "Call of the Haunted": [
+        "Call of the Haunted brings one of your monsters back from the Graveyard. A trap they won't see coming!"
+      ],
+      "Premature Burial": [
+        "Premature Burial! Pay 800 Life Points and your fallen monster is back in the fight."
+      ],
+      "Buster Blader": [
+        "Buster Blader! He was in my deck too. He gains 500 ATK for every dragon they have, so Kaiba hated him!"
+      ],
+      "Thousand-Eyes Restrict": [
+        "Thousand-Eyes Restrict! Pegasus fused it from Relinquished and Thousand-Eyes Idol. No other monster can attack!"
+      ],
+      "Magical Hats": [
+        "Magical Hats! I hid my monsters under these against Kaiba. Let them guess which one is real!"
+      ],
+      "Nobleman of Crossout": {
+        "lines": [
+          "Nobleman of Crossout destroys a face-down monster and banishes it. Perfect against flip effects!"
+        ],
+        "until": "IOC"
+      },
+      "Dust Tornado": [
+        "Dust Tornado destroys one of their spells or traps, then you get to set a card. A clean trade!"
+      ],
+      "Gearfried the Iron Knight": [
+        "Gearfried the Iron Knight! Joey's knight. 1800 ATK with no tribute, just no equip cards."
+      ],
+      "The Legendary Fisherman": [
+        "The Legendary Fisherman! Mako's ace. While Umi is on the field, it can't be attacked."
+      ],
+      "Parasite Paracide": [
+        "Parasite Paracide! Weevil snuck it into Joey's deck in Battle City. So sneaky!"
+      ],
+      "Goblin Attack Force": {
+        "lines": [
+          "Goblin Attack Force! 2300 ATK with no tribute. It rests after attacking, but beatdown decks loved it."
+        ],
+        "until": "IOC"
+      }
+    }
+  },
+  "LON": {
+    "intro": [
+      "Labyrinth of Nightmare has Torrential Tribute and Magic Cylinder! Two traps that can turn a whole duel around.",
+      "Gemini Elf is in here! 1900 ATK, no tribute and no catch. Nothing else like it yet, but it's a Secret Rare."
+    ],
+    "cards": {
+      "Gemini Elf": {
+        "lines": [
+          "Gemini Elf! 1900 ATK for no tribute at all. The twins can stand up to almost anything right now."
+        ],
+        "until": "IOC"
+      },
+      "Magic Cylinder": [
+        "Magic Cylinder stops an attack and hits them with the attacker's own ATK. They'll be sorry!"
+      ],
+      "Torrential Tribute": [
+        "Torrential Tribute! When a monster is summoned, every monster on the field is destroyed. Time it right!"
+      ],
+      "Destiny Board": [
+        "Destiny Board! Spell out F-I-N-A-L over their turns and you win. Stop it before the last letter!"
+      ],
+      "Dark Necrofear": [
+        "Dark Necrofear! Bakura's favorite. Banish three Fiends from your Graveyard to call her."
+      ],
+      "United We Stand": {
+        "lines": [
+          "United We Stand gives 800 ATK and DEF for every face-up monster you control. Even a small monster wins fights!"
+        ],
+        "until": "IOC"
+      },
+      "Mage Power": {
+        "lines": [
+          "Mage Power adds 500 ATK and DEF for every spell and trap you control. Set a few first!"
+        ],
+        "until": "IOC"
+      },
+      "Kycoo the Ghost Destroyer": {
+        "lines": [
+          "Kycoo! 1800 ATK with no tribute, and it banishes their Graveyard monsters. No Monster Reborn for them!"
+        ],
+        "until": "IOC"
+      },
+      "Bazoo the Soul-Eater": {
+        "lines": [
+          "Bazoo the Soul-Eater! Banish monsters from your Graveyard and he gets 300 ATK for each. A real threat!"
+        ],
+        "until": "IOC"
+      }
+    }
+  },
+  "LOD": {
+    "intro": [
+      "Legacy of Darkness is great for Warriors! Reinforcement of the Army, Exiled Force and Marauding Captain are all in here.",
+      "Watch out for Yata-Garasu in here. Empty their hand first, and it can stop them drawing at all!"
+    ],
+    "cards": {
+      "Yata-Garasu": [
+        "Yata-Garasu! When it hits them, they skip their next draw. If their hand is empty, they're stuck!"
+      ],
+      "Airknight Parshath": {
+        "lines": [
+          "Airknight Parshath hits through defense, and draws you a card whenever it deals damage!"
+        ],
+        "until": "IOC"
+      },
+      "Fiber Jar": [
+        "Fiber Jar shuffles everything back and both players draw five. A whole new duel!"
+      ],
+      "Freed the Matchless General": {
+        "lines": [
+          "Freed the Matchless General! He fetches a Warrior from your deck instead of drawing."
+        ],
+        "until": "IOC"
+      },
+      "Marauding Captain": [
+        "Marauding Captain brings a friend from your hand when he's summoned, and protects your Warriors!"
+      ],
+      "Exiled Force": [
+        "Exiled Force! Tribute it to destroy any monster. One small card for their biggest one!"
+      ],
+      "Reinforcement of the Army": [
+        "Reinforcement of the Army fetches a Level 4 or lower Warrior from your deck. Like a friend coming to help!"
+      ],
+      "Bottomless Trap Hole": [
+        "Bottomless Trap Hole banishes a monster with 1500 or more ATK the moment it's summoned!"
+      ],
+      "Drop Off": {
+        "lines": [
+          "Drop Off! Whatever they just drew goes straight to the Graveyard. That's one card they never get to use."
+        ],
+        "until": "IOC"
+      },
+      "Injection Fairy Lily": {
+        "lines": [
+          "Injection Fairy Lily gains 3000 ATK in battle for 2000 Life Points. Powerful, but count your Life Points!"
+        ],
+        "until": "IOC"
+      }
+    }
+  },
+  "PGD": {
+    "intro": [
+      "Pharaonic Guardian brings Ring of Destruction and Book of Moon. And the Gravekeepers, who guard the Graveyard!",
+      "Don Zaloog and Spirit Reaper are in here. They tear apart the other duelist's hand!"
+    ],
+    "cards": {
+      "Ring of Destruction": [
+        "Ring of Destruction blows up their monster, and you both take its ATK as damage. Watch your Life Points!"
+      ],
+      "Book of Moon": [
+        "Book of Moon flips a monster face-down. It can stop an attack or save your own monster!"
+      ],
+      "Lava Golem": [
+        "Lava Golem! You take two of their monsters to give it to them, and it burns them every turn."
+      ],
+      "Spirit Reaper": [
+        "Spirit Reaper can't be destroyed in battle, and a direct hit makes them discard at random!"
+      ],
+      "Don Zaloog": {
+        "lines": [
+          "Don Zaloog! When he hits them, they lose a random card from their hand, or the top two of their deck."
+        ],
+        "until": "IOC"
+      },
+      "Necrovalley": [
+        "Necrovalley! Gravekeepers get stronger, and nobody can take cards out of the Graveyard."
+      ],
+      "Mirage of Nightmare": {
+        "lines": [
+          "Mirage of Nightmare draws until you hold four on their turn. You discard them later, so use them fast!"
+        ],
+        "until": "IOC"
+      }
+    }
+  },
+  "MFC": {
+    "intro": [
+      "Magician's Force! Dark Magician Girl is in here. She was my partner in so many duels!",
+      "Breaker the Magical Warrior and Tribe-Infecting Virus are in this set, and Kaiba's X, Y and Z machines too!"
+    ],
+    "cards": {
+      "Dark Magician Girl": [
+        "Dark Magician Girl! My Dark Magician's apprentice. She gains 300 ATK for every Dark Magician in the Graveyards!"
+      ],
+      "Breaker the Magical Warrior": [
+        "Breaker the Magical Warrior! Summon him, then use his spell counter to destroy a spell or trap."
+      ],
+      "Dark Paladin": [
+        "Dark Paladin! I fused Dark Magician with Buster Blader to beat Kaiba's dragons. He can stop a spell too!"
+      ],
+      "XYZ-Dragon Cannon": [
+        "XYZ-Dragon Cannon! Kaiba's three-part machine. Discard a card to destroy anything they control."
+      ],
+      "Tribe-Infecting Virus": [
+        "Tribe-Infecting Virus! Discard a card, name a Type, and every face-up monster of that Type is destroyed."
+      ],
+      "Skilled Dark Magician": [
+        "Skilled Dark Magician collects spell counters. At three, tribute it for my Dark Magician!"
+      ]
+    }
+  },
+  "DCR": {
+    "intro": [
+      "Dark Crisis is full of Archfiends and Guardians. And Skill Drain, which shuts down every effect monster!",
+      "Vampire Lord, Kaiser Glider and Exodia Necross are in here. This set has a lot of dark power!"
+    ],
+    "cards": {
+      "Vampire Lord": [
+        "Vampire Lord! Every hit sends a card from their deck to the Graveyard. And when an effect destroys him, he comes back!"
+      ],
+      "Exodia Necross": [
+        "Exodia Necross! It can't be destroyed while the five Exodia pieces are in your Graveyard. Exodia, back again!"
+      ],
+      "Skill Drain": [
+        "Skill Drain! Pay 1000 Life Points and every face-up monster loses its effect. Normal monsters love this!"
+      ],
+      "D.D. Warrior Lady": [
+        "D.D. Warrior Lady can banish a monster she battles, along with herself. A brave one-for-one!"
+      ]
+    }
+  },
+  "IOC": {
+    "intro": [
+      "Invasion of Chaos! Chaos Emperor Dragon and the new Black Luster Soldier both need a LIGHT and a DARK to come out.",
+      "Lots of cards in this set banish instead of destroying, like Dark Mirror Force and Dark Magician of Chaos!"
+    ],
+    "cards": {
+      "Chaos Emperor Dragon - Envoy of the End": [
+        "Chaos Emperor Dragon! Pay 1000 Life Points and every card in both hands and on the field goes to the Graveyard!"
+      ],
+      "Black Luster Soldier - Envoy of the Beginning": [
+        "Black Luster Soldier, Envoy of the Beginning! Banish a monster, or attack twice. Either way, they're in trouble!"
+      ],
+      "Dark Magician of Chaos": [
+        "Dark Magician of Chaos! He brings a spell back from your Graveyard, and banishes what he destroys."
+      ],
+      "Dark Mirror Force": [
+        "Dark Mirror Force! When they attack, every monster they have in Defense Position is banished."
+      ],
+      "Compulsory Evacuation Device": [
+        "Compulsory Evacuation Device sends a monster back to the hand. Perfect against a big fusion!"
       ]
     }
   }

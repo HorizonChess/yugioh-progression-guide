@@ -46,7 +46,8 @@ We use CSS variables to define the theme:
 Yugi slides in from the left with his words typed into a stone tablet, then leaves; nothing on the page moves for him.
 -   **When he speaks**: opening a set's card list, looking at a card, a notable card flipping in the opener, the haul, and a recorded duel (solo and duo lines differ). Several lines play as a dialogue he waits on (▼, tap for the next).
 -   **What he says**: [src/lib/guide/lines.ts](src/lib/guide/lines.ts) picks the line; [src/lib/guide/store.ts](src/lib/guide/store.ts) queues them (priorities, a gap between tips, no repeats in a visit); [src/components/layout/GuideSprite.tsx](src/components/layout/GuideSprite.tsx) shows them.
--   **Facts, not memory**: comparisons ("nothing hits harder for no tribute") come from `src/data/guide/facts.json`, built from each stage's real card pool by `scripts/guide/build.mjs`, which also checks the hand-written notes in `src/data/guide/sets.json` against each set.
+-   **What he talks about**: only cards that mattered in real decks of the era (staples, the beatsticks tournaments played) and cards he remembers from his, Kaiba's and Joey's duels, from the notes in `src/data/guide/sets.json`. A card's worth depends on the stage: a note with `until` is only said up to that set (Fissure is great at the start, not twenty sets in); memories never expire. On a repeat he only speaks when more copies make a deck better (`_multiples`, with why).
+-   **Checked, not remembered**: `scripts/guide/build.mjs` checks every card a note names against its set; `scripts/guide/pool.mjs <stage>` shows a stage's pool for checking a note's claims; `npx tsx scripts/guide/simulate.ts` prints what he'd say over real openings.
 -   **Options**: the main menu's Options turn him, the sound and his typewriter keys on or off.
 
 ## Data & APIs
