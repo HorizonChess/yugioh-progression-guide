@@ -1,49 +1,35 @@
 "use client";
 
 import { Card } from "@/lib/api";
+import { useMemo } from "react";
+import { CardPlate } from "@/components/card/CardPlate";
+import { stageOf, type Printing } from "./stage";
 
 interface CardInfoPanelProps {
     card: Card | null;
+    /** How many of the card you own. */
+    owned?: number;
+    /** The printing you own (its set code and rarity). */
+    printing?: Printing;
 }
 
-export default function CardInfoPanel({ card }: CardInfoPanelProps) {
-    if (!card) {
+/**
+ * The hovered card, read in full: its art, then its details as the card-styled
+ * plate. A long effect scrolls inside the plate's text box, not the panel.
+ */
+export default function CardInfoPanel({ card, owned = 0, printing }: CardInfoPanelProps) {
+    const stage = useMemo(() => card && stageOf(card, printing, owned), [card, printing, owned]);
+    if (!card || !stage) {
         return (
-            <div className="p-2 flex flex-col items-center justify-center text-center">
-                <div className="w-full aspect-[59/86] bg-black/20 rounded border-2 border-dashed border-wood-border/30 flex items-center justify-center">
-                    <span className="text-wood-border/50 font-bold text-xs">No Card Selected</span>
-                </div>
+            <div className="db-info">
+                <div className="db-info__none">Hover a card to read it here.<br />Double-click to add · right-click to remove · drag between decks</div>
             </div>
         );
     }
-
     return (
-        <div className="flex flex-col h-full overflow-hidden gap-1 p-1">
-            {/*
-               Image Container:
-               - Uses aspect ratio to size correctly without black bars
-               - w-full + aspect-[59/86] gives proper card dimensions
-            */}
-            <div className="w-full shrink-0">
-                <img
-                    src={card.card_images[0]?.image_url}
-                    alt={card.name}
-                    className="w-full h-auto"
-                />
-            </div>
-
-            {/* Description - fills remaining space */}
-            <div className="flex-1 bg-parchment-light text-black p-2 overflow-y-auto custom-scrollbar font-serif leading-tight text-base shadow-inner min-h-[0] border-2 border-wood-border rounded">
-                <p className="font-bold border-b border-wood-border/50 mb-1 pb-1">{card.name}</p>
-                {card.type.includes("Monster") && (
-                    <div className="text-xs text-gray-700 mb-1 font-bold">
-                        [{card.race} / {card.type.split(" ").pop()}]
-                        {card.atk !== undefined && ` ATK/${card.atk}`}
-                        {card.def !== undefined && ` DEF/${card.def}`}
-                    </div>
-                )}
-                <p className="whitespace-pre-wrap">{card.desc}</p>
-            </div>
+        <div className="db-info">
+            <img className="db-info__art" src={card.card_images[0]?.image_url} alt={card.name} />
+            <CardPlate card={stage} className="db-info__plate" />
         </div>
     );
 }
