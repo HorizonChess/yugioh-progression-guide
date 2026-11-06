@@ -62,13 +62,11 @@ export default function SideExtraDeckGrid({
     };
 
     return (
-        <div className="flex flex-col h-full gap-1 overflow-hidden">
+        <div className="flex flex-col h-full gap-2 overflow-hidden">
             {/* Side Deck Section */}
-            <div className="flex-1 flex flex-col min-h-0">
-                <div className="bg-teal-800/80 rounded-t border border-teal-600 px-2 py-0.5 shrink-0">
-                    <span className="text-teal-100 font-bold text-[10px] tracking-widest">SIDE DECK ({sideDeck.length}/15)</span>
-                </div>
-                <div className="flex-1 bg-slate-900/50 border border-t-0 border-teal-900/50 rounded-b overflow-y-auto p-1">
+            <div className="db-panel flex-1">
+                <div className="db-band db-band--side">Side Deck <small>{sideDeck.length} / 15</small></div>
+                <div className="db-zone custom-scrollbar">
                     <div className="flex flex-wrap gap-0.5 content-start">
                         {renderSlots(sideDeck, 'side', 15)}
                     </div>
@@ -76,11 +74,9 @@ export default function SideExtraDeckGrid({
             </div>
 
             {/* Extra Deck Section */}
-            <div className="flex-1 flex flex-col min-h-0">
-                <div className="bg-purple-900/80 rounded-t border border-purple-700 px-2 py-0.5 shrink-0">
-                    <span className="text-purple-100 font-bold text-[10px] tracking-widest">EXTRA DECK ({extraDeck.length}/15)</span>
-                </div>
-                <div className="flex-1 bg-slate-900/50 border border-t-0 border-purple-900/50 rounded-b overflow-y-auto p-1">
+            <div className="db-panel flex-1">
+                <div className="db-band db-band--extra">Extra Deck <small>{extraDeck.length} / 15</small></div>
+                <div className="db-zone custom-scrollbar">
                     <div className="flex flex-wrap gap-0.5 content-start">
                         {renderSlots(extraDeck, 'extra', 15)}
                     </div>

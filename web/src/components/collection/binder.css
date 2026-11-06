@@ -16,10 +16,10 @@
 }
 .binder-shell::before { content: ""; position: absolute; inset: 9px; border-radius: 12px; border: 1.5px dashed rgba(230, 190, 120, 0.45); pointer-events: none; }
 .binder-spine {
-  position: absolute; top: 0; bottom: 0; left: 50%; width: 9%; transform: translateX(-50%); z-index: 1;
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 9%; transform: translateX(-50%) translateZ(1px); z-index: 1;
   background: var(--pebble), linear-gradient(90deg, #2a0e06, #5a2414 30%, #6e2e19 50%, #5a2414 70%, #2a0e06); box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.6);
 }
-@media (max-width: 767px) { .binder-spine { left: 0; width: 13%; transform: none; border-radius: 18px 0 0 18px; } }
+@media (max-width: 767px) { .binder-spine { left: 0; width: 13%; transform: translateZ(1px); border-radius: 18px 0 0 18px; } }
 
 /* the open pages, each on a stack of sheet edges */
 .binder-sheets, .binder-leaf { position: absolute; top: 4.2%; bottom: 4.2%; z-index: 2; display: flex; }
@@ -91,7 +91,8 @@ button.binder-pocket { cursor: pointer; }
 .binder-ghost span { font: 600 clamp(6px, 0.6vw, 9px)/1.2 var(--font-main); color: rgba(241, 231, 204, 0.28); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* the rings */
-.binder-rings { position: absolute; top: 9%; bottom: 9%; left: 50%; width: 9%; transform: translateX(-50%); z-index: 6; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+/* the spine and rings sit a hair in front in 3D, so a turned sheet lying over them never hides them */
+.binder-rings { position: absolute; top: 9%; bottom: 9%; left: 50%; width: 9%; transform: translateX(-50%) translateZ(2px); z-index: 6; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
 @media (max-width: 767px) { .binder-rings { left: 7.5%; width: 12%; } }
 .binder-rings i { position: relative; display: block; height: 13%; }
 .binder-rings i::before {
@@ -147,6 +148,9 @@ button.binder-pocket { cursor: pointer; }
 .binder-leaf--l { transform-origin: right center; }
 .binder-leaf > .binder-page { position: absolute; inset: 0; backface-visibility: hidden; }
 .binder-leaf__back { position: absolute; inset: 0; display: flex; transform: rotateY(180deg); backface-visibility: hidden; }
+.binder-leaf__back--sleeve .binder-page::before { left: auto; right: 2.2%; }
+.binder-leaf__back--sleeve .binder-page__foot { display: none; }
+.binder-leaf__back--sleeve .binder-page { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset -26px 0 30px -16px rgba(0, 0, 0, 0.85); }
 .binder-leaf__shade { position: absolute; inset: 0; border-radius: 6px; pointer-events: none; background: linear-gradient(90deg, rgba(0, 0, 0, 0.55), transparent 60%); opacity: 0; }
 
 .binder-pager { flex: none; display: flex; align-items: center; justify-content: center; gap: 14px; padding: 8px 0 6px; }
@@ -183,4 +187,27 @@ button.binder-pocket { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .binder-foil { animation: none; }
   .binder-cover { transition: none; }
+}
+
+/* ---------- phones: give the page the room ---------- */
+@media (max-width: 767px) {
+  /* a tighter heading: the chapter tab already says which set this is */
+  .coll__head { padding: 8px 12px 0; }
+  .coll__title .store__stage { display: none; }
+  .coll__title h1 { font-size: 21px; }
+  .coll__bar { padding: 6px 12px 2px; }
+  .coll__search { height: 36px; }
+  .coll__bar .ps-btn, .coll__head .ps-btn { padding-top: 7px; padding-bottom: 7px; }
+  .binder-stage { padding: 2px 5px 0; }
+  .binder { margin-top: 30px; }
+  /* a slimmer spine and rings, and the sheet out to the edge */
+  .binder-spine { width: 10%; }
+  .binder-rings { left: 5.2%; width: 9.5%; }
+  .binder-tabs { left: 12%; }
+  .binder-sheets--r, .binder-leaf--r { left: 11.5%; right: 2.4%; }
+  .binder-page { padding: 8.5% 4% 7.5%; gap: 2.2% 3%; }
+  .binder-rings i { height: 10%; }
+  .binder-pocket img, .binder-ghost, .binder-foil { height: 95%; max-width: 95%; }
+  .binder-pager { padding: 2px 0 0; gap: 10px; }
+  .binder-pager .ps-btn { padding-top: 6px; padding-bottom: 6px; }
 }

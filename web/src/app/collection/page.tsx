@@ -37,7 +37,8 @@ export default function Collection() {
     const isPhone = useIsPhone();
     const [cards, setCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selected, setSelected] = useState<StageCard | null>(null);
+    /** The card open in the close-up, by its pocket. */
+    const [selectedKey, setSelectedKey] = useState<string | null>(null);
     const { bind, peek, hide } = useCardPeek();
 
     // The drawer's panel holds every filter but the search, which sits on the page.
@@ -201,6 +202,7 @@ export default function Collection() {
     }
 
     const isEmpty = Object.keys(collection).length === 0;
+    const selectedIndex = selectedKey ? slots.findIndex((s) => s.key === selectedKey) : -1;
     const info = chapters.find((c) => c.key === chapter);
     const meta = searching
         ? `of ${filterCollection(collection, cards, DEFAULT_FILTERS).length} you own`
@@ -257,8 +259,9 @@ export default function Collection() {
                 }}
                 onOpen={(s) => {
                     hide();
-                    setSelected(toStage(s));
+                    setSelectedKey(s.key);
                 }}
+                showKey={selectedKey}
                 bind={(s) => bind(toStage(s))}
                 empty={searching ? "No cards match. Try fewer filters." : chapter && chapter !== OTHER && !chapterCards[chapter] ? "Opening the chapter…" : undefined}
                 isPhone={isPhone}
@@ -272,7 +275,15 @@ export default function Collection() {
             </aside>
 
             {peek}
-            {selected && <CardCloseUp card={selected} onClose={() => setSelected(null)} />}
+            {selectedIndex >= 0 && (
+                <CardCloseUp
+                    card={toStage(slots[selectedIndex]!)}
+                    onClose={() => setSelectedKey(null)}
+                    onPrev={selectedIndex > 0 ? () => setSelectedKey(slots[selectedIndex - 1]!.key) : undefined}
+                    onNext={selectedIndex < slots.length - 1 ? () => setSelectedKey(slots[selectedIndex + 1]!.key) : undefined}
+                    position={`${selectedIndex + 1} / ${slots.length}`}
+                />
+            )}
         </div>
     );
 }

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Main Menu Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root { --primary: #d4af37; --gold-hi: #ffe08a; --font-display: "Cinzel", Georgia, serif; --font-main: "Inter", sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; background: #0a0704; color: #f1e7cc; font-family: var(--font-main); -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; }
+.proto { flex: none; display: flex; gap: 4px; padding: 6px 8px; background: #110c18; border-bottom: 1px dashed #6e5320; position: relative; z-index: 60; }
+.proto button { flex: 1; font: 700 12px/1.1 var(--font-main); letter-spacing: .06em; text-transform: uppercase; color: #a99d80; background: transparent; border: 1px solid #3d3220; border-radius: 6px; padding: 8px 4px; cursor: pointer; }
+.proto button[aria-pressed="true"], .proto button[aria-selected="true"] { color: var(--gold-hi); border-color: #8a6a2c; background: rgba(224,181,79,.12); }
+.stagebox { flex: 1; min-height: 0; display: flex; justify-content: center; align-items: center; background: #050302; }
+/* the screen itself; "phone frame" shrinks it to a phone so its layout can be seen on a desktop */
+#app { position: relative; width: 100%; height: 100%; overflow: hidden; container-type: size; }
+body.as-phone #app { width: 390px; height: min(844px, calc(100% - 24px)); border-radius: 26px; box-shadow: 0 0 0 8px #0b0806, 0 0 0 9px #3d3220, 0 30px 60px rgba(0,0,0,.7); }
+
+/* ---------- the wall, lit ---------- */
+.menu { position: absolute; inset: 0; display: grid; grid-template-rows: 1fr auto; }
+.menu::before { content: ""; position: absolute; inset: 0; background: url("img/bg-wall.webp") center / cover; }
+.menu::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 75% 65% at 68% 45%, rgba(255,170,70,.10), transparent 60%), radial-gradient(ellipse 90% 80% at 50% 50%, transparent 40%, rgba(0,0,0,.78)); }
+@container (max-width: 760px) { .menu::before { background-image: url("img/bg-wall-phone.webp"); } }
+/* torches either side, flickering */
+.torch { position: absolute; top: 18%; width: 34%; aspect-ratio: 1; pointer-events: none; z-index: 1; background: radial-gradient(circle, rgba(255,170,60,.28), rgba(255,120,30,.08) 40%, transparent 70%); mix-blend-mode: screen; animation: flicker 3.2s ease-in-out infinite; }
+.torch.l { left: -12%; } .torch.r { right: -12%; animation-delay: -1.4s; }
+@keyframes flicker { 0%, 100% { opacity: .85; transform: scale(1); } 30% { opacity: 1; transform: scale(1.04); } 55% { opacity: .75; } 80% { opacity: .95; transform: scale(.98); } }
+
+.body { position: relative; z-index: 2; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 4%; max-width: 1240px; width: 100%; margin: 0 auto; padding: 4% 5%; }
+.left { position: relative; z-index: 3; }
+.word { margin: 0 0 18px; }
+.word small { display: block; font: 800 12px/1 var(--font-main); letter-spacing: .3em; text-transform: uppercase; color: #c7b99a; text-shadow: 0 1px 4px #000; }
+.word b { display: block; margin-top: 6px; font: 800 clamp(26px, 3.4vw, 46px)/1 var(--font-display); letter-spacing: .06em; color: transparent; background: linear-gradient(#fff1bf, #d4af37 55%, #8a6420); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 6px rgba(0,0,0,.8)); }
+
+/* a menu entry: a lacquer tablet with a gold edge, its words engraved */
+.items { display: flex; flex-direction: column; gap: 12px; padding-left: 14px; }
+.item { position: relative; display: block; width: 100%; padding: 16px 52px 16px 30px; border: 0; text-align: left; cursor: pointer; border-radius: 3px; transform: skewX(-10deg);
+  background: radial-gradient(120% 160% at 0% 0%, rgba(60,40,90,.5), transparent 60%), linear-gradient(100deg, rgba(26,19,36,.96), rgba(10,7,15,.9));
+  box-shadow: inset 4px 0 0 #d4af37, inset 0 1px 0 rgba(255,230,170,.12), 0 0 0 1px rgba(224,181,79,.28), 0 10px 22px rgba(0,0,0,.55); transition: transform .2s, box-shadow .2s; overflow: hidden; }
+.item::after { content: "›"; position: absolute; right: 20px; top: 50%; transform: translate(-6px, -50%); opacity: 0; font: 700 28px/1 var(--font-main); color: var(--gold-hi); transition: .2s; }
+.item:hover, .item:focus-visible { transform: skewX(-10deg) translateX(10px); box-shadow: inset 4px 0 0 #ffe08a, inset 0 1px 0 rgba(255,230,170,.2), 0 0 0 1px rgba(255,224,138,.6), 0 0 22px rgba(212,175,55,.25), 0 12px 24px rgba(0,0,0,.6); outline: 0; }
+.item:hover::after, .item:focus-visible::after { opacity: 1; transform: translate(0, -50%); }
+/* the glint passing over */
+.item::before { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255,240,200,.12) 50%, transparent 65%) -200% 0 / 200% 100% no-repeat; transition: background-position .8s; }
+.item:hover::before { background-position: 200% 0; }
+.item > * { transform: skewX(10deg); }
+.item b { display: block; font: 800 clamp(17px, 1.5vw, 22px)/1.1 var(--font-display); letter-spacing: .12em; color: #fff; text-shadow: 0 2px 6px #000; }
+.item small { display: block; margin-top: 6px; font: 600 12px/1.35 var(--font-main); letter-spacing: .12em; text-transform: uppercase; color: #b7a98a; }
+.item.main { background: radial-gradient(120% 160% at 0% 0%, rgba(120,80,20,.45), transparent 60%), linear-gradient(100deg, rgba(40,28,14,.96), rgba(14,10,6,.92)); box-shadow: inset 4px 0 0 #ffe08a, inset 0 1px 0 rgba(255,230,170,.2), 0 0 0 1px rgba(255,224,138,.55), 0 0 26px rgba(212,175,55,.22), 0 10px 22px rgba(0,0,0,.55); }
+.item.main b { color: var(--gold-hi); }
+.item.off { cursor: default; opacity: .45; } .item.off:hover { transform: skewX(-10deg); } .item.off::after { display: none; }
+.foot { position: relative; z-index: 3; display: flex; justify-content: space-between; padding: 8px 14px calc(8px + env(safe-area-inset-bottom)); font: 700 11px/1 var(--font-main); letter-spacing: .16em; text-transform: uppercase; color: #a99d80; background: linear-gradient(rgba(10,7,4,.4), rgba(10,7,4,.85)); box-shadow: inset 0 1px 0 rgba(224,181,79,.35); }
+
+/* ---------- Yugi ---------- */
+.right { position: relative; z-index: 2; height: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.yugi { position: relative; height: min(88%, 640px); aspect-ratio: 1; }
+.yugi img { width: 100%; height: 100%; display: block; object-fit: contain; }
+/* A · spotlight: the art's black melts into a pool of shadow on the lit wall, its edges
+   (and the hair cut at the top of the picture) fading out instead of stopping */
+.v-spot .yugi { margin-top: 4%; }
+/* the art is cut out of its black: his own shadow on the wall gives him weight, and
+   only the bottom (where the picture ends at his chest) and the very top fade */
+.v-spot .yugi img { position: relative; filter: drop-shadow(0 0 2px rgba(0,0,0,.9)) drop-shadow(0 18px 26px rgba(0,0,0,.55)) drop-shadow(0 0 40px rgba(0,0,0,.35));
+  -webkit-mask: linear-gradient(transparent 0, #000 4%, #000 80%, transparent 99%); mask: linear-gradient(transparent 0, #000 4%, #000 80%, transparent 99%); }
+.v-spot .yugi::before { content: ""; position: absolute; inset: 4% 6% 0; border-radius: 50%; background: radial-gradient(ellipse at 50% 55%, rgba(0,0,0,.42), rgba(0,0,0,.18) 45%, transparent 70%); }
+.v-spot .yugi::after { content: ""; position: absolute; left: 50%; bottom: 2%; width: 70%; height: 9%; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(255,200,110,.22), transparent 70%); filter: blur(4px); }
+/* the card in his hand still glows */
+.glow { position: absolute; left: 67%; top: 54%; width: 22%; aspect-ratio: 1; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,200,90,.45), transparent 65%); mix-blend-mode: screen; animation: pulse 2.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .55; transform: scale(.92); } }
+/* B · niche: he stands in an arched stone niche cut into the wall; the arch's lip
+   and its shadow frame the picture, so nothing looks cropped */
+.v-niche .yugi { height: min(86%, 620px); aspect-ratio: .82; }
+.v-niche .niche { position: absolute; inset: 0; border-radius: 48% 48% 6px 6px / 34% 34% 6px 6px; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 30%, #1a120a, #000 70%); box-shadow: inset 0 18px 30px rgba(0,0,0,.95), inset 0 0 0 3px rgba(0,0,0,.6), 0 0 0 10px rgba(120,90,50,.35), 0 0 0 12px rgba(0,0,0,.5), 0 0 0 16px rgba(160,120,60,.25), 0 30px 50px rgba(0,0,0,.8); }
+.v-niche .niche img { position: absolute; left: 50%; top: 6%; width: 122%; height: auto; transform: translateX(-50%); -webkit-mask: linear-gradient(transparent 0, #000 9%, #000 86%, transparent 100%); mask: linear-gradient(transparent 0, #000 9%, #000 86%, transparent 100%); }
+.v-niche .niche::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 26px 34px rgba(0,0,0,.9), inset 0 -40px 40px -10px rgba(0,0,0,.8); }
+.v-niche .lip { position: absolute; left: -4%; right: -4%; bottom: -3%; height: 6%; border-radius: 4px; background: linear-gradient(#8a6f48, #4a3922 60%, #2b2114); box-shadow: 0 -2px 0 #a2865a, 0 10px 20px rgba(0,0,0,.7); }
+.v-niche .glow { left: 70%; top: 58%; }
+
+/* ---------- phones: Yugi heads the screen, the menu below ---------- */
+@container (max-width: 760px) {
+  .body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 42%) auto; align-content: start; gap: 0; padding: 14px 16px 12px; }
+  .right { order: -1; height: 100%; }
+  .right { min-width: 0; align-items: flex-end; }
+  .v-spot .yugi { height: auto; width: min(94%, 40cqh); margin-top: 0; }
+  .v-niche .yugi { height: auto; width: min(78%, 34cqh); margin-top: 6%; }
+  .word { text-align: center; margin: 4px 0 12px; }
+  .word b { font-size: 26px; }
+  .items { gap: 9px; }
+  .item { padding: 12px 44px 12px 20px; }
+  .item b { font-size: 16px; }
+  .item small { font-size: 10px; margin-top: 4px; }
+  .torch { top: 4%; width: 60%; }
+}
+@container (max-height: 640px) and (max-width: 760px) { .item small { display: none; } .body { grid-template-rows: minmax(0, 36%) auto; } }
+
+/* the save slots, after Campaign Mode */
+.saves { display: flex; flex-direction: column; gap: 10px; }
+.back { align-self: flex-start; margin-bottom: 4px; padding: 6px 0; border: 0; background: none; cursor: pointer; font: 700 12px/1 var(--font-main); letter-spacing: .14em; text-transform: uppercase; color: #e9d9ad; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233,217,173,.4); }
+.slot { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 0; text-align: left; cursor: pointer; background: rgba(10,7,4,.72); box-shadow: 0 0 0 1px rgba(224,181,79,.3); }
+.slot img { width: 34px; height: 62px; object-fit: contain; }
+.slot b { display: block; font: 800 16px/1.1 var(--font-display); color: #fff; }
+.slot small { display: block; margin-top: 4px; font: 600 12px/1.3 var(--font-main); color: #b7a98a; }
+.slot.new { justify-content: center; font: 800 12px/1 var(--font-main); letter-spacing: .16em; text-transform: uppercase; color: var(--gold-hi); box-shadow: 0 0 0 1px dashed rgba(224,181,79,.5); border: 1px dashed rgba(224,181,79,.5); background: transparent; }
+</style>
+</head>
+<body>
+<div class="proto">
+    <button data-v="spot" role="tab" aria-selected="true">Spotlight</button>
+    <button data-frame aria-pressed="false">Phone frame</button>
+</div>
+<div class="stagebox"><div id="app"></div></div>
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const ITEMS = [
+    { label: "Campaign Mode", desc: "Continue your progression journey", main: true, go: "saves" },
+    { label: "Card Collection", desc: "View your acquired cards" },
+    { label: "Options", desc: "Configure game settings", off: true },
+    { label: "Sign In", desc: "Keep your progress in an account" },
+    { label: "Back to Title", desc: "Return to the title screen" },
+];
+let view = "menu";
+function draw(v) {
+    const left = view === "menu"
+        ? `<div class="word"><small>The road through history</small><b>Progression Series</b></div><div class="items">${ITEMS.map((it, i) => `<button class="item ${it.main ? "main" : ""} ${it.off ? "off" : ""}" data-i="${i}"><b>${it.label}</b><small>${it.desc}</small></button>`).join("")}</div>`
+        : `<div class="word"><small>Campaign mode</small><b>Your saves</b></div><div class="saves"><button class="back">‹ Back to the menu</button>
+            <button class="slot"><img src="img/cartouche.webp" style="width:44px;height:20px" alt=""><span><b>HorizonDev's road</b><small>Stage 5 · Metal Raiders · Duo with Yami</small></span></button>
+            <button class="slot"><img src="img/cartouche.webp" style="width:44px;height:20px" alt=""><span><b>Guest save</b><small>Stage 2 · Solo · on this device</small></span></button>
+            <button class="slot new">+ New save</button></div>`;
+    const art = v === "spot"
+        ? `<div class="yugi"><img src="img/yugi_cut.webp" alt="Yugi"><span class="glow"></span></div>`
+        : `<div class="yugi"><div class="niche"><img src="img/yugi_v2.webp" alt="Yugi"></div><div class="lip"></div><span class="glow"></span></div>`;
+    $("#app").innerHTML = `<div class="menu v-${v}"><span class="torch l"></span><span class="torch r"></span>
+        <div class="body"><div class="left">${left}</div><div class="right">${art}</div></div>
+        <div class="foot"><span>System · Online</span><span>Version 0.6 Alpha</span></div></div>`;
+    $("#app").querySelectorAll(".item").forEach((b) => (b.onclick = () => { const it = ITEMS[+b.dataset.i]; if (it.go) { view = it.go; draw(v); } }));
+    $(".back", $("#app"))?.addEventListener("click", () => { view = "menu"; draw(v); });
+    document.querySelectorAll("[data-v]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === v)));
+}
+document.querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => (location.hash = b.dataset.v)));
+$("[data-frame]").onclick = (e) => { const on = document.body.classList.toggle("as-phone"); e.currentTarget.setAttribute("aria-pressed", String(on)); };
+const show = () => { const v = ["spot", "niche"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "spot"; draw(v); };
+addEventListener("hashchange", show);
+if (innerWidth >= 760 && innerWidth < 1000) document.body.classList.remove("as-phone");
+show();
+</script>
+</body>
+</html>

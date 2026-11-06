@@ -7,8 +7,8 @@ export default function GlobalBackground() {
     // trailingSlash (for static hosting) makes this "/menu/"; strip it so the check matches
     const pathname = usePathname().replace(/(.)\/$/, "$1");
 
-    // The menu and the title screen draw their own backgrounds.
-    if (pathname === '/menu' || pathname === '/') {
+    // The title screen draws its own background.
+    if (pathname === '/') {
         return null;
     }
 

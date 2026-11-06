@@ -12,10 +12,11 @@ import MenuItem, { MenuItemData } from "@/components/menu/MenuItem";
 import MenuSignIn from "@/components/menu/MenuSignIn";
 
 /**
- * The main MENU (route: /menu). A retro terminal-styled screen: skewed menu
- * entries on the left (Campaign flips to the save-slot list), character art on
- * the right, and a status footer. SIGN IN and SIGN OUT stay here; BACK TO
- * TITLE goes to the title screen (/), where new players sign up.
+ * The main MENU (route: /menu), on the hieroglyph wall: slanted lacquer tablets
+ * on the left (Campaign flips to the save-slot list), Yugi in the torchlight on
+ * the right (above the menu on phones), and a status footer. SIGN IN and SIGN
+ * OUT stay here; BACK TO TITLE goes to the title screen (/), where new players
+ * sign up.
  */
 export default function Menu() {
     const [view, setView] = useState<"menu" | "saves" | "signin">("menu");
@@ -55,54 +56,47 @@ export default function Menu() {
           ];
 
     return (
-        <main className="min-h-screen bg-black text-white grid grid-rows-[1fr_auto] relative overflow-hidden font-mono">
-            <div className="menu-grid-bg" />
-
+        <main className="menu-screen">
             {/* No nav here: the menu is a front-end screen. */}
-            <div className="relative z-10 flex items-center justify-center p-8">
-                <div className="flex gap-12 w-full max-w-6xl items-center">
-                    {/* Left: menu, or the save-slot list once Campaign is chosen */}
-                    <div className="flex-1 space-y-4">
-                        {view !== "menu" ? (
-                            <div className="animate-in slide-in-from-left-10 fade-in duration-300">
-                                <button onClick={() => setView("menu")} className="mb-6 text-gray-500 hover:text-white flex items-center gap-2 transition-colors">
-                                    ◀ BACK TO MENU
-                                </button>
-                                {view === "saves" ? <SaveSlotList /> : <MenuSignIn onDone={() => setView("menu")} />}
-                            </div>
-                        ) : (
-                            <div className="space-y-4 animate-in slide-in-from-left-10 fade-in duration-300">
-                                {menuItems.map((item, idx) =>
-                                    item.href ? (
-                                        <Link key={idx} href={item.disabled ? "#" : item.href} className={`block group relative ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}`}>
-                                            <MenuItem item={item} />
-                                        </Link>
-                                    ) : (
-                                        <button key={idx} onClick={item.action} disabled={item.disabled} className={`block w-full text-left group relative ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}`}>
-                                            <MenuItem item={item} />
-                                        </button>
-                                    )
-                                )}
-                            </div>
-                        )}
-                    </div>
+            <div className={`menu-screen__body ${view !== "menu" ? "menu-screen__body--form" : ""}`}>
+                {/* Yugi in the torchlight: cut out of his black, his own shadow on the wall */}
+                <div className="menu-yugi" aria-hidden="true">
+                    <img src={asset("/sprites/yugi_menu.webp")} alt="" />
+                    <span className="menu-yugi__glow" />
+                </div>
 
-                    {/* Right: character art (lg+ only) */}
-                    <div className="flex-1 h-[600px] relative hidden lg:block">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--primary)_0%,transparent_70%)] opacity-5 animate-pulse" />
-                        <img
-                            src={asset("/sprites/yugi_v2.webp")}
-                            alt="Yugi"
-                            className="absolute bottom-0 right-0 h-full object-contain drop-shadow-[0_0_50px_rgba(0,0,0,0.8)]"
-                            style={{ maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)" }}
-                        />
+                {/* The menu, or the save-slot list once Campaign is chosen */}
+                <div className="menu-screen__left">
+                    <div className="menu-word">
+                        <small>The road through history</small>
+                        <b>Progression Series</b>
                     </div>
+                    {view !== "menu" ? (
+                        <div className="menu-form animate-in slide-in-from-left-10 fade-in duration-300">
+                            <button onClick={() => setView("menu")} className="menu-back">‹ Back to the menu</button>
+                            {view === "saves" ? <SaveSlotList /> : <MenuSignIn onDone={() => setView("menu")} />}
+                        </div>
+                    ) : (
+                        <div className="menu-items animate-in slide-in-from-left-10 fade-in duration-300">
+                            {menuItems.map((item, idx) =>
+                                item.href ? (
+                                    <Link key={idx} href={item.disabled ? "#" : item.href} className={`block group relative ${item.disabled ? "cursor-not-allowed" : ""}`} aria-disabled={item.disabled || undefined}>
+                                        <MenuItem item={item} main={idx === 0} />
+                                    </Link>
+                                ) : (
+                                    <button key={idx} onClick={item.action} disabled={item.disabled} className={`block w-full text-left group relative ${item.disabled ? "cursor-not-allowed" : ""}`}>
+                                        <MenuItem item={item} main={idx === 0} />
+                                    </button>
+                                )
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 
-            <div className="bg-gray-900 border-t border-gray-800 p-2 flex justify-between text-xs text-gray-500 font-mono uppercase">
-                <span>SYSTEM: ONLINE</span>
-                <span>VERSION 0.6 ALPHA</span>
+            <div className="menu-screen__foot">
+                <span>System · Online</span>
+                <span>Version 0.6 Alpha</span>
             </div>
         </main>
     );

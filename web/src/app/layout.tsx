@@ -50,7 +50,7 @@ export default function RootLayout({
           {/* Row 2 (1fr): the routed page. min-h-0/min-w-0 let a page's own
               inner scroll containers work; relative anchors deck-builder's
               absolutely-positioned ScaleWrapper to this row (below the nav). */}
-          <main className="relative min-h-0 min-w-0"><SeriesGate>{children}</SeriesGate></main>
+          <main className="relative row-start-2 min-h-0 min-w-0"><SeriesGate>{children}</SeriesGate></main>
           {/* Row 3 (auto): the phone tab bar, on the same pages as the nav. */}
           <PhoneTabBar />
         </NotificationsProvider>

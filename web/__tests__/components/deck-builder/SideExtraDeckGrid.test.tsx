@@ -97,7 +97,7 @@ describe('SideExtraDeckGrid', () => {
                 />
             );
 
-            expect(screen.getByText(/SIDE DECK.*5.*15/i)).toBeInTheDocument();
+            expect(screen.getByText((_, el) => el?.classList.contains('db-band') === true && /SIDE DECK.*5.*15/i.test(el.textContent ?? ''))).toBeInTheDocument();
         });
 
         it('should display correct extra deck count', () => {
@@ -109,7 +109,7 @@ describe('SideExtraDeckGrid', () => {
                 />
             );
 
-            expect(screen.getByText(/EXTRA DECK.*8.*15/i)).toBeInTheDocument();
+            expect(screen.getByText((_, el) => el?.classList.contains('db-band') === true && /EXTRA DECK.*8.*15/i.test(el.textContent ?? ''))).toBeInTheDocument();
         });
     });
 });

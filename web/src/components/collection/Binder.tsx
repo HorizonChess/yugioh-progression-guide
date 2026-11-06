@@ -63,7 +63,7 @@ function Page({ slots, title, chapter, number, onOpen, bind }: {
  * (a set); pages turn with the arrows, a swipe or the arrow keys. `slots` is the
  * chapter's (or the search's) cards in order; owned ones open on tap.
  */
-export default function Binder({ owner, title, chapterCode, slots, chapters, activeChapter, onChapter, onOpen, bind, empty, isPhone }: {
+export default function Binder({ owner, title, chapterCode, slots, chapters, activeChapter, onChapter, onOpen, bind, empty, isPhone, showKey = null }: {
     owner: string;
     title: string;
     chapterCode: string;
@@ -75,6 +75,8 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
     bind: (s: BinderSlot) => object;
     empty?: string;
     isPhone: boolean;
+    /** Keep the page with this card open (the close-up stepping through cards). */
+    showKey?: string | null;
 }) {
     const [spread, setSpread] = useState(0);
     const [open, setOpen] = useState(false);
@@ -90,6 +92,13 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
     if (lastList !== slots) {
         setLastList(slots);
         setSpread(0);
+    }
+    // The close-up stepped to a card on another page: open the binder there, so closing lands on it.
+    const [lastShow, setLastShow] = useState(showKey);
+    if (lastShow !== showKey) {
+        setLastShow(showKey);
+        const i = showKey ? slots.findIndex((s) => s.key === showKey) : -1;
+        if (i >= 0 && Math.floor(i / per) !== at) setSpread(Math.floor(i / per));
     }
     useEffect(() => {
         const t = setTimeout(() => setOpen(true), 450);
@@ -108,7 +117,7 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
     });
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if ((e.target as Element).closest("input, select, textarea, [role=dialog]")) return;
+            if ((e.target as Element).closest("input, select, textarea, [role=dialog]") || document.querySelector(".closeup")) return;
             if (e.key === "ArrowRight") latestTurn.current(1);
             if (e.key === "ArrowLeft") latestTurn.current(-1);
         };
@@ -124,17 +133,17 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
         const shade = el.querySelector(".binder-leaf__shade");
         let a: Animation;
         if (isPhone) {
-            // One page at a time: the sheet lifts on the rings up to edge-on (next),
-            // or comes down from edge-on onto the page (back). It never passes 90°,
-            // so its back never shows, and it never fades: a fade flattens the 3D
-            // and the page would show through mirrored.
-            const up = [{ transform: "rotateY(0deg)" }, { transform: "rotateY(-90deg)" }];
+            // One page at a time: the sheet turns right over the rings, its sleeve
+            // back showing as it goes (next), or comes back over them onto the page
+            // (back). It never fades: a fade flattens the 3D and the page would
+            // show through mirrored.
+            const over = [{ transform: "rotateY(0deg)" }, { transform: "rotateY(-90deg) translateZ(24px)" }, { transform: "rotateY(-180deg)" }];
             const next = turning.dir > 0;
-            a = el.animate(next ? up : [...up].reverse(), { duration: 520, easing: next ? "cubic-bezier(.55,0,.8,.3)" : "cubic-bezier(.2,.7,.45,1)", fill: "both" });
-            shade?.animate(next ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }], { duration: 520, fill: "both" });
+            a = el.animate(next ? over : [...over].reverse(), { duration: 640, easing: "cubic-bezier(.45,.05,.3,1)", fill: "both" });
+            shade?.animate([{ opacity: 0 }, { opacity: 1, offset: 0.5 }, { opacity: 0 }], { duration: 640 });
         } else {
             const angle = turning.dir > 0 ? -180 : 180;
-            a = el.animate([{ transform: "rotateY(0deg)" }, { transform: `rotateY(${angle / 2}deg) translateZ(30px)` }, { transform: `rotateY(${angle}deg)` }], { duration: 700, easing: "cubic-bezier(.45,.05,.3,1)" });
+            a = el.animate([{ transform: "rotateY(0deg)" }, { transform: `rotateY(${angle / 2}deg) translateZ(30px)` }, { transform: `rotateY(${angle}deg)` }], { duration: 700, easing: "cubic-bezier(.45,.05,.3,1)", fill: "both" });
             shade?.animate([{ opacity: 0 }, { opacity: 1, offset: 0.5 }, { opacity: 0 }], { duration: 700 });
         }
         a.onfinish = () => setTurning(null);
@@ -174,7 +183,12 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
                 {t && leafFront !== null && (
                     <div ref={leaf} className={`binder-leaf ${isPhone || t.dir > 0 ? "binder-leaf--r" : "binder-leaf--l"}`}>
                         <Page {...props} slots={page(leafFront)} number={leafFront + 1} />
-                        {leafBack !== null && <div className="binder-leaf__back"><Page {...props} slots={page(leafBack)} number={leafBack + 1} /></div>}
+                        {leafBack !== null ? (
+                            <div className="binder-leaf__back"><Page {...props} slots={page(leafBack)} number={leafBack + 1} /></div>
+                        ) : (
+                            // Phones: the back of the sleeve sheet, its pockets empty from this side.
+                            <div className="binder-leaf__back binder-leaf__back--sleeve"><Page {...props} title="" chapter="" slots={[]} number={0} /></div>
+                        )}
                         <div className="binder-leaf__shade" />
                     </div>
                 )}

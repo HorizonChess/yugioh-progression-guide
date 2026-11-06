@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deck Builder Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800&family=Outfit:wght@500;700;800&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="plate.css">
+<style>
+:root { --primary: #d4af37; --gold-hi: #ffe08a; --font-display: "Cinzel", Georgia, serif; --font-heading: "Outfit", sans-serif; --font-main: "Inter", sans-serif;
+  --mon: #c9852a; --spell: #1a8d7d; --trap: #a33b7c; --extra: #7a4fb5; --side: #3f8f8a; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; background: #1a120a; color: #f1e7cc; font-family: var(--font-main); -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(0,0,0,.2), rgba(0,0,0,.78)), url("img/wall-gemini-1.webp") center / cover; }
+button { font: inherit; color: inherit; }
+.proto { flex: none; display: flex; gap: 4px; padding: 6px 8px; background: #110c18; border-bottom: 1px dashed #6e5320; position: relative; z-index: 60; }
+.proto button { flex: 1; font: 700 12px/1.1 var(--font-main); letter-spacing: .06em; text-transform: uppercase; color: #a99d80; background: transparent; border: 1px solid #3d3220; border-radius: 6px; padding: 8px 4px; cursor: pointer; }
+.proto button[aria-selected="true"] { color: var(--gold-hi); border-color: #8a6a2c; background: rgba(224,181,79,.12); }
+#app { flex: 1; min-height: 0; position: relative; display: flex; justify-content: center; }
+.toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 99; padding: 10px 14px; border-radius: 8px; background: #15100a; box-shadow: 0 0 0 1px #8a6420, 0 10px 20px rgba(0,0,0,.5); font: 600 13px var(--font-main); max-width: 90vw; text-align: center; animation: pop .2s ease-out; }
+.toast.bad { box-shadow: 0 0 0 1px #b04f4f, 0 10px 20px rgba(0,0,0,.5); }
+@keyframes pop { from { opacity: 0; transform: translate(-50%, 8px); } }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid #8a6a2c; background: linear-gradient(#2a1f14, #15100a); color: #ffe08a; font: 800 11px/1 var(--font-main); letter-spacing: .12em; text-transform: uppercase; cursor: pointer; box-shadow: 0 2px 0 #000, inset 0 1px 0 rgba(255,230,170,.15); }
+.btn:disabled { opacity: .35; cursor: default; }
+.btn.gold { color: #2a1c05; background: linear-gradient(#ffe8a6, #e0b54f 55%, #b5852a); border-color: #ffe08a; }
+.cb { position: relative; display: inline-flex; align-items: center; justify-content: center; aspect-ratio: 1376/620; width: 150px; padding: 0 10%; border: 0; cursor: pointer; background: url("img/cartouche.webp") center / 100% 100% no-repeat; filter: drop-shadow(0 6px 8px rgba(0,0,0,.6)); }
+.cb span { font: 800 12px/1 var(--font-display); letter-spacing: .07em; text-transform: uppercase; color: #3a2405; text-shadow: 0 1px 0 rgba(255,243,200,.7); white-space: nowrap; }
+.cb.sm { width: 112px; } .cb.sm span { font-size: 10px; }
+.thumb { display: block; aspect-ratio: 813/1185; border-radius: 3px; overflow: hidden; background: #111; box-shadow: 0 2px 4px rgba(0,0,0,.6); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.k-Monster { --kc: var(--mon); } .k-Spell { --kc: var(--spell); } .k-Trap { --kc: var(--trap); } .k-Extra { --kc: var(--extra); }
+.gem { display: inline-flex; align-items: center; gap: 5px; font: 800 11px/1 var(--font-main); letter-spacing: .06em; color: #f1e7cc; }
+.gem i { width: 10px; height: 10px; border-radius: 50%; background: var(--kc); box-shadow: 0 0 0 1.5px rgba(0,0,0,.6), 0 0 6px var(--kc); }
+.banned-tag { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(120,10,10,.55); font: 900 9px/1 var(--font-main); letter-spacing: .1em; color: #fff; }
+
+/* ---------- a card's sheet (phones) ---------- */
+.scrim { position: fixed; inset: 0; z-index: 80; background: rgba(4,3,8,.6); animation: fade .2s ease-out; }
+@keyframes fade { from { opacity: 0; } }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 81; max-height: 88dvh; overflow-y: auto; padding: 10px 14px calc(16px + env(safe-area-inset-bottom)); border-radius: 16px 16px 0 0; background: linear-gradient(#1d1610, #0d0a07); box-shadow: 0 -2px 0 #8a6420, 0 -20px 40px rgba(0,0,0,.6); animation: up .28s cubic-bezier(.2,.9,.3,1); }
+@media (min-width: 700px) { .sheet { left: 50%; right: auto; width: 420px; transform: translateX(-50%); } }
+@keyframes up { from { transform: translateY(100%); } }
+@media (min-width: 700px) { @keyframes up { from { transform: translate(-50%, 100%); } } }
+.sheet::before { content: ""; display: block; width: 44px; height: 4px; margin: 0 auto 10px; border-radius: 2px; background: rgba(224,181,79,.4); }
+.sheet .top { display: flex; gap: 12px; align-items: flex-start; }
+.sheet .top .thumb { flex: none; width: 92px; }
+.sheet .ps-plate { position: relative; flex: 1; min-width: 0; font-size: 12px; }
+.sheet .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.zone-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(224,181,79,.2); }
+.zone-row b { font: 800 13px/1.1 var(--font-display); letter-spacing: .06em; }
+.zone-row small { display: block; font: 600 11px/1.2 var(--font-main); color: #a99d80; margin-top: 2px; }
+.step { display: inline-flex; align-items: center; gap: 2px; }
+.step button { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #8a6a2c; background: #15100a; color: #ffe08a; font: 800 17px/1 var(--font-main); cursor: pointer; }
+.step button:disabled { opacity: .3; }
+.step output { min-width: 26px; text-align: center; font: 800 15px/1 var(--font-main); }
+.sheet .note { margin: 10px 0 0; text-align: center; font: 600 12px/1.4 var(--font-main); color: #a99d80; }
+
+/* ---------- phone frame ---------- */
+.phone { position: relative; width: 100%; max-width: 430px; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+@media (min-width: 700px) { .phone { margin: 14px 0; height: calc(100% - 28px); max-height: 860px; border-radius: 26px; box-shadow: 0 0 0 8px #0b0806, 0 0 0 9px #3d3220, 0 30px 60px rgba(0,0,0,.7); } }
+.pbar { flex: none; height: 58px; display: flex; align-items: center; gap: 10px; padding: 0 12px; position: relative; z-index: 40; background: radial-gradient(120% 140% at 20% 0%, #2a1f3a, transparent 60%), linear-gradient(#1a1324, #0a070f); box-shadow: 0 6px 14px rgba(0,0,0,.6); }
+.pbar::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 7px; background: linear-gradient(#fff1bf, #d4af37 45%, #8a6420); }
+.pbar .face { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #1b1426 url("img/yugi-neutral.webp") center 8% / 250% auto no-repeat; box-shadow: 0 0 0 2px var(--primary), 0 0 0 4px #3a2405; }
+.pbar .name { font: 800 16px/1 var(--font-display); color: var(--gold-hi); }
+.pbar .sub { margin-top: 3px; font: 700 10px/1.2 var(--font-main); letter-spacing: .14em; color: #c7b99a; text-transform: uppercase; }
+.tabs { flex: none; display: flex; height: 58px; background: linear-gradient(#0f172a, #020617); border-top: 1px solid #1e293b; position: relative; z-index: 40; }
+.tabs a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #94a3b8; text-decoration: none; font: 700 10px/1 var(--font-heading); letter-spacing: .1em; }
+.tabs svg { width: 22px; height: 22px; } .tabs a[aria-current] { color: var(--primary); }
+.pmain { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+
+/* the deck head: name, the counts against the rules, save */
+.dhead { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 12px 6px; }
+.dhead input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: #fff; font: 800 16px/1.1 var(--font-display); text-shadow: 0 2px 8px #000; padding: 4px 0; border-bottom: 1px dashed rgba(224,181,79,.35); }
+.counts { flex: none; display: flex; gap: 6px; padding: 2px 12px 8px; overflow-x: auto; scrollbar-width: none; }
+.count { flex: none; display: flex; align-items: baseline; gap: 4px; padding: 6px 10px; border-radius: 999px; background: rgba(10,7,4,.7); box-shadow: 0 0 0 1px rgba(224,181,79,.35); font: 700 11px/1 var(--font-main); letter-spacing: .1em; text-transform: uppercase; color: #c7b99a; }
+.count b { font: 800 14px/1 var(--font-main); color: #fff; letter-spacing: 0; }
+.count.short { box-shadow: 0 0 0 1px #b04f4f; } .count.short b { color: #ffb4a8; }
+.count.ok b { color: #a7e3a1; }
+.menu { position: absolute; right: 10px; top: 50px; z-index: 70; min-width: 200px; padding: 6px; border-radius: 10px; background: #15100a; box-shadow: 0 0 0 1px #6e5320, 0 18px 30px rgba(0,0,0,.6); }
+.menu button { display: block; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 6px; background: none; cursor: pointer; font: 600 14px/1 var(--font-main); }
+.menu button:hover { background: rgba(224,181,79,.12); }
+.menu .danger { color: #f87171; }
+
+/* search + chips */
+.find { flex: none; display: flex; gap: 6px; padding: 4px 12px 6px; }
+.find label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 999px; background: rgba(10,7,4,.7); box-shadow: 0 0 0 1px rgba(224,181,79,.4); }
+.find input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: #f1e7cc; font: 600 14px var(--font-main); }
+.find svg { width: 15px; height: 15px; color: #c7b99a; flex: none; }
+.chips { flex: none; display: flex; gap: 6px; padding: 0 12px 8px; overflow-x: auto; scrollbar-width: none; }
+.chip { flex: none; padding: 7px 11px; border-radius: 999px; border: 0; cursor: pointer; background: rgba(10,7,4,.6); box-shadow: 0 0 0 1px rgba(224,181,79,.25); font: 700 11px/1 var(--font-main); letter-spacing: .1em; text-transform: uppercase; color: #c7b99a; }
+.chip[aria-pressed="true"] { color: #2a1c05; background: linear-gradient(#f3d98a, #c99a3a); }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px 16px; }
+
+/* a fold: a section that opens and closes */
+.fold { margin: 0 0 8px; border-radius: 10px; background: rgba(10,7,4,.55); box-shadow: inset 0 0 0 1px rgba(224,181,79,.18); overflow: hidden; }
+.fold > summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 11px 12px; cursor: pointer; font: 800 13px/1 var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: #ffe08a; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::after { content: "›"; margin-left: auto; font: 700 20px/1 var(--font-main); color: #c7b99a; transition: transform .2s; }
+.fold[open] > summary::after { transform: rotate(90deg); }
+.fold > summary small { font: 700 12px/1 var(--font-main); letter-spacing: 0; color: #c7b99a; }
+.fold > summary .bar { flex: 1; max-width: 90px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.08); overflow: hidden; }
+.fold > summary .bar i { display: block; height: 100%; background: var(--kc, #e0b54f); }
+.sub-h { display: flex; align-items: center; gap: 8px; padding: 8px 12px 4px; font: 800 10px/1 var(--font-main); letter-spacing: .18em; text-transform: uppercase; color: #a99d80; }
+.sub-h::after { content: ""; flex: 1; height: 1px; background: rgba(224,181,79,.2); }
+.row { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-top: 1px solid rgba(255,255,255,.04); }
+.row .thumb { flex: none; width: 34px; cursor: pointer; position: relative; }
+.row .who { flex: 1; min-width: 0; cursor: pointer; }
+.row .who b { display: block; font: 700 13px/1.2 var(--font-main); color: #f1e7cc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .who small { display: block; margin-top: 2px; font: 600 11px/1.2 var(--font-main); color: #a99d80; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .step button { width: 28px; height: 28px; font-size: 15px; }
+.row .step output { min-width: 20px; font-size: 14px; }
+.empty { padding: 14px 12px 16px; text-align: center; font: 600 12px/1.4 var(--font-main); color: #a99d80; }
+
+/* the card grid (your cards) */
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 8px; }
+.tile { position: relative; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; }
+.tile .thumb { width: 100%; }
+.tile .badge { position: absolute; left: 4px; bottom: 4px; padding: 3px 5px; border-radius: 999px; font: 800 10px/1 var(--font-main); color: #ffe08a; background: rgba(10,7,4,.88); box-shadow: 0 0 0 1px rgba(224,181,79,.6); }
+.tile .badge.in { color: #2a1c05; background: linear-gradient(#f3d98a, #c99a3a); box-shadow: none; }
+.tile .plus { position: absolute; right: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; border: 0; display: grid; place-items: center; background: rgba(10,7,4,.85); box-shadow: 0 0 0 1px #e0b54f; color: #ffe08a; font: 800 16px/1 var(--font-main); cursor: pointer; }
+.tile.off .thumb { filter: grayscale(.8) brightness(.55); }
+.tile .nm { display: block; margin-top: 4px; font: 600 10px/1.2 var(--font-main); color: #c7b99a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* A · two pages */
+.seg { flex: none; display: flex; gap: 4px; margin: 0 12px 8px; padding: 4px; border-radius: 999px; background: rgba(10,7,4,.7); box-shadow: 0 0 0 1px rgba(224,181,79,.3); }
+.seg button { flex: 1; padding: 9px 8px; border: 0; border-radius: 999px; cursor: pointer; background: transparent; font: 800 12px/1 var(--font-main); letter-spacing: .14em; text-transform: uppercase; color: #c7b99a; }
+.seg button[aria-selected="true"] { color: #2a1c05; background: linear-gradient(#f3d98a, #c99a3a); }
+
+/* B · deck above, cards in a drawer */
+.mini-deck { padding: 0 10px; }
+.mini { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; padding: 4px 8px 10px; }
+.mini .thumb { cursor: pointer; border-radius: 2px; }
+.mini .slot { aspect-ratio: 813/1185; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); background: rgba(255,255,255,.02); }
+.mini .thumb.fresh { animation: land .45s cubic-bezier(.2,.9,.3,1.3); }
+@keyframes land { from { transform: scale(1.6); box-shadow: 0 0 0 2px #ffe08a, 0 0 20px #ffe08a; } }
+.drawer { position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; flex-direction: column; height: 46%; border-radius: 16px 16px 0 0; background: linear-gradient(#1d1610, #0d0a07); box-shadow: 0 -2px 0 #8a6420, 0 -16px 30px rgba(0,0,0,.6); transition: height .3s cubic-bezier(.2,.9,.3,1); }
+.drawer.full { height: 86%; } .drawer.low { height: 92px; }
+.drawer .handle { flex: none; display: flex; align-items: center; justify-content: center; gap: 8px; height: 30px; border: 0; background: none; cursor: pointer; font: 800 10px/1 var(--font-main); letter-spacing: .18em; text-transform: uppercase; color: #a99d80; touch-action: none; }
+.drawer .handle::before { content: ""; width: 44px; height: 4px; border-radius: 2px; background: rgba(224,181,79,.45); }
+.pmain.b .scroll.deck { padding-bottom: calc(46% + 12px); }
+
+/* C · one folding list */
+.row2 { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 7px 12px; border-top: 1px solid rgba(255,255,255,.04); }
+.row2 .thumb { grid-row: span 2; width: 34px; cursor: pointer; position: relative; }
+.row2 .who { min-width: 0; cursor: pointer; }
+.row2 .who b { display: block; font: 700 13px/1.2 var(--font-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row2 .who small { display: block; font: 600 11px/1.2 var(--font-main); color: #a99d80; }
+.row2 .own { font: 700 11px/1 var(--font-main); color: #a99d80; text-align: right; }
+.row2 .zones { grid-column: 2 / 4; display: flex; gap: 14px; }
+.row2 .zones label { display: inline-flex; align-items: center; gap: 6px; font: 800 10px/1 var(--font-main); letter-spacing: .14em; text-transform: uppercase; color: #a99d80; }
+.row2 .step button { width: 26px; height: 26px; font-size: 14px; }
+.row2 .step output { min-width: 18px; font-size: 13px; }
+.row2.in { background: rgba(224,181,79,.06); }
+.toggle { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(10,7,4,.7); box-shadow: 0 0 0 1px rgba(224,181,79,.3); }
+.toggle button { padding: 7px 10px; border: 0; border-radius: 999px; cursor: pointer; background: none; font: 800 11px/1 var(--font-main); letter-spacing: .1em; text-transform: uppercase; color: #c7b99a; }
+.toggle button[aria-pressed="true"] { color: #2a1c05; background: linear-gradient(#f3d98a, #c99a3a); }
+
+/* ---------- D · desktop: today's four columns, in the game's look ---------- */
+.desk-wrap { position: absolute; inset: 0; overflow: hidden; }
+.desk { position: absolute; left: 0; top: 0; width: 1440px; height: 840px; transform-origin: 0 0; display: grid; grid-template-columns: 236px minmax(0, 1fr) 196px 262px; gap: 8px; padding: 8px; }
+.panel { position: relative; min-height: 0; display: flex; flex-direction: column; border-radius: 12px; background: linear-gradient(rgba(20,14,8,.9), rgba(10,7,4,.92)); box-shadow: 0 0 0 1px rgba(224,181,79,.35), inset 0 1px 0 rgba(255,230,170,.1), 0 14px 30px rgba(0,0,0,.6); }
+.band { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; border-radius: 12px 12px 0 0; font: 800 12px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: #2a1c05; background: linear-gradient(#f3d98a, #c99a3a); box-shadow: inset 0 1px 0 rgba(255,245,210,.7); }
+.band small { font: 800 12px/1 var(--font-main); letter-spacing: 0; }
+.band.side { background: linear-gradient(#8fd3cc, #3f8f8a); } .band.extra { background: linear-gradient(#c7a7f0, #7a4fb5); color: #1c0f33; }
+.info { flex: 1; min-height: 0; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.info .big { flex: none; width: 62%; margin: 0 auto; }
+.info .ps-plate { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; font-size: 12px; }
+.info .ps-plate__box { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #8a6420 transparent; }
+.info .ps-plate__name, .info .ps-plate__sub, .info .ps-plate__foot { flex: none; }
+.info .none { height: 100%; display: grid; place-items: center; text-align: center; font: 600 13px/1.5 var(--font-main); color: #7d7360; border: 1px dashed rgba(224,181,79,.2); border-radius: 10px; padding: 20px; }
+.ctrls { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px 12px 12px; border-top: 1px solid rgba(224,181,79,.2); }
+.ctrls input { grid-column: 1 / -1; height: 34px; padding: 0 10px; border-radius: 8px; border: 0; outline: 0; background: linear-gradient(#f5e7bf, #e2cc93); color: #2a1c05; font: 700 14px var(--font-main); box-shadow: inset 0 2px 3px rgba(90,60,10,.4), 0 0 0 1px #8a6420; }
+.mat { flex: 1; min-height: 0; display: flex; gap: 8px; padding: 10px; border-radius: 0 0 12px 12px; background: radial-gradient(ellipse at 50% 30%, rgba(90,60,25,.35), transparent 70%), repeating-linear-gradient(45deg, rgba(255,255,255,.015) 0 2px, transparent 2px 6px), #120d08; }
+.band .gems { display: flex; gap: 14px; margin-left: auto; margin-right: 14px; }
+.band .gems .gem { color: #2a1c05; } .band .gems .gem b { font-size: 13px; }
+
+.dgrid { flex: 1; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); grid-auto-rows: max-content; gap: 7px 6px; align-content: start; }
+.dgrid.small { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.dgrid .slot { aspect-ratio: 813/1185; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(224,181,79,.12); background: rgba(255,255,255,.015); }
+.dgrid .thumb { cursor: grab; transition: transform .12s; }
+.dgrid .thumb:hover { transform: translateY(-3px); box-shadow: 0 0 0 1px #ffe08a, 0 6px 10px rgba(0,0,0,.6); }
+.zone { flex: 1; min-height: 0; padding: 8px; overflow-y: auto; }
+.zone.over, .mat.over { box-shadow: inset 0 0 0 2px #ffe08a; }
+.stack { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.stack > .panel { flex: 1; }
+.search { padding: 10px 12px; display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; align-items: center; font: 700 11px/1 var(--font-main); letter-spacing: .06em; color: #c7b99a; border-bottom: 1px solid rgba(224,181,79,.2); }
+.search input, .search select { min-width: 0; height: 28px; padding: 0 8px; border-radius: 6px; border: 0; outline: 0; background: linear-gradient(#f5e7bf, #e2cc93); color: #2a1c05; font: 600 12px var(--font-main); box-shadow: inset 0 1px 2px rgba(90,60,10,.4); }
+.search .pair { display: flex; align-items: center; gap: 4px; } .search .pair input { width: 0; flex: 1; }
+.pager { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; font: 800 12px/1 var(--font-main); letter-spacing: .1em; color: #ffe08a; }
+.results { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 12px 12px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 6px; align-content: start; }
+.results .tile .badge { left: auto; right: 3px; bottom: 3px; }
+.peek-hint { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); font: 600 11px/1 var(--font-main); color: #7d7360; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="proto" role="tablist" aria-label="Deck builder layout">
+    <button role="tab" data-v="desk">D · Desktop</button>
+    <button role="tab" data-v="pages">A · Two pages</button>
+    <button role="tab" data-v="drawer">B · Deck + drawer</button>
+    <button role="tab" data-v="list">C · One list</button>
+</div>
+<div id="app"></div>
+<script src="data.js"></script>
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const tierOf = (r) => { r = r.toLowerCase(); return r.includes("secret") ? "Secret" : r.includes("ultra") ? "Ultra" : r.includes("super rare") ? "Super" : r === "rare" ? "Rare" : "Common"; };
+const img = (c) => `img/${c.id}.jpg`;
+const ATTR = { LIGHT: ["光", "#d9a400"], DARK: ["闇", "#5b2a86"], EARTH: ["地", "#7a5527"], WATER: ["水", "#1f6fc0"], FIRE: ["炎", "#d23a1e"], WIND: ["風", "#2e9a3c"], DIVINE: ["神", "#b8892a"] };
+
+/* ---------- your cards: the owned ones, a copy count per card ---------- */
+const byId = new Map();
+for (const s of SETS) for (const c of s.cards) {
+    if (!c.owned) continue;
+    const had = byId.get(c.id);
+    if (had) had.owned += c.owned;
+    else byId.set(c.id, { ...c, tier: tierOf(c.rarity) });
+}
+const CARDS = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+const kindOf = (c) => c.frameType === "fusion" ? "Extra" : c.type.startsWith("Spell") ? "Spell" : c.type.startsWith("Trap") ? "Trap" : "Monster";
+const KINDS = ["Monster", "Spell", "Trap", "Extra"];
+const KIND_LABEL = { Monster: "Monsters", Spell: "Spells", Trap: "Traps", Extra: "Extra Deck" };
+const meta = (c) => kindOf(c) === "Spell" || kindOf(c) === "Trap" ? `${kindOf(c)} · ${c.race}` : `Lv ${c.level} · ${c.attribute} · ${c.atk}/${c.def}`;
+// One card banned for the demo (the shared banlist).
+const BANNED = new Set([CARDS.find((c) => c.name === "Dark Hole")?.id ?? CARDS.find((c) => kindOf(c) === "Spell").id]);
+
+/* ---------- the deck, and today's rules ---------- */
+const deck = { main: [], extra: [], side: [] };
+const LIMIT = { main: 60, extra: 15, side: 15 };
+const ZONE = { main: "Main Deck", extra: "Extra Deck", side: "Side Deck" };
+let deckName = "Dragons of Legend";
+const inZone = (z, id) => deck[z].filter((x) => x === id).length;
+const inAll = (id) => inZone("main", id) + inZone("extra", id) + inZone("side", id);
+/** Why `c` can't go into `zone`, or null if it can. */
+function refuse(c, zone) {
+    if (BANNED.has(c.id)) return "This card is banned and cannot be added.";
+    if (zone === "extra" && kindOf(c) !== "Extra") return "Only Extra Deck monsters go in the Extra Deck.";
+    if (zone === "main" && kindOf(c) === "Extra") return "Extra Deck monsters can't go in the Main Deck.";
+    if (deck[zone].length >= LIMIT[zone]) return `${ZONE[zone]} is full (max ${LIMIT[zone]}).`;
+    if (inAll(c.id) >= 3) return "Max 3 copies across your decks.";
+    if (inAll(c.id) >= c.owned) return `You own ${c.owned}: all of them are in.`;
+    return null;
+}
+const homeOf = (c) => (kindOf(c) === "Extra" ? "extra" : "main");
+function add(c, zone = homeOf(c)) {
+    const why = refuse(c, zone);
+    if (why) return toast(why, true), false;
+    deck[zone].push(c.id);
+    changed(c.id, zone);
+    return true;
+}
+function remove(c, zone) {
+    const i = deck[zone].lastIndexOf(c.id);
+    if (i < 0) return;
+    deck[zone].splice(i, 1);
+    changed(c.id, zone);
+}
+let onChange = () => {};
+let lastAdded = null;
+function changed(id, zone) { lastAdded = { id, zone }; onChange(); }
+// A started deck, so every view has something in it.
+(function seed() {
+    const take = (k, n) => CARDS.filter((c) => kindOf(c) === k && !BANNED.has(c.id)).slice(0, n);
+    for (const c of take("Monster", 14)) for (let i = 0; i < Math.min(2, c.owned); i++) deck.main.push(c.id);
+    for (const c of take("Spell", 6)) deck.main.push(c.id);
+    for (const c of take("Trap", 2)) deck.main.push(c.id);
+    for (const c of take("Extra", 3)) deck.extra.push(c.id);
+    deck.side.push(take("Spell", 8)[7].id);
+})();
+const card = (id) => byId.get(id);
+const sortZone = (z) => deck[z].sort((a, b) => KINDS.indexOf(kindOf(card(a))) - KINDS.indexOf(kindOf(card(b))) || card(a).name.localeCompare(card(b).name));
+const toast = (t, bad = false) => { document.querySelectorAll(".toast").forEach((e) => e.remove()); const el = document.createElement("div"); el.className = "toast" + (bad ? " bad" : ""); el.textContent = t; document.body.appendChild(el); setTimeout(() => el.remove(), 2200); };
+
+/* ---------- shared pieces ---------- */
+function plate(c) {
+    const k = kindOf(c) === "Spell" ? "Spell" : kindOf(c) === "Trap" ? "Trap" : c.frameType === "fusion" ? "Fusion" : c.frameType === "ritual" ? "Ritual" : c.frameType === "effect" ? "Effect" : "Normal";
+    const mon = c.type.includes("Monster"), [kj, col] = mon ? ATTR[c.attribute] ?? ["?", "#6b6256"] : k === "Spell" ? ["魔", "#1a8d7d"] : ["罠", "#a33b7c"];
+    return `<div class="ps-plate ps-plate--${k}" data-tier="${c.tier}"><div class="ps-plate__name"><h3>${esc(c.name)}</h3><span class="ps-attr" style="--ac:${col}">${kj}</span></div>
+        <div class="ps-plate__sub">${mon ? '<span class="ps-lv">★</span>'.repeat(c.level ?? 0) : `[${k} Card${c.race !== "Normal" ? " · " + esc(c.race) : ""}]`}</div>
+        <div class="ps-plate__box">${mon ? `<div class="ps-tl">[${esc(c.race)}/${esc(c.type.replace(" Monster", "").replace(/ /g, "/"))}]</div><p class="${k === "Normal" ? "ps-flavor" : ""}">${esc(c.desc)}</p><div class="ps-plate__stats">ATK/${c.atk ?? "?"}  DEF/${c.def ?? "?"}</div>` : `<p>${esc(c.desc)}</p>`}</div>
+        <div class="ps-plate__foot"><span>${c.code} · ${esc(c.rarity)}</span><span>Owned ×${c.owned}</span></div></div>`;
+}
+const thumb = (c) => `<span class="thumb">${BANNED.has(c.id) ? `<span class="banned-tag">BANNED</span>` : ""}<img src="${img(c)}" alt="" loading="lazy"></span>`;
+const stepper = (c, zone) => `<span class="step" data-id="${c.id}" data-z="${zone}"><button data-op="-" ${inZone(zone, c.id) ? "" : "disabled"} aria-label="One less">−</button><output>${inZone(zone, c.id)}</output><button data-op="+" ${refuse(c, zone) ? "disabled" : ""} aria-label="One more">+</button></span>`;
+/** Steppers anywhere under `root` add and remove; tapping a card's art or name opens its sheet. */
+function wire(root) {
+    root.addEventListener("click", (e) => {
+        const b = e.target.closest(".step button");
+        if (b) {
+            const s = b.closest(".step"), c = card(+s.dataset.id);
+            if (b.dataset.op === "+") add(c, s.dataset.z); else remove(c, s.dataset.z);
+            return;
+        }
+        const plus = e.target.closest(".plus");
+        if (plus) return add(card(+plus.dataset.id));
+        const open = e.target.closest("[data-open]");
+        if (open) sheet(card(+open.dataset.open));
+    });
+}
+/** The card's sheet: its details, and how many sit in each deck, with steppers. */
+function sheet(c) {
+    document.querySelectorAll(".scrim, .sheet").forEach((e) => e.remove());
+    const scrim = document.createElement("div"); scrim.className = "scrim";
+    const el = document.createElement("div"); el.className = "sheet"; el.setAttribute("role", "dialog");
+    const zones = kindOf(c) === "Extra" ? ["extra", "side"] : ["main", "side"];
+    const draw = () => {
+        el.innerHTML = `<div class="top"><span class="thumb" style="width:92px"><img src="${img(c)}" alt=""></span>${plate(c)}</div>
+            <div style="display:grid;gap:8px;margin-top:12px">${zones.map((z) => `<div class="zone-row"><span><b>${ZONE[z]}</b><small>${deck[z].length} / ${LIMIT[z]}</small></span>${stepper(c, z)}</div>`).join("")}</div>
+            <p class="note">${BANNED.has(c.id) ? "Banned: it can't go in a deck." : `${inAll(c.id)} of yours in decks · max ${Math.min(3, c.owned)}`}</p>`;
+    };
+    draw();
+    const prev = onChange;
+    onChange = () => { prev(); draw(); };
+    const close = () => { scrim.remove(); el.remove(); onChange = prev; };
+    scrim.onclick = close;
+    wire(el);
+    document.body.append(scrim, el);
+}
+function counts() {
+    const m = deck.main.length, short = m < 40;
+    const by = (k) => deck.main.filter((id) => kindOf(card(id)) === k).length;
+    return `<span class="count ${short ? "short" : "ok"}">Main <b>${m}</b>${short ? ` · ${40 - m} short` : " / 60"}</span>
+        <span class="count">Extra <b>${deck.extra.length}</b></span><span class="count">Side <b>${deck.side.length}</b></span>
+        ${["Monster", "Spell", "Trap"].map((k) => `<span class="count gem k-${k}"><i></i><b>${by(k)}</b></span>`).join("")}`;
+}
+function deckMenu(host, anchor) {
+    host.querySelector(".menu")?.remove();
+    const m = document.createElement("div"); m.className = "menu"; m.setAttribute("role", "menu");
+    m.innerHTML = ["Load a deck", "Sort the deck", "Import YDK", "Export YDK"].map((t) => `<button role="menuitem">${t}</button>`).join("") + `<button role="menuitem" class="danger">Clear the deck</button>`;
+    m.onclick = (e) => {
+        const t = e.target.closest("button")?.textContent; m.remove();
+        if (t === "Sort the deck") { sortZone("main"); sortZone("extra"); sortZone("side"); onChange(); toast("Sorted: monsters, spells, traps"); }
+        else if (t === "Clear the deck") { if (confirm("Clear the deck?")) { deck.main = []; deck.extra = []; deck.side = []; onChange(); } }
+        else if (t) toast(`${t}: as today`);
+    };
+    host.appendChild(m);
+    setTimeout(() => addEventListener("click", function off(e) { if (!m.contains(e.target) && e.target !== anchor) { m.remove(); removeEventListener("click", off); } }), 0);
+}
+const PHONE = (inner, cls = "") => `<div class="phone"><header class="pbar"><div class="face"></div><div><div class="name">GUEST</div><div class="sub">Stage 3 · Solo</div></div></header>
+    <main class="pmain ${cls}">${inner}</main>
+    <nav class="tabs" aria-label="Main">
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6"/></svg>CAMPAIGN</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 3h11v15H4zM9 21h9.5A1.5 1.5 0 0 0 20 19.5V7"/></svg>COLLECTION</a>
+    <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>DECK</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8-4.3-4.1 5.9-.8Z"/></svg>REWARDS</a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg>MENU</a></nav></div>`;
+const HEAD = `<div class="dhead"><input value="${esc(deckName)}" aria-label="Deck name"><button class="btn" data-menu aria-label="More">⋯</button><button class="cb sm" data-save><span>Save</span></button></div><div class="counts"></div>`;
+function head(root) {
+    const name = $(".dhead input", root);
+    name.oninput = () => (deckName = name.value);
+    $("[data-menu]", root).onclick = (e) => deckMenu($(".phone", root) ?? root, e.currentTarget);
+    $("[data-save]", root).onclick = () => toast(deck.main.length < 40 ? "Main Deck is under 40. Saved anyway (as today, after asking)." : `Saved “${deckName}”`);
+}
+// Your cards, narrowed by the search box and a kind chip.
+let query = "", kind = "All";
+const FIND = `<div class="find"><label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input placeholder="Search your cards" aria-label="Search your cards"></label><button class="btn" data-filters>Filters</button></div>
+    <div class="chips">${["All", ...KINDS].map((k) => `<button class="chip" data-k="${k}" aria-pressed="${k === "All"}">${k === "All" ? "All" : KIND_LABEL[k]}</button>`).join("")}</div>`;
+const found = () => CARDS.filter((c) => (kind === "All" || kindOf(c) === kind) && (!query || (c.name + " " + c.desc).toLowerCase().includes(query.toLowerCase())));
+function find(root, redraw) {
+    const q = $(".find input", root); q.value = query;
+    q.oninput = () => { query = q.value; redraw(); };
+    root.querySelectorAll(".chip").forEach((b) => { b.setAttribute("aria-pressed", String(b.dataset.k === kind)); b.onclick = () => { kind = b.dataset.k; root.querySelectorAll(".chip").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); redraw(); }; });
+    $("[data-filters]", root).onclick = () => toast("Today's full filters (type, attribute, level, ATK, DEF, order) in a sheet");
+}
+const tile = (c) => {
+    const n = inAll(c.id), off = BANNED.has(c.id) || inAll(c.id) >= Math.min(3, c.owned);
+    return `<div class="tile ${off ? "off" : ""}"><span data-open="${c.id}">${thumb(c)}</span>${n ? `<span class="badge in">${n} in</span>` : `<span class="badge">×${c.owned}</span>`}${off ? "" : `<button class="plus" data-id="${c.id}" aria-label="Add ${esc(c.name)}">+</button>`}<span class="nm">${esc(c.name)}</span></div>`;
+};
+/** The deck as folding lists: Main (by kind), Extra, Side. */
+function deckFolds(openState) {
+    const zone = (z, label) => {
+        const ids = [...new Set(deck[z])];
+        const rows = (list) => list.map((id) => { const c = card(id); return `<div class="row"><span data-open="${id}">${thumb(c)}</span><span class="who" data-open="${id}"><b>${esc(c.name)}</b><small>${meta(c)}</small></span>${stepper(c, z)}</div>`; }).join("");
+        let body = "";
+        if (!ids.length) body = `<div class="empty">Nothing here yet. ${z === "side" ? "Add from a card's sheet." : "Add from your cards."}</div>`;
+        else if (z === "main") for (const k of ["Monster", "Spell", "Trap"]) {
+            const list = ids.filter((id) => kindOf(card(id)) === k);
+            if (list.length) body += `<div class="sub-h">${KIND_LABEL[k]} · ${deck.main.filter((id) => kindOf(card(id)) === k).length}</div>` + rows(list);
+        }
+        else body = rows(ids);
+        const full = z === "main" ? Math.min(100, (deck.main.length / 40) * 100) : (deck[z].length / 15) * 100;
+        return `<details class="fold ${z === "extra" ? "k-Extra" : z === "side" ? "" : "k-Monster"}" data-z="${z}" ${openState[z] ? "open" : ""}><summary>${label} <small>${deck[z].length}${z === "main" ? " / 40–60" : " / 15"}</small><span class="bar"><i style="width:${full}%"></i></span></summary>${body}</details>`;
+    };
+    return zone("main", "Main Deck") + zone("extra", "Extra Deck") + zone("side", "Side Deck");
+}
+const keepFolds = (root, state) => root.querySelectorAll("details.fold").forEach((d) => d.addEventListener("toggle", () => (state[d.dataset.z] = d.open)));
+
+/* ---------- A · two pages: the deck as folding lists, your cards as a grid ---------- */
+function pages(root) {
+    let page = "deck";
+    const folds = { main: true, extra: true, side: false };
+    root.innerHTML = PHONE(`${HEAD}<div class="seg" role="tablist"><button role="tab" data-p="deck"></button><button role="tab" data-p="cards"></button></div><div class="pagebody" style="flex:1;min-height:0;display:flex;flex-direction:column"></div>`);
+    head(root);
+    const body = $(".pagebody", root);
+    wire(body);
+    const draw = () => {
+        $(".counts", root).innerHTML = counts();
+        root.querySelectorAll("[data-p]").forEach((b) => { b.setAttribute("aria-selected", String(b.dataset.p === page)); b.textContent = b.dataset.p === "deck" ? `Deck · ${deck.main.length + deck.extra.length + deck.side.length}` : `Your cards · ${CARDS.length}`; });
+        if (page === "deck") {
+            const top = $(".scroll", body)?.scrollTop ?? 0;
+            body.innerHTML = `<div class="scroll">${deckFolds(folds)}</div>`;
+            keepFolds(body, folds);
+            $(".scroll", body).scrollTop = top;
+        } else {
+            if (!$(".find", body)) { body.innerHTML = FIND + `<div class="scroll"><div class="grid"></div></div>`; find(body, draw); }
+            $(".grid", body).innerHTML = found().map(tile).join("");
+        }
+    };
+    root.querySelectorAll("[data-p]").forEach((b) => (b.onclick = () => { page = b.dataset.p; body.innerHTML = ""; draw(); }));
+    onChange = draw;
+    draw();
+}
+
+/* ---------- B · the deck up top as cards, your cards in a drawer below ---------- */
+function drawer(root) {
+    const folds = { main: true, extra: true, side: true };
+    root.innerHTML = PHONE(`${HEAD}<div class="scroll deck"></div>
+        <section class="drawer"><button class="handle" aria-label="Your cards: pull up or down">Your cards</button>${FIND}<div class="scroll"><div class="grid"></div></div></section>`, "b");
+    head(root);
+    const dk = $(".scroll.deck", root), dr = $(".drawer", root);
+    wire(dk); wire(dr);
+    const mini = (z) => {
+        const shown = deck[z].map((id, i) => { const c = card(id); const fresh = lastAdded && lastAdded.zone === z && lastAdded.id === id && i === deck[z].lastIndexOf(id); return `<span class="${fresh ? "fresh" : ""}" data-open="${id}" style="display:block">${thumb(c).replace('class="thumb"', `class="thumb${fresh ? " fresh" : ""}"`)}</span>`; }).join("");
+        const pad = z === "main" ? Math.max(0, 40 - deck.main.length) : Math.max(0, Math.min(15, 8) - deck[z].length);
+        return `<div class="mini">${shown}${'<span class="slot"></span>'.repeat(pad)}</div>`;
+    };
+    const draw = () => {
+        $(".counts", root).innerHTML = counts();
+        const top = dk.scrollTop;
+        dk.innerHTML = ["main", "extra", "side"].map((z) => `<details class="fold" data-z="${z}" ${folds[z] ? "open" : ""}><summary>${ZONE[z]} <small>${deck[z].length}${z === "main" ? " / 40–60" : " / 15"}</small></summary>${deck[z].length || z !== "side" ? mini(z) : `<div class="empty">Open a card and add it to the Side Deck.</div>`}</details>`).join("") + `<p class="empty" style="padding-top:2px">Tap a card in your deck for its details, to move or remove it.</p>`;
+        keepFolds(dk, folds);
+        dk.scrollTop = top;
+        $(".grid", dr).innerHTML = found().map(tile).join("");
+        lastAdded = null;
+    };
+    find(dr, draw);
+    // The drawer: tap the handle to cycle, or drag it.
+    const states = ["low", "", "full"]; let st = 1;
+    const set = (i) => { st = Math.max(0, Math.min(2, i)); dr.className = "drawer " + states[st]; dk.style.paddingBottom = st === 0 ? "104px" : st === 2 ? "86%" : ""; };
+    let y0 = null;
+    const h = $(".handle", dr);
+    h.onpointerdown = (e) => { y0 = e.clientY; h.setPointerCapture(e.pointerId); };
+    h.onpointerup = (e) => { if (y0 === null) return; const d = e.clientY - y0; y0 = null; if (Math.abs(d) < 8) set(st === 2 ? 0 : st + 1); else set(st + (d < 0 ? 1 : -1)); };
+    onChange = draw;
+    draw();
+}
+
+/* ---------- C · one folding list of your cards, each with its deck counts ---------- */
+function list(root) {
+    let only = false;
+    const folds = { Monster: true, Spell: false, Trap: false, Extra: false };
+    root.innerHTML = PHONE(`${HEAD}<div class="find" style="align-items:center"><label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input placeholder="Search your cards" aria-label="Search your cards"></label><span class="toggle" role="group" aria-label="Show"><button data-only="0" aria-pressed="true">All</button><button data-only="1" aria-pressed="false">In deck</button></span></div><div class="scroll" style="padding-top:4px"></div>`);
+    head(root);
+    const sc = $(".scroll", root);
+    wire(sc);
+    const q = $(".find input", root); q.value = query;
+    q.oninput = () => { query = q.value; draw(); };
+    root.querySelectorAll("[data-only]").forEach((b) => (b.onclick = () => { only = b.dataset.only === "1"; root.querySelectorAll("[data-only]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); draw(); }));
+    const row = (c) => {
+        const zs = kindOf(c) === "Extra" ? ["extra", "side"] : ["main", "side"];
+        return `<div class="row2 ${inAll(c.id) ? "in" : ""}"><span data-open="${c.id}">${thumb(c)}</span><span class="who" data-open="${c.id}"><b>${esc(c.name)}</b><small>${meta(c)}</small></span><span class="own">×${c.owned}</span>
+            <span class="zones">${zs.map((z) => `<label>${z === "side" ? "Side" : z === "extra" ? "Extra" : "Main"} ${stepper(c, z)}</label>`).join("")}</span></div>`;
+    };
+    const draw = () => {
+        $(".counts", root).innerHTML = counts();
+        const top = sc.scrollTop;
+        sc.innerHTML = KINDS.map((k) => {
+            const all = CARDS.filter((c) => kindOf(c) === k && (!query || (c.name + " " + c.desc).toLowerCase().includes(query.toLowerCase())) && (!only || inAll(c.id)));
+            const inDeck = (k === "Extra" ? deck.extra : deck.main).filter((id) => kindOf(card(id)) === k).length;
+            return `<details class="fold k-${k}" data-k="${k}" ${folds[k] || query ? "open" : ""}><summary><span class="gem"><i></i></span>${KIND_LABEL[k]} <small>${inDeck} in · ${all.length} ${only ? "" : "yours"}</small></summary>${all.length ? all.map(row).join("") : `<div class="empty">None${only ? " in the deck" : ""}.</div>`}</details>`;
+        }).join("");
+        sc.querySelectorAll("details.fold").forEach((d) => d.addEventListener("toggle", () => (folds[d.dataset.k] = d.open)));
+        sc.scrollTop = top;
+    };
+    onChange = draw;
+    draw();
+}
+
+/* ---------- D · desktop: the same four columns, restyled ---------- */
+function desk(root) {
+    root.innerHTML = `<div class="desk-wrap"><div class="desk">
+        <section class="panel"><div class="band">Card <small></small></div><div class="info"><div class="none">Hover a card to read it here.<br>Double-click to add · right-click to remove · drag between decks</div></div>
+            <div class="ctrls"><input value="${esc(deckName)}" aria-label="Deck name"><button class="btn gold" data-a="save">Save Deck</button><button class="btn" data-a="load">Load Deck</button><button class="btn" data-a="clear">Clear</button><button class="btn" data-a="sort">Sort</button><button class="btn" data-a="imp">Import</button><button class="btn" data-a="exp">Export</button></div></section>
+        <section class="panel"><div class="band">Main Deck <span class="gems"></span><small class="mc"></small></div><div class="mat" data-drop="main"><div class="dgrid" data-z="main"></div></div></section>
+        <div class="stack"><section class="panel"><div class="band side">Side Deck <small class="sc"></small></div><div class="zone" data-drop="side"><div class="dgrid small" data-z="side"></div></div></section>
+            <section class="panel"><div class="band extra">Extra Deck <small class="ec"></small></div><div class="zone" data-drop="extra"><div class="dgrid small" data-z="extra"></div></div></section></div>
+        <section class="panel"><div class="band">Search <small class="rc"></small></div>
+            <div class="search"><span>Name</span><input data-f="q"><span>Card</span><select data-f="k"><option>All</option><option>Monster</option><option>Spell</option><option>Trap</option><option>Extra</option></select>
+            <span>Attrib</span><select><option>All</option><option>DARK</option><option>LIGHT</option><option>EARTH</option><option>WATER</option><option>FIRE</option><option>WIND</option></select>
+            <span>Level</span><span class="pair"><input placeholder="min"> ≤ Lv ≤ <input placeholder="max"></span><span>ATK</span><span class="pair"><input placeholder="min"> ≤ <input placeholder="max"></span>
+            <span>DEF</span><span class="pair"><input placeholder="min"> ≤ <input placeholder="max"></span><span>Order</span><select><option>Name (A–Z)</option><option>ATK</option><option>Level</option></select></div>
+            <div class="pager"><button class="btn" data-pg="-1">‹</button><span class="pg"></span><button class="btn" data-pg="1">›</button></div>
+            <div class="results"></div></section>
+    </div></div>`;
+    const d = $(".desk", root), wrap = $(".desk-wrap", root);
+    const fit = () => { const s = Math.min(wrap.clientWidth / 1440, wrap.clientHeight / 840); d.style.transform = `scale(${s})`; d.style.left = (wrap.clientWidth - 1440 * s) / 2 + "px"; };
+    new ResizeObserver(fit).observe(wrap); fit();
+    let page = 0, q = "", k = "All";
+    const PER = 28;
+    const info = $(".info", root);
+    const show = (c) => { info.innerHTML = `<div class="big thumb"><img src="${img(c)}" alt=""></div>${plate(c)}`; $(".band small", root).textContent = c.code; };
+    const cardEl = (c, z, i) => `<span class="thumb" draggable="true" data-id="${c.id}" data-from="${z}" data-i="${i}">${BANNED.has(c.id) ? '<span class="banned-tag">BANNED</span>' : ""}<img src="${img(c)}" alt="" draggable="false"></span>`;
+    const draw = () => {
+        for (const z of ["main", "side", "extra"]) {
+            const g = $(`.dgrid[data-z="${z}"]`, root), cap = z === "main" ? 60 : 15;
+            g.innerHTML = deck[z].map((id, i) => cardEl(card(id), z, i)).join("") + '<span class="slot"></span>'.repeat(Math.max(0, (z === "main" ? 60 : 15) - deck[z].length));
+        }
+        $(".mc", root).textContent = `${deck.main.length} / 40–60`; $(".sc", root).textContent = `${deck.side.length} / 15`; $(".ec", root).textContent = `${deck.extra.length} / 15`;
+        $(".gems", root).innerHTML = ["Monster", "Spell", "Trap"].map((x) => `<span class="gem k-${x}" title="${KIND_LABEL[x]}"><i></i><b>${deck.main.filter((id) => kindOf(card(id)) === x).length}</b></span>`).join("");
+        const list = CARDS.filter((c) => (k === "All" || kindOf(c) === k) && (!q || c.name.toLowerCase().includes(q.toLowerCase())));
+        const pages = Math.max(1, Math.ceil(list.length / PER)); page = Math.min(page, pages - 1);
+        $(".pg", root).textContent = `${page + 1} / ${pages}`; $(".rc", root).textContent = `${list.length} yours`;
+        $(".results", root).innerHTML = list.slice(page * PER, page * PER + PER).map((c) => { const off = BANNED.has(c.id) || inAll(c.id) >= Math.min(3, c.owned); return `<div class="tile ${off ? "off" : ""}">${cardEl(c, "search", -1)}<span class="badge">${inAll(c.id) ? inAll(c.id) + "/" : "×"}${c.owned}</span></div>`; }).join("");
+    };
+    root.addEventListener("pointerover", (e) => { const t = e.target.closest(".thumb[data-id]"); if (t) show(card(+t.dataset.id)); });
+    root.addEventListener("dblclick", (e) => { const t = e.target.closest('.thumb[data-from="search"]'); if (t) add(card(+t.dataset.id)); });
+    root.addEventListener("contextmenu", (e) => { const t = e.target.closest(".thumb[data-from]"); if (!t || t.dataset.from === "search") return; e.preventDefault(); deck[t.dataset.from].splice(+t.dataset.i, 1); onChange(); });
+    // Drag between your cards and the three decks.
+    root.addEventListener("dragstart", (e) => { const t = e.target.closest(".thumb[data-id]"); if (!t) return; e.dataTransfer.setData("text/plain", JSON.stringify({ id: +t.dataset.id, from: t.dataset.from, i: +t.dataset.i })); });
+    root.querySelectorAll("[data-drop]").forEach((zEl) => {
+        zEl.addEventListener("dragover", (e) => { e.preventDefault(); zEl.classList.add("over"); });
+        zEl.addEventListener("dragleave", () => zEl.classList.remove("over"));
+        zEl.addEventListener("drop", (e) => {
+            e.preventDefault(); zEl.classList.remove("over");
+            const p = JSON.parse(e.dataTransfer.getData("text/plain") || "null"); if (!p) return;
+            const to = zEl.dataset.drop, c = card(p.id);
+            if (p.from === "search") return void add(c, to);
+            if (p.from === to) return;
+            deck[p.from].splice(p.i, 1);
+            if (!add(c, to)) { deck[p.from].splice(p.i, 0, c.id); onChange(); }
+        });
+    });
+    root.querySelectorAll("[data-pg]").forEach((b) => (b.onclick = () => { page = Math.max(0, page + +b.dataset.pg); draw(); }));
+    $('[data-f="q"]', root).oninput = (e) => { q = e.target.value; page = 0; draw(); };
+    $('[data-f="k"]', root).onchange = (e) => { k = e.target.value; page = 0; draw(); };
+    $(".ctrls input", root).oninput = (e) => (deckName = e.target.value);
+    root.querySelectorAll("[data-a]").forEach((b) => (b.onclick = () => {
+        const a = b.dataset.a;
+        if (a === "sort") { sortZone("main"); sortZone("extra"); sortZone("side"); onChange(); }
+        else if (a === "clear") { if (confirm("Clear the deck?")) { deck.main = []; deck.extra = []; deck.side = []; onChange(); } }
+        else toast(`${b.textContent}: as today`);
+    }));
+    onChange = draw;
+    draw();
+}
+
+const VIEWS = { desk, pages, drawer, list };
+function show(name) {
+    const v = VIEWS[name] ? name : "pages";
+    document.querySelectorAll(".scrim, .sheet, .toast").forEach((e) => e.remove());
+    const root = document.createElement("div"); root.style.cssText = "position:absolute;inset:0;display:flex;justify-content:center";
+    $("#app").replaceChildren(root);
+    VIEWS[v](root);
+    document.querySelectorAll(".proto button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.v === v)));
+}
+document.querySelectorAll(".proto button").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.v; }));
+addEventListener("hashchange", () => show(location.hash.slice(1)));
+show(location.hash.slice(1));
+</script>
+</body>
+</html>

@@ -25,9 +25,14 @@ import CardSearchPanel from "@/components/deck-builder/CardSearchPanel";
 import LoadDeckModal from "@/components/deck-builder/LoadDeckModal";
 import DragPreview, { DragPreviewHandle, dragPreviewTransform } from "@/components/deck-builder/DragPreview";
 import DeckControls from "@/components/deck-builder/DeckControls";
+import DeckPhone from "@/components/deck-builder/DeckPhone";
+import { ownedPrintings } from "@/components/deck-builder/stage";
+import { useIsPhone } from "@/lib/useIsPhone";
+import "@/components/deck-builder/deck-builder.css";
 
 export default function DeckBuilder() {
     const { collection, saveDeck, savedDecks, deleteDeck, bannedCardIds } = useProgression();
+    const isPhone = useIsPhone();
     // Cosmetic ban list (Phase 5): banned cards are greyed in the search panel and
     // blocked from being added. Saved decks are never stripped.
     const bannedIds = useMemo(() => new Set(bannedCardIds), [bannedCardIds]);
@@ -329,6 +334,32 @@ export default function DeckBuilder() {
             || sideDeck.find(c => c.id === cardId);
     };
 
+    /** Why `card` can't go into `zone` right now, or null if it can. */
+    const refuse = (card: Card, zone: DeckZone): string | null => {
+        if (bannedIds.has(card.id)) return "This card is banned and cannot be added.";
+        const isExtra = isExtraDeckCard(card);
+        if (zone === 'extra' && !isExtra) return "Only Extra Deck monsters can go in Extra Deck";
+        if (zone === 'main' && isExtra) return "Extra Deck monsters cannot go in Main Deck";
+        if (zone === 'main' && mainDeck.length >= 60) return "Main Deck Full (Max 60)";
+        if (zone !== 'main' && decks[zone].length >= 15) return "Extra/Side Deck Full (Max 15)";
+        if (getCopiesInAllDecks(card.id) >= 3) return "Max 3 copies allowed.";
+        if ((collectionCards.find(entry => entry.card.id === card.id)?.count ?? 0) <= 0) return "Every copy you own is already in.";
+        return null;
+    };
+    /** Adds one copy to `zone` (its home deck by default); returns why not, or null. */
+    const addCard = (card: Card, zone: DeckZone = isExtraDeckCard(card) ? 'extra' : 'main') => {
+        const why = refuse(card, zone);
+        if (!why) setDeck(zone, [...decks[zone], card]);
+        return why;
+    };
+    /** Takes the last copy of `card` out of `zone`. */
+    const removeCard = (card: Card, zone: DeckZone) => {
+        const i = decks[zone].map(c => c.id).lastIndexOf(card.id);
+        if (i >= 0) setDeck(zone, removeCardFromDeck(decks[zone], i));
+    };
+    const ownedCounts = useMemo(() => ownedCountsById(collection), [collection]);
+    const printings = useMemo(() => ownedPrintings(collection), [collection]);
+
     const insertAt = (deck: Card[], index: number, card: Card) => {
         const next = [...deck];
         next.splice(index, 0, card);
@@ -396,78 +427,8 @@ export default function DeckBuilder() {
         else setMainDeck([...mainDeck, card]);
     };
 
-    return (
+    const shared = (
         <>
-        <ScaleWrapper backgroundColor="#0f172a">
-            <div className="flex flex-col h-full w-full bg-slate-900 text-slate-100 overflow-hidden">
-            {/* The nav is hoisted to the root layout above ScaleWrapper, so it's
-                no longer scaled with the board. */}
-            <div className="flex flex-1 px-1 pt-1 pb-1 gap-1 overflow-hidden relative min-h-0">
-
-                {/* Left Column: Info + Controls */}
-                <div className="w-[300px] shrink-0 flex flex-col min-h-0 bg-wood-dark border-r-2 border-wood-border">
-                    {/* Card Info - Can shrink and scroll if needed */}
-                    <div className="flex-1 min-h-0 overflow-hidden">
-                        <CardInfoPanel card={hoveredCard} />
-                    </div>
-
-                    <DeckControls
-                        deckName={deckName}
-                        onDeckNameChange={setDeckName}
-                        onSave={handleSaveDeck}
-                        onLoad={() => setShowLoadModal(true)}
-                        onClear={handleClearDeck}
-                        onSort={handleSortDeck}
-                        onImport={handleImportClick}
-                        onExport={handleExportClick}
-                    />
-                </div>
-
-                {/* Center: Main Deck */}
-                <div className="flex-[3] min-w-0 min-h-0 bg-slate-800/50 rounded border border-slate-700 p-1">
-                    <MainDeckGrid
-                        mainDeck={mainDeck}
-                        stats={stats}
-                        onDrop={handleDrop}
-                        onDragStart={handleDragStart}
-                        onDrag={handleDrag}
-                        onDragEnd={handleDragEnd}
-                        onRightClick={handleRightClick}
-                        onHover={handleHover}
-                    />
-                </div>
-
-                {/* Side/Extra Decks */}
-                <div className="w-[240px] shrink-0 min-h-0 bg-slate-800/50 rounded border border-slate-700 p-1">
-                    <SideExtraDeckGrid
-                        sideDeck={sideDeck}
-                        extraDeck={extraDeck}
-                        onDrop={handleDrop}
-                        onDragStart={handleDragStart}
-                        onDrag={handleDrag}
-                        onDragEnd={handleDragEnd}
-                        onRightClick={handleRightClick}
-                        onHover={handleHover}
-                    />
-                </div>
-
-                {/* Right: Search Panel */}
-                <div className="w-[280px] shrink-0 flex flex-col bg-lime rounded-lg border-4 border-olive shadow-xl overflow-hidden min-h-0">
-                    <CardSearchPanel
-                        collectionCards={collectionCards}
-                        onDragStart={handleSearchDragStart}
-                        onDrag={handleDrag}
-                        onDragEnd={handleDragEnd}
-                        onHover={handleHover}
-                        onCardDoubleClick={handleDoubleClick}
-                        bannedIds={bannedIds}
-                    />
-                </div>
-
-            </div>
-
-            <GuideSprite />
-
             {/* Hidden file input for YDK import */}
             <input
                 type="file"
@@ -485,6 +446,112 @@ export default function DeckBuilder() {
                     onClose={() => setShowLoadModal(false)}
                 />
             )}
+        </>
+    );
+
+    // Phones: the deck above as cards, your cards in a drawer below; taps, no dragging.
+    if (isPhone) {
+        return (
+            <>
+                <DeckPhone
+                    deckName={deckName}
+                    onDeckNameChange={setDeckName}
+                    decks={decks}
+                    stats={stats}
+                    collectionCards={collectionCards}
+                    ownedCounts={ownedCounts}
+                    printings={printings}
+                    bannedIds={bannedIds}
+                    copies={getCopiesInAllDecks}
+                    refuse={refuse}
+                    onAdd={addCard}
+                    onRemove={removeCard}
+                    onSave={handleSaveDeck}
+                    onLoad={() => setShowLoadModal(true)}
+                    onClear={handleClearDeck}
+                    onSort={handleSortDeck}
+                    onImport={handleImportClick}
+                    onExport={handleExportClick}
+                />
+                {shared}
+            </>
+        );
+    }
+
+    return (
+        <>
+        <ScaleWrapper backgroundColor="transparent">
+            <div className="flex flex-col h-full w-full text-slate-100 overflow-hidden">
+            {/* The nav is hoisted to the root layout above ScaleWrapper, so it's
+                no longer scaled with the board. */}
+            <div className="flex flex-1 p-2 gap-2 overflow-hidden relative min-h-0">
+
+                {/* Left Column: Info + Controls */}
+                <div className="w-[300px] shrink-0 db-panel">
+                    <div className="db-band">Card <small>{hoveredCard ? printings.get(hoveredCard.id)?.setCode ?? hoveredCard.card_sets?.[0]?.set_code ?? "" : ""}</small></div>
+                    {/* Card Info: its text box scrolls inside the card */}
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                        <CardInfoPanel card={hoveredCard} owned={hoveredCard ? ownedCounts.get(hoveredCard.id) ?? 0 : 0} printing={hoveredCard ? printings.get(hoveredCard.id) : undefined} />
+                    </div>
+
+                    <DeckControls
+                        deckName={deckName}
+                        onDeckNameChange={setDeckName}
+                        onSave={handleSaveDeck}
+                        onLoad={() => setShowLoadModal(true)}
+                        onClear={handleClearDeck}
+                        onSort={handleSortDeck}
+                        onImport={handleImportClick}
+                        onExport={handleExportClick}
+                    />
+                </div>
+
+                {/* Center: Main Deck */}
+                <div className="flex-[3] min-w-0 min-h-0">
+                    <MainDeckGrid
+                        mainDeck={mainDeck}
+                        stats={stats}
+                        onDrop={handleDrop}
+                        onDragStart={handleDragStart}
+                        onDrag={handleDrag}
+                        onDragEnd={handleDragEnd}
+                        onRightClick={handleRightClick}
+                        onHover={handleHover}
+                    />
+                </div>
+
+                {/* Side/Extra Decks */}
+                <div className="w-[240px] shrink-0 min-h-0">
+                    <SideExtraDeckGrid
+                        sideDeck={sideDeck}
+                        extraDeck={extraDeck}
+                        onDrop={handleDrop}
+                        onDragStart={handleDragStart}
+                        onDrag={handleDrag}
+                        onDragEnd={handleDragEnd}
+                        onRightClick={handleRightClick}
+                        onHover={handleHover}
+                    />
+                </div>
+
+                {/* Right: Search Panel */}
+                <div className="w-[290px] shrink-0 flex flex-col min-h-0">
+                    <CardSearchPanel
+                        collectionCards={collectionCards}
+                        onDragStart={handleSearchDragStart}
+                        onDrag={handleDrag}
+                        onDragEnd={handleDragEnd}
+                        onHover={handleHover}
+                        onCardDoubleClick={handleDoubleClick}
+                        bannedIds={bannedIds}
+                    />
+                </div>
+
+            </div>
+
+            {/* He stands on the Main Deck's mat, clear of the card panel and its buttons. */}
+            <GuideSprite at="17vw" />
+            {shared}
 
             </div>
         </ScaleWrapper>
