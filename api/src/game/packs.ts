@@ -1,5 +1,5 @@
 import { ObjectId, type Db, type MongoClient } from 'mongodb';
-import { collectionKey, generateBoosterPack, type Card, type CardSet } from '@ygo/shared';
+import { collectionKey, generateBoosterPacks, type Card, type CardSet } from '@ygo/shared';
 import type { CardCatalog } from '../cards/catalog';
 import { cryptoRng } from './rng';
 import { seriesPlayersCollection } from './series';
@@ -41,8 +41,9 @@ export async function ensurePackIndexes(db: Db): Promise<void> {
 }
 
 export function rollPacks(cards: Card[], set: CardSet, count: number): Pull[][] {
-    return Array.from({ length: count }, () =>
-        generateBoosterPack(cards, set, cryptoRng).map((c) => ({ id: c.id, rarity: c.pulled_rarity, setCode: c.pulled_set_code })),
+    // Rolled as boxes: fixed foil counts and an even spread of cards, as a real box.
+    return generateBoosterPacks(cards, set, count, cryptoRng).map((pack) =>
+        pack.map((c) => ({ id: c.id, rarity: c.pulled_rarity, setCode: c.pulled_set_code })),
     );
 }
 

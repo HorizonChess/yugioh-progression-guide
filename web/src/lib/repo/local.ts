@@ -13,7 +13,7 @@ import {
 } from "@ygo/shared";
 import { fetchCardsByIds, fetchCardsInSet, fetchRawSets, fetchSetDateMap, fetchTournamentSets, type CardSet, type PulledCard } from "@/lib/api";
 import { collectionKey, type Collection } from "@/lib/collection";
-import { generateBoosterPack } from "@/lib/pack-logic";
+import { generateBoosterPacks } from "@/lib/pack-logic";
 import type { RewardEntry, RivalReward } from "@/lib/rewards";
 import { reconcileSaves } from "@/lib/set-position";
 import { loadPersistedState, persistState, type SaveSlot } from "@/lib/storage";
@@ -35,7 +35,8 @@ const pulled = (cards: PulledCard[]) => cards.map((c) => ({ id: c.id, setCode: c
 async function rollPacks(set: CardSet, count: number): Promise<PulledCard[][]> {
     const cards = await fetchCardsInSet(set.set_name);
     if (!cards.length) throw new RepoError(`Couldn't load the cards of ${set.set_name}`);
-    return Array.from({ length: count }, () => generateBoosterPack(cards, set));
+    // Rolled as boxes: fixed foil counts and an even spread of cards, as a real box.
+    return generateBoosterPacks(cards, set, count);
 }
 
 /** Guest play: saves live in this browser's localStorage. */
