@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, ReactNode } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Collection } from '@/lib/collection';
 import { LocalRepo } from '@/lib/repo/local';
@@ -64,12 +64,42 @@ interface ProgressionContextType {
 
     isGuideVisible: boolean;
     toggleGuide: () => void;
+    setGuideVisible: (on: boolean) => void;
 }
 
 const ProgressionContext = createContext<ProgressionContextType | undefined>(undefined);
 
 // Stable fallbacks while no series is active, so consumers' memo deps don't churn.
 const EMPTY_COLLECTION: Collection = {};
+const GUIDE_KEY = "ygo-guide";
+
+/** Whether Yugi is on: kept in localStorage, with this visit's value as a fallback when storage is blocked. */
+const guideStore = (() => {
+    let fallback = true;
+    const listeners = new Set<() => void>();
+    return {
+        get: () => {
+            try {
+                return localStorage.getItem(GUIDE_KEY) === null ? fallback : localStorage.getItem(GUIDE_KEY) !== "off";
+            } catch {
+                return fallback;
+            }
+        },
+        set: (on: boolean) => {
+            fallback = on;
+            try {
+                localStorage.setItem(GUIDE_KEY, on ? "on" : "off");
+            } catch {
+                /* storage blocked: the choice lasts this visit */
+            }
+            listeners.forEach((l) => l());
+        },
+        subscribe: (l: () => void) => {
+            listeners.add(l);
+            return () => listeners.delete(l);
+        },
+    };
+})();
 const EMPTY: never[] = [];
 
 export function ProgressionProvider({ children }: { children: ReactNode }) {
@@ -144,7 +174,9 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         return result;
     };
 
-    const [isGuideVisible, setIsGuideVisible] = useState(true);
+    // Yugi on or off, remembered on this device (the nav's Yugi button and the menu's Options).
+    const isGuideVisible = useSyncExternalStore(guideStore.subscribe, guideStore.get, () => true);
+    const setGuide = guideStore.set;
 
     return (
         <ProgressionContext.Provider value={{
@@ -185,7 +217,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             importCollection: (cardIds, mode) => onActive((id) => repo.importCollection(id, cardIds, mode))(),
 
             isGuideVisible,
-            toggleGuide: () => setIsGuideVisible((v) => !v),
+            toggleGuide: () => setGuide(!isGuideVisible),
+            setGuideVisible: setGuide,
         }}>
             {children}
         </ProgressionContext.Provider>
