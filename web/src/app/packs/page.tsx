@@ -7,6 +7,8 @@ import type { Opening } from "@/lib/repo/types";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import GuideSprite from "@/components/layout/GuideSprite";
+import { pullLine } from "@/lib/guide/lines";
+import { guide, seed } from "@/lib/guide/store";
 import StoreView from "@/components/packs/StoreView";
 import PackStageView from "@/components/packs/PackStageView";
 import { ownedCountsById } from "@/lib/collection";
@@ -55,8 +57,12 @@ function PacksPageContent() {
         flipTimer.current = setTimeout(flushFlips, 600);
     });
 
+    // Cards Yugi already talked about as they flipped, so the haul doesn't repeat them.
+    const saidOnFlip = useRef<Set<number>>(new Set());
+
     const startReveal = (opening: Opening) => {
         openingId.current = opening.id;
+        saidOnFlip.current = new Set();
         pack.start(opening.packs, opening.flipped);
     };
 
@@ -163,6 +169,7 @@ function PacksPageContent() {
         };
         return (
             <div className="h-full overflow-hidden pb-1">
+                <GuideSprite />
                 <PackStageView
                     set={currentSet}
                     pack={current}
@@ -171,7 +178,17 @@ function PacksPageContent() {
                     flippedCards={pack.flippedCards}
                     fullyOpened={pack.isPackFullyOpened}
                     ownedBefore={ownedBefore}
-                    onFlip={(index) => pack.flip([index])}
+                    onFlip={(index) => {
+                        pack.flip([index]);
+                        // Yugi on the card that just turned face up, once it's settled.
+                        const card = current[index];
+                        if (!card) return;
+                        const before = ownedBefore(index);
+                        const line = pullLine({ id: card.id, name: card.name, rarity: card.pulled_rarity, isNew: before === 0, copies: before + 1 }, currentSetIndex, seed());
+                        if (!line) return;
+                        saidOnFlip.current.add(card.id);
+                        setTimeout(() => guide.say(line), 700);
+                    }}
                     onNextPack={pack.handleNextPack}
                     onOpenAll={pack.handleOpenAll}
                     onBack={handleDiscardAndExit}
@@ -203,9 +220,9 @@ function PacksPageContent() {
     const owned = ownedCountsById(collection);
     const ownedCount = (id: number) => owned.get(id) ?? 0;
     return (
-        <PacksShell withSprite={!pack.isOpening}>
+        <PacksShell withSprite={!pack.isOpening || pack.showSummary}>
             {viewDetails ? (
-                <SetCardList set={currentSet} cards={setCards} ownedCount={ownedCount} onBack={() => setViewDetails(false)} />
+                <SetCardList set={currentSet} cards={setCards} ownedCount={ownedCount} onBack={() => setViewDetails(false)} stage={currentSetIndex} />
             ) : (
                 <OpeningSummary
                     set={currentSet}
@@ -216,6 +233,8 @@ function PacksPageContent() {
                     onBack={handleDiscardAndExit}
                     onOpenMore={repo.freePacks ? pack.reset : undefined}
                     onReroll={hasTicket ? handleReroll : undefined}
+                    stage={currentSetIndex}
+                    alreadySaid={saidOnFlip.current}
                 />
             )}
         </PacksShell>

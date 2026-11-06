@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import type { Card } from "@/lib/api";
 import type { Tier } from "@/components/packs/stage/fx";
 import { TIER_LABEL, type StageCard } from "@/components/packs/stage/plate";
 import { CardCloseUp, useCardPeek } from "@/components/card/CardPlate";
@@ -25,6 +26,7 @@ export default function CardGallery({
     countCopies = true,
     onOpen,
     flat = false,
+    onLook,
 }: {
     items: GalleryItem[];
     empty?: ReactNode;
@@ -34,9 +36,27 @@ export default function CardGallery({
     onOpen?: (item: GalleryItem) => void;
     /** One grid in the given order, without the rarity bands (search results). */
     flat?: boolean;
+    /** The player is looking at a card: opened it, or rested the mouse on it a moment. Yugi may have a word on it. */
+    onLook?: (card: Card) => void;
 }) {
     const { bind, peek, hide } = useCardPeek();
     const [open, setOpen] = useState<StageCard | null>(null);
+    // A look on desktop is the mouse resting on a card, not sweeping across the grid.
+    const dwell = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const look = (card: StageCard) => {
+        const peek = bind(card);
+        return {
+            onPointerEnter: (e: React.PointerEvent<HTMLElement>) => {
+                peek.onPointerEnter(e);
+                clearTimeout(dwell.current);
+                if (onLook && e.pointerType === "mouse") dwell.current = setTimeout(() => onLook(card.card), 900);
+            },
+            onPointerLeave: () => {
+                peek.onPointerLeave();
+                clearTimeout(dwell.current);
+            },
+        };
+    };
     const sections = flat ? (items.length ? [{ tier: null, items }] : []) : byTier(items);
     if (!sections.length) return <>{empty}</>;
     return (
@@ -58,10 +78,12 @@ export default function CardGallery({
                                 data-tier={item.card.tier}
                                 onClick={() => {
                                     hide();
+                                    clearTimeout(dwell.current);
+                                    onLook?.(item.card.card);
                                     if (onOpen) onOpen(item);
                                     else setOpen(item.card);
                                 }}
-                                {...bind(item.card)}
+                                {...look(item.card)}
                             >
                                 <span className="gallery__art">
                                     <img src={item.card.card.card_images[0]?.image_url_small ?? item.card.image} alt={item.card.card.name} loading="lazy" decoding="async" />

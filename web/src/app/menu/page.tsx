@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useProgression } from "@/context/ProgressionContext";
 import MenuItem, { MenuItemData } from "@/components/menu/MenuItem";
 import MenuSignIn from "@/components/menu/MenuSignIn";
+import MenuOptions from "@/components/menu/MenuOptions";
 
 /**
  * The main MENU (route: /menu), on the hieroglyph wall: slanted lacquer tablets
@@ -19,7 +20,7 @@ import MenuSignIn from "@/components/menu/MenuSignIn";
  * sign up.
  */
 export default function Menu() {
-    const [view, setView] = useState<"menu" | "saves" | "signin">("menu");
+    const [view, setView] = useState<"menu" | "saves" | "signin" | "options">("menu");
     const { activeSeriesId } = useProgression();
     const { user, loading, signOut } = useAuth();
     const router = useRouter();
@@ -50,7 +51,7 @@ export default function Menu() {
                   description: activeSeriesId ? "View your acquired cards" : "Pick a save in Campaign Mode first",
                   disabled: !activeSeriesId,
               },
-              { label: "OPTIONS", href: "#", description: "Configure game settings", disabled: true },
+              { label: "OPTIONS", action: () => setView("options"), description: "Sound and the guide" },
               ...account,
               { label: "BACK TO TITLE", href: "/", description: user ? "Return to the title screen" : "Return to the title screen, to sign up or play as a guest" },
           ];
@@ -74,7 +75,7 @@ export default function Menu() {
                     {view !== "menu" ? (
                         <div className="menu-form animate-in slide-in-from-left-10 fade-in duration-300">
                             <button onClick={() => setView("menu")} className="menu-back">‹ Back to the menu</button>
-                            {view === "saves" ? <SaveSlotList /> : <MenuSignIn onDone={() => setView("menu")} />}
+                            {view === "saves" ? <SaveSlotList /> : view === "options" ? <MenuOptions /> : <MenuSignIn onDone={() => setView("menu")} />}
                         </div>
                     ) : (
                         <div className="menu-items animate-in slide-in-from-left-10 fade-in duration-300">
