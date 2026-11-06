@@ -38,8 +38,8 @@
 .db-zone { flex: 1; min-height: 0; padding: 6px; overflow-y: auto; border-radius: 0 0 12px 12px; background: #120d08; }
 /* the card panel: art, then the plate, its text box scrolling inside */
 .db-info { container-type: size; height: 100%; padding: 6px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
-/* the art fills the panel's width (no dark strips beside it), narrowing only when the panel is too short to leave the plate ~350px (a long effect fits) */
-.db-info__art { flex: none; width: min(100%, (100cqh - 12px - 6px - 350px) * 813 / 1185); height: auto; margin: 0 auto; border-radius: 4.5% / 3.2%; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6); }
+/* the art always fills the panel's width, as the original's did; the text box takes what is left and scrolls only for the longest effects */
+.db-info__art { flex: none; width: 100%; height: auto; margin: 0 auto; border-radius: 4.5% / 3.2%; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6); }
 .db-info__none { height: 100%; display: grid; place-items: center; padding: 24px; text-align: center; font: 600 15px/1.5 var(--font-main); color: #7d7360; border: 1px dashed rgba(224, 181, 79, 0.2); border-radius: 10px; }
 .db-info .db-info__plate { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; font-size: 15px; }
 .db-info .db-info__plate .ps-plate__box { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #8a6420 transparent; }
@@ -51,7 +51,7 @@
 .db-info .db-info__plate .ps-attr { transform: scale(0.8); margin: -3px -2px; }
 .db-info .db-info__plate .ps-plate__sub { min-height: 0; margin: 3px 2px 4px; font-size: 12px; }
 .db-info .db-info__plate .ps-lv { width: 14px; height: 14px; font-size: 9px; }
-.db-info .db-info__plate .ps-plate__box { padding: 7px 9px; font-size: 16.5px; line-height: 1.32; }
+.db-info .db-info__plate .ps-plate__box { padding: 7px 9px; font-size: clamp(14.5px, 1.9cqh, 16.5px); line-height: 1.32; }
 .db-info .db-info__plate .ps-plate__stats { margin-top: 4px; padding-top: 3px; }
 .db-info .db-info__plate .ps-plate__foot { margin: 4px 2px 0; font-size: 10px; }
 .db-ctrls { flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px; border-top: 1px solid rgba(224, 181, 79, 0.2); }
