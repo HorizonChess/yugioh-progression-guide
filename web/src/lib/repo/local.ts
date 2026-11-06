@@ -14,7 +14,7 @@ import {
 import { fetchCardsByIds, fetchCardsInSet, fetchRawSets, fetchSetDateMap, fetchTournamentSets, type CardSet, type PulledCard } from "@/lib/api";
 import { collectionKey, type Collection } from "@/lib/collection";
 import { generateBoosterPack } from "@/lib/pack-logic";
-import type { RewardEntry } from "@/lib/rewards";
+import type { RewardEntry, RivalReward } from "@/lib/rewards";
 import { reconcileSaves } from "@/lib/set-position";
 import { loadPersistedState, persistState, type SaveSlot } from "@/lib/storage";
 import { RepoError, type CreateSeriesInput, type GameRepository, type Opening, type OpenOptions } from "./types";
@@ -227,6 +227,11 @@ export class LocalRepo implements GameRepository {
 
     async rivalBinder(): Promise<Collection> {
         throw new RepoError(DUO_ONLY);
+    }
+
+    /** Guest saves are solo: there is no rival. */
+    async rivalRewards(): Promise<RivalReward[]> {
+        return [];
     }
 
     async spin(id: string, rewardId: string) {

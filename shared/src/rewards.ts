@@ -158,6 +158,37 @@ export function claimedCardId(entry: RewardEntry): number | null {
     }
 }
 
+/**
+ * A rival's claimed reward as the other player sees it: what it was, which set's
+ * match it came from, and the one card it named (the wildcard pick, the stolen
+ * card, the ban). Packs show only how many cards they opened, and what the rival
+ * still holds stays theirs to see.
+ */
+export interface RivalReward {
+    id: string;
+    prizeId: PrizeId;
+    wonFromPackName: string;
+    wonFromSetIndex: number;
+    wonDate: string;
+    claimedDate?: string;
+    cardId?: number;
+    packCards?: number;
+}
+
+export function toRivalReward(entry: RewardEntry): RivalReward {
+    const cardId = claimedCardId(entry);
+    return {
+        id: entry.id,
+        prizeId: entry.prizeId,
+        wonFromPackName: entry.wonFromPackName,
+        wonFromSetIndex: entry.wonFromSetIndex,
+        wonDate: entry.wonDate,
+        ...(entry.claimedDate ? { claimedDate: entry.claimedDate } : {}),
+        ...(cardId != null ? { cardId } : {}),
+        ...(entry.grantedCardIds ? { packCards: entry.grantedCardIds.length } : {}),
+    };
+}
+
 /** Short caption shown under a claimed reward's picked card, by prize kind. */
 export function claimedCardCaption(entry: RewardEntry): string {
     switch (resolvePrizeKind(entry.prizeId)) {
