@@ -146,8 +146,11 @@ button.binder-pocket { cursor: pointer; }
 @media (max-width: 767px) { .binder--open .binder-cover { transform: rotateY(-100deg); opacity: 0; transition: transform 1s cubic-bezier(0.55, 0.05, 0.25, 1), opacity 0.4s 0.6s; } }
 
 /* the turning sheet */
-.binder-leaf { z-index: 8; transform-style: preserve-3d; pointer-events: none; transform-origin: left center; }
-.binder-leaf--l { transform-origin: right center; }
+/* the sheet turns about the middle of the spine, so it lands exactly on the other page: the pages
+   sit 2% either side of it, and a sheet is 44.6% wide, so the pivot is 2/44.6 of its width outside it */
+.binder-leaf { z-index: 8; transform-style: preserve-3d; pointer-events: none; transform-origin: -4.484% 50%; }
+.binder-leaf--l { transform-origin: 104.484% 50%; }
+@media (max-width: 767px) { .binder-leaf { transform-origin: left center; } }
 .binder-leaf > .binder-page { position: absolute; inset: 0; backface-visibility: hidden; }
 .binder-leaf__back { position: absolute; inset: 0; display: flex; transform: rotateY(180deg); backface-visibility: hidden; }
 .binder-leaf__back--sleeve .binder-page::before { left: auto; right: 2.2%; }
