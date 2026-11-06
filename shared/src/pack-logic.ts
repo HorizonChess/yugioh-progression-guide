@@ -74,17 +74,94 @@ interface PackConfig {
 let activeRng: Rng = Math.random;
 
 /**
+ * The pack being rolled: its set's name, for reading each card's printing in that exact
+ * set, and the cards already in it. Real packs of these eras never held two copies of a
+ * card, so each slot draws from the cards not yet in the pack (a repeat only when a slot's
+ * pool has run out). Set for the length of one `generateBoosterPack` call, like `activeRng`.
+ */
+let activePack: { setName: string; used: Set<number> } | null = null;
+
+/**
  * Rolls one booster pack of `setInfo` from `setCards`. `rng` defaults to
  * `Math.random`; the server passes a cryptographic source, tests a seeded one.
  */
 export function generateBoosterPack(setCards: Card[], setInfo: CardSet, rng: Rng = Math.random): PulledCard[] {
-    const previousRng = activeRng;
+    const previousRng = activeRng, previousPack = activePack;
     activeRng = rng;
+    activePack = { setName: setInfo.set_name, used: new Set() };
     try {
         return generatePackOfType(setCards, setInfo);
     } finally {
         activeRng = previousRng;
+        activePack = previousPack;
     }
+}
+
+/** Packs per booster box: the unit the foil counts and the even spread of cards are kept over. */
+export const BOX_SIZE = 24;
+/** Copies of each common in a box's common stack (see `activeBox`). */
+const COMMON_COPIES = 4;
+/**
+ * How often a pack has a common twice. Real packs of these eras almost never repeated a
+ * card, but collation slips happened; no measured rate is known, so this is an estimate.
+ */
+export const PACK_REPEAT_CHANCE = 1 / 250;
+
+/**
+ * The box being opened, for `generateBoosterPacks`. Within a box:
+ *  - the ninth slot follows a plan made once per box from the ratios: a 1:6 Super is
+ *    exactly 4 Supers in 24 packs, a 1:31 Secret is one with a 24/31 chance, placed in
+ *    random packs (the same odds per pack as the hat, without a box of 7 Supers);
+ *  - the commons are dealt from a stack holding COMMON_COPIES of each, shuffled: plenty
+ *    of repeats still, but not a box with 8 of one common and 8 never seen. Rares and
+ *    foils are picked at random within their rarity, so doubles of good cards happen as
+ *    often as they would by chance.
+ */
+let activeBox: { foilPlan: (string | null)[] | null; pack: number; stacks: Map<string, Card[]> } | null = null;
+
+/**
+ * Rolls `count` packs of `setInfo` the way a box (or boxes) would hold them: each run of
+ * BOX_SIZE packs is one box, and fewer packs are the first ones out of a box. Use this for
+ * any opening of several packs; `generateBoosterPack` is a lone loose pack.
+ */
+export function generateBoosterPacks(setCards: Card[], setInfo: CardSet, count: number, rng: Rng = Math.random): PulledCard[][] {
+    const previousBox = activeBox, previousRng = activeRng;
+    activeRng = rng;
+    const packs: PulledCard[][] = [];
+    try {
+        for (let i = 0; i < count; i++) {
+            if (i % BOX_SIZE === 0) activeBox = { foilPlan: null, pack: 0, stacks: new Map() };
+            packs.push(generateBoosterPack(setCards, setInfo, rng));
+            activeBox!.pack++;
+        }
+    } finally {
+        activeBox = previousBox;
+        activeRng = previousRng;
+    }
+    return packs;
+}
+
+/** The box's ninth-slot plan: how many of each foil the ratios give a full box, in random packs. */
+function planBoxFoils(odds: { rarity: string; ratio: number }[]): (string | null)[] {
+    const plan: (string | null)[] = Array(BOX_SIZE).fill(null);
+    const order = shuffled(Array.from({ length: BOX_SIZE }, (_, i) => i));
+    let next = 0;
+    for (const { rarity, ratio } of odds) {
+        const exact = BOX_SIZE / ratio;
+        const n = Math.floor(exact) + (activeRng() < exact - Math.floor(exact) ? 1 : 0);
+        for (let k = 0; k < n && next < BOX_SIZE; k++) plan[order[next++]!] = rarity;
+    }
+    return plan;
+}
+
+/** A shuffled copy (Fisher-Yates, from the active rng). */
+function shuffled<T>(items: readonly T[]): T[] {
+    const out = [...items];
+    for (let i = out.length - 1; i > 0; i--) {
+        const j = randomIndex(activeRng, i + 1);
+        [out[i], out[j]] = [out[j]!, out[i]!];
+    }
+    return out;
 }
 
 function generatePackOfType(setCards: Card[], setInfo: CardSet): PulledCard[] {
@@ -584,7 +661,7 @@ function generatePackFromConfig(setCards: Card[], setInfo: CardSet, config: Pack
     // 1. Add Guaranteed Commons
     for (let i = 0; i < config.guaranteedCommons; i++) {
         if (commons.length > 0) {
-            const card = pickRandom(commons);
+            const card = pickCommon(commons);
             const rarity = isRarity(card, 'Short Print', setPrefix) ? 'Short Print' : 'Common';
             pack.push(toPulledCard(card, rarity, setPrefix));
         }
@@ -596,7 +673,7 @@ function generatePackFromConfig(setCards: Card[], setInfo: CardSet, config: Pack
             pack.push(toPulledCard(pickRandom(rares), 'Rare', setPrefix));
         } else if (commons.length > 0) {
             // Fallback to common if no rares available
-            const card = pickRandom(commons);
+            const card = pickCommon(commons);
             const rarity = isRarity(card, 'Short Print', setPrefix) ? 'Short Print' : 'Common';
             pack.push(toPulledCard(card, rarity, setPrefix));
         }
@@ -610,19 +687,26 @@ function generatePackFromConfig(setCards: Card[], setInfo: CardSet, config: Pack
         } else {
             // If no foil pulled and not guaranteed foil, add common
             if (commons.length > 0) {
-                const card = pickRandom(commons);
+                const card = pickCommon(commons);
                 const rarity = isRarity(card, 'Short Print', setPrefix) ? 'Short Print' : 'Common';
                 pack.push(toPulledCard(card, rarity, setPrefix));
             }
         }
     }
 
-    // 4. Validate pack size and fill if needed
+    // 4. Now and then a collation slip: one common printed twice in the pack.
+    const packCommons = pack.filter(c => c.pulled_rarity === 'Common');
+    if (packCommons.length >= 2 && activeRng() < PACK_REPEAT_CHANCE) {
+        const [from, to] = shuffled(pack.map((c, i) => i).filter(i => pack[i]!.pulled_rarity === 'Common')).slice(0, 2);
+        pack[to!] = { ...pack[from!]! };
+    }
+
+    // 5. Validate pack size and fill if needed
     if (pack.length < config.cardsPerPack) {
         console.warn(`Pack underflow for ${setInfo.set_name}: expected ${config.cardsPerPack}, got ${pack.length}. Filling with commons.`);
         // Fill remaining slots with commons as emergency fallback
         while (pack.length < config.cardsPerPack && commons.length > 0) {
-            const card = pickRandom(commons);
+            const card = pickCommon(commons);
             const rarity = isRarity(card, 'Short Print', setPrefix) ? 'Short Print' : 'Common';
             pack.push(toPulledCard(card, rarity, setPrefix));
         }
@@ -676,6 +760,21 @@ function rollFoilSlot(setCards: Card[], setInfo: CardSet, config: PackConfig, fa
         .sort((a, b) => b.ratio - a.ratio);
     if (odds.length === 0) return null;
 
+    // In a box, the ninth slot follows the box's plan instead of a fresh roll.
+    if (activeBox) {
+        activeBox.foilPlan ??= planBoxFoils(odds);
+        const planned = activeBox.foilPlan[activeBox.pack % BOX_SIZE];
+        if (planned) {
+            if (planned === 'Ultimate Rare' && config.ultimateCanBeUpgrade) {
+                const ultimates = setCards.filter(c => isRarity(c, 'Ultimate Rare', setPrefix));
+                if (ultimates.length > 0) return { card: pickRandom(ultimates), rarity: 'Ultimate Rare' };
+            }
+            const result = tryGetCardWithFallback(setCards, setPrefix, planned);
+            if (result) return result;
+        }
+        return config.foilIsGuaranteed ? tryGetCardWithFallback(setCards, setPrefix, fallbackRarity) : null;
+    }
+
     // Calculate Hat Size (LCM of ratios)
     const hatSize = lcmArray(odds.map(o => o.ratio));
 
@@ -724,26 +823,74 @@ function generateSimplePack(setCards: Card[], setInfo: CardSet): PulledCard[] {
 
     // 8 Commons
     for (let i = 0; i < 8; i++) {
-        if (commons.length > 0) pack.push(toPulledCard(pickRandom(commons), 'Common', setPrefix));
+        if (commons.length > 0) pack.push(toPulledCard(pickCommon(commons), 'Common', setPrefix));
     }
 
     // 1 Rare
     if (rares.length > 0) pack.push(toPulledCard(pickRandom(rares), 'Rare', setPrefix));
-    else if (commons.length > 0) pack.push(toPulledCard(pickRandom(commons), 'Common', setPrefix));
+    else if (commons.length > 0) pack.push(toPulledCard(pickCommon(commons), 'Common', setPrefix));
 
     return pack;
 }
 
+/**
+ * Whether `card` is printed at `rarity` in the pack's set. Read from the printing in that
+ * exact set (by name): a code prefix also matches other products that share it, such as
+ * the 25th Anniversary reprint of LOB (its Short Prints are Commons) or a set's promo
+ * printings (STON-ENSE1), which were never in its packs.
+ */
 function isRarity(card: Card, rarity: string, setPrefix: string): boolean {
     if (!card.card_sets) return false;
-    return card.card_sets.some(s => s.set_code.startsWith(setPrefix) && s.set_rarity === rarity);
+    const setName = activePack?.setName;
+    return card.card_sets.some(s => (setName ? s.set_name === setName : s.set_code.startsWith(setPrefix)) && s.set_rarity === rarity);
 }
 
-/** A random element of a non-empty array. Callers check for an empty pool first. */
-function pickRandom<T>(items: readonly T[]): T {
-    const item = items[randomIndex(activeRng, items.length)];
+/**
+ * A random card of a non-empty pool, one not already in the pack when there's one left.
+ * Callers check for an empty pool first.
+ */
+function pickRandom<T extends Card>(items: readonly T[]): T {
+    const used = activePack?.used;
+    const item = pickFresh(items, used);
     if (item === undefined) throw new Error("pickRandom: empty pool");
+    used?.add(item.id);
     return item;
+}
+
+/** A common for the pack: from the box's common stack in a box, else at random (not one already in the pack). */
+function pickCommon(items: readonly Card[]): Card {
+    const used = activePack?.used;
+    const item = activeBox ? dealFromStack(items, used) : pickFresh(items, used);
+    if (item === undefined) throw new Error("pickCommon: empty pool");
+    used?.add(item.id);
+    return item;
+}
+
+/** A random card not yet in the pack (any card if the pool has none left). */
+function pickFresh<T extends Card>(items: readonly T[], used: Set<number> | undefined): T | undefined {
+    const fresh = used ? items.filter((c) => !used.has(c.id)) : items;
+    const pool = fresh.length ? fresh : items;
+    return pool[randomIndex(activeRng, pool.length)];
+}
+
+/**
+ * The next card of this pool's stack in the box, skipping any already in the pack. The
+ * stack is COMMON_COPIES of each card, shuffled, and is refilled once dealt out.
+ */
+function dealFromStack<T extends Card>(items: readonly T[], used: Set<number> | undefined): T | undefined {
+    const stacks = activeBox!.stacks;
+    const key = items.map((c) => c.id).join(',');
+    let stack = stacks.get(key) as T[] | undefined;
+    const fill = () => shuffled(items.flatMap((c) => Array<T>(COMMON_COPIES).fill(c)));
+    if (!stack?.length) stacks.set(key, (stack = fill()));
+    let at = used ? stack.findIndex((c) => !used.has(c.id)) : 0;
+    if (at === -1) {
+        // Every card left in the stack is already in this pack: add the next round of the stack early.
+        stack.push(...fill());
+        at = used ? stack.findIndex((c) => !used.has(c.id)) : 0;
+        if (at === -1) at = 0; // the whole pool is in this pack already
+    }
+    return stack.splice(at, 1)[0];
 }
 
 function toPulledCard(card: Card, rarity: string, setCode: string): PulledCard {
