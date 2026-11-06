@@ -942,32 +942,69 @@ html::-webkit-scrollbar-corner,
 }
 
 /* ============================================================
- * MENU (/menu) — retro grid background + skewed menu items.
+ * MENU (/menu) — the wall, the slanted tablets, Yugi.
  * ============================================================ */
 
-/* Faint 40px tech grid behind the menu */
-.menu-grid-bg {
-  @apply absolute inset-0 opacity-20;
-  background-image:
-    linear-gradient(to right, var(--card-bg) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--card-bg) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-/* A skewed menu entry; hover slides + glows (active variant only) */
+/* the menu on the hieroglyph wall: slanted lacquer tablets, Yugi in the torchlight */
+.menu-screen { position: absolute; inset: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; color: #f1e7cc; overflow: hidden; }
+.menu-screen::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 55% 60% at 70% 45%, rgba(255, 170, 70, 0.1), transparent 65%); }
+.menu-screen__body { position: relative; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 4%; width: 100%; max-width: 1240px; margin: 0 auto; padding: 3% 5%; overflow-y: auto; }
+.menu-screen__left { position: relative; z-index: 2; order: -1; }
+.menu-word { margin: 0 0 18px; }
+.menu-word small { display: block; font: 800 12px/1 var(--font-main); letter-spacing: 0.3em; text-transform: uppercase; color: #c7b99a; text-shadow: 0 1px 4px #000; }
+.menu-word b { display: block; margin-top: 6px; font: 800 clamp(26px, 3.4vw, 46px)/1 var(--font-display); letter-spacing: 0.06em; color: transparent; background: linear-gradient(#fff1bf, #d4af37 55%, #8a6420); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.8)); }
+.menu-items { display: flex; flex-direction: column; gap: 12px; padding-left: 14px; }
 .menu-item {
-  @apply relative overflow-hidden bg-gradient-to-r from-gray-900 to-black
-    border-l-4 p-6 skew-x-[-10deg] transition-all duration-300;
+  position: relative; overflow: hidden; padding: 16px 52px 16px 30px; border-radius: 3px; transform: skewX(-10deg); transition: transform 0.2s, box-shadow 0.2s;
+  background: radial-gradient(120% 160% at 0% 0%, rgba(60, 40, 90, 0.5), transparent 60%), linear-gradient(100deg, rgba(26, 19, 36, 0.96), rgba(10, 7, 15, 0.9));
+  box-shadow: inset 4px 0 0 #d4af37, inset 0 1px 0 rgba(255, 230, 170, 0.12), 0 0 0 1px rgba(224, 181, 79, 0.28), 0 10px 22px rgba(0, 0, 0, 0.55);
 }
-
-.menu-item--active {
-  @apply border-primary group-hover:translate-x-4 group-hover:bg-gray-800
-    group-hover:shadow-[0_0_20px_rgba(212,175,55,0.2)];
+.menu-item::before { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255, 240, 200, 0.12) 50%, transparent 65%) -200% 0 / 200% 100% no-repeat; transition: background-position 0.8s; }
+.menu-item::after { content: "›"; position: absolute; right: 20px; top: 50%; transform: translate(-6px, -50%) skewX(10deg); opacity: 0; font: 700 28px/1 var(--font-main); color: #ffe08a; transition: 0.2s; }
+.menu-item__words { transform: skewX(10deg); }
+.menu-item h3 { margin: 0; font: 800 clamp(17px, 1.5vw, 22px)/1.1 var(--font-display); letter-spacing: 0.12em; color: #fff; text-shadow: 0 2px 6px #000; }
+.menu-item p { margin: 6px 0 0; font: 600 12px/1.35 var(--font-main); letter-spacing: 0.12em; text-transform: uppercase; color: #b7a98a; }
+.group:hover .menu-item--active, .group:focus-visible .menu-item--active {
+  transform: skewX(-10deg) translateX(10px);
+  box-shadow: inset 4px 0 0 #ffe08a, inset 0 1px 0 rgba(255, 230, 170, 0.2), 0 0 0 1px rgba(255, 224, 138, 0.6), 0 0 22px rgba(212, 175, 55, 0.25), 0 12px 24px rgba(0, 0, 0, 0.6);
 }
-
-.menu-item--disabled {
-  @apply border-gray-700;
+.group:hover .menu-item--active::before { background-position: 200% 0; }
+.group:hover .menu-item--active::after, .group:focus-visible .menu-item--active::after { opacity: 1; transform: translate(0, -50%) skewX(10deg); }
+.group:focus-visible { outline: none; }
+.menu-item--main { background: radial-gradient(120% 160% at 0% 0%, rgba(120, 80, 20, 0.45), transparent 60%), linear-gradient(100deg, rgba(40, 28, 14, 0.96), rgba(14, 10, 6, 0.92)); box-shadow: inset 4px 0 0 #ffe08a, inset 0 1px 0 rgba(255, 230, 170, 0.2), 0 0 0 1px rgba(255, 224, 138, 0.55), 0 0 26px rgba(212, 175, 55, 0.22), 0 10px 22px rgba(0, 0, 0, 0.55); }
+.menu-item--main h3 { color: #ffe08a; }
+.menu-item--disabled { opacity: 0.45; }
+/* the save slots and the sign-in, on a lacquer panel so they read on the wall */
+.menu-form { padding: 16px; border-radius: 12px; background: linear-gradient(rgba(20, 14, 26, 0.92), rgba(8, 6, 10, 0.94)); box-shadow: 0 0 0 1px rgba(224, 181, 79, 0.3), 0 16px 30px rgba(0, 0, 0, 0.6); }
+.menu-back { margin: 0 0 12px; padding: 4px 0; border: 0; background: none; cursor: pointer; font: 700 12px/1 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; color: #e9d9ad; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233, 217, 173, 0.4); }
+/* Yugi: the art is cut out of its black, so his own shadow gives him weight; only the
+   bottom (where the picture ends at his chest) and the very top fade */
+.menu-yugi { position: relative; z-index: 1; justify-self: center; width: min(100%, 640px, 70vh); aspect-ratio: 1; }
+.menu-yugi::before { content: ""; position: absolute; inset: 4% 6% 0; border-radius: 50%; background: radial-gradient(ellipse at 50% 55%, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.18) 45%, transparent 70%); }
+.menu-yugi img {
+  position: relative; display: block; width: 100%; height: 100%; object-fit: contain;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.9)) drop-shadow(0 18px 26px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 40px rgba(0, 0, 0, 0.35));
+  -webkit-mask: linear-gradient(transparent 0, #000 4%, #000 80%, transparent 99%); mask: linear-gradient(transparent 0, #000 4%, #000 80%, transparent 99%);
 }
+/* the card in his hand still glows */
+.menu-yugi__glow { position: absolute; left: 67%; top: 54%; width: 22%; aspect-ratio: 1; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255, 200, 90, 0.45), transparent 65%); mix-blend-mode: screen; animation: menu-glow 2.6s ease-in-out infinite; }
+@keyframes menu-glow { 50% { opacity: 0.55; transform: scale(0.92); } }
+.menu-screen__foot { position: relative; display: flex; justify-content: space-between; padding: 8px 14px calc(8px + env(safe-area-inset-bottom)); font: 700 11px/1 var(--font-main); letter-spacing: 0.16em; text-transform: uppercase; color: #a99d80; background: linear-gradient(rgba(10, 7, 4, 0.4), rgba(10, 7, 4, 0.85)); box-shadow: inset 0 1px 0 rgba(224, 181, 79, 0.35); }
+/* phones: Yugi heads the screen, the menu below */
+@media (max-width: 899px) {
+  .menu-screen__body { grid-template-columns: 1fr; align-content: start; gap: 0; padding: 14px 16px 16px; }
+  .menu-screen__left { order: 0; }
+  .menu-yugi { width: min(94%, 42vh); margin-bottom: -6%; }
+  .menu-screen__body--form .menu-yugi { width: min(60%, 26vh); }
+  .menu-word { text-align: center; margin: 4px 0 12px; }
+  .menu-word b { font-size: 26px; }
+  .menu-items { gap: 9px; }
+  .menu-item { padding: 12px 44px 12px 22px; }
+  .menu-item h3 { font-size: 16px; }
+  .menu-item p { font-size: 10px; margin-top: 4px; }
+}
+@media (max-width: 899px) and (max-height: 700px) { .menu-item p { display: none; } .menu-yugi { width: min(80%, 34vh); } }
+@media (prefers-reduced-motion: reduce) { .menu-yugi__glow { animation: none; } }
 
 /* ============================================================
  * SHELL — the persistent AppNav chrome.
