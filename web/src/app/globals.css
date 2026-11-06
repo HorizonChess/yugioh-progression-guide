@@ -100,6 +100,10 @@
   --font-fell: var(--font-fell-face), Georgia, serif;
 }
 
+/* the document itself is dark: when a phone keyboard shrinks the page, the strip left below it
+   shows this, not white */
+html { background-color: #07050a; }
+
 html,
 body {
   max-width: 100vw;
@@ -1343,6 +1347,10 @@ html::-webkit-scrollbar-corner,
   .closeup__nav { top: 40%; width: 38px; height: 38px; font-size: 20px; background: rgba(10, 7, 4, 0.55); }
   .closeup__nav--prev { left: 6px; }
   .closeup__nav--next { right: 6px; }
+  /* a pick's button sits above the plate on phones, so it's always on screen; the plate scrolls under it */
+  .closeup__side { display: flex; flex-direction: column; }
+  .closeup__action { order: -1; margin: 0 0 10px; }
+  .closeup__side:has(.closeup__action) .ps-plate { max-height: calc(var(--app-h, 100dvh) * 0.46 - 76px); }
   .closeup__side .ps-plate { border-radius: 14px 14px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom)); max-height: calc(var(--app-h, 100dvh) * 0.46); overflow-y: auto; }
 }
 .ps-peek--react .ps-plate { animation: ps-fade-in 0.18s ease-out both; }
