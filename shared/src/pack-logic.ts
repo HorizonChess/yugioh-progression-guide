@@ -74,16 +74,26 @@ interface PackConfig {
 let activeRng: Rng = Math.random;
 
 /**
+ * The pack being rolled: its set's name, for reading each card's printing in that exact
+ * set, and the cards already in it. Real packs of these eras never held two copies of a
+ * card, so each slot draws from the cards not yet in the pack (a repeat only when a slot's
+ * pool has run out). Set for the length of one `generateBoosterPack` call, like `activeRng`.
+ */
+let activePack: { setName: string; used: Set<number> } | null = null;
+
+/**
  * Rolls one booster pack of `setInfo` from `setCards`. `rng` defaults to
  * `Math.random`; the server passes a cryptographic source, tests a seeded one.
  */
 export function generateBoosterPack(setCards: Card[], setInfo: CardSet, rng: Rng = Math.random): PulledCard[] {
-    const previousRng = activeRng;
+    const previousRng = activeRng, previousPack = activePack;
     activeRng = rng;
+    activePack = { setName: setInfo.set_name, used: new Set() };
     try {
         return generatePackOfType(setCards, setInfo);
     } finally {
         activeRng = previousRng;
+        activePack = previousPack;
     }
 }
 
@@ -734,15 +744,29 @@ function generateSimplePack(setCards: Card[], setInfo: CardSet): PulledCard[] {
     return pack;
 }
 
+/**
+ * Whether `card` is printed at `rarity` in the pack's set. Read from the printing in that
+ * exact set (by name): a code prefix also matches other products that share it, such as
+ * the 25th Anniversary reprint of LOB (its Short Prints are Commons) or a set's promo
+ * printings (STON-ENSE1), which were never in its packs.
+ */
 function isRarity(card: Card, rarity: string, setPrefix: string): boolean {
     if (!card.card_sets) return false;
-    return card.card_sets.some(s => s.set_code.startsWith(setPrefix) && s.set_rarity === rarity);
+    const setName = activePack?.setName;
+    return card.card_sets.some(s => (setName ? s.set_name === setName : s.set_code.startsWith(setPrefix)) && s.set_rarity === rarity);
 }
 
-/** A random element of a non-empty array. Callers check for an empty pool first. */
-function pickRandom<T>(items: readonly T[]): T {
-    const item = items[randomIndex(activeRng, items.length)];
+/**
+ * A random card of a non-empty pool, one not already in the pack when there's one left.
+ * Callers check for an empty pool first.
+ */
+function pickRandom<T extends Card>(items: readonly T[]): T {
+    const used = activePack?.used;
+    const fresh = used ? items.filter((c) => !used.has(c.id)) : items;
+    const pool = fresh.length ? fresh : items;
+    const item = pool[randomIndex(activeRng, pool.length)];
     if (item === undefined) throw new Error("pickRandom: empty pool");
+    used?.add(item.id);
     return item;
 }
 

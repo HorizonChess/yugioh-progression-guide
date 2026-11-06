@@ -62,6 +62,32 @@ describe('generateBoosterPack', () => {
         expect(pack.every(c => c.pulled_set_code === 'LOB')).toBe(true);
     });
 
+    it('never puts the same card in a pack twice', () => {
+        // 9 cards from 8 commons: before, about 1 pack in 4 of a small set repeated a common.
+        const small = [...POOL.slice(0, 8), ...POOL.slice(40)];
+        for (let seed = 0; seed < 500; seed++) {
+            const pack = generateBoosterPack(small, LOB, seededRng(seed));
+            expect(new Set(pack.map(c => c.id)).size).toBe(pack.length);
+        }
+    });
+
+    it('repeats a card only when a slot has run out of others', () => {
+        const pack = generateBoosterPack([...POOL.slice(0, 3), ...POOL.slice(40)], LOB, seededRng(1));
+        expect(pack).toHaveLength(9);
+        expect(new Set(pack.slice(0, 3).map(c => c.id)).size).toBe(3);
+    });
+
+    it("reads a card's rarity from its printing in this exact set, not another product with the same code prefix", () => {
+        // A LOB Short Print that the 25th Anniversary reprint (codes LOB-EN…, another set name) lists as a Common.
+        const sp = card(500, 'Short Print');
+        sp.card_sets!.push({ set_name: `${LOB.set_name} (25th Anniversary Edition)`, set_code: 'LOB-EN500', set_rarity: 'Ultra Rare', set_rarity_code: '', set_price: '0' });
+        const pool = [sp, ...POOL.slice(0, 40), ...POOL.slice(40, 50)];
+        for (let seed = 0; seed < 300; seed++) {
+            const hit = generateBoosterPack(pool, LOB, seededRng(seed)).find(c => c.id === 500);
+            if (hit) expect(hit.pulled_rarity).toBe('Short Print');
+        }
+    });
+
     it('rolls foils at roughly the documented 1:6 / 1:12 / 1:31 LOB ratios', () => {
         const rng = seededRng(2002);
         const counts: Record<string, number> = {};
