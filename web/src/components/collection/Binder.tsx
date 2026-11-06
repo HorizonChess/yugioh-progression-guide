@@ -121,10 +121,22 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
     useLayoutEffect(() => {
         const el = leaf.current;
         if (!turning || !el) return;
-        const angle = isPhone ? -160 : turning.dir > 0 ? -180 : 180;
-        const a = el.animate([{ transform: "rotateY(0deg)" }, { transform: `rotateY(${angle / 2}deg) translateZ(30px)` }, { transform: `rotateY(${angle}deg)` }], { duration: 700, easing: "cubic-bezier(.45,.05,.3,1)" });
-        if (isPhone) el.animate([{ opacity: 1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }], { duration: 700 });
-        el.querySelector(".binder-leaf__shade")?.animate([{ opacity: 0 }, { opacity: 1, offset: 0.5 }, { opacity: 0 }], { duration: 700 });
+        const shade = el.querySelector(".binder-leaf__shade");
+        let a: Animation;
+        if (isPhone) {
+            // One page at a time: the sheet lifts on the rings up to edge-on (next),
+            // or comes down from edge-on onto the page (back). It never passes 90°,
+            // so its back never shows, and it never fades: a fade flattens the 3D
+            // and the page would show through mirrored.
+            const up = [{ transform: "rotateY(0deg)" }, { transform: "rotateY(-90deg)" }];
+            const next = turning.dir > 0;
+            a = el.animate(next ? up : [...up].reverse(), { duration: 520, easing: next ? "cubic-bezier(.55,0,.8,.3)" : "cubic-bezier(.2,.7,.45,1)", fill: "both" });
+            shade?.animate(next ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }], { duration: 520, fill: "both" });
+        } else {
+            const angle = turning.dir > 0 ? -180 : 180;
+            a = el.animate([{ transform: "rotateY(0deg)" }, { transform: `rotateY(${angle / 2}deg) translateZ(30px)` }, { transform: `rotateY(${angle}deg)` }], { duration: 700, easing: "cubic-bezier(.45,.05,.3,1)" });
+            shade?.animate([{ opacity: 0 }, { opacity: 1, offset: 0.5 }, { opacity: 0 }], { duration: 700 });
+        }
         a.onfinish = () => setTurning(null);
         return () => a.cancel();
     }, [turning, isPhone]);
@@ -134,12 +146,13 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
     // Pages as numbered in the binder (two per spread on wide screens).
     const left = at * 2, right = isPhone ? at : at * 2 + 1;
     // While turning: the sheet carries the page it lifts off on its front, the page it lands as on its back.
+    // Phones turn one page: forward, the old page lifts off the new one; back, the new page comes down over the old.
     const t = turning;
-    const leafFront = t && (isPhone ? t.from : t.dir > 0 ? t.from * 2 + 1 : t.from * 2);
-    const leafBack = t && (isPhone ? at : t.dir > 0 ? at * 2 : at * 2 + 1);
+    const leafFront = t && (isPhone ? (t.dir > 0 ? t.from : at) : t.dir > 0 ? t.from * 2 + 1 : t.from * 2);
+    const leafBack = t && (isPhone ? null : t.dir > 0 ? at * 2 : at * 2 + 1);
     // Under the sheet, the side it is leaving shows the new page at once; the side it lands on keeps the old one.
     const shownLeft = t && !isPhone && t.dir > 0 ? t.from * 2 : left;
-    const shownRight = t && !isPhone && t.dir < 0 ? t.from * 2 + 1 : right;
+    const shownRight = t && t.dir < 0 ? (isPhone ? t.from : t.from * 2 + 1) : right;
 
     return (
         <div className="binder-stage" onPointerDown={(e) => (swipe.current = e.clientX)} onPointerUp={(e) => {
@@ -158,10 +171,10 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
                 </div>
                 {!isPhone && <div className="binder-sheets binder-sheets--l"><Page {...props} slots={page(shownLeft)} number={shownLeft + 1} /></div>}
                 <div className="binder-sheets binder-sheets--r"><Page {...props} slots={page(shownRight)} number={shownRight + 1} /></div>
-                {t && leafFront !== null && leafBack !== null && (
+                {t && leafFront !== null && (
                     <div ref={leaf} className={`binder-leaf ${isPhone || t.dir > 0 ? "binder-leaf--r" : "binder-leaf--l"}`}>
                         <Page {...props} slots={page(leafFront)} number={leafFront + 1} />
-                        <div className="binder-leaf__back"><Page {...props} slots={page(leafBack)} number={leafBack + 1} /></div>
+                        {leafBack !== null && <div className="binder-leaf__back"><Page {...props} slots={page(leafBack)} number={leafBack + 1} /></div>}
                         <div className="binder-leaf__shade" />
                     </div>
                 )}

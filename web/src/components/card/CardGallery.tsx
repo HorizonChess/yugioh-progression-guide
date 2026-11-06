@@ -19,29 +19,47 @@ export function byTier(items: GalleryItem[]) {
  * their colour, duplicates carry a count, new ones a ribbon. Hover (mouse) shows a
  * card's plate beside it; a tap opens the close-up.
  */
-export default function CardGallery({ items, empty, countCopies = true }: { items: GalleryItem[]; empty?: ReactNode; /** Bands count copies (a haul) rather than cards (a list). */ countCopies?: boolean }) {
+export default function CardGallery({
+    items,
+    empty,
+    countCopies = true,
+    onOpen,
+    flat = false,
+}: {
+    items: GalleryItem[];
+    empty?: ReactNode;
+    /** Bands count copies (a haul) rather than cards (a list). */
+    countCopies?: boolean;
+    /** A tap hands the card here (a picker's own close-up) instead of the plain close-up. */
+    onOpen?: (item: GalleryItem) => void;
+    /** One grid in the given order, without the rarity bands (search results). */
+    flat?: boolean;
+}) {
     const { bind, peek, hide } = useCardPeek();
     const [open, setOpen] = useState<StageCard | null>(null);
-    const sections = byTier(items);
+    const sections = flat ? (items.length ? [{ tier: null, items }] : []) : byTier(items);
     if (!sections.length) return <>{empty}</>;
     return (
         <div className="gallery">
             {sections.map(({ tier, items: list }) => (
-                <section key={tier} className="gallery__section" data-tier={tier}>
-                    <h2 className="gallery__band">
-                        <span>{TIER_LABEL[tier]}</span>
-                        <small>{countCopies ? list.reduce((n, i) => n + i.count, 0) : list.length}</small>
-                    </h2>
+                <section key={tier ?? "all"} className="gallery__section" data-tier={tier ?? undefined}>
+                    {tier && (
+                        <h2 className="gallery__band">
+                            <span>{TIER_LABEL[tier]}</span>
+                            <small>{countCopies ? list.reduce((n, i) => n + i.count, 0) : list.length}</small>
+                        </h2>
+                    )}
                     <div className="gallery__grid">
                         {list.map((item) => (
                             <button
                                 key={item.key}
                                 type="button"
                                 className={`gallery__tile ${item.dim ? "gallery__tile--dim" : ""}`}
-                                data-tier={tier}
+                                data-tier={item.card.tier}
                                 onClick={() => {
                                     hide();
-                                    setOpen(item.card);
+                                    if (onOpen) onOpen(item);
+                                    else setOpen(item.card);
                                 }}
                                 {...bind(item.card)}
                             >

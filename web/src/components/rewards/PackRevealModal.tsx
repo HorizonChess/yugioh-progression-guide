@@ -1,17 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardSet, fetchAllSets, fetchTournamentSets } from "@/lib/api";
+import { CardSet, fetchAllSets, fetchTournamentSets } from "@/lib/api";
 import type { Opening } from "@/lib/repo/types";
-import { processCardsForRarityGrid } from "@/lib/card-utils";
+import type { PrizeId } from "@/lib/rewards";
+import { ownedCountsById } from "@/lib/collection";
+import { useProgression } from "@/context/ProgressionContext";
 import { usePackOpening } from "@/hooks/usePackOpening";
-import { useCardTooltip } from "@/hooks/useCardTooltip";
-import Modal from "@/components/ui/Modal";
-import PackOpeningView from "@/components/packs/PackOpeningView";
-import RarityCardGrid from "@/components/packs/RarityCardGrid";
-import CardDetailModal from "@/components/card/CardDetailModal";
-import CardTooltip from "@/components/card/CardTooltip";
-import FrameButton from "@/components/ui/FrameButton";
+import PackStageView from "@/components/packs/PackStageView";
+import OpeningSummary from "@/components/packs/OpeningSummary";
+import RewardRite, { RiteNote } from "@/components/rewards/RewardRite";
 
 interface PackRevealModalProps {
     /** A pity or tournament reward's packs, as the repository rolled them. */
@@ -23,17 +21,16 @@ interface PackRevealModalProps {
 }
 
 /**
- * The shared "open 3 packs" reward reveal: the /packs reveal machinery
- * (`usePackOpening` + `PackOpeningView`) inside the shared `Modal`, then a
- * rarity-grouped summary with "Add to Collection".
+ * The shared "open 3 packs" reward reveal, in the claiming chamber: the same pack
+ * opener as /packs (a tear and a ring on phones, the duel table on wider
+ * screens), then the haul with "Add to Collection". Closing keeps the opening, so
+ * the rewards page resumes it.
  */
 export default function PackRevealModal({ opening, onFlip, onCollect, onClose }: PackRevealModalProps) {
+    const { collection } = useProgression();
     const [set, setSet] = useState<CardSet | null>(null);
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-    const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-
     const pack = usePackOpening(onFlip);
-    const { hoveredCard, tooltipPosition, onHover, onLeave } = useCardTooltip();
 
     useEffect(() => {
         let cancelled = false;
@@ -52,74 +49,61 @@ export default function PackRevealModal({ opening, onFlip, onCollect, onClose }:
         // eslint-disable-next-line react-hooks/exhaustive-deps -- once per opening
     }, [opening.id]);
 
-    const panelClassName =
-        "relative w-full max-w-6xl h-[85vh] max-h-[820px] bg-card-bg border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col";
+    const prizeId: PrizeId = opening.source === "tournament" ? "tournament-packs" : "pity-packs";
+    const owned = ownedCountsById(collection);
 
     if (status !== "ready" || !set) {
         return (
-            <Modal onClose={onClose} panelClassName={panelClassName} showCloseButton>
-                <div className="flex-1 flex items-center justify-center p-8 text-center">
-                    {status === "error" ? (
-                        <div>
-                            <p className="text-xl font-bold text-white mb-2">Couldn&apos;t open your packs.</p>
-                            <p className="text-white/60 text-sm">Please close and try again.</p>
-                        </div>
-                    ) : (
-                        <div className="text-xl animate-pulse text-white/80">Preparing your packs…</div>
-                    )}
-                </div>
-            </Modal>
+            <RewardRite prizeId={prizeId} title={opening.setName} kicker="Opening your packs" onClose={onClose}>
+                {status === "error" ? <RiteNote>Couldn&apos;t open your packs. Close this and try again.</RiteNote> : <RiteNote pulse>Preparing your packs…</RiteNote>}
+            </RewardRite>
         );
     }
-
-    const overlays = (
-        <>
-            {selectedCard && <CardDetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />}
-            {hoveredCard && <CardTooltip card={hoveredCard} x={tooltipPosition.x} y={tooltipPosition.y} />}
-        </>
-    );
 
     if (pack.showSummary) {
-        const { cardsByRarity, sortedRarities } = processCardsForRarityGrid(pack.allOpenedCards, set.set_code);
         return (
-            <Modal onClose={onClose} panelClassName={panelClassName}>
-                {overlays}
-                <div className="shrink-0 flex flex-col md:flex-row items-center justify-between gap-4 p-6 border-b border-white/10">
-                    <div className="text-center md:text-left">
-                        <h2 className="text-2xl font-black text-white">{set.set_name}</h2>
-                        <p className="text-primary text-sm font-bold">Opened {pack.allOpenedCards.length} Cards</p>
-                    </div>
-                    <FrameButton onClick={onCollect} className="h-12 px-6" textClassName="tracking-[0.1em] text-[0.72rem]">
-                        Add to Collection
-                    </FrameButton>
+            <RewardRite prizeId={prizeId} title={set.set_name} onClose={onClose} bare>
+                <div className="rite__scroll custom-scrollbar">
+                    <OpeningSummary
+                        set={set}
+                        cards={pack.allOpenedCards}
+                        packCount={pack.packsToOpen.length}
+                        ownedCount={(id) => owned.get(id) ?? 0}
+                        onSave={onCollect}
+                        onBack={onClose}
+                        saveLabel="Add to Collection"
+                        backLabel="Not now"
+                    />
                 </div>
-                <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar p-6">
-                    <RarityCardGrid cardsByRarity={cardsByRarity} sortedRarities={sortedRarities} onCardClick={setSelectedCard} onHover={onHover} onLeave={onLeave} />
-                </div>
-            </Modal>
+            </RewardRite>
         );
     }
 
+    const current = pack.currentPack ?? [];
+    // How many of each card the player had before it: the collection, the packs
+    // already opened this time, and the cards before it in this pack.
+    const ownedBefore = (index: number) => {
+        const id = current[index]?.id;
+        if (id === undefined) return 0;
+        const earlier = [...pack.allOpenedCards, ...current.slice(0, index)].filter((c) => c.id === id).length;
+        return (owned.get(id) ?? 0) + earlier;
+    };
     return (
-        <Modal onClose={onClose} panelClassName={panelClassName}>
-            {overlays}
-            <div className="min-h-0 flex-1 p-4">
-                <PackOpeningView
-                    set={set}
-                    pack={pack.currentPack ?? []}
-                    packIndex={pack.currentPackIndex}
-                    packCount={pack.packsToOpen.length}
-                    flippedCards={pack.flippedCards}
-                    fullyOpened={pack.isPackFullyOpened}
-                    onCardClick={(index, card) => pack.handleCardClick(index, card, setSelectedCard)}
-                    onFlipAll={pack.handleFlipAll}
-                    onNextPack={pack.handleNextPack}
-                    onOpenAll={pack.handleOpenAll}
-                    onBack={onClose}
-                    onHover={onHover}
-                    onLeave={onLeave}
-                />
-            </div>
-        </Modal>
+        <RewardRite prizeId={prizeId} title={set.set_name} onClose={onClose} bare>
+            <PackStageView
+                set={set}
+                pack={current}
+                packIndex={pack.currentPackIndex}
+                packCount={pack.packsToOpen.length}
+                flippedCards={pack.flippedCards}
+                fullyOpened={pack.isPackFullyOpened}
+                ownedBefore={ownedBefore}
+                onFlip={(index) => pack.flip([index])}
+                onNextPack={pack.handleNextPack}
+                onOpenAll={pack.handleOpenAll}
+                onBack={onClose}
+                backLabel="Not now"
+            />
+        </RewardRite>
     );
 }

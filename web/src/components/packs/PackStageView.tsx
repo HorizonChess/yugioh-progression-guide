@@ -28,6 +28,7 @@ export default function PackStageView({
     onNextPack,
     onOpenAll,
     onBack,
+    backLabel = "Back to Campaign",
 }: {
     set: CardSet;
     pack: PulledCard[];
@@ -41,6 +42,8 @@ export default function PackStageView({
     onNextPack: () => void;
     onOpenAll: () => void;
     onBack: () => void;
+    /** The back button's words (wide screens). */
+    backLabel?: string;
 }) {
     const isPhone = useIsPhone();
     const host = useRef<HTMLDivElement>(null);
@@ -106,9 +109,9 @@ export default function PackStageView({
         <div className="ps-view h-full w-full flex flex-col min-h-0">
             <header className="ps-head flex items-center justify-between gap-3 px-3 md:px-4 pt-2 pb-2 shrink-0">
                 <div className="flex gap-2 md:w-1/3">
-                    <button onClick={onBack} className="ps-btn" aria-label="Back to Campaign">
+                    <button onClick={onBack} className="ps-btn" aria-label={backLabel}>
                         <span className="md:hidden">‹</span>
-                        <span className="hidden md:inline">Back to Campaign</span>
+                        <span className="hidden md:inline">{backLabel}</span>
                     </button>
                     <button onClick={onOpenAll} className="ps-btn">Open All</button>
                 </div>

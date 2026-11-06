@@ -10,10 +10,13 @@ import {
     earliestPrintingDate,
 } from "@/lib/api";
 import { RewardEntry, getPrize } from "@/lib/rewards";
-import Modal from "@/components/ui/Modal";
-import ParchmentInput from "@/components/ui/ParchmentInput";
-import CardDetailModal from "@/components/card/CardDetailModal";
-import FrameButton from "@/components/ui/FrameButton";
+import { useProgression } from "@/context/ProgressionContext";
+import { ownedCountsById } from "@/lib/collection";
+import CardGallery, { type GalleryItem } from "@/components/card/CardGallery";
+import { CardCloseUp } from "@/components/card/CardPlate";
+import type { StageCard } from "@/components/packs/stage/plate";
+import CartoucheButton from "@/components/ui/CartoucheButton";
+import RewardRite, { RiteNote, RiteSearch } from "@/components/rewards/RewardRite";
 
 interface StarlightSearchModalProps {
     entry: RewardEntry;
@@ -23,20 +26,21 @@ interface StarlightSearchModalProps {
 }
 
 /**
- * The Starlight Rare wildcard claim — a full-catalog typeahead (unlike the plain
+ * The Starlight Rare wildcard claim — a full-catalog search (unlike the plain
  * wildcard, which is limited to the won pack). A card is eligible iff it has a
  * printing dated BEFORE the won pack (`earliestPrintingDate < sets[wonFromSetIndex]
  * .tcg_date`) — a pure-date gate, so off-timeline cards (e.g. structure-deck
- * classics) are reachable, matching the Starlight rule. Clicking a result opens
- * its detail modal for confirmation (a starlight is one-shot); confirming grants
- * it as a Starlight Rare PulledCard.
+ * classics) are reachable, matching the Starlight rule. Tapping a result opens
+ * its close-up for confirmation (a starlight is one-shot); confirming grants it
+ * as a Starlight Rare PulledCard.
  */
 export default function StarlightSearchModal({ entry, onChoose, onClose }: StarlightSearchModalProps) {
+    const { collection } = useProgression();
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<Card[]>([]);
     const [loading, setLoading] = useState(false);
-    /** A clicked card awaiting confirmation in its detail modal. */
-    const [pending, setPending] = useState<Card | null>(null);
+    /** A tapped card awaiting confirmation in its close-up. */
+    const [pending, setPending] = useState<StageCard | null>(null);
     /** The won pack's date — the eligibility ceiling — and the set-date lookup. */
     const [gate, setGate] = useState<{ anchorDate: string | null; setDates: Map<string, string> } | null>(null);
     const reqId = useRef(0);
@@ -95,9 +99,6 @@ export default function StarlightSearchModal({ entry, onChoose, onClose }: Starl
             .slice(0, 40);
     }, [results, gate]);
 
-    const panelClassName =
-        "relative w-full max-w-2xl h-[80vh] max-h-[760px] bg-card-bg border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col";
-
     // The earliest set_code among the card's pre-anchor printings — used as the
     // collection key's set component so the granted copy is attributable.
     const grantSetCode = (card: Card): string => {
@@ -113,99 +114,54 @@ export default function StarlightSearchModal({ entry, onChoose, onClose }: Starl
         return best?.code ?? "STARLIGHT";
     };
 
+    // Each eligible card as it would be granted: a Starlight Rare.
+    const owned = ownedCountsById(collection);
+    const items: GalleryItem[] = eligible.map((card) => {
+        const n = owned.get(card.id) ?? 0;
+        return {
+            key: String(card.id),
+            count: 0,
+            card: { card, image: card.card_images[0]?.image_url ?? "", tier: "Secret", rarity: "Starlight Rare", code: grantSetCode(card), owned: n, ownedNote: n ? `You own ×${n}` : "Not owned yet" },
+        };
+    });
+
     const confirmChoice = () => {
         if (!pending) return;
-        const granted: PulledCard = {
-            ...pending,
-            pulled_rarity: "Starlight Rare",
-            pulled_set_code: grantSetCode(pending),
-        };
-        onChoose(granted);
+        onChoose({ ...pending.card, pulled_rarity: "Starlight Rare", pulled_set_code: grantSetCode(pending.card) });
     };
 
     return (
-        <Modal onClose={onClose} panelClassName={panelClassName} showCloseButton>
-            <div className="shrink-0 px-6 py-4 border-b border-white/10">
-                <h2 className="text-2xl font-black text-white">{prizeLabel}</h2>
-                <p className="text-primary text-sm font-bold">
-                    Search any card released before {entry.wonFromPackName} to claim it as a Starlight Rare.
-                </p>
-            </div>
-
-            <div className="shrink-0 px-6 py-3">
-                <ParchmentInput
-                    autoFocus
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder={gate ? "Type a card name…" : "Loading catalog…"}
-                    disabled={!gate}
-                    className="w-full"
+        <RewardRite
+            prizeId={entry.prizeId}
+            kicker={`Won on the ${entry.wonFromPackName} wheel`}
+            title={prizeLabel}
+            lead={<>Any card released before <b>{entry.wonFromPackName}</b>, as a Starlight Rare.</>}
+            tools={<RiteSearch value={query} onChange={setQuery} placeholder={gate ? "Search a card name" : "Loading the catalog…"} disabled={!gate} />}
+            onClose={onClose}
+        >
+            {!gate || loading ? (
+                <RiteNote pulse>{gate ? "Searching…" : "Loading the catalog…"}</RiteNote>
+            ) : (
+                <CardGallery
+                    items={items}
+                    flat
+                    onOpen={(item) => setPending(item.card)}
+                    empty={<RiteNote>{query.trim().length < 2 ? "Type at least 2 letters of a card's name." : "No card by that name was out before this pack."}</RiteNote>}
                 />
-            </div>
+            )}
 
-            <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar px-6 pb-6">
-                {!gate || loading ? (
-                    <div className="py-10 text-center text-white/70 animate-pulse">
-                        {gate ? "Searching…" : "Loading catalog…"}
-                    </div>
-                ) : eligible.length === 0 ? (
-                    <div className="py-10 text-center text-white/50">
-                        {query.trim().length < 2
-                            ? "Type at least 2 characters."
-                            : "No eligible cards found (must be released before this pack)."}
-                    </div>
-                ) : (
-                    <ul className="space-y-2">
-                        {eligible.map((card) => (
-                            <li key={card.id}>
-                                <button
-                                    onClick={() => setPending(card)}
-                                    className="w-full flex items-center gap-3 p-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 hover:border-primary/50 transition-colors text-left"
-                                >
-                                    <div className="relative w-10 h-[58px] shrink-0 rounded overflow-hidden bg-black/40">
-                                        {card.card_images?.[0]?.image_url_small && (
-                                            <img
-                                                src={card.card_images[0].image_url_small}
-                                                alt={card.name}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        )}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="text-white font-bold text-sm truncate">{card.name}</div>
-                                        <div className="text-white/50 text-xs truncate">{card.type}</div>
-                                    </div>
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-
-            {/* Confirm the pick inside its detail modal before granting. */}
+            {/* Confirm the pick in its close-up before granting. */}
             {pending && (
-                <CardDetailModal
+                <CardCloseUp
                     card={pending}
                     onClose={() => setPending(null)}
                     action={
-                        <div className="flex items-center gap-3">
-                            <FrameButton
-                                onClick={confirmChoice}
-                                className="h-11 px-5 flex-1 min-w-0"
-                                textClassName="tracking-[0.1em] text-[0.72rem] truncate"
-                            >
-                                Claim as Starlight
-                            </FrameButton>
-                            <button
-                                onClick={() => setPending(null)}
-                                className="h-11 px-4 shrink-0 rounded-lg border border-white/15 text-white/70 text-sm font-bold hover:bg-white/5 transition-colors"
-                            >
-                                Cancel
-                            </button>
+                        <div className="rite__confirm">
+                            <CartoucheButton next onClick={confirmChoice}>Claim as Starlight</CartoucheButton>
                         </div>
                     }
                 />
             )}
-        </Modal>
+        </RewardRite>
     );
 }
