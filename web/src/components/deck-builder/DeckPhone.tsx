@@ -74,20 +74,59 @@ export default function DeckPhone({
         else setFresh({ id: card.id, zone: to, key: seq.current });
     };
 
-    // The drawer: tap its handle to step through the heights, or drag it.
-    const drag = useRef<{ y: number } | null>(null);
+    // The drawer: tap its handle to step through the heights, or drag it. While dragging it follows
+    // the finger; on release it settles on the nearest height (a quick flick goes on to the next).
+    const drawerEl = useRef<HTMLElement>(null);
+    const drag = useRef<{ y: number; h: number; t: number; lastY: number; lastT: number; v: number; moved: boolean } | null>(null);
+    const levels = (): [number, number, number] => {
+        const H = drawerEl.current?.parentElement?.clientHeight ?? 0;
+        return [120, H * 0.46, H * 0.86];
+    };
     const handle = {
         onPointerDown: (e: React.PointerEvent) => {
-            drag.current = { y: e.clientY };
+            const el = drawerEl.current;
+            if (!el) return;
+            drag.current = { y: e.clientY, h: el.getBoundingClientRect().height, t: e.timeStamp, lastY: e.clientY, lastT: e.timeStamp, v: 0, moved: false };
             (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         },
-        onPointerUp: (e: React.PointerEvent) => {
-            const d = drag.current;
-            drag.current = null;
-            if (!d) return;
+        onPointerMove: (e: React.PointerEvent) => {
+            const d = drag.current, el = drawerEl.current;
+            if (!d || !el) return;
             const dy = e.clientY - d.y;
-            if (Math.abs(dy) < 8) setDrawer((h) => (h === 2 ? 0 : h + 1));
-            else setDrawer((h) => Math.max(0, Math.min(2, h + (dy < 0 ? 1 : -1))));
+            if (!d.moved && Math.abs(dy) < 6) return;
+            d.moved = true;
+            const [lo, , hi] = levels();
+            el.style.transition = "none";
+            el.style.height = `${Math.max(lo * 0.8, Math.min(hi, d.h - dy))}px`;
+            // the finger's speed (px/ms, up is positive), smoothed over the last moves
+            const dt = Math.max(1, e.timeStamp - d.lastT);
+            d.v = d.v * 0.4 + ((d.lastY - e.clientY) / dt) * 0.6;
+            d.lastY = e.clientY; d.lastT = e.timeStamp;
+        },
+        onPointerUp: (e: React.PointerEvent) => {
+            const d = drag.current, el = drawerEl.current;
+            drag.current = null;
+            if (!d || !el) return;
+            if (!d.moved) {
+                setDrawer((h) => (h === 2 ? 0 : h + 1));
+                return;
+            }
+            const now = el.getBoundingClientRect().height;
+            // the speed of the last move (px/ms, up is positive) carries the drawer on a little
+            // a finger held still before release carries no speed
+            const v = e.timeStamp - d.lastT > 120 ? 0 : d.v;
+            const aim = now + v * 180;
+            const ls = levels();
+            let best = 0;
+            ls.forEach((l, k) => { if (Math.abs(l - aim) < Math.abs(ls[best]! - aim)) best = k; });
+            el.style.transition = "";
+            el.style.height = "";
+            setDrawer(best);
+        },
+        onPointerCancel: () => {
+            drag.current = null;
+            const el = drawerEl.current;
+            if (el) { el.style.transition = ""; el.style.height = ""; }
         },
     };
 
@@ -161,7 +200,7 @@ export default function DeckPhone({
                 <p className="dp-empty">Tap a card in your deck for its details, to move or remove it.</p>
             </div>
 
-            <section className={`dp-drawer dp-drawer--${DRAWER[drawer]}`} aria-label="Your cards">
+            <section ref={drawerEl} className={`dp-drawer dp-drawer--${DRAWER[drawer]}`} aria-label="Your cards">
                 <button type="button" className="dp-handle" {...handle} aria-label="Your cards: pull up or down">Your cards · {f.filtered.length}</button>
                 <div className="dp-find">
                     <label>
