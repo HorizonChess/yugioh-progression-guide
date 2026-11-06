@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nav options</title>
+<style>
+@font-face { font-family: "Cinzel"; src: url("img/cinzel.woff2") format("woff2"); font-weight: 400 900; }
+@font-face { font-family: "Outfit"; src: url("img/outfit.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Inter"; src: url("img/inter.woff2") format("woff2"); font-weight: 100 900; }
+:root {
+    --gold: #d4af37; --gold-hi: #ffe08a; --ink: #3a2405; --muted: #a99878;
+    --display: "Cinzel", Georgia, serif; --heading: "Outfit", sans-serif;
+    --lacquer: radial-gradient(120% 140% at 20% 0%, #2a1f3a, transparent 60%), linear-gradient(#1a1324, #0a070f);
+    --meander: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='7'%3E%3Cpath d='M0 6H4V1H12V4H8V6H16' fill='none' stroke='%233a2405' stroke-width='1.2'/%3E%3C/svg%3E") 0 0 / 16px 7px repeat-x;
+    --gold-strip: linear-gradient(#fff1bf, #d4af37 45%, #8a6420);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #120d18; color: #eee; font-family: var(--heading); }
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+/* ---------- viewer chrome ---------- */
+.viewer { position: sticky; top: 0; z-index: 500; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; padding: 10px 16px; background: #0b0810; border-bottom: 1px dashed #6e5320; }
+.viewer h1 { margin: 0; font: 700 15px var(--display); color: var(--gold-hi); letter-spacing: .06em; }
+.seg { display: flex; gap: 4px; }
+.seg button { font: 600 12px/1 var(--heading); letter-spacing: .08em; text-transform: uppercase; color: #a99d80; background: transparent; border: 1px solid #3d3220; border-radius: 6px; padding: 8px 10px; }
+.seg button[aria-pressed="true"] { color: var(--gold-hi); border-color: #8a6a2c; background: rgba(224,181,79,.12); }
+.seg span { font: 600 11px var(--heading); color: #6f6553; align-self: center; margin-right: 2px; text-transform: uppercase; letter-spacing: .1em; }
+.note { max-width: 1100px; margin: 14px auto 0; padding: 0 16px; font-size: 14px; line-height: 1.5; color: #c9bfa8; }
+.note b { color: var(--gold-hi); }
+section[hidden] { display: none; }
+
+/* desktop stage: a 1440x900 screen, scaled to fit */
+.stage-wrap { margin: 14px auto 30px; width: min(1440px, calc(100vw - 32px)); aspect-ratio: 1440 / 900; position: relative; }
+.stage { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; transform-origin: 0 0; overflow: hidden; border-radius: 6px; box-shadow: 0 0 0 1px #3d3220, 0 20px 50px rgba(0,0,0,.6); background: #000 0 0 / 1440px auto no-repeat; }
+
+/* phone frames side by side */
+.phones { display: flex; flex-wrap: wrap; justify-content: center; gap: 28px; margin: 18px auto 40px; padding: 0 16px; }
+.phone-col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.phone-col h2 { margin: 0; font: 700 14px var(--display); color: var(--gold-hi); letter-spacing: .06em; }
+.phone-col p { margin: 0; max-width: 340px; font-size: 13px; color: #b8ad95; text-align: center; line-height: 1.4; }
+.phone { width: 390px; height: 844px; position: relative; overflow: hidden; border-radius: 34px; box-shadow: 0 0 0 8px #050307, 0 0 0 9px #3d3220, 0 20px 50px rgba(0,0,0,.6); background: #000 0 0 / 390px auto no-repeat; }
+
+/* ---------- icons ---------- */
+.ic { width: 24px; height: 24px; display: block; }
+symbol .fill { fill: currentColor; }
+symbol .line { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+symbol .cut { fill: none; stroke: #0b0810; stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; }
+
+/* ---------- desktop bars: shared ---------- */
+.dbar { position: absolute; left: 0; right: 0; top: 0; height: 66px; z-index: 10; display: flex; align-items: center; gap: 14px; padding: 0 22px; background: var(--lacquer); box-shadow: 0 6px 14px rgba(0,0,0,.6); }
+.dbar::after { content: ""; position: absolute; left: 0; right: 0; bottom: -7px; height: 7px; background: var(--meander), var(--gold-strip); box-shadow: 0 2px 4px rgba(0,0,0,.6); pointer-events: none; }
+.face { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; padding: 0; background: url("img/yugi.webp") 50% 8% / 250% auto no-repeat, #1b1426; box-shadow: 0 0 0 2px var(--gold), 0 0 0 4px var(--ink), 0 0 12px rgba(212,175,55,.5); transition: filter .2s, opacity .2s, transform .15s; }
+.face:hover { transform: scale(1.06); }
+.face.off { opacity: .55; filter: grayscale(.7); }
+.who { min-width: 0; }
+.who .name { font: 800 19px/1 var(--display); color: var(--gold-hi); letter-spacing: .05em; text-shadow: 0 1px 0 #000; }
+.who .sub { margin-top: 4px; font: 600 11px/1.2 var(--heading); letter-spacing: .16em; color: #c7b99a; text-transform: uppercase; }
+.bell { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #d9c58e; border: 0; background: radial-gradient(circle at 50% 35%, #2c2238, #120c18); box-shadow: inset 0 0 0 1px rgba(212,175,55,.45); }
+.bell:hover { color: var(--gold-hi); box-shadow: inset 0 0 0 1px var(--gold), 0 0 10px rgba(212,175,55,.35); }
+.bell i { position: absolute; top: 5px; right: 5px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; background: #b91c1c; color: #fff; font: 700 9px/15px var(--heading); font-style: normal; box-shadow: 0 0 0 2px #120c18; }
+.dlinks { flex: 1; display: flex; justify-content: center; align-items: center; }
+
+/* A — lacquer bar, engraved lettering */
+.dA .dlinks { gap: 6px; }
+.dA .dlinks a { position: relative; padding: 10px 16px; font: 700 14px/1 var(--display); letter-spacing: .14em; color: #a99878; text-shadow: 0 1px 0 #000; transition: color .2s, text-shadow .2s; }
+.dA .dlinks a:hover { color: #f3e3b5; }
+.dA .dlinks a[aria-current] { color: var(--gold-hi); text-shadow: 0 1px 0 #000, 0 0 12px rgba(255,214,110,.55); }
+.dA .dlinks a[aria-current]::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold-hi) 50%, var(--gold) 80%, transparent); }
+.dA .dlinks a[aria-current]::before { content: ""; position: absolute; left: 50%; bottom: -3px; width: 7px; height: 7px; margin-left: -3.5px; transform: rotate(45deg); background: var(--gold-hi); box-shadow: 0 0 6px var(--gold); }
+.dA .dlinks .sep { width: 5px; height: 5px; transform: rotate(45deg); background: #5c4a25; }
+
+/* B — gold cartouche plaques */
+.dB .dlinks { gap: 10px; }
+.dB .dlinks a { padding: 9px 18px 8px; border-radius: 999px; font: 700 13px/1 var(--display); letter-spacing: .12em; color: #d9c58e; background: linear-gradient(#211830, #120c18); box-shadow: inset 0 0 0 1px rgba(212,175,55,.55), inset 0 0 0 3px #120c18, inset 0 0 0 4px rgba(212,175,55,.25), 0 2px 3px rgba(0,0,0,.6); transition: color .2s, box-shadow .2s, transform .15s; }
+.dB .dlinks a:hover { color: var(--gold-hi); box-shadow: inset 0 0 0 1px var(--gold), inset 0 0 0 3px #120c18, inset 0 0 0 4px rgba(212,175,55,.5), 0 0 10px rgba(212,175,55,.3); }
+.dB .dlinks a:active { transform: translateY(1px); }
+.dB .dlinks a[aria-current] { color: #2a1a04; text-shadow: 0 1px 0 rgba(255,240,190,.6); background: linear-gradient(#fff1bf, #e6c25a 40%, #b8892c 75%, #8a6420); box-shadow: inset 0 0 0 1px #fff4c8, inset 0 0 0 3px #a87d25, inset 0 0 0 4px #6b4c14, 0 0 14px rgba(212,175,55,.45); }
+
+/* C — icon tabs; the current one hangs below the trim like a banner */
+.dC .dlinks { gap: 4px; align-self: stretch; }
+.dC .dlinks a { position: relative; align-self: stretch; display: flex; align-items: center; gap: 8px; padding: 0 14px; font: 700 13px/1 var(--display); letter-spacing: .12em; color: #a99878; transition: color .2s; }
+.dC .dlinks a:hover { color: #f3e3b5; }
+.dC .dlinks a .ic { width: 20px; height: 20px; }
+.dC .dlinks a[aria-current] { color: var(--gold-hi); z-index: 2; }
+.dC .dlinks a[aria-current]::before { content: ""; position: absolute; inset: 0 0 -26px; z-index: -1;
+    background: linear-gradient(#2c2040, #150f1e); clip-path: polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%);
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,.7)); }
+.dC .dlinks a[aria-current]::after { content: ""; position: absolute; inset: 0 0 -26px; z-index: -1;
+    background: var(--gold-strip); clip-path: polygon(0 0, 2px 0, 2px calc(78% - 1px), 50% calc(100% - 3px), calc(100% - 2px) calc(78% - 1px), calc(100% - 2px) 0, 100% 0, 100% 78%, 50% 100%, 0 78%); }
+
+/* ---------- phone tab bars: shared ---------- */
+.ptabs { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; z-index: 10; display: flex; }
+.ptabs a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: 700 10px/1 var(--display); letter-spacing: .08em; color: #8f8470; position: relative; }
+.ptabs a .ic { width: 25px; height: 25px; }
+.ptabs a[aria-disabled] { opacity: .4; }
+
+/* A — lacquer, meander on top */
+.pA { background: var(--lacquer); box-shadow: 0 -6px 14px rgba(0,0,0,.6); }
+.pA::before { content: ""; position: absolute; left: 0; right: 0; top: -7px; height: 7px; background: var(--meander), linear-gradient(#8a6420, #d4af37 55%, #fff1bf); transform: scaleY(-1); box-shadow: 0 2px 4px rgba(0,0,0,.6); }
+.pA a[aria-current] { color: var(--gold-hi); text-shadow: 0 0 8px rgba(255,214,110,.5); }
+.pA a[aria-current] .ic { filter: drop-shadow(0 0 6px rgba(255,214,110,.6)); }
+.pA a[aria-current]::after { content: ""; position: absolute; top: 3px; width: 6px; height: 6px; transform: rotate(45deg); background: var(--gold-hi); box-shadow: 0 0 6px var(--gold); }
+
+/* B — the current tab rises in a gold medallion, like the Yugi portrait up top */
+.pB { background: var(--lacquer); box-shadow: 0 -6px 14px rgba(0,0,0,.6); }
+.pB::before { content: ""; position: absolute; left: 0; right: 0; top: -7px; height: 7px; background: var(--meander), linear-gradient(#8a6420, #d4af37 55%, #fff1bf); transform: scaleY(-1); }
+.pB a { justify-content: flex-end; padding-bottom: 9px; }
+.pB a .ic { transition: transform .25s cubic-bezier(.2,.9,.3,1.3); }
+.pB a[aria-current] { color: var(--gold-hi); }
+.pB a[aria-current] .medal { position: absolute; top: -22px; width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; color: #2a1a04;
+    background: radial-gradient(circle at 40% 30%, #fff4c8, #e6c25a 45%, #9a7020 90%); box-shadow: 0 0 0 2px #3a2405, 0 0 0 3px #d4af37, 0 0 14px rgba(212,175,55,.55), 0 6px 8px rgba(0,0,0,.6); }
+.pB a[aria-current] .medal .ic { width: 27px; height: 27px; }
+.pB a[aria-current] > .ic { visibility: hidden; }
+
+/* C — a carved stone slab; the current icon is inlaid gold */
+.pC { background: linear-gradient(rgba(20,14,8,.55), rgba(10,7,4,.8)), url("img/stone_texture.webp") center / 300px auto; box-shadow: 0 -6px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,230,170,.18); }
+.pC::before { content: ""; position: absolute; left: 0; right: 0; top: -3px; height: 3px; background: var(--gold-strip); }
+.pC a { color: #6d6150; text-shadow: 0 1px 0 rgba(255,235,190,.12), 0 -1px 0 rgba(0,0,0,.8); }
+.pC a .ic { filter: drop-shadow(0 1px 0 rgba(255,235,190,.15)) drop-shadow(0 -1px 0 rgba(0,0,0,.9)); }
+.pC a[aria-current] { color: var(--gold-hi); text-shadow: 0 1px 0 #000; }
+.pC a[aria-current] .ic { color: #e6c25a; filter: drop-shadow(0 1px 0 #000) drop-shadow(0 0 5px rgba(255,214,110,.5)); }
+.pC a + a { box-shadow: -1px 0 0 rgba(0,0,0,.45), -2px 0 0 rgba(255,235,190,.06); }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Campaign: a pyramid under the sun -->
+  <symbol id="i-campaign" viewBox="0 0 24 24"><circle class="fill" cx="18.5" cy="5" r="2.2"/><path class="fill" d="M10 5.5 20.5 21H1.5Z"/><path class="cut" d="M10 5.5 12.5 21M6 14.5h8.6M3.8 18h12.9"/></symbol>
+  <!-- Collection: a ringed binder -->
+  <symbol id="i-collection" viewBox="0 0 24 24"><path class="fill" d="M6 2.5h12.5a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H6Z"/><path class="fill" d="M4 3.5h1.2v17H4z"/><path class="cut" d="M9.5 6.5h7v4.5h-7zM9.5 13.5h7v4.5h-7z"/><path class="line" d="M3 7h3.5M3 12h3.5M3 17h3.5"/></symbol>
+  <!-- Deck: a fan of three cards -->
+  <symbol id="i-deck" viewBox="0 0 24 24"><rect class="fill" x="3" y="5" width="9" height="13" rx="1" transform="rotate(-16 7.5 11.5)"/><rect class="fill" x="12" y="5" width="9" height="13" rx="1" transform="rotate(16 16.5 11.5)"/><rect class="fill" x="7.5" y="3" width="9" height="13.5" rx="1" stroke="#0b0810" stroke-width="1.2"/><circle class="cut" cx="12" cy="9.75" r="2.4"/></symbol>
+  <!-- Rewards: a treasure chest -->
+  <symbol id="i-rewards" viewBox="0 0 24 24"><path class="fill" d="M3 11h18v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><path class="fill" d="M3 10a9 5.5 0 0 1 18 0v.5H3Z"/><path class="cut" d="M3 13.5h18M12 10.5v5"/><rect class="fill" x="10.4" y="12.4" width="3.2" height="3.6" rx=".5" stroke="#0b0810" stroke-width="1.1"/></symbol>
+  <!-- Menu: the Millennium Eye -->
+  <symbol id="i-menu" viewBox="0 0 24 24"><path class="fill" d="M1.5 10.5Q12 1 22.5 10.5Q12 20 1.5 10.5Z"/><circle cx="12" cy="10.5" r="3.4" fill="#0b0810"/><circle class="fill" cx="12" cy="10.5" r="1.6"/><path class="line" d="M12 16.6v5M8.5 15.8 6.5 20M15.5 15.8l2 4.2"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path class="fill" d="M6 16v-5a6 6 0 0 1 12 0v5l2 2.2H4Z"/><path class="fill" d="M9.8 19.6h4.4a2.2 2.2 0 0 1-4.4 0Z"/></symbol>
+</svg>
+
+<div class="viewer">
+  <h1>Nav options</h1>
+  <div class="seg" id="mode"><button aria-pressed="true" data-v="desktop">Desktop top bar</button><button aria-pressed="false" data-v="phone">Phone tab bar</button></div>
+  <div class="seg" id="dopt"><span>Option</span><button aria-pressed="true" data-v="A">A · Engraved</button><button aria-pressed="false" data-v="B">B · Cartouches</button><button aria-pressed="false" data-v="C">C · Banner</button></div>
+  <div class="seg" id="page"><span>Page</span><button aria-pressed="true" data-v="timeline">Campaign</button><button aria-pressed="false" data-v="collection">Collection</button><button aria-pressed="false" data-v="packs-summary">Haul</button></div>
+</div>
+
+<section id="desktop">
+  <p class="note" id="dnote"></p>
+  <div class="stage-wrap"><div class="stage" id="stage"></div></div>
+</section>
+
+<section id="phone" hidden>
+  <p class="note">The top bar stays as it is today. Only the bottom tab bar changes. Each phone shows the same icons (pyramid, binder, card fan, chest, Millennium Eye) in a different finish. They replace the outline icons on navy.</p>
+  <div class="phones" id="phones"></div>
+</section>
+
+<script>
+const LINKS = [
+    ["timeline", "Campaign", "i-campaign"],
+    ["collection", "Collection", "i-collection"],
+    ["deck-builder", "Deck Builder", "i-deck", "Deck"],
+    ["rewards", "Rewards", "i-rewards"],
+    ["menu", "Menu", "i-menu"],
+];
+const NOTES = {
+    A: "<b>A · Engraved.</b> The phone's lacquer bar and gold meander at desktop width. The links are gold-engraved Cinzel lettering, and the current page glows with a gold rule and a diamond under it. The quietest of the three.",
+    B: "<b>B · Cartouches.</b> Each link is a small gold-rimmed plaque, and the current page is solid polished gold with dark lettering. It reads most like a game menu and is the easiest to spot at a glance.",
+    C: "<b>C · Banner.</b> Each link has the same icon as the phone tab bar. The current page hangs below the trim on a gold-edged banner, so desktop and phone share one set of icons.",
+};
+const icon = (id) => `<svg class="ic"><use href="#${id}"/></svg>`;
+const state = { mode: "desktop", opt: "A", page: "timeline", guide: true };
+const current = () => state.page === "packs-summary" ? "" : state.page;
+
+function desktopBar(opt) {
+    const links = LINKS.map(([href, label, ic], i) =>
+        (opt === "A" && i ? '<span class="sep"></span>' : "") +
+        `<a href="#" data-href="${href}" ${current() === href ? 'aria-current="page"' : ""}>${opt === "C" ? icon(ic) : ""}${label}</a>`).join("");
+    return `<header class="dbar d${opt}">
+        <button class="face ${state.guide ? "" : "off"}" title="${state.guide ? "Hide" : "Show"} Yugi" data-face></button>
+        <a href="#" class="who"><div class="name">Guest</div><div class="sub">Stage 3 · Spell Ruler · Solo</div></a>
+        <nav class="dlinks">${links}</nav>
+        <button class="bell" title="Notifications">${icon("i-bell")}<i>2</i></button>
+    </header>`;
+}
+function phoneTabs(opt) {
+    return `<nav class="ptabs p${opt}">${LINKS.map(([href, label, ic, short]) => {
+        const on = current() === href;
+        return `<a href="#" data-href="${href}" ${on ? 'aria-current="page"' : ""}>${opt === "B" && on ? `<span class="medal">${icon(ic)}</span>` : ""}${icon(ic)}${(short || label).toUpperCase()}</a>`;
+    }).join("")}</nav>`;
+}
+const PHONE_NOTES = {
+    A: ["A · Lacquer", "The top bar's lacquer and meander, turned upside down. The current tab glows gold with a diamond above it."],
+    B: ["B · Medallion", "The current tab rises out of the bar in a gold medallion, like the Yugi portrait at the top."],
+    C: ["C · Carved stone", "A slab of the wall's stone with carved icons. The current one is inlaid gold."],
+};
+
+function render() {
+    document.getElementById("desktop").hidden = state.mode !== "desktop";
+    document.getElementById("phone").hidden = state.mode !== "phone";
+    document.getElementById("dopt").style.display = state.mode === "desktop" ? "" : "none";
+    if (state.mode === "desktop") {
+        const stage = document.getElementById("stage");
+        stage.style.backgroundImage = `url("img/desktop-${state.page}.webp")`;
+        stage.innerHTML = desktopBar(state.opt);
+        document.getElementById("dnote").innerHTML = NOTES[state.opt];
+        fit();
+    } else {
+        document.getElementById("phones").innerHTML = ["A", "B", "C"].map((o) =>
+            `<div class="phone-col"><h2>${PHONE_NOTES[o][0]}</h2><div class="phone" style="background-image:url('img/phone-${state.page}.webp')">${phoneTabs(o)}</div><p>${PHONE_NOTES[o][1]}</p></div>`).join("");
+    }
+}
+function fit() {
+    const wrap = document.querySelector(".stage-wrap");
+    document.getElementById("stage").style.transform = `scale(${wrap.clientWidth / 1440})`;
+}
+for (const [id, key] of [["mode", "mode"], ["dopt", "opt"], ["page", "page"]]) {
+    document.getElementById(id).addEventListener("click", (e) => {
+        const b = e.target.closest("button"); if (!b) return;
+        state[key] = b.dataset.v;
+        for (const x of e.currentTarget.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b));
+        render();
+    });
+}
+document.addEventListener("click", (e) => {
+    const a = e.target.closest("[data-href]");
+    if (a) { e.preventDefault(); const p = a.dataset.href; if (["timeline", "collection"].includes(p)) { state.page = p; document.querySelectorAll("#page button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.v === p))); render(); } }
+    if (e.target.closest("[data-face]")) { state.guide = !state.guide; render(); }
+});
+addEventListener("resize", fit);
+render();
+</script>
+</body>
+</html>

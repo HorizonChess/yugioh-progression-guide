@@ -457,3 +457,13 @@ Buttons (user, 2026-11-05): option A, the gold cartouche made with Nano Banana 2
 Phone (user, 2026-11-05): the app is unusable on a phone. Before this round of the timeline is finished, it must work at phone size. Phone layout options are being prototyped.
 
 Phone timeline (user, 2026-11-05): the Road layout. Sets zigzag down a vertical path joined by the same physics chain as desktop: taut, glowing gold up to the current set and sagging iron beyond. The top bar gets a gold meander trim and Yugi's portrait, with the painted scoreboard hanging from its right edge. Cartouche buttons are smaller on the phone (two side by side, at most 142 px each) above the tab bar.
+
+Next steps (user, 2026-11-06): finish the do-over with a desktop top bar and a phone tab bar in the phone bar's lacquer style (prototype options first), then the guide.
+- Yugi's look: on phones he takes too much room (mid-screen, a big bubble, a random line on every page); on desktop he looks clunky (a white comic bubble that ignores the stone and gold look, floating with nothing under him). Prototype fixes for both.
+- Desktop layout rule: no element moves to make room for Yugi, so a page looks right when he's away. He overlays briefly and leaves.
+- Phone: Yugi always slides in to speak, smaller and lower than today. The random "hello" on every page goes.
+- Guide logic: screens send events (pack details opened, card viewed, pack finished, match won or lost). A queue with priority and cooldowns keeps him from talking too much, and he never repeats a line.
+- Lines are written ahead of time and kept in the repo, not generated live. Solo and duo have their own lines (duo can mention the rival).
+- What he says: per-set notes (what the set adds to the game, cards to look out for, one-line tips on key cards as you view them), comments worked out from your pulls (a watch-list card, a third copy, synergy with what you own, a banlist card, an empty pack) and reactions to wins and losses. Each line stays under about 140 characters. Written for the first 8–10 sets first, to settle the tone, then era by era.
+- Pack details is `SetCardList` (already in the new look). `PackDetails.tsx` is unused and goes.
+- To do (user, 2026-11-06): look for other dead components like `PackDetails.tsx` (files nothing imports, exports nothing uses) and remove them.
