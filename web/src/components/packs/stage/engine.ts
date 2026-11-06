@@ -344,9 +344,12 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
             const el = els[front()]!;
             setHint(!isUp(el) ? "Tap the front card to reveal it" : flipped.size === n ? "All revealed · tap a card for details" : "Tap it for details · swipe to turn");
         };
-        const spinTo = (t: number, then?: () => void) => {
-            Sfx.whoosh();
-            to(state, { t, duration: 0.5, ease: "power3.out", onUpdate: render, onComplete: () => (onFront(), then?.()) });
+        // The running spin, so a finger can catch the ring mid-turn.
+        let spinning: gsap.core.Animation | null = null;
+        const spinTo = (t: number, then?: () => void, duration = 0.5, ease = "power3.out") => {
+            spinning?.kill();
+            if (Math.abs(t - state.t) > step * 0.3) Sfx.whoosh();
+            spinning = to(state, { t, duration, ease, onUpdate: render, onComplete: () => ((spinning = null), onFront(), then?.()) });
         };
         const goReady = () => {
             ready = true;
@@ -434,26 +437,50 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
             }, 800);
         }
 
-        let drag: { x: number; t: number; moved: boolean } | null = null;
+        // Dragging turns the ring under the finger; letting go keeps its speed and
+        // settles on the nearest card, so a flick carries on for a few cards.
+        const PER_PX = 1 / (R * 0.85); // ring turn per pixel dragged
+        let drag: { x: number; t: number; moved: boolean; trail: { at: number; t: number }[] } | null = null;
         stage.addEventListener("pointerdown", (e: PointerEvent) => {
             if (!ready || busy) return;
             Sfx.unlock();
-            drag = { x: e.clientX, t: state.t, moved: false };
+            // Catch a spinning ring where it is.
+            const caught = spinning !== null;
+            spinning?.kill();
+            spinning = null;
+            drag = { x: e.clientX, t: state.t, moved: caught, trail: [{ at: performance.now(), t: state.t }] };
         }, { signal });
         stage.addEventListener("pointermove", (e: PointerEvent) => {
             if (!drag) return;
             const dx = e.clientX - drag.x;
-            if (Math.abs(dx) > 10) drag.moved = true; // a finger wobbles a little on a tap
-            if (drag.moved) {
-                state.t = drag.t - dx / R;
-                render();
+            if (!drag.moved) {
+                if (Math.abs(dx) < 8) return; // a finger wobbles a little on a tap
+                drag.moved = true;
+                drag.x = e.clientX; // start from here, without a jump
+                return;
             }
+            state.t = drag.t - dx * PER_PX;
+            render();
+            const now = performance.now();
+            drag.trail.push({ at: now, t: state.t });
+            while (drag.trail.length > 2 && now - drag.trail[0]!.at > 100) drag.trail.shift();
         }, { signal });
         stage.addEventListener("pointerup", (e: PointerEvent) => {
             if (!drag) return;
             const d = drag;
             drag = null;
-            if (d.moved) return spinTo(Math.round(state.t / step) * step);
+            if (d.moved) {
+                // Speed over the last tenth of a second, in turn per second.
+                const first = d.trail[0]!, last = d.trail[d.trail.length - 1]!;
+                const dt = (performance.now() - first.at) / 1000;
+                const v = dt > 0.005 && last.at > first.at ? (last.t - first.t) / Math.max(dt, (last.at - first.at) / 1000) : 0;
+                // Coast about a third of a second's worth, at most a few cards, then the nearest card.
+                const coast = Math.max(-step * 4, Math.min(step * 4, v * 0.32));
+                const target = Math.round((state.t + coast) / step) * step, dist = Math.abs(target - state.t);
+                // An ease-out whose starting speed matches the finger's (power2.out starts at 2·dist/duration).
+                const duration = Math.abs(v) > 0.05 ? Math.max(0.25, Math.min(1.1, (2 * dist) / Math.abs(v))) : 0.35;
+                return spinTo(target, undefined, duration, "power2.out");
+            }
             const el = (e.target as Element).closest<CardEl>(".ps-card");
             if (!el) return;
             const i = els.indexOf(el);
