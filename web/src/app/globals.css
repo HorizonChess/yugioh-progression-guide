@@ -97,6 +97,7 @@
   --font-heading: var(--font-outfit), sans-serif;
   --font-techno: var(--font-russo), sans-serif;
   --font-display: var(--font-cinzel), Georgia, serif;
+  --font-fell: var(--font-fell-face), Georgia, serif;
 }
 
 html,
@@ -774,70 +775,6 @@ html::-webkit-scrollbar-corner,
 }
 
 /* ============================================================
- * REWARDS (/rewards) — the ledger tab: available + claimed rows.
- * ============================================================ */
-
-/* One ledger row: prize info on the left, claim affordance on the right. */
-.reward-card {
-  @apply flex items-center gap-4 p-4 rounded-lg
-    bg-black/25 border border-white/10;
-}
-
-.reward-card__title {
-  @apply text-base md:text-lg font-black text-white leading-tight truncate;
-}
-
-.reward-card__meta {
-  @apply mt-0.5 flex items-center gap-2 text-xs text-white/60;
-}
-
-.reward-card__note {
-  @apply mt-1 text-[0.7rem] uppercase tracking-wider text-primary/70;
-}
-
-/* Claimed reward's picked-card thumbnail (wildcard / ban / snatch). */
-.reward-card__thumb {
-  @apply relative shrink-0 w-11 aspect-[59/86] rounded overflow-hidden
-    border border-white/15 bg-black/40 transition-all;
-}
-.reward-card__thumb:hover {
-  @apply border-primary/60 ring-1 ring-primary/40 scale-105;
-}
-.reward-card__thumb--banned img {
-  @apply grayscale opacity-70;
-}
-.reward-card__thumb-marker {
-  @apply absolute inset-x-0 bottom-0 text-center text-[0.5rem] font-black
-    tracking-wider text-white bg-red-700/90 py-px;
-}
-
-/* "<card name> · <caption>" line under a claimed reward. */
-.reward-card__pick {
-  @apply mt-1 flex items-center gap-2 text-xs text-white/70;
-}
-.reward-card__pick-name {
-  @apply font-bold text-white/90;
-}
-.reward-card__pick-caption {
-  @apply uppercase tracking-wider text-[0.65rem] text-primary/80;
-}
-
-.reward-card__claimed-badge {
-  @apply text-[0.7rem] font-bold uppercase tracking-[0.15em] text-green-400/90
-    px-3 py-1 rounded-full border border-green-500/30 bg-green-500/10;
-}
-
-.reward-card__locked-badge {
-  @apply text-[0.7rem] font-bold uppercase tracking-[0.15em] text-white/40
-    px-3 py-1 rounded-full border border-white/15 bg-white/5;
-}
-
-/* Empty-state line inside a ledger section. */
-.reward-empty {
-  @apply text-center text-white/45 text-sm py-6;
-}
-
-/* ============================================================
  * COLLECTION (/collection) — card tile + pagination.
  * ============================================================ */
 
@@ -1224,7 +1161,6 @@ html::-webkit-scrollbar-corner,
   font: 700 12px/1 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; border-bottom: 1px solid rgba(233, 217, 173, 0.4);
   animation: store-in 0.5s 0.35s ease-out both;
 }
-.haul > :last-child:not(.haul__dock) { margin-bottom: 40px; }
 .store__title { animation: store-in 0.5s 0.25s ease-out both; }
 .store__title h1 { margin: 2px 0 0; font: 800 clamp(22px, 2.4vw + 10px, 44px)/1.1 var(--font-display); color: #fff; letter-spacing: 0.02em; text-shadow: 0 3px 10px #000; }
 .store__stage { margin: 0; font: 800 12px/1 var(--font-main); letter-spacing: 0.26em; text-transform: uppercase; color: #ffe08a; text-shadow: 0 1px 4px #000; }
@@ -1288,6 +1224,7 @@ html::-webkit-scrollbar-corner,
   /* A long soft fade, dark all the way to the bottom edge it sits on, so there is no seam. */
   background: linear-gradient(rgba(8, 5, 2, 0), rgba(8, 5, 2, 0.55) 34%, rgba(8, 5, 2, 0.86) 70%, rgba(8, 5, 2, 0.92));
 }
+.haul > :last-child:not(.haul__dock) { margin-bottom: 40px; }
 .haul__btn { width: clamp(132px, 10vw + 60px, 200px); }
 .haul__back { flex-basis: 100%; text-align: center; color: #e9d9ad; font: 700 12px/1 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233, 217, 173, 0.4); }
 
