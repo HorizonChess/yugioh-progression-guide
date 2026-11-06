@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { asset } from '@/lib/utils';
 import { useProgression } from "@/context/ProgressionContext";
 import { Sfx } from "@/components/packs/stage/fx";
-import { guide, type Spoken } from "@/lib/guide/store";
+import { guide, serverState, type Spoken } from "@/lib/guide/store";
 import type { Mood } from "@/lib/guide/lines";
 
 /* Each mood is cropped to the same 338x700 frame with his feet on the bottom edge, so he
@@ -22,56 +22,57 @@ const TYPE_MS = 22;
 /** How long he stays once the words are out: time to read them, then a beat. */
 const readMs = (text: string) => 2600 + text.length * 30;
 
-/** The words on the tablet, typed out with a key every third letter, then held long enough to read. */
-function Words({ line, onDone }: { line: Spoken; onDone: () => void }) {
-    const [typed, setTyped] = useState(0);
-    const done = typed >= line.text.length;
-    useEffect(() => {
-        if (done) {
-            const t = setTimeout(onDone, readMs(line.text));
-            return () => clearTimeout(t);
-        }
-        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const t = setTimeout(() => {
-            if (reduced) return setTyped(line.text.length);
-            // A key sounds about every third letter (a typist's pace, not a buzz), never on a space.
-            if (typed % 3 === 0 && line.text[typed] !== " ") Sfx.key();
-            setTyped((n) => n + 1);
-        }, typed === 0 ? 550 : TYPE_MS);
-        return () => clearTimeout(t);
-    }, [typed, done, line.text, onDone]);
-    return (
-        <>
-            {/* The whole line is laid out from the start (the untyped part invisible), so the tablet doesn't grow as he speaks. */}
-            <span className="sr-only" role="status">{line.text}</span>
-            <span className={`guide__text ${done ? "guide__text--done" : ""}`} aria-hidden="true">
-                {line.text.slice(0, typed)}
-                <span className="guide__rest">{line.text.slice(typed)}</span>
-                <span className="guide__caret">▼</span>
-            </span>
-        </>
-    );
-}
-
 /**
  * Yugi, the guide. Like characters in old games, he slides in from the left edge when
- * the game has something to say (a screen hands him a line through `guide.say`), his
- * words carved into a stone tablet, then slides back out. He overlays the page and
- * nothing moves for him. Tap him or the tablet to send him off. On phones he and the
- * tablet sit along the bottom, above the tab bar.
+ * the game has something to say (a screen hands him lines through `guide.say`), his
+ * words typed into a stone tablet. When there's more to say (▼) he waits: tap the tablet
+ * to finish the line, tap again for the next. After the last line he leaves by himself.
+ * Tapping Yugi sends him off. He overlays the page and nothing moves for him. On phones
+ * he and the tablet sit along the bottom, above the tab bar.
  *
  * `at` (a viewport length, e.g. "17vw") stands him further in from the left edge on
  * desktop, clear of a page's own controls there.
  */
 export default function GuideSprite({ at: standAt }: { at?: string }) {
     const { isGuideVisible } = useProgression();
-    const current = useSyncExternalStore(guide.subscribe, guide.current, () => null);
+    const { line: current, more } = useSyncExternalStore(guide.subscribe, guide.state, serverState);
     // The last line stays on the tablet while he slides away.
     const [shown, setShown] = useState<Spoken | null>(current);
     if (current && current !== shown) setShown(current);
     const onStage = !!current && isGuideVisible;
+
+    // Typing: starts over for each new line.
+    const [typed, setTyped] = useState(0);
+    const [typing, setTyping] = useState<Spoken | null>(current);
+    if (current !== typing) {
+        setTyping(current);
+        setTyped(0);
+    }
+    const text = current?.text ?? "";
+    const typedOut = typed >= text.length;
     const at = current?.at;
-    const leave = useCallback(() => guide.done(at), [at]);
+    const next = useCallback(() => guide.done(at), [at]);
+
+    useEffect(() => {
+        if (!onStage) return;
+        // Words out: with more to say he waits for a tap; after the last line, time to read, then away.
+        if (typedOut) {
+            if (more) return;
+            const t = setTimeout(next, readMs(text));
+            return () => clearTimeout(t);
+        }
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const t = setTimeout(() => {
+            if (reduced) return setTyped(text.length);
+            // A key sounds about every third letter (a typist's pace, not a buzz), never on a space.
+            if (typed % 3 === 0 && text[typed] !== " ") Sfx.key();
+            setTyped((n) => n + 1);
+        }, typed === 0 ? 550 : TYPE_MS);
+        return () => clearTimeout(t);
+    }, [onStage, typed, typedOut, more, text, next]);
+
+    // A tap finishes the line, then moves on.
+    const tap = () => (typedOut ? next() : setTyped(text.length));
 
     return (
         <div
@@ -79,12 +80,24 @@ export default function GuideSprite({ at: standAt }: { at?: string }) {
             className={`guide ${onStage ? "guide--on" : ""}`}
             style={{ "--guide-stone": `url('${STONE}')`, ...(standAt && { "--guide-at": standAt }) } as React.CSSProperties}
         >
-            <button type="button" className="guide__yugi" onClick={leave} tabIndex={onStage ? 0 : -1} aria-label="Send Yugi off">
+            <button type="button" className="guide__yugi" onClick={() => guide.silence()} tabIndex={onStage ? 0 : -1} aria-label="Send Yugi off">
                 <img src={SPRITE[shown?.mood ?? "neutral"]} alt="" />
             </button>
-            <button type="button" className="guide__tablet" onClick={leave} tabIndex={onStage ? 0 : -1}>
+            <button type="button" className="guide__tablet" onClick={tap} tabIndex={onStage ? 0 : -1} aria-label={more ? "Next" : undefined}>
                 <span className="guide__plate">Yugi</span>
-                {shown && (onStage ? <Words key={`${shown.key}:${shown.at}`} line={shown} onDone={leave} /> : <span className="guide__text">{shown.text}</span>)}
+                {onStage && current ? (
+                    <>
+                        <span className="sr-only" role="status">{current.text}</span>
+                        {/* The whole line is laid out from the start (the untyped part invisible), so the tablet doesn't grow as he speaks. */}
+                        <span className={`guide__text ${typedOut && more ? "guide__text--more" : ""}`} aria-hidden="true">
+                            {text.slice(0, typed)}
+                            <span className="guide__rest">{text.slice(typed)}</span>
+                            <span className="guide__caret">▼</span>
+                        </span>
+                    </>
+                ) : (
+                    shown && <span className="guide__text">{shown.text}</span>
+                )}
             </button>
         </div>
     );

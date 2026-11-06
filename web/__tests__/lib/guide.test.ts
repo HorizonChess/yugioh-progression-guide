@@ -1,4 +1,4 @@
-import { cardTip, haulLine, rankLine, resultLine, setDetails, waitingLine, PRIORITY } from "@/lib/guide/lines";
+import { cardTip, haulLines, pullLine, rankLine, resultLine, setDetails, waitingLine, PRIORITY } from "@/lib/guide/lines";
 import { guide } from "@/lib/guide/store";
 
 // Stages: 0 = Legend of Blue Eyes, 1 = Metal Raiders, 2 = Spell Ruler (facts.json, built from the real pool).
@@ -44,12 +44,24 @@ describe("Yugi's lines", () => {
         expect(owned.text).toMatch(/Pot of Greed|Fissure/);
     });
 
-    it("comments on the best new pull in a haul, else comforts", () => {
-        const pull = haulLine([{ ...URABY, rarity: "Common", isNew: true, copies: 1 }, { id: 9, name: "Pot of Greed", rarity: "Rare", isNew: true, copies: 1 }], 0, 0);
-        expect(pull.text).toMatch(/Pot of Greed/);
-        expect(pull.mood).toBe("happy");
-        const quiet = haulLine([{ id: 1, name: "Some Ordinary Card", rarity: "Common", isNew: true, copies: 1 }], 0, 0);
-        expect(quiet.mood).toBe("neutral");
+    it("talks about each notable pull in a haul, rarest first, else comforts", () => {
+        const lines = haulLines([{ ...URABY, rarity: "Common", isNew: true, copies: 1 }, { id: 9, name: "Pot of Greed", rarity: "Rare", isNew: true, copies: 1 }], 0, 0);
+        expect(lines.map((l) => l.text)).toEqual([expect.stringMatching(/Pot of Greed/), expect.stringMatching(/Uraby/)]);
+        const quiet = haulLines([{ id: 1, name: "Some Ordinary Card", rarity: "Common", isNew: true, copies: 1 }], 0, 0);
+        expect(quiet).toHaveLength(1);
+        expect(quiet[0]!.mood).toBe("neutral");
+    });
+
+    it("doesn't repeat in the haul what he said as the cards flipped, nor comfort after he spoke", () => {
+        const pot = { id: 9, name: "Pot of Greed", rarity: "Rare", isNew: true, copies: 1 };
+        expect(pullLine(pot, 0)?.text).toMatch(/Pot of Greed/);
+        expect(haulLines([pot], 0, 0, new Set([9]))).toEqual([]);
+    });
+
+    it("says nothing on a flip unless the card is new and notable, or a third copy", () => {
+        expect(pullLine({ id: 1, name: "Some Ordinary Card", isNew: true, copies: 1 }, 0)).toBeNull();
+        expect(pullLine({ ...URABY, isNew: false, copies: 2 }, 0)).toBeNull();
+        expect(pullLine({ ...URABY, isNew: false, copies: 3 }, 0)?.text).toMatch(/three Uraby|third Uraby/);
     });
 
     it("speaks differently in duo, naming the rival", () => {
@@ -93,11 +105,26 @@ describe("the guide's one line at a time", () => {
         expect(guide.say(line("same", PRIORITY.pull))).toBe(false);
     });
 
-    it("says a waiting line once the current one is done", () => {
-        guide.say(line("first", PRIORITY.result));
-        guide.say(line("second", PRIORITY.pull));
+    it("queues pulls as a conversation, and tells the tablet more is coming", () => {
+        guide.sayAll([line("first", PRIORITY.pull), line("second", PRIORITY.pull), line("third", PRIORITY.pull)]);
+        expect(guide.state()).toMatchObject({ line: { key: "first" }, more: 2 });
         guide.done();
-        expect(guide.current()?.key).toBe("second");
+        expect(guide.state()).toMatchObject({ line: { key: "second" }, more: 1 });
+        guide.done();
+        guide.done();
+        expect(guide.current()).toBeNull();
+    });
+
+    it("never queues a tip behind a conversation", () => {
+        guide.say(line("pull", PRIORITY.pull));
+        expect(guide.say(line("tip", PRIORITY.tip))).toBe(false);
+    });
+
+    it("puts an interrupted conversation line back after a result", () => {
+        guide.say(line("pull", PRIORITY.pull));
+        guide.say(line("result", PRIORITY.result));
+        guide.done();
+        expect(guide.current()?.key).toBe("pull");
     });
 
     it("ignores a late 'done' meant for an earlier line", () => {

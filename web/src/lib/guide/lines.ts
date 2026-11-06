@@ -124,24 +124,49 @@ export function setDetails(setCode: string, setName: string, cards: GuideCard[],
 
 export type HaulCard = GuideCard & { isNew: boolean; copies: number };
 
-/** The haul at the end of opening: the best thing in it, or a word of comfort. */
-export function haulLine(cards: HaulCard[], stage: number, seed = 0): Line {
-    const fresh = cards.filter((c) => c.isNew).sort(byRarity);
-    const worthSaying = (c: GuideCard) => CARD_LINES.has(c.name) || rankLine(c, stage) !== null;
-    const star = fresh.find((c) => CARD_LINES.has(c.name)) ?? fresh.find(worthSaying);
-    const key = `haul:${cards.map((c) => c.id).join(",")}`;
-    if (star) return { key, text: cardText(star, stage, seed)!, mood: "happy", priority: PRIORITY.pull };
-    const third = cards.find((c) => c.copies === 3 && worthSaying(c));
-    if (third) {
+/** A card he'd talk about when it turns up: his note on it, or a top-three monster for its cost. */
+const worthSaying = (c: GuideCard, stage: number) => CARD_LINES.has(c.name) || rankLine(c, stage) !== null;
+
+/**
+ * A card just flipped face up: a word on it if it's new to you and worth one, or on a
+ * third copy (a full set for the deck). Null for everything else.
+ */
+export function pullLine(card: HaulCard, stage: number, seed = 0): Line | null {
+    if (card.isNew && worthSaying(card, stage)) return { key: `pull:${card.id}`, text: cardText(card, stage, seed)!, mood: "happy", priority: PRIORITY.pull };
+    if (card.copies === 3 && worthSaying(card, stage)) {
         const lines = ["That's three {name}! A full set for your deck.", "Your third {name}! You can run all three now."];
-        return { key, text: fill(pick(lines, seed), { name: third.name }), mood: "happy", priority: PRIORITY.pull };
+        return { key: `third:${card.id}`, text: fill(pick(lines, seed), { name: card.name }), mood: "happy", priority: PRIORITY.pull };
     }
-    const quiet = [
-        "No big pulls this time... but every card counts. Let's see what we can build!",
-        "Not much luck in these packs. Don't worry, the next ones could be different!",
-        "Hmm, quiet packs. Sometimes the heart of the cards makes us wait.",
-    ];
-    return { key, text: pick(quiet, seed), mood: "neutral", priority: PRIORITY.pull };
+    return null;
+}
+
+/**
+ * The haul, once it's all laid out: his words on up to three of its best cards (the
+ * rarest new ones first), leaving out any he already talked about as they flipped. If
+ * there's nothing to say and he said nothing while you flipped, a word of comfort.
+ */
+export function haulLines(cards: HaulCard[], stage: number, seed = 0, alreadySaid: ReadonlySet<number> = new Set()): Line[] {
+    const lines: Line[] = [];
+    const done = new Set(alreadySaid);
+    const ordered = [...cards].sort((a, b) => Number(b.isNew) - Number(a.isNew) || Number(CARD_LINES.has(b.name)) - Number(CARD_LINES.has(a.name)) || byRarity(a, b));
+    for (const card of ordered) {
+        if (lines.length === 3) break;
+        if (done.has(card.id)) continue;
+        const line = pullLine(card, stage, seed + lines.length);
+        if (line) {
+            lines.push(line);
+            done.add(card.id);
+        }
+    }
+    if (!lines.length && !alreadySaid.size) {
+        const quiet = [
+            "No big pulls this time... but every card counts. Let's see what we can build!",
+            "Not much luck in these packs. Don't worry, the next ones could be different!",
+            "Hmm, quiet packs. Sometimes the heart of the cards makes us wait.",
+        ];
+        lines.push({ key: `quiet:${cards.map((c) => c.id).join(",")}`, text: pick(quiet, seed), mood: "neutral", priority: PRIORITY.pull });
+    }
+    return lines;
 }
 
 /** After recording a duel. In solo the opponent is the set; in duo it's the rival. `streak` counts this result: +3 is a third win in a row. */

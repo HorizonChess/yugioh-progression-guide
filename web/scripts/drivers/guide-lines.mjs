@@ -33,9 +33,9 @@ const MOMENTS = [
     ["/packs/?set=1", "Looking at 7 Colored Fish at stage 2 (a stronger monster has a catch)", `L.cardTip(${JSON.stringify(FISH)}, 1, 0)`],
     ["/packs/?set=1", "Looking at Summoned Skull (his note)", `L.cardTip(${JSON.stringify(SKULL)}, 1, 0)`],
     ["/packs/?set=0", "Looking at Man-Eater Bug (his note)", `L.cardTip(${JSON.stringify(MANEATER)}, 0, 0)`],
-    ["/packs/?set=0", "Haul with a new Raigeki", `L.haulLine([{...${JSON.stringify(RAIGEKI)}, isNew: true, copies: 1}, {...${JSON.stringify(DULL)}, isNew: true, copies: 1}], 0, 0)`],
-    ["/packs/?set=0", "Haul with a third Uraby, nothing else new", `L.haulLine([{...${JSON.stringify(URABY)}, isNew: false, copies: 3}], 0, 0)`],
-    ["/packs/?set=0", "Haul with nothing of note", `L.haulLine([{...${JSON.stringify(DULL)}, isNew: true, copies: 1}], 0, 2)`],
+    ["/packs/?set=0", "Haul with a new Raigeki", `L.haulLines([{...${JSON.stringify(RAIGEKI)}, isNew: true, copies: 1}, {...${JSON.stringify(DULL)}, isNew: true, copies: 1}], 0, 0)`],
+    ["/packs/?set=0", "Haul with a third Uraby, nothing else new", `L.haulLines([{...${JSON.stringify(URABY)}, isNew: false, copies: 3}], 0, 0)`],
+    ["/packs/?set=0", "Haul with nothing of note", `L.haulLines([{...${JSON.stringify(DULL)}, isNew: true, copies: 1}], 0, 2)`],
     ["/record-match/", "Solo win, Spell Ruler next", "L.resultLine(true, { mode: 'solo', streak: 1, next: 'Spell Ruler', seed: 0 })"],
     ["/record-match/", "Solo, third win in a row", "L.resultLine(true, { mode: 'solo', streak: 3, next: 'Spell Ruler', seed: 0 })"],
     ["/record-match/", "Solo loss", "L.resultLine(false, { mode: 'solo', streak: -1, next: 'Spell Ruler', seed: 1 })"],
@@ -59,7 +59,8 @@ for (const [route, caption, call] of MOMENTS) {
     const text = await page.evaluate((call) => {
         window.__guide.reset();
         const L = window.__guideLines;
-        const line = eval(call);
+        const out = eval(call);
+        const line = Array.isArray(out) ? out[0] : out;
         if (line) window.__guide.say(line);
         return line?.text ?? null;
     }, call);

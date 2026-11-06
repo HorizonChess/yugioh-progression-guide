@@ -6,7 +6,7 @@ import CartoucheButton from "@/components/ui/CartoucheButton";
 import CardGallery, { byTier, type GalleryItem } from "@/components/card/CardGallery";
 import { TIER_LABEL, toStageCard } from "@/components/packs/stage/plate";
 import { useEffect } from "react";
-import { cardTip, haulLine } from "@/lib/guide/lines";
+import { cardTip, haulLines } from "@/lib/guide/lines";
 import { guide, seed } from "@/lib/guide/store";
 
 /**
@@ -26,6 +26,7 @@ export default function OpeningSummary({
     saveLabel = "Done & Save",
     backLabel = "Back to the campaign",
     stage,
+    alreadySaid,
 }: {
     set: CardSet;
     cards: PulledCard[];
@@ -40,6 +41,8 @@ export default function OpeningSummary({
     backLabel?: string;
     /** The player's stage in the series, for Yugi's word on the haul (left out: he stays quiet). */
     stage?: number;
+    /** Cards Yugi already talked about as they flipped. */
+    alreadySaid?: ReadonlySet<number>;
 }) {
     // The haul is in: Yugi on the best of it, or a word of comfort.
     useEffect(() => {
@@ -47,7 +50,7 @@ export default function OpeningSummary({
         const pulled = new Map<number, number>();
         for (const c of cards) pulled.set(c.id, (pulled.get(c.id) ?? 0) + 1);
         const haul = cards.map((c) => ({ id: c.id, name: c.name, rarity: c.pulled_rarity, isNew: ownedCount(c.id) === 0, copies: ownedCount(c.id) + (pulled.get(c.id) ?? 0) }));
-        const t = setTimeout(() => guide.say(haulLine(haul, stage, seed())), 900);
+        const t = setTimeout(() => guide.sayAll(haulLines(haul, stage, seed(), alreadySaid)), 900);
         return () => clearTimeout(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps -- once per haul
     }, [cards.length, stage]);
