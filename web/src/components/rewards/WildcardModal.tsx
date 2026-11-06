@@ -3,14 +3,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardSet, PulledCard, fetchAllSets, fetchCardsInSet } from "@/lib/api";
 import { RewardEntry, getPrize, wildcardRarityFloor, isRarityAtOrBelow } from "@/lib/rewards";
-import { getCardRarity } from "@/lib/utils";
 import { useProgression } from "@/context/ProgressionContext";
 import { ownedCountsById } from "@/lib/collection";
 import CardGallery, { type GalleryItem } from "@/components/card/CardGallery";
 import { CardCloseUp } from "@/components/card/CardPlate";
-import { printedIn } from "@/components/packs/stage/plate";
+import { tierOf } from "@/components/packs/stage/plate";
 import CartoucheButton from "@/components/ui/CartoucheButton";
 import RewardRite, { RiteNote } from "@/components/rewards/RewardRite";
+
+/** The card's printing in this set: by the set's name first, since reprints (a 25th anniversary, a tin)
+    can share its code prefix at other rarities; the prefix only as a fallback. */
+function printIn(c: Card, set: CardSet | null) {
+    if (!set) return undefined;
+    const prefix = set.set_code.split("-")[0];
+    return c.card_sets?.find((p) => p.set_name === set.set_name) ?? c.card_sets?.find((p) => p.set_code.split("-")[0] === prefix);
+}
+/** Its rarity in this set (short prints count as Common). */
+function rarityIn(c: Card, set: CardSet | null) {
+    const r = printIn(c, set)?.set_rarity || "Common";
+    return r === "Short Print" || r === "Super Short Print" || r === "SP" ? "Common" : r;
+}
 
 interface WildcardModalProps {
     entry: RewardEntry;
@@ -69,25 +81,29 @@ export default function WildcardModal({ entry, onChoose, onClose }: WildcardModa
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [entry.id]);
 
-    const setPrefix = set?.set_code.split("-")[0] ?? "";
+    const rarityOf = (c: Card) => rarityIn(c, set);
     // The set's cards the wildcard covers.
     const items = useMemo<GalleryItem[]>(() => {
         if (!set) return [];
         const owned = ownedCountsById(collection);
         return cards
-            .map((c) => {
+            .map((c): GalleryItem | null => {
                 const n = owned.get(c.id) ?? 0;
-                return { key: String(c.id), card: printedIn(c, set.set_code, n, n ? `You own ×${n}` : "Not owned yet"), count: 0, dim: !isRarityAtOrBelow(getCardRarity(c, setPrefix), ceiling) };
+                const print = printIn(c, set);
+                if (!print) return null;
+                const rarity = rarityIn(c, set);
+                const card = { card: c, image: c.card_images[0]?.image_url ?? "", tier: tierOf(rarity), rarity, code: print.set_code, owned: n, ownedNote: n ? `You own ×${n}` : "Not owned yet" };
+                return { key: String(c.id), card, count: 0, dim: !isRarityAtOrBelow(rarity, ceiling) };
             })
             // Only what the wildcard covers, as before: rarer cards aren't shown.
-            .filter((i) => !i.dim)
+            .filter((i): i is GalleryItem => i !== null && !i.dim)
             .sort((a, b) => a.card.code.localeCompare(b.card.code, undefined, { numeric: true }));
-    }, [cards, set, collection, ceiling, setPrefix]);
+    }, [cards, set, collection, ceiling]);
 
     const confirmChoice = () => {
         if (!pending || !set) return;
         const card = pending.card.card;
-        onChoose({ ...card, pulled_rarity: getCardRarity(card, setPrefix), pulled_set_code: set.set_code });
+        onChoose({ ...card, pulled_rarity: rarityOf(card), pulled_set_code: set.set_code });
     };
 
     return (
