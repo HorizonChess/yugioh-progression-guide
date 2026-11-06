@@ -16,7 +16,7 @@ import {
     type SeriesSummary,
     type SeriesView,
 } from '@/lib/repo/types';
-import { RewardEntry, WheelPrize } from '@/lib/rewards';
+import { RewardEntry, RivalReward, WheelPrize } from '@/lib/rewards';
 import { MatchResult, SavedDeck } from '@/lib/storage';
 
 export type { MatchResult, SavedDeck } from '@/lib/storage';
@@ -57,6 +57,7 @@ interface ProgressionContextType {
     spin: (rewardId: string) => Promise<WheelPrize>;
     claimReward: (rewardId: string, cardId?: number, printing?: string) => Promise<Opening | null>;
     rivalBinder: () => Promise<Collection>;
+    rivalRewards: () => Promise<RivalReward[]>;
     saveDeck: (deck: SavedDeck) => Promise<void>;
     deleteDeck: (deckId: string) => Promise<void>;
     importCollection: (cardIds: number[], mode: 'add' | 'replace') => Promise<void>;
@@ -178,6 +179,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             spin: (rewardId) => onActive((id) => repo.spin(id, rewardId))(),
             claimReward: (rewardId, cardId, printing) => onActive((id) => repo.claimReward(id, rewardId, cardId, printing))(),
             rivalBinder: () => onActive((id) => repo.rivalBinder(id), false)(),
+            rivalRewards: () => onActive((id) => repo.rivalRewards(id), false)(),
             saveDeck: (deck) => onActive((id) => repo.saveDeck(id, deck))(),
             deleteDeck: (deckId) => onActive((id) => repo.deleteDeck(id, deckId))(),
             importCollection: (cardIds, mode) => onActive((id) => repo.importCollection(id, cardIds, mode))(),

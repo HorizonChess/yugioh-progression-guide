@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { PrintingSchema } from '@ygo/shared';
+import { PrintingSchema, toRivalReward } from '@ygo/shared';
 import { z } from 'zod';
 import { ClaimError, claimReward } from '../game/claims';
 import { confirmReport, publicReport, rejectReport, reportDuoMatch, reportSoloMatch, spinReward } from '../game/matches';
@@ -39,6 +39,7 @@ const RESOLVE_ERRORS = {
  *   POST /rewards/:rewardId/spin      spin a won wheel
  *   POST /rewards/:rewardId/claim     resolve a reward
  *   GET  /rival-binder                the rival's cards, while you hold a Snatch Steal
+ *   GET  /rival-rewards               what the rival has claimed (never what they still hold)
  */
 export async function matchRoutes(app: FastifyInstance): Promise<void> {
     const guard = { preHandler: [requireAuth, requireSeriesMember], config: { rateLimit: { max: 20, timeWindow: '1 minute' } } };
@@ -113,6 +114,13 @@ export async function matchRoutes(app: FastifyInstance): Promise<void> {
         const canSnatch = me?.rewards.some((r) => r.prizeId === 'snatch-steal' && r.status === 'available');
         if (!rivalId || !canSnatch) return reply.code(409).send({ error: 'You need a Snatch Steal to look through your rival\'s binder' });
         return { collection: (await findPlayer(app.db, series._id, rivalId))?.collection ?? {} };
+    });
+
+    app.get('/rival-rewards', guard, async (request) => {
+        const series = request.series!;
+        const rivalId = series.memberIds.find((id) => !id.equals(request.user!._id));
+        const rival = rivalId && (await findPlayer(app.db, series._id, rivalId));
+        return { rewards: rival ? rival.rewards.filter((r) => r.status === 'claimed').map(toRivalReward) : [] };
     });
 
     app.post('/rewards/:rewardId/claim', guard, async (request, reply) => {

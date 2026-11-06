@@ -1,7 +1,7 @@
 import { transformCardImages } from "@/lib/api";
 import { API_BASE } from "@/lib/auth-client";
 import type { Collection } from "@/lib/collection";
-import type { RewardEntry, WheelPrize } from "@/lib/rewards";
+import type { RewardEntry, RivalReward, WheelPrize } from "@/lib/rewards";
 import type { SavedDeck } from "@/lib/storage";
 import { RepoError, type CreateSeriesInput, type GameRepository, type Opening, type OpenOptions, type PlayerView, type SeriesView } from "./types";
 
@@ -141,6 +141,10 @@ export class RemoteRepo implements GameRepository {
 
     async rivalBinder(id: string) {
         return (await api<{ collection: Collection }>("GET", `/${id}/rival-binder`)).collection;
+    }
+
+    async rivalRewards(id: string) {
+        return (await api<{ rewards: RivalReward[] }>("GET", `/${id}/rival-rewards`)).rewards;
     }
 
     saveDeck = (id: string, { id: deckId, name, mainDeck, extraDeck, sideDeck }: SavedDeck) =>

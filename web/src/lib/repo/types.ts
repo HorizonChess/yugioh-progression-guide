@@ -1,6 +1,6 @@
 import type { PulledCard } from "@/lib/api";
 import type { Collection } from "@/lib/collection";
-import type { RewardEntry, WheelPrize } from "@/lib/rewards";
+import type { RewardEntry, RivalReward, WheelPrize } from "@/lib/rewards";
 import type { MatchResult, SavedDeck } from "@/lib/storage";
 
 /*
@@ -111,6 +111,8 @@ export interface GameRepository {
     claimReward(id: string, rewardId: string, cardId?: number, printing?: string): Promise<Opening | null>;
     /** Duo only, while holding a Snatch Steal. */
     rivalBinder(id: string): Promise<Collection>;
+    /** What the rival has claimed (empty in solo). */
+    rivalRewards(id: string): Promise<RivalReward[]>;
 
     saveDeck(id: string, deck: SavedDeck): Promise<void>;
     deleteDeck(id: string, deckId: string): Promise<void>;

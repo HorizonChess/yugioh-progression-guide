@@ -10,4 +10,4 @@ export {
     wildcardRarityFloor,
     isRarityAtOrBelow,
 } from '@ygo/shared';
-export type { PrizeId, WheelPrize, RewardStatus, RewardEntry, PrizeKind } from '@ygo/shared';
+export type { PrizeId, WheelPrize, RewardStatus, RewardEntry, PrizeKind, RivalReward } from '@ygo/shared';

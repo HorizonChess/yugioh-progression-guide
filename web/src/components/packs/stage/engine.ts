@@ -191,7 +191,11 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
         };
         const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
         addEventListener("keydown", onKey, { signal });
+        // A tap opens this on finger-up; the browser's click for that same tap then
+        // lands on the new overlay, so clicks in the first moment don't close it.
+        const opened = performance.now();
         ov.addEventListener("click", (e) => {
+            if (performance.now() - opened < 400) return;
             if (!(e.target as Element).closest(".ps-plate")) close();
         });
     }
@@ -358,33 +362,45 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
             goReady();
         } else {
             tearable(0.56, ({ pk, packW, top }) => {
-                const mouth = { x: W / 2, y: top + packW * 0.3 }, sb = stage.getBoundingClientRect();
-                // Light spills out of the torn mouth, the pack sinks, and the cards spiral out onto the ring.
-                fx.burst(mouth.x + sb.left, mouth.y + sb.top, "Ultra", 40, true);
+                const packH = packW / PACK_ASPECT, sb = stage.getBoundingClientRect();
+                const mouthY = top + packH * 0.13; // where the strip tore off
+                // In the pack the cards are a stack about as wide as the pack, fanned a touch.
+                const s0 = Math.min(1, (packW * 0.8) / cw), sh = ch * s0;
+                const fan = (i: number) => (i - (n - 1) / 2) * 2.4;
+                const inside = top + packH * 0.62, out = mouthY - sh * 0.04;
+                // Light spills out of the torn mouth.
+                fx.burst(W / 2 + sb.left, mouthY + sb.top, "Ultra", 40, true);
                 Sfx.rise(0.9);
-                to(pk, { y: H * 0.85, rotation: 6, duration: 0.8, delay: 0.35, ease: "power2.in" });
-                to(halo, { opacity: 1, duration: 1.2, delay: 0.5 });
+                // 1. The cards rise out of the mouth as one fanned stack, from behind the pack's face.
                 els.forEach((el, i) => {
-                    const swirl = { p: 0 };
-                    to(swirl, {
-                        p: 1, duration: 1.15, delay: 0.25 + i * 0.085, ease: "power2.out",
-                        onStart: () => {
-                            el.style.visibility = "visible";
-                            if (i % 2 === 0) Sfx.whoosh();
-                        },
-                        onUpdate: () => {
-                            const p = swirl.p;
-                            // Spin in from extra turns, widening from the pack mouth out to the ring.
-                            const at = pos(i, -(1 - p) * Math.PI * 2.2, R * p);
-                            const y = mouth.y - ch / 2 + (at.y - (mouth.y - ch / 2)) * p;
-                            gsap.set(el, { x: at.x, y, scale: 0.2 + (at.scale - 0.2) * p, opacity: Math.min(1, p * 3) * (0.35 + 0.65 * at.depth), rotation: (1 - p) * 140 });
-                            el.style.zIndex = String(Math.round(at.depth * 100));
-                            if (Math.random() < 0.5) fx.trail(sb.left + at.x + cw / 2, sb.top + y + ch / 2);
-                        },
-                        onComplete: () => gsap.set(el, { rotation: 0 }),
+                    el.style.zIndex = String(1 + i);
+                    gsap.set(el, { x: W / 2 - cw / 2, y: inside - ch / 2, scale: s0, rotation: fan(i), opacity: 1 });
+                    to(el, {
+                        y: out - ch / 2 - i * 1.5, duration: 0.55, delay: 0.2 + i * 0.045, ease: "power2.out",
+                        onStart: () => (el.style.visibility = "visible"),
                     });
                 });
-                later(goReady, 250 + n * 85 + 1250);
+                const lifted = 0.2 + (n - 1) * 0.045 + 0.55;
+                // 2. The empty pack drops away and the stack spreads onto the ring.
+                to(pk, { y: H * 0.6, opacity: 0, rotation: 4, duration: 0.6, delay: lifted, ease: "power2.in" });
+                to(halo, { opacity: 1, duration: 1.2, delay: lifted });
+                later(() => Sfx.whoosh(), lifted * 1000);
+                els.forEach((el, i) => {
+                    const spread = { p: 0 }, y0 = out - i * 1.5;
+                    to(spread, {
+                        p: 1, duration: 1.0, delay: lifted + 0.05 + i * 0.035, ease: "power3.inOut",
+                        onUpdate: () => {
+                            const p = spread.p;
+                            // A half turn while the ring widens from the stack out to its radius.
+                            const at = pos(i, -(1 - p) * Math.PI, R * p);
+                            const y = y0 - ch / 2 + (at.y - (y0 - ch / 2)) * p;
+                            gsap.set(el, { x: at.x, y, scale: s0 + (at.scale - s0) * p, rotation: fan(i) * (1 - p), opacity: 1 - p * (1 - (0.35 + 0.65 * at.depth)) });
+                            if (p > 0.35) el.style.zIndex = String(Math.round(at.depth * 100));
+                            if (p > 0.1 && p < 0.9 && Math.random() < 0.25) fx.trail(sb.left + at.x + cw / 2, sb.top + y + ch / 2);
+                        },
+                    });
+                });
+                later(goReady, (lifted + 0.05 + (n - 1) * 0.035 + 1.0) * 1000 + 50);
             });
         }
 
@@ -427,7 +443,7 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
         stage.addEventListener("pointermove", (e: PointerEvent) => {
             if (!drag) return;
             const dx = e.clientX - drag.x;
-            if (Math.abs(dx) > 6) drag.moved = true;
+            if (Math.abs(dx) > 10) drag.moved = true; // a finger wobbles a little on a tap
             if (drag.moved) {
                 state.t = drag.t - dx / R;
                 render();

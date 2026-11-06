@@ -1,0 +1,115 @@
+/* ---------- the rewards page: an altar for what's waiting, a scroll for what's been claimed ---------- */
+.rw { position: relative; min-height: 100%; display: flex; flex-direction: column; align-items: center; padding: 12px 16px 40px; text-align: center; }
+.rw-head { padding: 4px 0 6px; animation: store-in 0.5s ease-out both; }
+.rw-head h1 { margin: 2px 0 0; font: 800 clamp(24px, 2.2vw + 12px, 40px)/1.1 var(--font-display); color: #fff; text-shadow: 0 3px 10px #000; }
+.rw-kicker { margin: 0; font: 800 12px/1 var(--font-main); letter-spacing: 0.26em; text-transform: uppercase; color: #ffe08a; text-shadow: 0 1px 4px #000; }
+
+/* Waiting · Chronicle */
+.rw-tabs { display: flex; gap: 4px; margin: 10px 0 4px; padding: 4px; border-radius: 999px; background: rgba(10, 7, 4, 0.6); box-shadow: 0 0 0 1px rgba(224, 181, 79, 0.3); animation: store-in 0.5s 0.1s ease-out both; }
+.rw-tabs button {
+  padding: 8px 16px; border: 0; border-radius: 999px; cursor: pointer; background: transparent;
+  font: 800 12px/1 var(--font-main); letter-spacing: 0.16em; text-transform: uppercase; color: #c7b99a; transition: background 0.2s, color 0.2s;
+}
+.rw-tabs button[aria-selected="true"] { color: #2a1c05; background: linear-gradient(#f3d98a, #c99a3a); box-shadow: inset 0 1px 0 rgba(255, 245, 210, 0.7); }
+
+/* which set's wheel a reward came from (or the loss a pity reward was for) */
+.rw-origin { display: inline-flex; align-items: center; gap: 6px; font: 700 12px/1.25 var(--font-main); letter-spacing: 0.04em; color: #e9d9ad; vertical-align: middle; }
+.rw-origin img { flex: none; width: 14px; height: 25px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
+
+.rw-relic { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.6)); }
+.rw-lock { position: absolute; top: 34%; left: 50%; width: 38%; transform: translate(-50%, -50%); opacity: 0.9; }
+
+/* ---------- the altar ---------- */
+.rw-stage { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 900px; margin-top: 8px; touch-action: pan-y; animation: store-in 0.5s 0.15s ease-out both; }
+.rw-pool {
+  position: absolute; left: 50%; top: 45%; width: min(90vw, 640px); aspect-ratio: 1.3; transform: translate(-50%, -50%); pointer-events: none;
+  background: radial-gradient(ellipse, rgba(255, 205, 120, 0.28), rgba(255, 170, 60, 0.08) 40%, transparent 68%); animation: rw-breathe 4s ease-in-out infinite;
+}
+@keyframes rw-breathe { 50% { opacity: 0.6; } }
+.rw-altar { display: flex; flex-direction: column; align-items: center; }
+.rw-holder { position: relative; width: min(50vw, 250px); aspect-ratio: 1; }
+.rw-holder .rw-relic { animation: rw-float 5s ease-in-out infinite; }
+.rw-holder--locked .rw-relic { filter: grayscale(0.6) brightness(0.6) drop-shadow(0 10px 12px rgba(0, 0, 0, 0.6)); }
+.rw-holder--in { animation: rw-rise 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+@keyframes rw-float { 50% { transform: translateY(-8px); } }
+@keyframes rw-rise { from { opacity: 0; transform: translateY(24px) scale(0.85); } }
+/* the stone altar top it rests on */
+.rw-slab {
+  width: min(70vw, 360px); height: 34px; margin-top: -20px; border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(#8a6f48, #4a3922 60%, #2b2114); box-shadow: 0 -2px 0 #a2865a, 0 12px 20px rgba(0, 0, 0, 0.6), inset 0 6px 10px rgba(255, 230, 170, 0.15);
+}
+.rw-arrow { position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%; border: 1px solid #8a6a2c; background: rgba(10, 7, 4, 0.7); color: #ffe08a; font-size: 24px; line-height: 1; cursor: pointer; }
+.rw-arrow:disabled { opacity: 0.3; cursor: default; }
+.rw-info { position: relative; max-width: 32rem; margin-top: 12px; }
+.rw-info h2 { margin: 0; font: 800 clamp(22px, 3vw, 34px)/1.1 var(--font-display); color: #fff; text-shadow: 0 3px 10px #000; }
+.rw-info p { margin: 6px auto 0; font: 600 14px/1.45 var(--font-main); color: #d9ccaa; text-shadow: 0 1px 4px #000; }
+.rw-info .rw-when { color: #a99d80; }
+.rw-act { display: flex; justify-content: center; margin-top: 14px; }
+.rw-act .cartouche-btn { width: clamp(170px, 10vw + 110px, 230px); }
+.rw-locked { margin-top: 14px; font: 700 12px/1.3 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; color: #e9d9ad; }
+/* every waiting reward, as a row of small relics */
+.rw-queue { display: flex; gap: 10px; max-width: 100%; margin-top: 18px; padding: 4px 4px 10px; overflow-x: auto; scrollbar-width: none; }
+.rw-queue button { flex: none; width: 58px; height: 58px; padding: 6px; border: 0; border-radius: 12px; cursor: pointer; background: rgba(10, 7, 4, 0.6); box-shadow: 0 0 0 1px rgba(224, 181, 79, 0.3); }
+.rw-queue button[aria-current="true"] { background: rgba(224, 181, 79, 0.16); box-shadow: 0 0 0 2px var(--primary), 0 0 14px rgba(212, 175, 55, 0.45); }
+.rw-queue button.is-locked { opacity: 0.5; }
+.rw-queue .rw-relic { filter: none; }
+.rw-empty { margin-top: 40px; font: 600 14px/1.45 var(--font-main); color: #c7b99a; text-shadow: 0 1px 4px #000; }
+
+/* claiming: the relic plays its opening, then the reward's own flow opens */
+.rw-burst { position: absolute; left: 50%; top: 40%; width: 10px; height: 10px; margin: -5px; border-radius: 50%; pointer-events: none; box-shadow: 0 0 0 0 rgba(255, 220, 130, 0.9); animation: rw-burst 0.9s ease-out forwards; }
+@keyframes rw-burst { to { box-shadow: 0 0 0 160px rgba(255, 220, 130, 0); } }
+.rw-opening .lid { transform-box: fill-box; transform-origin: 50% 100%; animation: rw-lid 0.7s cubic-bezier(0.3, 1.4, 0.5, 1) forwards; }
+@keyframes rw-lid { to { transform: translateY(-14%) rotate(-24deg); } }
+.rw-opening .flap { transform-box: fill-box; transform-origin: 50% 0%; animation: rw-flap 0.6s ease-out forwards; }
+@keyframes rw-flap { to { transform: scaleY(-1); } }
+.rw-opening .seal { transform-box: fill-box; transform-origin: center; animation: rw-seal 0.5s ease-in forwards; }
+@keyframes rw-seal { to { transform: scale(1.4); opacity: 0; } }
+.rw-opening .spin { transform-box: fill-box; transform-origin: center; animation: rw-spin 1s cubic-bezier(0.2, 0.8, 0.3, 1) forwards; }
+@keyframes rw-spin { to { transform: rotate(540deg); } }
+
+/* ---------- the chronicle: an illuminated scroll ---------- */
+.rw-scroll {
+  position: relative; width: 100%; max-width: 760px; margin: 26px auto 0; padding: 30px clamp(16px, 4vw, 46px) 34px; color: #2a1c05; text-align: left;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .32 0 0 0 0 .12 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(90deg, #d9c08a, #f1e1b4 12%, #f5e7bf 50%, #f1e1b4 88%, #d9c08a);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), inset 0 0 40px rgba(120, 80, 20, 0.35);
+  animation: rw-unroll 0.55s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+@keyframes rw-unroll { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(-20px -20px -20px -20px); } }
+/* the gilded rods at either end */
+.rw-scroll::before, .rw-scroll::after {
+  content: ""; position: absolute; left: -14px; right: -14px; height: 26px; border-radius: 13px;
+  background: linear-gradient(#8a6420, #e9c977 40%, #b58a2e 60%, #5a3d08); box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+}
+.rw-scroll::before { top: -13px; }
+.rw-scroll::after { bottom: -13px; }
+.rw-scroll h2 { margin: 6px 0 4px; text-align: center; font: 800 clamp(22px, 3vw, 32px)/1.1 var(--font-display); color: #3a2405; letter-spacing: 0.08em; }
+.rw-scroll .rw-sub { margin: 0 0 10px; text-align: center; font: italic 400 16px/1.3 var(--font-fell); color: #5a4220; }
+.rw-sec { display: flex; align-items: center; gap: 10px; margin: 18px 0 6px; font: 800 13px/1 var(--font-display); letter-spacing: 0.2em; text-transform: uppercase; color: #6b4a12; }
+.rw-sec::before, .rw-sec::after { content: ""; flex: 1; height: 1px; background: #8a6420; opacity: 0.5; }
+.rw-none { margin: 6px 0; text-align: center; font: italic 400 15px/1.3 var(--font-fell); color: #6b5530; }
+.rw-entry { display: flex; align-items: center; gap: 14px; padding: 10px 2px; border-bottom: 1px dashed rgba(90, 61, 8, 0.35); }
+.rw-entry:last-child { border-bottom: 0; }
+.rw-medal { flex: none; width: 46px; height: 46px; padding: 6px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff1bf, #d4af37 55%, #8a6420); box-shadow: 0 0 0 2px #5a3d08, 0 4px 8px rgba(0, 0, 0, 0.3); }
+.rw-medal .rw-relic { filter: none; }
+.rw-thumb { position: relative; flex: none; width: 40px; aspect-ratio: 813 / 1185; padding: 0; border: 0; border-radius: 3px; overflow: hidden; cursor: pointer; background: #2a1c05; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); }
+.rw-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rw-thumb--banned::after { content: "BANNED"; position: absolute; inset: 0; display: grid; place-items: center; background: rgba(120, 10, 10, 0.55); color: #fff; font: 900 7px/1 var(--font-main); letter-spacing: 0.08em; }
+.rw-text { flex: 1; min-width: 0; }
+.rw-text b { display: block; font: 400 20px/1.1 var(--font-fell); color: #2a1c05; }
+.rw-text b::first-letter { font: 800 25px/1 var(--font-display); color: #8a1c10; }
+.rw-text small { display: block; margin-top: 3px; font: italic 400 14px/1.3 var(--font-fell); color: #5a4220; }
+.rw-text .rw-origin { font: italic 400 14px/1.3 var(--font-fell); letter-spacing: 0; color: #5a4220; }
+.rw-stamp { flex: none; max-width: 30%; padding: 5px 9px; border: 2px solid #6b4a12; border-radius: 4px; transform: rotate(-6deg); font: 800 11px/1 var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; color: #6b4a12; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rw-entry--rival .rw-text b::first-letter { color: #3a2405; }
+.rw-entry--rival .rw-stamp { color: #8a1c10; border-color: #8a1c10; }
+
+@media (max-width: 520px) {
+  .rw-entry { gap: 10px; }
+  .rw-text b { font-size: 18px; }
+  .rw-stamp { padding: 4px 6px; font-size: 9px; letter-spacing: 0.1em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rw-holder .rw-relic, .rw-pool { animation: none; }
+}

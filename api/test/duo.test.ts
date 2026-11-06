@@ -231,6 +231,22 @@ describe('rival rewards', () => {
         expect((await kaiba.notifications())[0]).toMatchObject({ type: 'snatched', payload: { from: 'Yami', cardId: 101 } });
     });
 
+    it("shows each player the rewards their rival claimed, never the ones still held", async () => {
+        const { yami, kaiba, id, series } = await pair();
+        const [me, rival] = (await series()).series.members.map((m: { id: string }) => new ObjectId(m.id));
+        await seriesPlayersCollection(app.db).updateOne({ userId: rival }, { $set: { collection: { '101_LOB-EN101_Common': 1 } } });
+        await give(id, rival!, 'ban');
+        const snatch = await give(id, me!, 'snatch-steal');
+        expect((await kaiba.call('GET', `/api/series/${id}/rival-rewards`)).json().rewards).toEqual([]);
+        expect((await yami.call('POST', `/api/series/${id}/rewards/${snatch}/claim`, { printing: '101_LOB-EN101_Common' })).statusCode).toBe(201);
+
+        const seen = (await kaiba.call('GET', `/api/series/${id}/rival-rewards`)).json().rewards;
+        expect(seen).toEqual([expect.objectContaining({ id: snatch, prizeId: 'snatch-steal', wonFromPackName: TIMELINE[0], cardId: 101 })]);
+        expect(seen[0].claimedDate).toBeTruthy();
+        expect(seen[0]).not.toHaveProperty('status');
+        expect((await yami.call('GET', `/api/series/${id}/rival-rewards`)).json().rewards).toEqual([]);
+    });
+
     it('a ban applies to both players, and the rival is told', async () => {
         const { yami, kaiba, id, series } = await pair();
         await cardsCollection(app.db).insertOne({
