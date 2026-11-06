@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cinzel, Inter, Outfit, Russo_One } from "next/font/google";
+import { Cinzel, IM_Fell_English, Inter, Outfit, Russo_One } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProgressionProvider } from "@/context/ProgressionContext";
@@ -12,6 +12,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const russo = Russo_One({ weight: "400", subsets: ["latin"], variable: "--font-russo" });
 const cinzel = Cinzel({ weight: ["700", "800"], subsets: ["latin"], variable: "--font-cinzel" });
+const fell = IM_Fell_English({ weight: "400", style: ["normal", "italic"], subsets: ["latin"], variable: "--font-fell-face" });
+
+const VISIBLE_HEIGHT = `(function(){var d=document.documentElement,v=window.visualViewport;function f(){var h=innerHeight;if(v)h=Math.min(h,v.height*v.scale);d.style.setProperty("--app-h",h+"px")}f();addEventListener("resize",f);if(v)v.addEventListener("resize",f)})()`;
 
 export const metadata: Metadata = {
   title: "Yu-Gi-Oh! Progression Series",
@@ -26,11 +29,16 @@ export default function RootLayout({
   // The font variables live on <html> so the :root aliases in globals.css
   // (--font-heading → --font-outfit, …) can resolve them.
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable} ${russo.variable} ${cinzel.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${outfit.variable} ${russo.variable} ${cinzel.variable} ${fell.variable}`} suppressHydrationWarning>
       <body
         className={`h-screen h-dvh overflow-hidden grid grid-rows-[auto_1fr_auto]`}
+        style={{ height: "var(--app-h, 100dvh)" }}
         suppressHydrationWarning
       >
+        {/* Some phone browsers (Brave's bottom toolbar, for one) leave 100dvh taller
+            than what is visible, which hides the tab bar and the pack opener's
+            buttons behind the toolbar. Size the app from what is actually visible. */}
+        <script dangerouslySetInnerHTML={{ __html: VISIBLE_HEIGHT }} />
         <AuthProvider>
         <ProgressionProvider>
         <NotificationsProvider>

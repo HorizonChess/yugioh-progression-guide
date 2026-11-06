@@ -1224,6 +1224,7 @@ html::-webkit-scrollbar-corner,
   font: 700 12px/1 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; border-bottom: 1px solid rgba(233, 217, 173, 0.4);
   animation: store-in 0.5s 0.35s ease-out both;
 }
+.haul > :last-child:not(.haul__dock) { margin-bottom: 40px; }
 .store__title { animation: store-in 0.5s 0.25s ease-out both; }
 .store__title h1 { margin: 2px 0 0; font: 800 clamp(22px, 2.4vw + 10px, 44px)/1.1 var(--font-display); color: #fff; letter-spacing: 0.02em; text-shadow: 0 3px 10px #000; }
 .store__stage { margin: 0; font: 800 12px/1 var(--font-main); letter-spacing: 0.26em; text-transform: uppercase; color: #ffe08a; text-shadow: 0 1px 4px #000; }
@@ -1270,7 +1271,7 @@ html::-webkit-scrollbar-corner,
 @keyframes store-in { from { opacity: 0; transform: translateY(10px); } }
 
 /* ---------- the haul (opened packs) and the set's card list ---------- */
-.haul { position: relative; max-width: 1200px; margin: 0 auto; padding: 14px 16px 120px; }
+.haul { position: relative; max-width: 1200px; margin: 0 auto; padding: 14px 16px 0; }
 .haul__head { text-align: center; padding: 6px 0 18px; animation: store-in 0.5s ease-out both; }
 .haul__head h1 { margin: 2px 0 0; font: 800 clamp(22px, 2.2vw + 10px, 40px)/1.1 var(--font-display); color: #fff; text-shadow: 0 3px 10px #000; }
 .haul__backtop { display: block; margin: 0 0 10px; }
@@ -1283,7 +1284,9 @@ html::-webkit-scrollbar-corner,
 /* The finishing choices stay at hand at the bottom, as on the timeline. */
 .haul__dock {
   position: sticky; bottom: 0; z-index: 20; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 14px;
-  margin: 0 -16px; padding: 18px 12px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(0, 0, 0, 0.8) 40%);
+  margin: 24px -16px 0; padding: 44px 12px calc(14px + env(safe-area-inset-bottom));
+  /* A long soft fade, dark all the way to the bottom edge it sits on, so there is no seam. */
+  background: linear-gradient(rgba(8, 5, 2, 0), rgba(8, 5, 2, 0.55) 34%, rgba(8, 5, 2, 0.86) 70%, rgba(8, 5, 2, 0.92));
 }
 .haul__btn { width: clamp(132px, 10vw + 60px, 200px); }
 .haul__back { flex-basis: 100%; text-align: center; color: #e9d9ad; font: 700 12px/1 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233, 217, 173, 0.4); }
