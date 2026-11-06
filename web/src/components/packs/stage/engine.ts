@@ -156,14 +156,17 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
     }
 
     /** A face-up card flies up into a close-up, its details beside it (wide) or in a sheet below (phone). */
-    /** "Look later": a bookmark toggle, inside the details so a tap on it doesn't close them. */
+    /** "Look later": a bookmark beside the close-up's card (a tap on it doesn't close the close-up). */
     function markToggle(cardId: number, marks: NonNullable<StageOptions["marks"]>) {
         const b = document.createElement("button");
         b.type = "button";
         const show = (on: boolean) => {
-            b.className = `mark-toggle ${on ? "mark-toggle--on" : ""}`;
+            const label = on ? "Marked to look at later" : "Look at later";
+            b.className = `mark-toggle mark-toggle--icon closeup__mark ${on ? "mark-toggle--on" : ""}`;
             b.setAttribute("aria-pressed", String(on));
-            b.innerHTML = `<span class="mark-toggle__icon" aria-hidden="true"></span>${on ? "Marked to look at later" : "Look at later"}`;
+            b.setAttribute("aria-label", label);
+            b.title = label;
+            b.innerHTML = `<span class="mark-toggle__icon" aria-hidden="true"></span>`;
         };
         show(marks.has(cardId));
         b.addEventListener("click", (e) => {
@@ -185,7 +188,6 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
         ov.setAttribute("aria-label", s.card.name);
         ov.innerHTML = `<span class="ps-close-hint">Tap anywhere to close</span>`;
         const panel = plate(s, wide ? "" : "ps-sheet");
-        if (o.marks) panel.append(markToggle(s.card.id, o.marks));
         ov.append(panel);
         const above = wide ? VH : VH - panel.offsetHeight;
         const ch = wide ? Math.min(VH * 0.72, 560) : Math.min(above - 64, (VW * 0.72) / ASPECT), cw = ch * ASPECT;
@@ -193,6 +195,7 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
         el.classList.add("ps-card--flipped");
         if (s.tier !== "Common") el.classList.add("ps-card--revealed");
         enableTilt(el);
+        if (o.marks) el.append(markToggle(s.card.id, o.marks));
         ov.prepend(el);
         const panelW = Math.min(400, VW - cw - 120);
         const tx = wide ? VW / 2 - (cw + 32 + panelW) / 2 : VW / 2 - cw / 2;
