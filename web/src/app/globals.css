@@ -1340,7 +1340,8 @@ html::-webkit-scrollbar-corner,
 .closeup__nav--next { right: 16px; }
 .ps-close-hint b { color: #ffe08a; }
 @media (max-width: 767px) {
-  .closeup { align-items: stretch; padding: 40px 0 0; }
+  .closeup { align-items: stretch; padding: 40px 0 0; touch-action: none; }
+  .closeup .ps-plate { touch-action: pan-y; }
   .closeup__body { flex-direction: column; justify-content: space-between; gap: 16px; width: 100%; }
   .closeup__card { height: auto; width: min(72vw, var(--app-h, 100dvh) * 0.52 * 0.686); margin: 0 auto; }
   .closeup__side { width: 100%; }

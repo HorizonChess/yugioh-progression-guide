@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useSwipeClose } from "@/lib/dismiss";
 import { createPortal } from "react-dom";
 import { plate, type StageCard } from "@/components/packs/stage/plate";
 import "@/components/packs/stage/pack-stage.css";
@@ -64,6 +65,10 @@ export function CardCloseUp({ card, onClose, action, onPrev, onNext, position }:
     position?: string;
 }) {
     const tilt = useRef<HTMLDivElement>(null);
+    // On phones a pull down on the card or its sheet closes it, as with any bottom sheet.
+    const rootEl = useRef<HTMLDivElement>(null);
+    const bodyEl = useRef<HTMLDivElement>(null);
+    useSwipeClose(rootEl, onClose, { enabled: typeof matchMedia !== "undefined" && matchMedia("(max-width: 767px)").matches, move: bodyEl });
     // Which way the last step went, so the new card slides in from that side.
     const [dir, setDir] = useState(0);
     const step = (d: 1 | -1) => {
@@ -128,11 +133,11 @@ export function CardCloseUp({ card, onClose, action, onPrev, onNext, position }:
     };
     if (typeof document === "undefined") return null;
     return createPortal(
-        <div className="closeup" role="dialog" aria-label={card.card.name} onPointerDown={down} onPointerUp={up} onPointerCancel={() => (press.current = null)}>
+        <div ref={rootEl} className="closeup" role="dialog" aria-label={card.card.name} onPointerDown={down} onPointerUp={up} onPointerCancel={() => (press.current = null)}>
             <span className="ps-close-hint">{position ? <><b>{position}</b> · swipe for the next card</> : "Tap anywhere to close"}</span>
             {onPrev && <button type="button" className="closeup__nav closeup__nav--prev" aria-label="Previous card" onClick={(e) => (e.stopPropagation(), step(-1))}>‹</button>}
             {onNext && <button type="button" className="closeup__nav closeup__nav--next" aria-label="Next card" onClick={(e) => (e.stopPropagation(), step(1))}>›</button>}
-            <div key={`${card.card.id}-${card.code}`} className="closeup__body" data-dir={dir}>
+            <div ref={bodyEl} key={`${card.card.id}-${card.code}`} className="closeup__body" data-dir={dir}>
                 <div className="closeup__card ps-card ps-card--flipped" data-tier={card.tier} onPointerMove={lean} onPointerLeave={settle} onClick={(e) => e.stopPropagation()}>
                     <div ref={tilt} className="ps-tilt">
                         <div className="ps-face closeup__face">
