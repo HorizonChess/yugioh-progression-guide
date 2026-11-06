@@ -44,6 +44,9 @@ export default function Collection() {
     // The drawer's panel holds every filter but the search, which sits on the page.
     const [panel, setPanel] = useState<FilterState>(DEFAULT_FILTERS);
     const [search, setSearch] = useState("");
+    // Phones fold the search behind a button on the title row; it stays open while it holds a query.
+    const [searchOpen, setSearchOpen] = useState(false);
+    const showBar = !isPhone || searchOpen || search !== "";
     const filters = useMemo(() => ({ ...panel, search }), [panel, search]);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -223,6 +226,16 @@ export default function Collection() {
                     <h1>{searching ? `${filteredCards.length} cards found` : info?.label ?? "Collection"}</h1>
                     <p className="store__meta">{meta}</p>
                 </div>
+                {isPhone && (
+                    <>
+                        <button className="ps-btn coll__icon" aria-label="Search your cards" aria-expanded={showBar} onClick={() => { if (showBar) { setSearch(""); setSearchOpen(false); } else setSearchOpen(true); }}>
+                            {showBar ? "✕" : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>}
+                        </button>
+                        <button className="ps-btn" onClick={() => setFiltersOpen(true)}>
+                            Filters{activeCount > 0 && <span className="coll__n">{activeCount}</span>}
+                        </button>
+                    </>
+                )}
                 <div className="coll__menu" onClick={(e) => e.stopPropagation()}>
                     <button className="ps-btn" aria-haspopup="true" aria-expanded={menuOpen} aria-label="More" onClick={() => setMenuOpen((v) => !v)}>⋯</button>
                     {menuOpen && (
@@ -236,15 +249,19 @@ export default function Collection() {
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".ydk" className="hidden" />
             </div>
 
-            <div className="coll__bar">
-                <label className="coll__search">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-                    <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your cards by name or text" aria-label="Search your cards" />
-                </label>
-                <button className="ps-btn" onClick={() => setFiltersOpen(true)}>
-                    Filters{activeCount > 0 && <span className="coll__n">{activeCount}</span>}
-                </button>
-            </div>
+            {showBar && (
+                <div className="coll__bar">
+                    <label className="coll__search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+                        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your cards by name or text" aria-label="Search your cards" autoFocus={isPhone} />
+                    </label>
+                    {!isPhone && (
+                        <button className="ps-btn" onClick={() => setFiltersOpen(true)}>
+                            Filters{activeCount > 0 && <span className="coll__n">{activeCount}</span>}
+                        </button>
+                    )}
+                </div>
+            )}
 
             <Binder
                 owner={owner}

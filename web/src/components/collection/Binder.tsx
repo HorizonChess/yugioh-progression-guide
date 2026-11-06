@@ -163,6 +163,14 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
     const shownLeft = t && !isPhone && t.dir > 0 ? t.from * 2 : left;
     const shownRight = t && t.dir < 0 ? (isPhone ? t.from : t.from * 2 + 1) : right;
 
+    const pager = (
+        <div className={`binder-pager ${isPhone ? "binder-pager--tabs" : ""}`}>
+            <button className="ps-btn" onClick={() => turn(-1)} disabled={at === 0} aria-label="Previous page">‹</button>
+            <span>{isPhone ? `${at + 1} / ${pages}` : `Page ${at + 1} of ${pages}`}</span>
+            <button className="ps-btn" onClick={() => turn(1)} disabled={at >= pages - 1} aria-label="Next page">›</button>
+        </div>
+    );
+
     return (
         <div className="binder-stage" onPointerDown={(e) => (swipe.current = e.clientX)} onPointerUp={(e) => {
             if (swipe.current !== null && Math.abs(e.clientX - swipe.current) > 50) turn(e.clientX < swipe.current ? 1 : -1);
@@ -198,12 +206,10 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
                     <div className="binder-cover__back" />
                 </div>
                 {!slots.length && empty && <p className="binder-empty">{empty}</p>}
+                {/* phones: the pager rides beside the chapter tabs, leaving the page the room */}
+                {isPhone && pager}
             </div>
-            <div className="binder-pager">
-                <button className="ps-btn" onClick={() => turn(-1)} disabled={at === 0} aria-label="Previous page">‹</button>
-                <span>Page {at + 1} of {pages}</span>
-                <button className="ps-btn" onClick={() => turn(1)} disabled={at >= pages - 1} aria-label="Next page">›</button>
-            </div>
+            {!isPhone && pager}
         </div>
     );
 }
