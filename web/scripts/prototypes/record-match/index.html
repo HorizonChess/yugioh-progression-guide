@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Record Match Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root { --gold: #d4af37; --gold-hi: #ffe08a; --ink: #2a1c05; --font-display: "Cinzel", Georgia, serif; --font-main: "Inter", sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; background: #0a0704; color: #f1e7cc; font-family: var(--font-main); -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; }
+
+/* ---------- the prototype's own switches ---------- */
+.proto { flex: none; display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; background: #110c18; border-bottom: 1px dashed #6e5320; position: relative; z-index: 60; }
+.proto .grp { display: flex; gap: 4px; flex: 1 1 auto; min-width: 0; }
+@media (max-width: 600px) { .proto .grp { flex-basis: 100%; } .proto button { font-size: 9.5px; letter-spacing: .02em; } }
+.proto button { flex: 1; font: 700 11px/1.1 var(--font-main); letter-spacing: .06em; text-transform: uppercase; color: #a99d80; background: transparent; border: 1px solid #3d3220; border-radius: 6px; padding: 7px 4px; cursor: pointer; min-width: 0; }
+.proto button[aria-pressed="true"] { color: var(--gold-hi); border-color: #8a6a2c; background: rgba(224,181,79,.12); }
+.stagebox { flex: 1; min-height: 0; display: flex; justify-content: center; align-items: center; background: #050302; }
+#app { position: relative; width: 100%; height: 100%; overflow: hidden; container-type: size; }
+body.as-phone #app { width: 390px; height: min(844px, calc(100% - 24px)); border-radius: 26px; box-shadow: 0 0 0 8px #0b0806, 0 0 0 9px #3d3220, 0 30px 60px rgba(0,0,0,.7); }
+
+/* ---------- the app around the screen: the wall, a nav bar ---------- */
+.wall { position: absolute; inset: 0; background: url("img/bg-wall.webp") center / cover; }
+.wall::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(255,170,70,.08), transparent 60%), linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.45)); }
+@container (max-width: 760px) { .wall { background-image: url("img/bg-wall-phone.webp"); } }
+.topnav { position: absolute; left: 0; right: 0; top: 0; height: 56px; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; background: linear-gradient(#0d0a14, #06050a); box-shadow: 0 2px 0 #8a6420; font: 700 11px/1 var(--font-main); letter-spacing: .16em; color: #8f8670; }
+.topnav b { font: 800 18px/1 var(--font-display); color: var(--gold-hi); letter-spacing: .04em; }
+.tabbar { display: none; }
+@container (max-width: 760px) {
+  .topnav { height: 52px; } .topnav span { display: none; }
+  .tabbar { display: flex; position: absolute; left: 0; right: 0; bottom: 0; height: 58px; z-index: 5; justify-content: space-around; align-items: center; background: linear-gradient(#0d0a18, #06050c); box-shadow: 0 -1px 0 #3d3220; font: 700 10px/1 var(--font-main); letter-spacing: .12em; color: #8f8670; }
+  .tabbar i { font-style: normal; } .tabbar i.on { color: var(--gold-hi); }
+}
+.screen { position: absolute; left: 0; right: 0; top: 56px; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: center; padding: 2.5%; }
+.screen.optA { padding-left: max(2.5%, 230px); }
+@container (max-width: 760px) { .screen, .screen.optA { top: 52px; bottom: 58px; padding: 10px; align-items: flex-start; overflow-y: auto; } }
+
+/* ---------- shared pieces ---------- */
+.cartouche { position: relative; display: inline-grid; place-items: center; min-width: 210px; height: 58px; padding: 0 30px; border: 0; cursor: pointer; background: url("img/cartouche.webp") center / 100% 100% no-repeat; filter: drop-shadow(0 6px 10px rgba(0,0,0,.6)); transition: transform .15s, filter .2s; }
+.cartouche span { font: 800 15px/1 var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); text-shadow: 0 1px 0 rgba(255,240,190,.6); }
+.cartouche:hover { filter: drop-shadow(0 6px 10px rgba(0,0,0,.6)) brightness(1.1); } .cartouche:active { transform: scale(.97); }
+.engrave { font-family: var(--font-display); text-transform: uppercase; color: #1c140b; text-shadow: 0 1px 0 rgba(255,235,200,.28), 0 -1px 0 rgba(0,0,0,.55); }
+.gilt { font-family: var(--font-display); color: transparent; background: linear-gradient(#fff1bf, #d4af37 55%, #8a6420); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 2px 3px rgba(0,0,0,.85)); }
+.linkback { border: 0; background: none; cursor: pointer; font: 700 11px/1 var(--font-main); letter-spacing: .16em; text-transform: uppercase; color: #e9d9ad; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233,217,173,.4); padding: 6px; }
+.guide { position: absolute; left: 1.5%; bottom: 0; z-index: 8; height: min(42%, 380px); pointer-events: none; }
+.guide img { height: 100%; filter: drop-shadow(0 8px 14px rgba(0,0,0,.7)); }
+.guide .bubble { position: absolute; left: 10px; bottom: calc(100% + 12px); width: 200px; padding: 12px 16px; border-radius: 16px; background: #fff; color: #111; font: 700 14px/1.35 var(--font-main); box-shadow: 0 0 0 3px #111; position: relative; }
+.guide .bubble::before { content: ""; position: absolute; left: 40px; top: 100%; border: 9px solid transparent; border-top-color: #fff; }
+@container (max-width: 760px) { .guide { display: none; } }
+
+/* the wheel (shared by both options) */
+.wheel { position: relative; width: 100%; aspect-ratio: 1; }
+.wheel__face { position: absolute; inset: 0; border-radius: 50%; transition: transform 3.6s cubic-bezier(.16, 1, .3, 1); will-change: transform;
+  box-shadow: 0 0 0 6px #3b2a10, 0 0 0 12px #c9a14a, 0 0 0 14px #6b4c18, 0 18px 40px rgba(0,0,0,.7); }
+.wheel__wedges { position: absolute; inset: 0; border-radius: 50%; }
+.wheel__wedges::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 40% 30%, rgba(255,255,255,.22), transparent 45%), radial-gradient(circle, transparent 60%, rgba(0,0,0,.35)); }
+.wheel__label { position: absolute; left: 50%; top: 50%; width: 50%; height: 0; transform-origin: 0 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 9%; }
+.wheel__label span { font: 800 clamp(9px, 2.6cqmin, 15px)/1 var(--font-display); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; transform: translateY(-50%); }
+.wheel__label.l span { color: #3a2608; text-shadow: 0 1px 0 rgba(255,240,190,.5); } .wheel__label.d span { color: #f1d98a; text-shadow: 0 1px 2px #000; }
+.wheel__stud { position: absolute; width: 4.2%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3c4, #c9a14a 55%, #6b4c18); box-shadow: 0 1px 2px #000; transform: translate(-50%, -50%); }
+.wheel__hub { position: absolute; left: 50%; top: 50%; width: 19%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; z-index: 2; display: grid; place-items: center;
+  background: radial-gradient(circle at 40% 35%, #4a3516, #1a1209); box-shadow: 0 0 0 4px #c9a14a, 0 0 0 6px #3b2a10, 0 6px 14px rgba(0,0,0,.7); }
+.wheel__hub img { width: 72%; filter: drop-shadow(0 1px 2px #000); }
+.wheel__pointer { position: absolute; left: -5%; top: 50%; z-index: 3; width: 12%; aspect-ratio: 1.1; transform: translateY(-50%); background: linear-gradient(90deg, #6b4c18, #ffe08a 60%, #c9a14a); clip-path: polygon(0 18%, 62% 18%, 100% 50%, 62% 82%, 0 82%); filter: drop-shadow(0 3px 4px rgba(0,0,0,.7)); }
+.wheel.won .wheel__pointer { animation: tick .4s 3; }
+@keyframes tick { 50% { filter: drop-shadow(0 0 10px #ffe08a) brightness(1.3); } }
+
+/* =====================================================================
+   A · THE TABLETS — the original record-match painting is the board
+   ===================================================================== */
+.optA { display: none; } body.A .optA { display: flex; }
+.optB { display: none; } body.B .optB { display: flex; }
+
+.board { position: relative; width: min(100%, (100cqh - 56px - 5cqh) * 1376 / 768); aspect-ratio: 1376 / 768; background: url("img/rm_ui.png") center / 100% 100%; border-radius: 4px; box-shadow: 0 0 0 2px #1a140b, 0 0 0 4px #8a6420, 0 30px 60px rgba(0,0,0,.75); container-type: inline-size; }
+.slot { position: absolute; }
+/* the painting's slots, in % of it */
+.s-title { left: .73%; top: 10.9%; width: 40.6%; height: 18.8%; display: flex; flex-direction: column; justify-content: center; padding: 0 5%; }
+.s-title small { font: 800 1.05cqw/1 var(--font-main); letter-spacing: .32em; text-transform: uppercase; color: #c7b99a; }
+.s-title b { display: block; margin-top: .6cqw; font: 900 3.2cqw/1 var(--font-display); letter-spacing: .02em; }
+.s-title b em { font-style: normal; color: #c7b99a; font-size: .6em; margin-right: .3em; -webkit-text-fill-color: #c7b99a; }
+.s-pack { left: 13.1%; top: 35%; width: 15.3%; height: 34.6%; display: grid; place-items: center; }
+.s-pack img { position: absolute; top: 4%; left: 50%; height: 92%; transform: translateX(-50%); filter: drop-shadow(0 6px 8px rgba(0,0,0,.7)); transition: transform .5s, opacity .4s; }
+.s-pack .relic { position: absolute; inset: 8%; display: grid; place-items: center; text-align: center; opacity: 0; transform: scale(.6); transition: .5s .2s; }
+.medal { display: grid; place-items: center; width: 10cqw; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 38% 30%, #fff3c4, #d9b45a 45%, #7a5418); box-shadow: 0 0 0 .35cqw #3b2a10, 0 0 0 .6cqw #c9a14a, 0 0 30px rgba(255,214,90,.6); }
+.medal b { font: 900 1.25cqw/1.05 var(--font-display); color: #2a1c05; text-align: center; text-transform: uppercase; padding: 0 12%; text-shadow: 0 1px 0 rgba(255,240,190,.6); }
+.s-strip { left: 2%; top: 76.8%; width: 37.8%; height: 10.4%; display: flex; align-items: center; justify-content: space-around; }
+.stat { text-align: center; }
+.stat small { display: block; font: 800 .9cqw/1 var(--font-main); letter-spacing: .26em; text-transform: uppercase; color: #a99d80; }
+.stat b { display: block; margin-top: .4cqw; font: 900 2.2cqw/1 var(--font-display); color: var(--gold-hi); text-shadow: 0 2px 4px #000; }
+.stat b.neg { color: #ff9c86; }
+.s-ask { left: 42.9%; top: 21.6%; width: 52.6%; height: 11.5%; display: grid; place-items: center; text-align: center; }
+.s-ask b { font: 900 2.2cqw/1 var(--font-display); letter-spacing: .14em; }
+.tablet { position: absolute; top: 34.24%; width: 23.84%; height: 30.21%; padding: 0; border: 0; cursor: pointer; background: center / 100% 100%; border-radius: 6px; transition: transform .18s, filter .3s, opacity .4s; }
+.tablet.win { left: 44.04%; background-image: url("img/tab-win.webp"); } .tablet.lose { left: 69.48%; background-image: url("img/tab-lose.webp"); }
+.tablet::after { content: ""; position: absolute; inset: 0; border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity .3s; }
+.tablet.win::after { box-shadow: inset 0 0 40px rgba(255,214,90,.55), 0 0 0 2px rgba(255,224,138,.8), 0 0 30px rgba(255,200,80,.5); }
+.tablet.lose::after { box-shadow: inset 0 0 40px rgba(255,110,80,.45), 0 0 0 2px rgba(255,140,110,.7), 0 0 30px rgba(220,70,50,.45); }
+.tablet:hover { transform: translateY(-1.5%) scale(1.015); filter: brightness(1.12); } .tablet:hover::after { opacity: .7; }
+.tablet:active, .tablet.pressed { transform: translateY(1.5%) scale(.985); filter: brightness(.95); }
+.tablet.chosen::after { opacity: 1; } .tablet.chosen { filter: brightness(1.15); }
+.plaque { position: absolute; top: 71.6%; width: 23.84%; height: 14.3%; display: grid; place-items: center; pointer-events: none; transition: opacity .4s; }
+.plaque.win { left: 44.04%; } .plaque.lose { left: 69.48%; }
+.plaque b { font: 900 2.5cqw/1 var(--font-display); letter-spacing: .16em; }
+.plaque.lose b { color: transparent; background: linear-gradient(#ffc8b8, #c8452e 60%, #6e1e10); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 2px 3px rgba(0,0,0,.85)); }
+.s-back { left: 1%; top: 91.5%; width: 41%; height: 7%; display: grid; place-items: center; }
+/* the acts on the board */
+.act { position: absolute; transition: opacity .45s, transform .55s cubic-bezier(.2,.9,.3,1); }
+.act.off { opacity: 0; pointer-events: none; transform: translateY(4%) scale(.96); }
+.a-stagebg { left: 42.9%; top: 33%; width: 52.7%; height: 55.6%; border-radius: 4px; background: #3d392f url('img/slab.webp') center / cover; box-shadow: inset 0 0 0 1px rgba(0,0,0,.5), inset 0 10px 30px rgba(0,0,0,.55); }
+.board.st-defeat .a-stagebg { top: 68%; height: 20.6%; }
+.a-wheel { left: 55.3%; top: 35.5%; width: 27.9%; }
+.a-wheel .wheel { width: 100%; }
+.a-claim { left: 2%; top: 74%; width: 38%; height: 16%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6cqw; }
+.a-claim .cartouche { min-width: 0; width: 56%; height: 4.4cqw; } .a-claim .cartouche span { font-size: 1.2cqw; }
+.a-claim .linkback { font-size: .85cqw; }
+.a-defeat { left: 42.9%; top: 69%; width: 52.6%; height: 18.6%; display: flex; align-items: center; justify-content: center; gap: 3%; }
+.packs3 { display: flex; } .packs3 img { height: 9cqw; margin-left: -2.2cqw; filter: drop-shadow(0 6px 8px rgba(0,0,0,.7)); transform: rotate(var(--r)) translateY(var(--y)); }
+.packs3 img:first-child { margin-left: 0; }
+.board.st-wheel .tablet, .board.st-wheel .plaque, .board.st-wheel .s-strip, .board.st-wheel .s-back, .board.st-defeat .s-strip, .board.st-defeat .s-back, .board.st-defeat .plaque { opacity: 0; pointer-events: none; }
+.board.st-wheel .s-ask b, .board.st-defeat .s-ask b { letter-spacing: .1em; }
+.board.st-defeat .tablet.win { opacity: .25; filter: grayscale(1) brightness(.6); pointer-events: none; }
+.board.st-defeat .tablet.lose { pointer-events: none; }
+.board.st-wheel .s-pack img.out { transform: translateX(-50%) scale(.5) rotate(-20deg); opacity: 0; }
+.board.won .s-pack .relic { opacity: 1; transform: none; }
+.duo-note { position: absolute; left: 42.9%; top: 66.5%; width: 52.6%; text-align: center; font: 700 1.1cqw/1.3 var(--font-main); color: #e9d9ad; opacity: 0; transition: .3s; }
+.board.st-duo .duo-note, .board.st-duo2 .duo-note { opacity: 1; }
+.board.st-duo .plaque, .board.st-duo2 .plaque { top: 74%; }
+.board.st-duo .tablet { pointer-events: none; } .board.st-duo .tablet.lose { opacity: .35; filter: grayscale(1) brightness(.7); }
+.board.st-duo .tablet.win::after { opacity: 1; animation: wait 1.6s ease-in-out infinite; }
+@keyframes wait { 50% { opacity: .35; } }
+.hourglass { display: inline-block; animation: turn 2.4s ease-in-out infinite; } @keyframes turn { 40%, 60% { transform: rotate(180deg); } 100% { transform: rotate(360deg); } }
+
+/* A on phones: the painting's pieces, stacked */
+.aphone { display: none; }
+@container (max-width: 760px) {
+  body.A .board { display: none; }
+  body.A .aphone { display: flex; }
+}
+.aphone { position: relative; width: 100%; flex-direction: column; gap: 8px; padding: 10px; border-radius: 10px; background: #4b463d url("img/slab.webp") center / cover; box-shadow: 0 0 0 2px #1a140b, 0 0 0 3px #8a6420, 0 20px 40px rgba(0,0,0,.7); overflow: hidden; }
+.ap-head { display: grid; grid-template-columns: 34% 1fr; gap: 10px; align-items: center; }
+.ap-pack { position: relative; aspect-ratio: 562 / 340; background: url("img/alcove.webp") center / cover; border-radius: 4px; display: grid; place-items: center; }
+.ap-pack img { position: absolute; top: 12%; left: 50%; height: 76%; transform: translateX(-50%); filter: drop-shadow(0 4px 6px rgba(0,0,0,.7)); transition: opacity .4s; }
+.ap-pack .relic { position: absolute; inset: 0; display: grid; place-items: center; font-size: 34px; container-type: inline-size; opacity: 0; transform: scale(.6); transition: .5s .2s; filter: drop-shadow(0 0 10px rgba(255,214,90,.8)); }
+.ap-title small { display: block; font: 800 10px/1 var(--font-main); letter-spacing: .28em; text-transform: uppercase; color: #c7b99a; }
+.ap-title b { display: block; margin-top: 5px; font: 900 24px/1.05 var(--font-display); }
+.ap-title .stats { display: flex; gap: 14px; margin-top: 8px; } .ap-title .stat small { font-size: 9px; } .ap-title .stat b { font-size: 18px; margin-top: 3px; }
+.ap-frieze { height: 30px; background: url("img/frieze.webp") center / cover; border-radius: 3px; opacity: .9; }
+.ap-ask { text-align: center; } .ap-ask b { font: 900 16px/1 var(--font-display); letter-spacing: .14em; }
+.ap-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ap-tabs .tablet { position: relative; top: auto; left: auto !important; width: 100%; height: auto; aspect-ratio: 328 / 232; }
+.ap-tabs .plaque { position: relative; top: auto; left: auto !important; width: 100%; height: 50px; margin-top: 6px; background: url("img/plaque.webp") center / 100% 100%; border-radius: 4px; }
+.ap-tabs .plaque b { font-size: 17px; }
+.ap-foot { display: flex; justify-content: center; }
+.ap-wheel { display: none; flex-direction: column; align-items: center; gap: 10px; }
+.ap-wheel .wheel { width: min(72%, 290px, 40cqh); margin-left: 6%; }
+.ap-won { text-align: center; min-height: 40px; } .ap-won small { display: block; font: 800 10px/1 var(--font-main); letter-spacing: .3em; color: #c7b99a; text-transform: uppercase; } .ap-won b { display: block; margin-top: 5px; font: 900 20px/1 var(--font-display); }
+.ap-defeat { display: none; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.ap-defeat p { margin: 0; font: 700 14px/1.4 var(--font-main); color: #e9d9ad; }
+.aphone.st-wheel .ap-tabs, .aphone.st-wheel .ap-ask, .aphone.st-defeat .ap-ask { display: none; }
+.aphone.st-wheel .ap-wheel { display: flex; }
+.aphone.st-defeat .ap-defeat { display: flex; } .aphone.st-defeat .ap-tabs .tablet.win, .aphone.st-defeat .ap-tabs .plaque { display: none; } .aphone.st-defeat .ap-tabs { grid-template-columns: 1fr; justify-items: center; } .aphone.st-defeat .ap-tabs .tablet.lose { width: 62%; }
+.aphone.won .ap-pack .relic { opacity: 1; transform: none; } .aphone.st-wheel .ap-pack img { opacity: 0; transition: .4s; }
+.aphone.st-duo .ap-tabs .tablet { pointer-events: none; } .aphone.st-duo .ap-tabs .tablet.lose { opacity: .35; filter: grayscale(1); } .aphone.st-duo .ap-tabs .tablet.win::after { opacity: 1; animation: wait 1.6s infinite; }
+.ap-duo { display: none; text-align: center; font: 700 13px/1.4 var(--font-main); color: #e9d9ad; } .aphone.st-duo .ap-duo, .aphone.st-duo2 .ap-duo { display: block; }
+
+/* =====================================================================
+   B · THE SCOREBOARD — the painted glass is the choice
+   ===================================================================== */
+.sb { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2.2cqh; width: min(100%, 900px); }
+.sb-head { text-align: center; }
+.sb-head small { font: 800 12px/1 var(--font-main); letter-spacing: .32em; text-transform: uppercase; color: #c7b99a; text-shadow: 0 1px 4px #000; }
+.sb-head b { display: block; margin-top: 8px; font: 900 clamp(30px, 4.6cqw, 54px)/1 var(--font-display); }
+.sb-head b em { font-style: normal; font-size: .55em; margin-right: .3em; color: #c7b99a; -webkit-text-fill-color: #c7b99a; }
+.frame { position: relative; height: min(56cqh, 520px); aspect-ratio: 952 / 792; background: url("img/stats_panel_cropped.webp") center / contain no-repeat; filter: drop-shadow(0 24px 40px rgba(0,0,0,.7)); container-type: size; transition: transform .6s cubic-bezier(.2,.9,.3,1), opacity .4s; }
+.glass { position: absolute; top: 15%; height: 68.6%; width: 34.2%; padding: 0; border: 0; cursor: pointer; border-radius: 3%; background: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4cqh; transition: transform .18s, filter .3s; }
+.glass.win { left: 14.2%; } .glass.lose { left: 52.2%; }
+.glass::before { content: ""; position: absolute; inset: 0; border-radius: inherit; opacity: 0; transition: opacity .3s; }
+.glass.win::before { background: radial-gradient(ellipse at 50% 40%, rgba(120,255,160,.5), transparent 70%); box-shadow: inset 0 0 0 2px rgba(170,255,190,.6); }
+.glass.lose::before { background: radial-gradient(ellipse at 50% 40%, rgba(255,120,100,.5), transparent 70%); box-shadow: inset 0 0 0 2px rgba(255,170,150,.6); }
+.glass:hover::before, .glass.chosen::before { opacity: 1; } .glass:hover { filter: brightness(1.15); } .glass:active { transform: scale(.98); }
+.glass .face { width: 62%; aspect-ratio: 1; background: center / contain no-repeat; opacity: .85; mix-blend-mode: screen; }
+.glass.win .face { background-image: url("img/tab-win.webp"); -webkit-mask: radial-gradient(circle, #000 30%, transparent 58%); mask: radial-gradient(circle, #000 30%, transparent 58%); filter: sepia(1) saturate(2) brightness(1.1); }
+.glass.lose .face { background-image: url("img/tab-lose.webp"); -webkit-mask: radial-gradient(circle, #000 30%, transparent 58%); mask: radial-gradient(circle, #000 30%, transparent 58%); filter: sepia(1) saturate(2) brightness(1.1); }
+.glass b { position: relative; font: 900 7.4cqh/1 var(--font-display); letter-spacing: .1em; text-shadow: 0 2px 6px #000; }
+.glass.win b { color: #d9ffe2; } .glass.lose b { color: #ffe0d8; }
+.glass small { position: relative; font: 800 3.4cqh/1 var(--font-main); letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.75); }
+.glass small b { font: inherit; letter-spacing: inherit; color: #fff; text-shadow: none; }
+.sb-foot { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.sb-act { display: none; flex-direction: column; align-items: center; gap: 2cqh; }
+.sb-act .wheel { width: min(46cqh, 420px); }
+.sb.st-wheel .frame, .sb.st-defeat .frame { display: none; }
+.sb.st-wheel .sb-wheel, .sb.st-defeat .sb-defeat { display: flex; }
+.sb.st-wheel .sb-ask, .sb.st-defeat .sb-ask { display: none; }
+.sb-defeat .bigword { font: 900 clamp(46px, 8cqw, 96px)/1 var(--font-display); letter-spacing: .08em; color: transparent; background: linear-gradient(#ffc8b8, #c8452e 60%, #6e1e10); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 3px 6px rgba(0,0,0,.85)); }
+.sb-defeat p { margin: 0; font: 700 16px/1.4 var(--font-main); color: #e9d9ad; text-shadow: 0 1px 4px #000; }
+.sb-defeat .packs3 img { height: min(20cqh, 180px); margin-left: -40px; }
+.sb.st-duo .glass { pointer-events: none; } .sb.st-duo .glass.lose { filter: grayscale(1) brightness(.6); } .sb.st-duo .glass.win::before { opacity: 1; animation: wait 1.6s infinite; }
+.sb-duo { display: none; font: 700 15px/1.4 var(--font-main); color: #e9d9ad; text-align: center; text-shadow: 0 1px 4px #000; } .sb.st-duo .sb-duo, .sb.st-duo2 .sb-duo { display: block; }
+.duo-btns { display: none; gap: 10px; } .st-duo2 .duo-btns { display: flex; }
+@container (max-width: 760px) {
+  .sb { gap: 12px; justify-content: center; }
+  .sb-head b { font-size: 26px; }
+  .frame { height: auto; width: 100%; }
+  .glass b { font-size: 6.4cqh; }
+  .sb-act .wheel { width: min(82%, 320px); margin-left: 6%; }
+  .sb-defeat .packs3 img { height: 110px; margin-left: -28px; }
+}
+</style>
+</head>
+<body class="A">
+<div class="proto">
+  <div class="grp" data-g="opt"><button data-v="A" aria-pressed="true">A · The tablets</button><button data-v="B">B · The scoreboard</button></div>
+  <div class="grp" data-g="st"><button data-v="board" aria-pressed="true">Record</button><button data-v="wheel">Victory → wheel</button><button data-v="defeat">Defeat</button><button data-v="duo">Duo: waiting</button><button data-v="duo2">Duo: confirm</button></div>
+  <div class="grp" data-g="dev"><button data-v="desk" aria-pressed="true">Desktop</button><button data-v="phone">Phone frame</button></div>
+</div>
+<div class="stagebox"><div id="app">
+  <div class="wall"></div>
+  <div class="topnav"><b>GUEST</b><span>CAMPAIGN · COLLECTION · DECK BUILDER · REWARDS · MENU</span></div>
+
+  <!-- ===================== A ===================== -->
+  <div class="screen optA">
+    <div class="board" id="boardA">
+      <div class="slot s-title"><small id="aEyebrow">Record the duel</small><b class="gilt" id="aTitle"><em>vs</em>Spell Ruler</b></div>
+      <div class="slot s-pack"><img src="img/SRL.webp" alt="Spell Ruler pack" class="out"><div class="relic"><div class="medal"><b id="aMedal">✦</b></div></div></div>
+      <div class="slot s-strip"><div class="stat"><small>Win rate</small><b>62%</b></div><div class="stat"><small>Streak</small><b>+3</b></div><div class="stat"><small>Record</small><b>8–5</b></div></div>
+      <div class="slot s-ask"><b class="gilt" id="aAsk">How did the duel go?</b></div>
+      <button class="tablet win" data-pick="win" aria-label="Victory"></button>
+      <button class="tablet lose" data-pick="lose" aria-label="Defeat"></button>
+      <div class="plaque win"><b class="engrave">Victory</b></div>
+      <div class="plaque lose"><b>Defeat</b></div>
+      <div class="duo-note" id="aDuo"></div>
+      <div class="slot s-back"><button class="linkback" data-go="back">← Back to campaign</button></div>
+      <!-- the acts -->
+      <div class="act a-stagebg off" id="aStage"></div>
+      <div class="act a-wheel off" id="aWheelAct"></div>
+      <div class="act a-claim off" id="aClaim"><button class="cartouche" id="aClaimBtn"><span>Spin the wheel</span></button><button class="linkback" data-go="back">Back to campaign</button></div>
+      <div class="act a-defeat off" id="aDefeat"><div class="packs3"><img src="img/SRL.webp" style="--r:-10deg;--y:4%"><img src="img/SRL.webp" style="--r:0deg;--y:0"><img src="img/SRL.webp" style="--r:10deg;--y:4%"></div><div style="display:flex;flex-direction:column;align-items:center;gap:.6cqw"><b class="gilt" style="font:900 1.6cqw/1.2 var(--font-display);text-align:center">3 Pity Packs<br><small style="font:700 .9cqw/1 var(--font-main);letter-spacing:.2em;-webkit-text-fill-color:#c7b99a">to rebuild your deck</small></b><button class="cartouche" style="min-width:0;width:19cqw;height:4cqw"><span style="font-size:1.05cqw;white-space:nowrap">Claim pity packs</span></button></div></div>
+      <div class="act a-claim off" id="aDuoBtns" style="top:74%"><div style="display:flex;gap:1cqw"><button class="cartouche" style="min-width:0;width:13cqw;height:4cqw"><span style="font-size:1.05cqw">Confirm</span></button><button class="cartouche" style="min-width:0;width:13cqw;height:4cqw;filter:hue-rotate(-30deg) saturate(1.4) drop-shadow(0 6px 10px rgba(0,0,0,.6))"><span style="font-size:1.05cqw">Reject</span></button></div></div>
+    </div>
+
+    <div class="aphone" id="phoneA">
+      <div class="ap-frieze"></div>
+      <div class="ap-head">
+        <div class="ap-pack"><img src="img/SRL.webp" alt=""><div class="relic"><div class="medal" style="width:46%"><b id="apMedal" style="font-size:9px"></b></div></div></div>
+        <div class="ap-title"><small id="apEyebrow">Record the duel</small><b class="gilt" id="apTitle">vs Spell Ruler</b>
+          <div class="stats"><div class="stat"><small>Win rate</small><b>62%</b></div><div class="stat"><small>Streak</small><b>+3</b></div><div class="stat"><small>Record</small><b>8–5</b></div></div></div>
+      </div>
+      <div class="ap-ask"><b class="gilt">How did the duel go?</b></div>
+      <div class="ap-tabs">
+        <div><button class="tablet win" data-pick="win" aria-label="Victory"></button><div class="plaque win"><b class="engrave">Victory</b></div></div>
+        <div><button class="tablet lose" data-pick="lose" aria-label="Defeat"></button><div class="plaque lose"><b>Defeat</b></div></div>
+      </div>
+      <div class="ap-duo" id="apDuo"></div>
+      <div class="ap-wheel"><div id="apWheelSlot" style="width:100%;display:flex;justify-content:center"></div><div class="ap-won" id="apWon"></div><button class="cartouche" id="apClaimBtn"><span>Spin the wheel</span></button></div>
+      <div class="ap-defeat"><div class="packs3"><img src="img/SRL.webp" style="--r:-10deg;--y:4%;height:110px;margin-left:0"><img src="img/SRL.webp" style="--r:0deg;--y:0;height:110px;margin-left:-28px"><img src="img/SRL.webp" style="--r:10deg;--y:4%;height:110px;margin-left:-28px"></div><p>You get <b style="color:var(--gold-hi)">3 Pity Packs</b> to rebuild your deck.</p><button class="cartouche"><span>Claim pity packs</span></button></div>
+      <div class="duo-btns" style="justify-content:center"><button class="cartouche" style="min-width:140px"><span>Confirm</span></button><button class="cartouche" style="min-width:140px;filter:hue-rotate(-30deg) saturate(1.4)"><span>Reject</span></button></div>
+      <div class="ap-foot"><button class="linkback" data-go="back">← Back to campaign</button></div>
+    </div>
+  </div>
+
+  <!-- ===================== B ===================== -->
+  <div class="screen optB">
+    <div class="sb" id="sbB">
+      <div class="sb-head"><small id="bEyebrow">Record the duel</small><b class="gilt"><em>vs</em>Spell Ruler</b></div>
+      <div class="frame">
+        <button class="glass win" data-pick="win"><div class="face"></div><b>Victory</b><small>Wins <b>8</b></small></button>
+        <button class="glass lose" data-pick="lose"><div class="face"></div><b>Defeat</b><small>Losses <b>5</b></small></button>
+      </div>
+      <div class="sb-duo" id="bDuo"></div>
+      <div class="duo-btns"><button class="cartouche"><span>Confirm</span></button><button class="cartouche" style="filter:hue-rotate(-30deg) saturate(1.4)"><span>Reject</span></button></div>
+      <div class="sb-act sb-wheel"><div id="bWheelSlot" style="width:100%;display:flex;justify-content:center"></div><div class="ap-won" id="bWon"></div><button class="cartouche" id="bClaimBtn"><span>Spin the wheel</span></button></div>
+      <div class="sb-act sb-defeat"><div class="bigword">Defeat</div><div class="packs3"><img src="img/SRL.webp" style="--r:-10deg;--y:4%;margin-left:0"><img src="img/SRL.webp" style="--r:0deg;--y:0"><img src="img/SRL.webp" style="--r:10deg;--y:4%"></div><p>You get <b style="color:var(--gold-hi)">3 Pity Packs</b> to rebuild your deck.</p><button class="cartouche"><span>Claim pity packs</span></button></div>
+      <div class="sb-foot sb-ask"><span style="font:700 12px/1 var(--font-main);letter-spacing:.18em;text-transform:uppercase;color:#c7b99a;text-shadow:0 1px 4px #000">Win rate 62% · streak +3</span></div>
+      <button class="linkback" data-go="back">← Back to campaign</button>
+    </div>
+  </div>
+
+  <div class="guide" id="guide"><img src="img/yugi_neutral_v2_transparent.webp" alt=""><div class="bubble" id="bubble">How did the duel go?</div></div>
+  <div class="tabbar"><i>Campaign</i><i>Collection</i><i>Deck</i><i>Rewards</i><i>Menu</i></div>
+</div></div>
+
+<script>
+const PRIZES = ["Common", "Rare", "Super Rare", "Ultra Rare", "Ult / Secret", "Starlight", "3 Tourn. Packs", "Ban", "Unban", "Redoer"];
+const LONG = { "Common": "Wildcard (Common)", "Rare": "Wildcard (Rare)", "Super Rare": "Wildcard (Super Rare)", "Ultra Rare": "Wildcard (Ultra Rare)", "Ult / Secret": "Wildcard (Ultimate/Secret)", "Starlight": "Wildcard (Starlight)", "3 Tourn. Packs": "3 Tournament Packs", "Ban": "Ban a Card", "Unban": "Unban a Card", "Redoer": "Redoer Ticket" };
+const SLICE = 360 / PRIZES.length;
+function makeWheel() {
+  const w = document.createElement("div"); w.className = "wheel";
+  const stops = PRIZES.map((_, i) => `${i % 2 ? "#2a1e0e" : "#d9b45a"} ${i * SLICE}deg ${(i + 1) * SLICE}deg`).join(",");
+  let labels = "", studs = "";
+  PRIZES.forEach((p, i) => { labels += `<div class="wheel__label ${i % 2 ? "d" : "l"}" style="transform:rotate(${i * SLICE - 90}deg)"><span>${p}</span></div>`;
+    const a = ((i + .5) * SLICE - 90) * Math.PI / 180; studs += `<i class="wheel__stud" style="left:${50 + 47.5 * Math.cos(a)}%;top:${50 + 47.5 * Math.sin(a)}%"></i>`; });
+  w.innerHTML = `<div class="wheel__face"><div class="wheel__wedges" style="background:conic-gradient(from ${-SLICE / 2}deg, ${stops})"></div>${labels}${studs}</div><div class="wheel__hub"><img src="img/millennium-eye.webp" alt=""></div><div class="wheel__pointer"></div>`;
+  w.rot = 0; return w;
+}
+function spin(w, done) {
+  const i = Math.floor(Math.random() * PRIZES.length);
+  const jitter = (Math.random() - .5) * SLICE * .7;
+  w.rot += 5 * 360 + (270 - i * SLICE) - (w.rot % 360) + jitter;
+  w.querySelector(".wheel__face").style.transform = `rotate(${w.rot}deg)`;
+  setTimeout(() => { w.classList.add("won"); done(PRIZES[i]); }, 3700);
+}
+const $ = (s) => document.querySelector(s);
+const wheels = { A: makeWheel(), Ap: makeWheel(), B: makeWheel() };
+$("#aWheelAct").append(wheels.A); $("#apWheelSlot").append(wheels.Ap); $("#bWheelSlot").append(wheels.B);
+
+let state = { opt: "A", st: "board", dev: "desk" };
+const guide = (img, text) => { $("#guide img").src = `img/${img}.webp`; $("#bubble").textContent = text; };
+function resetWheel(w) { w.classList.remove("won"); }
+function render() {
+  document.body.className = `${state.opt} ${state.dev === "phone" ? "as-phone" : ""}`;
+  for (const el of [$("#boardA"), $("#phoneA"), $("#sbB")]) { el.className = el.className.replace(/\bst-\S+|\bwon\b/g, "").trim() + " st-" + state.st; }
+  document.querySelectorAll(".chosen").forEach((e) => e.classList.remove("chosen"));
+  const st = state.st;
+  // A desktop acts
+  $("#aWheelAct").classList.toggle("off", st !== "wheel");
+  $("#aStage").classList.toggle("off", st !== "wheel" && st !== "defeat");
+  $("#aClaim").classList.toggle("off", st !== "wheel");
+  $("#aDefeat").classList.toggle("off", st !== "defeat");
+  $("#aDuoBtns").classList.toggle("off", st !== "duo2");
+  $("#aEyebrow").textContent = $("#apEyebrow").textContent = $("#bEyebrow").textContent = st === "wheel" ? "Victory reward" : st === "defeat" ? "Match result" : st.startsWith("duo") ? "Duo series · Spell Ruler" : "Record the duel";
+  $("#aTitle").innerHTML = st === "wheel" ? "Winner's Wheel" : st === "defeat" ? "Defeat" : "<em>vs</em>Spell Ruler";
+  $("#aTitle").style.cssText = st === "defeat" ? "background-image:linear-gradient(#ffc8b8,#c8452e 60%,#6e1e10)" : "";
+  $("#aAsk").textContent = st === "wheel" ? "Spin for your prize" : st === "defeat" ? "The shadows win this round" : st === "duo" ? "Waiting for Kaiba" : st === "duo2" ? "Kaiba reports a result" : "How did the duel go?";
+  const duoTxt = st === "duo" ? "You reported a victory. Kaiba has to confirm it before the wheel turns." : st === "duo2" ? "Kaiba says you won. Confirm it to spin, or reject it." : "";
+  $("#aDuo").innerHTML = $("#apDuo").innerHTML = $("#bDuo").innerHTML = st === "duo" ? `<span class="hourglass">⌛</span> ${duoTxt}` : duoTxt;
+  if (st === "duo" || st === "duo2") document.querySelectorAll(".tablet.win, .glass.win").forEach((e) => e.classList.add("chosen"));
+  if (st === "defeat") document.querySelectorAll(".tablet.lose, .glass.lose").forEach((e) => e.classList.add("chosen"));
+  for (const k in wheels) resetWheel(wheels[k]);
+  for (const id of ["#aClaimBtn", "#apClaimBtn", "#bClaimBtn"]) $(id).firstChild.textContent = "Spin the wheel";
+  $("#apWon").innerHTML = $("#bWon").innerHTML = "";
+  $("#aMedal").textContent = "";
+  guide(st === "defeat" ? "yugi_sad_v2_transparent" : st === "wheel" ? "yugi_happy_v2_transparent" : "yugi_neutral_v2_transparent",
+        st === "defeat" ? "Every loss makes your deck stronger. Take these packs." : st === "wheel" ? "Well played! Give the wheel a spin." : st === "duo" ? "We wait for your rival's word." : st === "duo2" ? "Is that how it went?" : "How did the duel go?");
+  document.querySelectorAll(".proto .grp").forEach((g) => g.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === state[g.dataset.g]))));
+}
+document.querySelectorAll(".proto .grp").forEach((g) => g.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; state[g.dataset.g] = b.dataset.v; render(); }));
+document.querySelectorAll("[data-pick]").forEach((b) => b.addEventListener("click", () => {
+  if (state.st !== "board") return;
+  b.classList.add("pressed", "chosen"); setTimeout(() => { b.classList.remove("pressed"); state.st = b.dataset.pick === "win" ? "wheel" : "defeat"; render(); }, 420);
+}));
+function claimFlow(btn, w, out, board) {
+  btn.addEventListener("click", () => {
+    if (btn.busy) return;
+    if (w.classList.contains("won")) { btn.firstChild.textContent = "→ to Rewards"; return; }
+    btn.busy = true; btn.style.opacity = .6;
+    spin(w, (p) => { btn.busy = false; btn.style.opacity = 1; btn.firstChild.textContent = "Claim prize";
+      if (out) out.innerHTML = `<small>You won</small><b class="gilt">${LONG[p]}</b>`;
+      if (board) { board.classList.add("won"); $("#aTitle").textContent = LONG[p]; $("#aEyebrow").textContent = "You won"; $("#aMedal").textContent = p; }
+      if (out === $("#apWon")) { $("#phoneA").classList.add("won"); $("#apMedal").textContent = p; }
+      guide("yugi_happy_v2_transparent", `${LONG[p]}! Claim it on the Rewards altar.`); });
+  });
+}
+claimFlow($("#aClaimBtn"), wheels.A, null, $("#boardA"));
+claimFlow($("#apClaimBtn"), wheels.Ap, $("#apWon"));
+claimFlow($("#bClaimBtn"), wheels.B, $("#bWon"));
+render();
+</script>
+</body>
+</html>
