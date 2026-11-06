@@ -125,7 +125,7 @@ export class LocalRepo implements GameRepository {
                 pendingReport: null,
                 openingsSaved: [],
             },
-            me: { collection: save.collection, savedDecks: save.savedDecks, rewards: save.rewards, ydkImportUsed: false },
+            me: { collection: save.collection, savedDecks: save.savedDecks, rewards: save.rewards, ydkImportUsed: false, marks: save.marks ?? [] },
         };
     }
 
@@ -299,6 +299,13 @@ export class LocalRepo implements GameRepository {
             }
         });
         return opened;
+    }
+
+    async setMark(id: string, cardId: number, on: boolean) {
+        await this.update(id, (save) => {
+            const marks = (save.marks ?? []).filter((c) => c !== cardId);
+            return { ...save, marks: on ? [...marks, cardId] : marks };
+        });
     }
 
     async saveDeck(id: string, deck: Parameters<GameRepository["saveDeck"]>[1]) {

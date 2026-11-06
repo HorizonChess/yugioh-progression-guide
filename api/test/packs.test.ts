@@ -218,6 +218,20 @@ describe('decks and collection import', () => {
         expect((await player()).savedDecks).toEqual([]);
     });
 
+    it('marks real cards to look at later, once each, and unmarks them', async () => {
+        const { send, player } = await setup();
+        expect((await player()).marks).toEqual([]);
+        // Marked while packs open, so owning the card isn't needed; an unknown card is refused.
+        expect((await send('PUT', '/marks/100')).statusCode).toBe(204);
+        expect((await send('PUT', '/marks/100')).statusCode).toBe(204);
+        expect((await send('PUT', '/marks/101')).statusCode).toBe(204);
+        expect((await send('PUT', '/marks/9999')).statusCode).toBe(400);
+        expect((await send('PUT', '/marks/abc')).statusCode).toBe(400);
+        expect((await player()).marks).toEqual([100, 101]);
+        expect((await send('DELETE', '/marks/100')).statusCode).toBe(204);
+        expect((await player()).marks).toEqual([101]);
+    });
+
     it('imports anytime in solo, but only once in a duo series that skipped early sets', async () => {
         const { send, player } = await setup();
         await send('POST', '/collection/import', { cardIds: [100], mode: 'add' });

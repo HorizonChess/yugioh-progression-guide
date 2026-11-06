@@ -64,7 +64,7 @@ describe('POST /api/series', () => {
             matchHistory: [],
         });
         expect(series.members).toEqual([{ id: series.ownerId, duelistName: 'Yami' }]);
-        expect(me).toEqual({ collection: {}, savedDecks: [], rewards: [], ydkImportUsed: false });
+        expect(me).toEqual({ collection: {}, savedDecks: [], rewards: [], ydkImportUsed: false, marks: [] });
         expect(await seriesPlayersCollection(app.db).countDocuments()).toBe(1);
     });
 

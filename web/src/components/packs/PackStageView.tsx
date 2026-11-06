@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CardSet, PulledCard } from "@/lib/api";
 import { useIsPhone } from "@/lib/useIsPhone";
+import { useProgression } from "@/context/ProgressionContext";
 import { createPackStage, type PackStage } from "@/components/packs/stage/engine";
 import { setSoundOn, soundOn } from "@/components/packs/stage/fx";
 import { toStageCard } from "@/components/packs/stage/plate";
@@ -53,9 +54,10 @@ export default function PackStageView({
     const [sound, setSound] = useState(soundOn);
     const [width, setWidth] = useState(0);
     // The engine keeps the callbacks it was made with; these always reach the latest props.
-    const latest = useRef({ onFlip, ownedBefore, flippedCards });
+    const { marks, setMark } = useProgression();
+    const latest = useRef({ onFlip, ownedBefore, flippedCards, marks, setMark });
     useLayoutEffect(() => {
-        latest.current = { onFlip, ownedBefore, flippedCards };
+        latest.current = { onFlip, ownedBefore, flippedCards, marks, setMark };
     });
 
     // Re-lay the stage when its width changes (not its height: a phone's address bar moves that).
@@ -89,6 +91,7 @@ export default function PackStageView({
             onFlip: (i) => latest.current.onFlip(i),
             onReady: () => setReadyStage(key),
             onAllFlipped: () => undefined,
+            marks: { has: (id) => latest.current.marks.has(id), set: (id, on) => latest.current.setMark(id, on) },
         });
         stage.current = s;
         return () => {

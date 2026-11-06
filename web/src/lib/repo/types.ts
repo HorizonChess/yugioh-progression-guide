@@ -53,6 +53,8 @@ export interface PlayerView {
     savedDecks: SavedDeck[];
     rewards: RewardEntry[];
     ydkImportUsed: boolean;
+    /** Card ids marked to look at later (see `setMark`). */
+    marks: number[];
 }
 
 export interface Opening {
@@ -117,6 +119,8 @@ export interface GameRepository {
     saveDeck(id: string, deck: SavedDeck): Promise<void>;
     deleteDeck(id: string, deckId: string): Promise<void>;
     importCollection(id: string, cardIds: number[], mode: "add" | "replace"): Promise<void>;
+    /** Marks a card to look at later, or clears the mark. */
+    setMark(id: string, cardId: number, on: boolean): Promise<void>;
 }
 
 /** A refusal worth showing the player as is. */

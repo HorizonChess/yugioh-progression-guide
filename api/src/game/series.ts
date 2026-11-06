@@ -62,6 +62,8 @@ export interface SeriesPlayerDoc {
     rewards: RewardEntry[];
     /** The one-time collection YDK import has been used. */
     ydkImportUsed: boolean;
+    /** Card ids the player marked to look at later (missing on players from before marks). */
+    marks?: number[];
     createdAt: Date;
 }
 
@@ -83,7 +85,7 @@ export async function ensureSeriesIndexes(db: Db): Promise<void> {
 export class TooManySeriesError extends Error {}
 
 export function blankPlayer(seriesId: ObjectId, userId: ObjectId): SeriesPlayerDoc {
-    return { _id: new ObjectId(), seriesId, userId, collection: {}, savedDecks: [], rewards: [], ydkImportUsed: false, createdAt: new Date() };
+    return { _id: new ObjectId(), seriesId, userId, collection: {}, savedDecks: [], rewards: [], ydkImportUsed: false, marks: [], createdAt: new Date() };
 }
 
 /** Throws TooManySeriesError if `userId` already plays the most series allowed. */

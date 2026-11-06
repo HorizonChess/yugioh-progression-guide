@@ -56,6 +56,7 @@ function publicPlayer(player: SeriesPlayerDoc) {
         savedDecks: player.savedDecks.map((d) => ({ ...d, createdAt: d.createdAt.toISOString() })),
         rewards: player.rewards,
         ydkImportUsed: player.ydkImportUsed,
+        marks: player.marks ?? [],
     };
 }
 

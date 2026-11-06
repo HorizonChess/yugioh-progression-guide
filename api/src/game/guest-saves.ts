@@ -13,6 +13,7 @@ function date(value: string | number): Date {
 export const guestSaveCardIds = (save: GuestSaveBody): number[] => [
     ...Object.keys(save.collection).map((key) => parseCollectionKey(key)!.id),
     ...save.bannedCardIds,
+    ...(save.marks ?? []),
     ...save.savedDecks.flatMap((d) => [...d.mainDeck, ...d.extraDeck, ...d.sideDeck]),
 ];
 
@@ -75,6 +76,7 @@ export async function importGuestSave(
             sideDeck: keep(d.sideDeck),
             createdAt: date(d.createdAt),
         })),
+        marks: [...new Set(keep(save.marks ?? []))],
         rewards: save.rewards.map((r) => ({ ...r, id: randomUUID(), wonFromSetIndex: resolveSetIndex(timeline, r.wonFromPackName, r.wonFromSetIndex) })),
     };
 

@@ -5,6 +5,8 @@ import { useDismiss, useSwipeClose } from "@/lib/dismiss";
 import { Card } from "@/lib/api";
 import { DeckZone, isExtraDeckCard } from "@/lib/deck-utils";
 import { CardPlate } from "@/components/card/CardPlate";
+import { useProgression } from "@/context/ProgressionContext";
+import { MarkBadge, MarkToggle, useLookedAt } from "@/components/card/LookLater";
 import { stageOf, type Printing } from "./stage";
 import CartoucheButton from "@/components/ui/CartoucheButton";
 import { CARD_KINDS, CardFilterFields, useCardFilters } from "./useCardFilters";
@@ -51,6 +53,8 @@ export default function DeckPhone({
     const cards = useMemo(() => collectionCards.map((c) => c.card), [collectionCards]);
     const f = useCardFilters(cards);
     const [open, setOpen] = useState<Card | null>(null);
+    const { marks } = useProgression();
+    useLookedAt(open?.id);
     const [drawer, setDrawer] = useState(1);
     const [folds, setFolds] = useState<Record<DeckZone, boolean>>({ main: true, extra: true, side: true });
     const [menu, setMenu] = useState(false);
@@ -230,6 +234,7 @@ export default function DeckPhone({
                                 <button type="button" className="dp-tile__art" onClick={() => setOpen(card)} aria-label={card.name}>
                                     <img src={art(card)} alt="" loading="lazy" />
                                     {banned && <span className="dp-banned">Banned</span>}
+                                    {marks.has(card.id) && <MarkBadge />}
                                     {inDeck ? <span className="dp-badge dp-badge--in">{inDeck} in</span> : <span className="dp-badge">×{left(card.id)}</span>}
                                 </button>
                                 {can && <button type="button" className="dp-plus" onClick={() => add(card)} aria-label={`Add ${card.name}`}>+</button>}
@@ -250,6 +255,7 @@ export default function DeckPhone({
                             <img className="dp-sheet__art" src={open.card_images[0]?.image_url} alt="" />
                             <CardPlate card={stageOf(open, printings.get(open.id), ownedCounts.get(open.id) ?? 0)} className="dp-sheet__plate" />
                         </div>
+                        <MarkToggle cardId={open.id} className="dp-sheet__mark" />
                         <div className="dp-zones">
                             {([homeOf(open), "side"] as DeckZone[]).map((z) => (
                                 <div key={z} className="dp-zone">

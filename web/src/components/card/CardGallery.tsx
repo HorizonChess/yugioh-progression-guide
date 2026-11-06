@@ -5,6 +5,7 @@ import type { Card } from "@/lib/api";
 import type { Tier } from "@/components/packs/stage/fx";
 import { TIER_LABEL, type StageCard } from "@/components/packs/stage/plate";
 import { CardCloseUp, useCardPeek } from "@/components/card/CardPlate";
+import { MarkToggle } from "@/components/card/LookLater";
 
 export type GalleryItem = { key: string; card: StageCard; count: number; isNew?: boolean; dim?: boolean };
 
@@ -97,7 +98,7 @@ export default function CardGallery({
                 </section>
             ))}
             {peek}
-            {open && <CardCloseUp card={open} onClose={() => setOpen(null)} />}
+            {open && <CardCloseUp card={open} action={<MarkToggle cardId={open.card.id} />} onClose={() => setOpen(null)} />}
         </div>
     );
 }

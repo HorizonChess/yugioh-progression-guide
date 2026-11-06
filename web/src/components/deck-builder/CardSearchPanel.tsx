@@ -1,5 +1,6 @@
 "use client";
 
+import { useProgression } from "@/context/ProgressionContext";
 import { useMemo, useState } from "react";
 import { Card } from "@/lib/api";
 import DeckSlot from "./DeckSlot";
@@ -18,6 +19,7 @@ interface CardSearchPanelProps {
 
 /** The desktop search: today's filters in parchment, then your cards a page at a time. */
 export default function CardSearchPanel({ collectionCards = [], onHover, onDragStart, onDrag, onDragEnd, onCardDoubleClick, bannedIds }: CardSearchPanelProps) {
+    const { marks } = useProgression();
     const cards = useMemo(() => collectionCards.map((c) => c.card), [collectionCards]);
     const f = useCardFilters(cards);
 
@@ -48,6 +50,7 @@ export default function CardSearchPanel({ collectionCards = [], onHover, onDragS
                                 card={card}
                                 isUnavailable={count === 0}
                                 banned={isBanned}
+                                marked={marks.has(card.id)}
                                 dragContext="search"
                                 onHover={onHover}
                                 onDragStart={(e) => onDragStart(e, card, 'search')}

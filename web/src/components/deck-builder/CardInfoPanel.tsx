@@ -3,6 +3,7 @@
 import { Card } from "@/lib/api";
 import { useMemo } from "react";
 import { CardPlate } from "@/components/card/CardPlate";
+import { MarkToggle, useLookedAt } from "@/components/card/LookLater";
 import { stageOf, type Printing } from "./stage";
 
 interface CardInfoPanelProps {
@@ -19,6 +20,7 @@ interface CardInfoPanelProps {
  */
 export default function CardInfoPanel({ card, owned = 0, printing }: CardInfoPanelProps) {
     const stage = useMemo(() => card && stageOf(card, printing, owned), [card, printing, owned]);
+    useLookedAt(card?.id, 1200);
     if (!card || !stage) {
         return (
             <div className="db-info">
@@ -30,6 +32,7 @@ export default function CardInfoPanel({ card, owned = 0, printing }: CardInfoPan
         <div className="db-info">
             <img className="db-info__art" src={card.card_images[0]?.image_url} alt={card.name} />
             <CardPlate card={stage} className="db-info__plate" />
+            <MarkToggle cardId={card.id} className="db-info__mark" />
         </div>
     );
 }

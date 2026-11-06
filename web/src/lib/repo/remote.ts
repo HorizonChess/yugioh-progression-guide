@@ -81,7 +81,7 @@ export class RemoteRepo implements GameRepository {
         const { series, me } = await api<{ series: ServerSeries; me: ServerPlayer }>("GET", `/${id}`);
         return {
             series: this.series(series),
-            me: { ...me, savedDecks: me.savedDecks.map((d) => ({ ...d, createdAt: Date.parse(d.createdAt) })) },
+            me: { ...me, marks: me.marks ?? [], savedDecks: me.savedDecks.map((d) => ({ ...d, createdAt: Date.parse(d.createdAt) })) },
         };
     }
 
@@ -152,4 +152,5 @@ export class RemoteRepo implements GameRepository {
     deleteDeck = (id: string, deckId: string) => api("DELETE", `/${id}/decks/${deckId}`);
     importCollection = (id: string, cardIds: number[], mode: "add" | "replace") =>
         api("POST", `/${id}/collection/import`, { cardIds, mode });
+    setMark = (id: string, cardId: number, on: boolean) => api(on ? "PUT" : "DELETE", `/${id}/marks/${cardId}`);
 }

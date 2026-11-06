@@ -486,3 +486,8 @@ Guide, finished (user, 2026-11-07, branch `feat/guide-more`):
 - Notes now cover the first ten sets (LOB to IOC). Later sets have no notes yet: he stays quiet there except for timeless notes on reprinted cards.
 - Yugi now speaks inside the pity and tournament pack chamber on Rewards. On phones a tap anywhere on the page moves him along, so his strip never blocks the bottom buttons for long.
 - `scripts/guide/simulate.ts` prints what he'd say over real openings, for review. Short Print rates are left alone (user).
+
+Tweaks done (2026-11-07):
+- `fix/ring-tap-flip`: on the phone ring a tap flips a face-down common where it is; rares and better still turn to the front for their reveal.
+- `feat/phone-swipe-nav`: a swipe across a tab's page goes to the neighbouring tab, sliding in from that side. Surfaces with their own gestures are left alone. The binder passes a swipe through only past its first or last page, since on phones the whole collection is the binder.
+- `feat/look-later`: marks to look at later. Stored per player and series as card ids (`marks` on the player doc, `PUT|DELETE /api/series/:id/marks/:cardId`, at most 500; guests keep them on the save, and the guest import carries them). Any real card can be marked, since marking happens before an opening is saved. A toggle sits in the opener's close-up, every card close-up, and the deck builder's details. A gold bookmark shows on marked cards in the binder and the deck builder's card lists. Opening the card's details in the collection or the phone deck builder clears the mark, as does resting on it for 1.2 s in the desktop deck builder; it can be switched back on there and stays.

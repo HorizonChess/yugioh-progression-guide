@@ -44,6 +44,8 @@ export interface SaveSlot {
     rewards: RewardEntry[];
     /** Cosmetic deck-builder ban list. */
     bannedCardIds: number[];
+    /** Card ids marked in the opener to look at later (cleared once looked at). */
+    marks?: number[];
 
     settings: {
         startSetIndex: number;
@@ -127,6 +129,7 @@ function toSaveSlot(v: unknown): SaveSlot | null {
         matchHistory: list(v.matchHistory).filter(isMatchResult),
         rewards: list(v.rewards).filter(isRewardEntry),
         bannedCardIds: numbers(v.bannedCardIds),
+        marks: numbers(v.marks),
         settings: {
             startSetIndex: num(settings.startSetIndex, 0),
             packsPerRound: num(settings.packsPerRound, DEFAULT_PACKS_PER_ROUND),
