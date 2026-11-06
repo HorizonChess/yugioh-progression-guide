@@ -13,27 +13,31 @@ import GuideSprite from "@/components/layout/GuideSprite";
 import PendingReportPanel from "@/components/record-match/PendingReportPanel";
 import { useAuth } from "@/context/AuthContext";
 import { wheelPrizesFor } from "@ygo/shared";
+import { asset } from "@/lib/utils";
+import type { WheelPrize } from "@/lib/rewards";
+import "@/components/record-match/record-match.css";
+
+/** The board's art, handed to its CSS through asset() (which knows the base path). */
+const ART = {
+    "--rm-stone": `url('${asset("/ui/record-match/stone.webp")}')`,
+    "--rm-frieze": `url('${asset("/ui/record-match/frieze.webp")}')`,
+    "--rm-tab-win": `url('${asset("/ui/record-match/tablet-win.webp")}')`,
+    "--rm-tab-win-lines": `url('${asset("/ui/record-match/tablet-win-lines.webp")}')`,
+    "--rm-tab-lose": `url('${asset("/ui/record-match/tablet-lose.webp")}')`,
+    "--rm-tab-lose-lines": `url('${asset("/ui/record-match/tablet-lose-lines.webp")}')`,
+} as React.CSSProperties;
 
 /**
- * The Record Match screen (route: /record-match). Wraps the record-match
- * board with the match-result math (win rate + streak) and drives the
- * record-then-reward flow:
+ * The Record Match screen (route: /record-match): one temple-stone board. The opponent's pack
+ * sits in a niche on the left; on the right the acts take turns:
  *
- *   WIN  → record → the board content VORTEXES away and the Winner's Wheel
- *          CURTAINS in — INSIDE THE SAME persistent glass panel (the box does
- *          not move / re-mount) → spin → claim the prize into the ledger →
- *          advance → /rewards (or Back to Campaign → /timeline).
- *   LOSS → record → the board content VORTEXES away and the DEFEAT act CURTAINS
- *          in — SAME persistent panel, mirroring the win → "3 Pity Packs" with
- *          two exits: Claim Pity Packs (→ /rewards) or Back to Campaign (→ /timeline).
+ *   choose → the two stone tablets (Victory / Defeat)
+ *   WIN    → the Winner's Wheel; its prize takes the pack's place → Claim → /rewards
+ *   LOSS   → the bowed tablet lit and 3 Pity Packs dealt → Claim → /rewards
+ *   DUO    → the reported result waits for the rival (or for this player to confirm it)
  *
- * The record moment is ONE persistent `.win-panel`: only its inner CONTENT swaps
- * (`stage` = "board" | "wheel" | "defeat") under <AnimatePresence>, so the panel
- * is a stable stage and the acts change on it. Degrades to a plain cross-fade
- * under prefers-reduced-motion.
- *
- * Reporting the result books the reward (a wheel spin or pity packs) and
- * advances the set; a spin left for later is resumed with ?spin=<rewardId>.
+ * Reporting the result books the reward (a wheel spin or pity packs) and advances the set;
+ * a spin left for later is resumed with ?spin=<rewardId>.
  */
 type Stage = "board" | "wheel" | "defeat";
 
@@ -68,6 +72,7 @@ export default function RecordMatchPage() {
     // Win rate and current streak from match history
     const wins = matchHistory.filter((m) => m.winner === "player").length;
     const total = matchHistory.length;
+    const losses = total - wins;
     const winRate = total > 0 ? `${Math.round((wins / total) * 100)}%` : "--";
 
     // Current run of same-result matches: +N wins or -N losses.
@@ -96,6 +101,8 @@ export default function RecordMatchPage() {
     // Confirming the rival's report books both rewards; this player's then plays out here.
     // The answered report stays on screen until the next act takes over.
     const [answered, setAnswered] = useState<PendingReport | null>(null);
+    /** The prize the wheel landed on: it takes the pack's place in the niche. */
+    const [won, setWon] = useState<WheelPrize | null>(null);
     const answerReport = async (confirm: boolean) => {
         const report = series?.pendingReport;
         if (!report) return;
@@ -126,87 +133,67 @@ export default function RecordMatchPage() {
     const pending = series?.mode === "duo" ? (series.pendingReport ?? answered) : null;
     const rival = series?.members.find((m) => m.id !== userId)?.duelistName ?? "Your rival";
 
-    // Content transitions INSIDE the stable panel. Board content vortexes out
-    // (collapse + spin inward); wheel content curtains in (open from a slit).
-    // Reduced motion → a plain cross-fade for both.
-    const vortexExit = reduceMotion
-        ? { opacity: 0 }
-        : { opacity: 0, scale: 0.2, rotate: 25, filter: "blur(6px)" };
-    const curtainsInitial = reduceMotion
-        ? { opacity: 0 }
-        : { opacity: 0, scaleX: 0.02, scaleY: 0.85 };
-    const curtainsAnimate = { opacity: 1, scaleX: 1, scaleY: 1 };
+    // The acts change on one board: the one leaving fades and sinks, the next rises in.
+    const enter = reduceMotion ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.97 };
+    const shown = { opacity: 1, y: 0, scale: 1 };
+    const leave = reduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, scale: 0.97 };
+    const motionProps = { initial: enter, animate: shown, exit: leave, transition: { duration: reduceMotion ? 0.2 : 0.35, ease: "easeOut" as const } };
+
+    const head = stage === "wheel" ? "Victory reward" : stage === "defeat" ? "Match result" : pending ? "Duo series" : "Record the duel";
+    const pack = currentSet?.set_image;
 
     return (
-        <div className="h-full flex items-center justify-center p-4 md:p-8">
-            {/* ONE persistent panel — the stable stage. It never unmounts across the
-                board→wheel swap; only its inner content changes. */}
-            <div className="win-panel">
-                <div className="win-panel__stage">
-                    <AnimatePresence mode="wait" initial={false}>
-                        {stage === "board" && pending && (
-                            <motion.div key="pending" className="win-panel__act" exit={vortexExit}>
-                                <PendingReportPanel
-                                    report={pending}
-                                    rival={rival}
-                                    mine={pending.reporterId === userId}
-                                    onAnswer={answerReport}
-                                    onBack={toTimeline}
-                                />
-                            </motion.div>
-                        )}
+        <div className="rm-screen">
+            <div className="rm-board" style={ART}>
+                <div className="rm-head"><b><span className="rm-gilt">{head}</span></b></div>
+                <div className="rm-main">
+                    <div className={`rm-foe ${won ? "rm-foe--won" : ""} ${stage === "wheel" ? "rm-foe--wheel" : ""}`}>
+                        <div className="rm-niche">
+                            {pack && <img src={pack} alt={`${currentSet?.set_name ?? ""} pack`} />}
+                            <div className="rm-medal" aria-hidden={!won}><b>{won?.short}</b></div>
+                        </div>
+                        <small>Your opponent</small>
+                        <b className="rm-foe__name rm-gilt">{pending?.setName ?? currentSet?.set_name ?? "Unknown duelist"}</b>
+                        <div className="rm-stats">
+                            <div className="rm-stat"><small>Win rate</small><b>{winRate}</b></div>
+                            <div className="rm-stat"><small>Streak</small><b>{streakDisplay}</b></div>
+                            <div className="rm-stat"><small>Record</small><b>{total ? `${wins}–${losses}` : "--"}</b></div>
+                        </div>
+                    </div>
 
-                        {stage === "board" && !pending && currentSet && (
-                            <motion.div
-                                key="board"
-                                className="win-panel__act"
-                                initial={{ opacity: 1 }}
-                                exit={vortexExit}
-                                transition={{ duration: reduceMotion ? 0.25 : 0.55, ease: "easeIn" }}
-                            >
-                                <RecordMatch
-                                    onRecord={handleRecordMatch}
-                                    onCancel={() => router.push("/timeline")}
-                                    opponentName={currentSet.set_name}
-                                    winRate={winRate}
-                                    streak={streakDisplay}
-                                />
-                            </motion.div>
-                        )}
-
-                        {stage === "wheel" && (
-                            <motion.div
-                                key="wheel"
-                                className="win-panel__act"
-                                initial={curtainsInitial}
-                                animate={curtainsAnimate}
-                                transition={{ duration: reduceMotion ? 0.25 : 0.5, ease: "easeOut", delay: reduceMotion ? 0 : 0.05 }}
-                            >
-                                <WinnersWheel
-                                    prizes={wheelPrizesFor(series?.mode ?? "solo")}
-                                    spin={() => (spinRewardId ? spin(spinRewardId) : Promise.reject(new RepoError("No reward to spin")))}
-                                    onClaim={toRewards}
-                                    onBackToCampaign={toTimeline}
-                                />
-                            </motion.div>
-                        )}
-
-                        {stage === "defeat" && (
-                            <motion.div
-                                key="defeat"
-                                className="win-panel__act"
-                                initial={curtainsInitial}
-                                animate={curtainsAnimate}
-                                transition={{ duration: reduceMotion ? 0.25 : 0.5, ease: "easeOut", delay: reduceMotion ? 0 : 0.05 }}
-                            >
-                                <DefeatAct onClaimPity={toRewards} onBackToCampaign={toTimeline} />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                    <div className="rm-stage">
+                        <AnimatePresence mode="wait" initial={false}>
+                            {stage === "board" && pending && (
+                                <motion.div key="pending" className="rm-act" {...motionProps}>
+                                    <PendingReportPanel report={pending} rival={rival} mine={pending.reporterId === userId} onAnswer={answerReport} />
+                                </motion.div>
+                            )}
+                            {stage === "board" && !pending && currentSet && (
+                                <motion.div key="board" className="rm-act rm-act--choose" {...motionProps}>
+                                    <RecordMatch onRecord={handleRecordMatch} />
+                                </motion.div>
+                            )}
+                            {stage === "wheel" && (
+                                <motion.div key="wheel" className="rm-act" {...motionProps}>
+                                    <WinnersWheel
+                                        prizes={wheelPrizesFor(series?.mode ?? "solo")}
+                                        spin={() => (spinRewardId ? spin(spinRewardId) : Promise.reject(new RepoError("No reward to spin")))}
+                                        onSpinComplete={setWon}
+                                        onClaim={toRewards}
+                                    />
+                                </motion.div>
+                            )}
+                            {stage === "defeat" && (
+                                <motion.div key="defeat" className="rm-act" {...motionProps}>
+                                    <DefeatAct onClaimPity={toRewards} packImage={pack} />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
+                <div className="rm-foot"><button type="button" className="rm-back" onClick={toTimeline}>← Back to campaign</button></div>
             </div>
 
-            {/* Character sprite — bottom left */}
             <GuideSprite />
         </div>
     );

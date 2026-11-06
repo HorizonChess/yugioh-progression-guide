@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import FrameButton from '@/components/ui/FrameButton';
+import CartoucheButton from '@/components/ui/CartoucheButton';
 import { WheelRim, WheelHub } from '@/components/record-match/WheelDecor';
 import { alertRepoError } from '@/context/ProgressionContext';
 import { WheelPrize } from '@/lib/rewards';
@@ -15,8 +15,6 @@ interface WinnersWheelProps {
     onSpinComplete?: (prize: WheelPrize) => void;
     /** Fired when the player claims the revealed prize. */
     onClaim: (prize: WheelPrize) => void;
-    /** Fired when the player skips the ledger and heads back to the campaign. */
-    onBackToCampaign?: () => void;
 }
 
 const SPIN_MS = 3600;              // wheel-settle duration
@@ -35,7 +33,7 @@ const SPIN_MS = 3600;              // wheel-settle duration
  * FrameButton so it matches the app and re-themes with --primary. Prize list is
  * the series' wheel (`wheelPrizesFor`), and the repository picks where it lands.
  */
-export default function WinnersWheel({ prizes, spin, onSpinComplete, onClaim, onBackToCampaign }: WinnersWheelProps) {
+export default function WinnersWheel({ prizes, spin, onSpinComplete, onClaim }: WinnersWheelProps) {
     const SLICE = 360 / prizes.length;
     const [spinning, setSpinning] = useState(false);
     const [rotation, setRotation] = useState(0);
@@ -102,12 +100,8 @@ export default function WinnersWheel({ prizes, spin, onSpinComplete, onClaim, on
     };
 
     return (
-        <div className="wheel-content">
-            <div className="text-center">
-                <span className="record-eyebrow">Victory Reward</span>
-                <h2 className="text-2xl md:text-3xl font-black text-white leading-none mt-1">Winner&apos;s Wheel</h2>
-            </div>
-
+        <div className="rm-wheel">
+            <div className="rm-wheel__dial">
             {/* The wheel row — a flex cell that gives the (height-driven, square)
                 wheel a definite box to size against so it stays perfectly circular. */}
             <div className="wheel-row">
@@ -176,57 +170,19 @@ export default function WinnersWheel({ prizes, spin, onSpinComplete, onClaim, on
             </div>
             </div>
 
-            {/* Footer — a CONSTANT-height slot so the 1fr wheel row never resizes
-                when the result appears (otherwise the wheel visibly jumps smaller
-                the instant the spin ends). The "You won / prize" line is ALWAYS in
-                the layout; before the reveal it's just visibility:hidden (space
-                reserved). The button below keeps the same box and only swaps its
-                label/handler Spin → Claim. */}
-            <div className="wheel-footer">
-                <div className={`wheel-prize ${result ? 'is-revealed' : ''}`} aria-hidden={!result}>
-                    <div className="wheel-prize__kicker">You won</div>
-                    <div className="wheel-prize__name">{result ? result.label : ' '}</div>
-                </div>
+            </div>
 
-                {/* Button COLUMN — laid out identically to the Defeat act (capped,
-                    full-width, stacked FrameButtons) so the win and loss acts look
-                    the same, only the wheel vs. the defeat message differing. The
-                    primary button swaps Spin -> Claim in place; the Back slot is
-                    ALWAYS in the column but invisible until a prize is revealed, so
-                    its height is reserved (the wheel row above never jumps) and the
-                    lone Spin button stays centered. */}
-                <div className="w-full max-w-[16rem] flex flex-col items-stretch gap-3">
-                    {result ? (
-                        <FrameButton
-                            onClick={() => onClaim(result)}
-                            className="w-full h-12"
-                            textClassName="tracking-[0.12em]"
-                            aria-label="Claim prize"
-                        >
-                            Claim Prize
-                        </FrameButton>
-                    ) : (
-                        <FrameButton
-                            onClick={handleSpin}
-                            className="w-full h-12"
-                            textClassName="tracking-[0.12em]"
-                            aria-label="Spin the wheel"
-                        >
-                            {spinning ? 'Spinning…' : 'Spin the Wheel'}
-                        </FrameButton>
-                    )}
-
-                    {onBackToCampaign && (
-                        <FrameButton
-                            onClick={result ? onBackToCampaign : undefined}
-                            className={`w-full h-12 ${result ? '' : 'invisible pointer-events-none'}`}
-                            textClassName="tracking-[0.12em]"
-                            aria-label="Back to campaign"
-                        >
-                            Back to Campaign
-                        </FrameButton>
-                    )}
+            {/* The prize line and the one button beside the wheel: Spin, then Claim. */}
+            <div className="rm-wheel__side">
+                <div className="wheel-prize is-revealed" aria-live="polite">
+                    <div className="wheel-prize__kicker">{result ? "You won" : "Spin for your prize"}</div>
+                    <div className="wheel-prize__name">{result ? result.label : "Winner's Wheel"}</div>
                 </div>
+                {result ? (
+                    <CartoucheButton onClick={() => onClaim(result)} aria-label="Claim prize">Claim prize</CartoucheButton>
+                ) : (
+                    <CartoucheButton onClick={handleSpin} aria-label="Spin the wheel">{spinning ? "Spinning…" : "Spin the wheel"}</CartoucheButton>
+                )}
             </div>
         </div>
     );

@@ -1,61 +1,26 @@
 "use client";
 
-import React from 'react';
-import FrameButton from '@/components/ui/FrameButton';
-
-interface DefeatActProps {
-    /** Claim the 3 pity packs — routes on to the Rewards tab. */
-    onClaimPity: () => void;
-    /** Skip the reward for now and head back to the campaign map. */
-    onBackToCampaign: () => void;
-}
+import CartoucheButton from "@/components/ui/CartoucheButton";
+import { Tablet } from "@/components/record-match/RecordMatch";
 
 /**
- * DefeatAct — the "you lost" CONTENT (loss path only).
- *
- * The DEFEAT act of the record moment: eyebrow → DEFEAT headline → a line
- * telling the player they get 3 Pity Packs → two exits. It is rendered INSIDE
- * the shared, always-mounted `.win-panel` (see app/record-match/page.tsx) — it
- * curtains IN where the record board vortexed OUT, without the panel box moving,
- * exactly like WinnersWheel does on the win path (so win and loss feel the same).
- *
- * Presentational only: the panel, centering, and glass surface live in the
- * page; this is just the inner stack. Built from tokens + FrameButton so
- * it matches the app and re-themes with --primary.
+ * The loss: the bowed tablet stays lit, the 3 Pity Packs of the set are dealt below it,
+ * and Claim takes them to the Rewards altar. The way back to the campaign is the board's foot.
  */
-export default function DefeatAct({ onClaimPity, onBackToCampaign }: DefeatActProps) {
+export default function DefeatAct({ onClaimPity, packImage }: { onClaimPity: () => void; packImage?: string }) {
     return (
-        <div className="defeat-content">
-            <div className="text-center">
-                <span className="record-eyebrow">Match Result</span>
-                <h2 className="record-outcome record-outcome--defeat mt-1">Defeat</h2>
-            </div>
-
-            <p className="text-center text-white/90 text-lg md:text-xl font-bold leading-snug px-2">
-                You get <span className="text-primary">3 Pity Packs</span> to rebuild your deck.
-            </p>
-
-            {/* Buttons fill the column up to a cap, so they shrink on a narrow
-                panel (no overflow) and never stretch too wide on a large one —
-                correct-by-construction rather than a fixed pixel width. */}
-            <div className="w-full max-w-[16rem] flex flex-col items-stretch gap-3">
-                <FrameButton
-                    onClick={onClaimPity}
-                    className="w-full h-12"
-                    textClassName="tracking-[0.12em]"
-                    aria-label="Claim pity packs"
-                >
-                    Claim Pity Packs
-                </FrameButton>
-                <FrameButton
-                    onClick={onBackToCampaign}
-                    className="w-full h-11"
-                    textClassName="tracking-[0.12em]"
-                    aria-label="Back to campaign"
-                >
-                    Back to Campaign
-                </FrameButton>
-            </div>
-        </div>
+        <>
+            <b className="rm-ask rm-carved rm-carved--red">The shadows win this round</b>
+            <div className="rm-tabs rm-tabs--one"><Tablet side="lose" chosen /></div>
+            {packImage && (
+                <div className="rm-packs" aria-hidden="true">
+                    {[-10, 0, 10].map((r, i) => (
+                        <img key={i} src={packImage} alt="" style={{ "--r": `${r}deg`, "--y": r ? "5%" : "0", "--d": `${0.05 + i * 0.13}s` } as React.CSSProperties} />
+                    ))}
+                </div>
+            )}
+            <p className="rm-note"><b>3 Pity Packs</b> to rebuild your deck</p>
+            <CartoucheButton onClick={onClaimPity} aria-label="Claim pity packs">Claim pity packs</CartoucheButton>
+        </>
     );
 }

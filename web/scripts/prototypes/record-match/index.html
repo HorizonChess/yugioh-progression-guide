@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Record Match Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root { --gold: #d4af37; --gold-hi: #ffe08a; --ink: #2a1c05; --lapis: #1d3a6e; --lapis-dk: #0f2246; --font-display: "Cinzel", Georgia, serif; --font-main: "Inter", sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; background: #0a0704; color: #f1e7cc; font-family: var(--font-main); -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; }
+
+/* ---------- the prototype's own switches ---------- */
+.proto { flex: none; display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; background: #110c18; border-bottom: 1px dashed #6e5320; position: relative; z-index: 60; }
+.proto .grp { display: flex; gap: 4px; flex: 1 1 auto; min-width: 0; }
+@media (max-width: 600px) { .proto { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 5px 6px; } .proto .grp { flex: none; } .proto .grp[data-g=dev] { display: none; } .proto button { flex: none; font-size: 10px; padding: 6px 8px; white-space: nowrap; } body.as-phone #app { width: 100%; height: 100%; border-radius: 0; box-shadow: none; } }
+.proto button { flex: 1; font: 700 11px/1.1 var(--font-main); letter-spacing: .06em; text-transform: uppercase; color: #a99d80; background: transparent; border: 1px solid #3d3220; border-radius: 6px; padding: 7px 4px; cursor: pointer; min-width: 0; }
+.proto button[aria-pressed="true"] { color: var(--gold-hi); border-color: #8a6a2c; background: rgba(224,181,79,.12); }
+.stagebox { flex: 1; min-height: 0; display: flex; justify-content: center; align-items: center; background: #050302; }
+#app { position: relative; width: 100%; height: 100%; overflow: hidden; container-type: size; }
+body.as-phone #app { width: 390px; height: min(844px, calc(100% - 24px)); border-radius: 26px; box-shadow: 0 0 0 8px #0b0806, 0 0 0 9px #3d3220, 0 30px 60px rgba(0,0,0,.7); }
+
+/* ---------- the app around the screen ---------- */
+.wall { position: absolute; inset: 0; background: url("img/bg-wall.webp") center / cover; }
+.wall::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(255,170,70,.08), transparent 60%), linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.45)); }
+@container (max-width: 760px) { .wall { background-image: url("img/bg-wall-phone.webp"); } }
+.topnav { position: absolute; left: 0; right: 0; top: 0; height: 56px; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; background: linear-gradient(#0d0a14, #06050a); box-shadow: 0 2px 0 #8a6420; font: 700 11px/1 var(--font-main); letter-spacing: .16em; color: #8f8670; }
+.topnav b { font: 800 18px/1 var(--font-display); color: var(--gold-hi); letter-spacing: .04em; }
+.tabbar { display: none; }
+@container (max-width: 760px) {
+  .topnav { height: 52px; } .topnav span { display: none; }
+  .tabbar { display: flex; position: absolute; left: 0; right: 0; bottom: 0; height: 58px; z-index: 5; justify-content: space-around; align-items: center; background: linear-gradient(#0d0a18, #06050c); box-shadow: 0 -1px 0 #3d3220; font: 700 10px/1 var(--font-main); letter-spacing: .12em; color: #8f8670; }
+  .tabbar i { font-style: normal; } .tabbar i.on { color: var(--gold-hi); }
+}
+.screen { position: absolute; left: 0; right: 0; top: 56px; bottom: 0; z-index: 2; display: none; align-items: center; justify-content: center; padding: 2.5% 2.5% 2.5% max(2.5%, 230px); }
+body.A .optA, body.B .optB { display: flex; }
+@container (max-width: 760px) { .screen { top: 52px; bottom: 58px; padding: 8px; align-items: stretch; } }
+
+/* ---------- shared pieces ---------- */
+.cartouche { position: relative; display: inline-grid; place-items: center; min-width: 220px; height: 60px; padding: 0 30px; border: 0; cursor: pointer; background: url("img/cartouche.webp") center / 100% 100% no-repeat; filter: drop-shadow(0 6px 10px rgba(0,0,0,.6)); transition: transform .15s, filter .2s, opacity .2s; }
+.cartouche span { font: 800 15px/1 var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); text-shadow: 0 1px 0 rgba(255,240,190,.6); white-space: nowrap; }
+.cartouche:hover { filter: drop-shadow(0 6px 10px rgba(0,0,0,.6)) brightness(1.1); } .cartouche:active { transform: scale(.97); }
+.cartouche.red { filter: hue-rotate(-28deg) saturate(1.5) brightness(.95) drop-shadow(0 6px 10px rgba(0,0,0,.6)); }
+.gilt { font-family: var(--font-display); color: transparent; background: linear-gradient(#fff1bf, #d4af37 55%, #8a6420); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 2px 2px rgba(0,0,0,.8)); }
+.ochre { font-family: var(--font-display); color: transparent; background: linear-gradient(#ffd2c2, #c8452e 60%, #6e1e10); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 2px 2px rgba(0,0,0,.8)); }
+/* letters cut into the stone: dark in the groove, a light lip below */
+.carved { font-family: var(--font-display); text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255,244,220,.4), 0 -1px 0 rgba(0,0,0,.5); }
+.carved.red { color: #5c1a10; }
+.linkback { border: 0; background: none; cursor: pointer; font: 700 11px/1 var(--font-main); letter-spacing: .16em; text-transform: uppercase; color: #e9d9ad; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233,217,173,.4); padding: 6px; }
+.guide { position: absolute; left: 1.5%; bottom: 0; z-index: 8; height: min(42%, 380px); pointer-events: none; }
+.guide img { height: 100%; filter: drop-shadow(0 8px 14px rgba(0,0,0,.7)); }
+.guide .bubble { position: absolute; left: 10px; bottom: calc(100% + 12px); width: 200px; padding: 12px 16px; border-radius: 16px; background: #fff; color: #111; font: 700 14px/1.35 var(--font-main); box-shadow: 0 0 0 3px #111; }
+.guide .bubble::before { content: ""; position: absolute; left: 40px; top: 100%; border: 9px solid transparent; border-top-color: #fff; }
+@container (max-width: 760px) { .guide { display: none; } }
+
+/* ===================== THE WHEEL ===================== */
+.wheel { position: relative; width: 100%; aspect-ratio: 1; container-type: inline-size; }
+.wheel__rays { position: absolute; inset: -22%; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .6s;
+  background: repeating-conic-gradient(rgba(255,214,120,.16) 0 6deg, transparent 6deg 18deg); -webkit-mask: radial-gradient(circle, #000 30%, transparent 70%); mask: radial-gradient(circle, #000 30%, transparent 70%); animation: rays 24s linear infinite; }
+.wheel.won .wheel__rays, .wheel.spinning .wheel__rays { opacity: 1; }
+@keyframes rays { to { transform: rotate(360deg); } }
+.wheel__rim { position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle, transparent 86.5%, #3b2a10 86.5% 87.5%, transparent 87.5%), conic-gradient(from 0deg, #8a6420, #ffe8a6, #c9a14a, #7a5418, #ffe08a, #a87e2c, #8a6420);
+  box-shadow: 0 0 0 2px #2a1c08, 0 22px 44px rgba(0,0,0,.75), inset 0 0 0 2px rgba(255,240,190,.5); }
+.wheel__rim::after { content: ""; position: absolute; inset: 1.6%; border-radius: 50%; background: repeating-conic-gradient(rgba(60,40,10,.55) 0 1deg, transparent 1deg 6deg); -webkit-mask: radial-gradient(circle, transparent 89%, #000 89.5% 96%, transparent 96.5%); mask: radial-gradient(circle, transparent 89%, #000 89.5% 96%, transparent 96.5%); }
+.wheel__face { position: absolute; inset: 6.5%; border-radius: 50%; will-change: transform; box-shadow: 0 0 0 3px #2a1c08, inset 0 0 24px rgba(0,0,0,.5); }
+.wheel__wedges { position: absolute; inset: 0; border-radius: 50%; }
+.wheel__wedges::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 38% 28%, rgba(255,255,255,.24), transparent 46%), radial-gradient(circle, transparent 62%, rgba(0,0,0,.38)); }
+.wheel__lines { position: absolute; inset: 0; border-radius: 50%; }
+.wheel__label { position: absolute; left: 50%; top: 50%; width: 50%; height: 0; transform-origin: 0 0; display: flex; align-items: center; justify-content: flex-end; padding-right: 9%; }
+.wheel__label span { font: 800 3.3cqi/1 var(--font-display); letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; transform: translateY(-50%); }
+.wheel__label.l span { color: #3a2608; text-shadow: 0 1px 0 rgba(255,240,190,.55); }
+.wheel__label.d span { color: transparent; background: linear-gradient(#fff3c4, #d9b45a 60%, #a37a28); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 1px 1px #000); }
+.wheel__glow { position: absolute; inset: 0; border-radius: 50%; opacity: 0; transition: opacity .5s; pointer-events: none; mix-blend-mode: screen; }
+.wheel.won .wheel__glow { opacity: 1; animation: glow 1.2s ease-in-out infinite alternate; }
+@keyframes glow { from { filter: brightness(1); } to { filter: brightness(1.6); } }
+.wheel__peg { position: absolute; width: 3.4%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff8dc, #d9b45a 55%, #6b4c18); box-shadow: 0 1px 2px #000; transform: translate(-50%, -50%); }
+.wheel__hub { position: absolute; left: 50%; top: 50%; width: 21%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; z-index: 2; display: grid; place-items: center;
+  background: radial-gradient(circle at 40% 35%, #4a3516, #120c05); box-shadow: 0 0 0 3px #2a1c08, 0 0 0 7px #d4af37, 0 0 0 9px #2a1c08, 0 8px 16px rgba(0,0,0,.7); }
+.wheel__hub img { width: 76%; filter: drop-shadow(0 1px 2px #000); }
+.wheel__pointer { position: absolute; left: -4.5%; top: 50%; z-index: 3; width: 15%; aspect-ratio: 1.35; transform-origin: 18% 50%; transform: translateY(-50%) rotate(var(--kick, 0deg)); transition: transform .08s;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.75)); }
+.wheel__pointer svg { width: 100%; height: 100%; display: block; }
+.wheel.won .wheel__pointer { animation: tick .45s 3; }
+@keyframes tick { 50% { filter: drop-shadow(0 0 12px #ffe08a) brightness(1.35); } }
+.sparks { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.sparks i { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle, #fff6cc, #ffcf4a 60%, transparent 70%); opacity: 0; }
+.wheel.won .sparks i { animation: spark 1.1s ease-out forwards; }
+@keyframes spark { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(.4); } }
+
+/* =====================================================================
+   A · THE TABLETS
+   ===================================================================== */
+.board { position: relative; width: min(100%, 1180px, (100cqh - 56px - 6cqh) * 1.62); aspect-ratio: 1.62; container-type: inline-size;
+  display: grid; grid-template-rows: auto 1fr auto; padding: 0 3.2cqi 2.2cqi; border-radius: 10px;
+  background: url("img/stone-tile.jpg") 0 0 / 1024px repeat, #77705f;
+  box-shadow: inset 0 0 0 .25cqi #6b4c18, inset 0 0 0 .45cqi #e0b54f, inset 0 0 0 .6cqi #6b4c18, inset 0 0 6cqi rgba(0,0,0,.45), 0 0 0 2px #1a140b, 0 30px 60px rgba(0,0,0,.75); }
+.b-head { position: relative; display: grid; place-items: center; height: 9cqi; margin: 0 -3.2cqi; }
+.b-head::before { content: ""; position: absolute; left: 1.4cqi; right: 1.4cqi; top: 1.3cqi; bottom: 1.3cqi; border-radius: 4px; background: url("img/frieze-hd.webp") center / cover, url("img/frieze.webp") center / cover; opacity: .9; box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 1px 0 rgba(255,240,200,.25); }
+.b-head b { position: relative; padding: .6cqi 3cqi; border-radius: 4px; background: rgba(40,32,22,.82); box-shadow: 0 0 0 1px rgba(224,181,79,.45); font: 900 1.7cqi/1 var(--font-display); letter-spacing: .32em; }
+.b-main { display: grid; grid-template-columns: 30% 1fr; gap: 3cqi; align-items: center; min-height: 0; }
+/* the opponent: their pack in a niche cut into the stone */
+.foe { display: flex; flex-direction: column; align-items: center; gap: 1.4cqi; text-align: center; }
+.niche { position: relative; width: 64%; aspect-ratio: .64; border-radius: 6px; display: grid; place-items: center;
+  background: linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.18)), url("img/stone-tile.jpg") 0 0 / 1024px repeat;
+  box-shadow: inset 0 1.2cqi 2cqi rgba(0,0,0,.7), inset 0 -2px 0 rgba(255,240,210,.25), 0 0 0 .3cqi #6b4c18, 0 0 0 .45cqi #e0b54f, 0 0 0 .6cqi #3b2a10; }
+.niche img { width: 82%; filter: drop-shadow(0 1cqi 1.2cqi rgba(0,0,0,.75)); transition: transform .5s, opacity .4s; }
+.niche .medal { position: absolute; opacity: 0; transform: scale(.6); transition: .5s .15s; }
+.won .niche img { opacity: 0; transform: scale(.6) rotate(-14deg); } .won .niche .medal { opacity: 1; transform: none; }
+.foe small { font: 800 1.05cqi/1 var(--font-display); letter-spacing: .3em; text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255,244,220,.4); }
+.foe .name { margin-top: -.6cqi; font: 900 3cqi/1.05 var(--font-display); }
+.stats { display: flex; gap: 1cqi; justify-content: center; }
+.stat { min-width: 7.4cqi; padding: .8cqi 1cqi; border-radius: 4px; background: rgba(28,22,15,.78); box-shadow: inset 0 2px 5px rgba(0,0,0,.7), 0 1px 0 rgba(255,240,210,.3); }
+.stat small { display: block; font: 800 .8cqi/1 var(--font-display); letter-spacing: .2em; text-transform: uppercase; color: #a99d80; text-shadow: none; }
+.stat b { display: block; margin-top: .4cqi; font: 900 2cqi/1 var(--font-display); color: var(--gold-hi); text-shadow: 0 2px 3px #000; }
+.medal { display: grid; place-items: center; width: 80%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 38% 30%, #fff3c4, #d9b45a 45%, #7a5418); box-shadow: 0 0 0 .35cqi #3b2a10, 0 0 0 .6cqi #c9a14a, 0 0 3cqi rgba(255,214,90,.6); }
+.medal b { font: 900 1.5cqi/1.05 var(--font-display); color: #2a1c05; text-align: center; text-transform: uppercase; padding: 0 12%; text-shadow: 0 1px 0 rgba(255,240,190,.6); }
+/* the choice */
+.choice { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2cqi; }
+.choice .ask { margin-bottom: 1cqi; font: 900 2cqi/1 var(--font-display); letter-spacing: .16em; text-align: center; }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3cqi; width: 100%; }
+.pick { display: flex; flex-direction: column; align-items: center; gap: 2cqi; padding: 0; border: 0; background: none; cursor: pointer; }
+.tablet { position: relative; width: 100%; aspect-ratio: 1229 / 905; transition: transform .2s cubic-bezier(.2,.9,.3,1.3); }
+/* the bed cut into the board: the stone steps down into a dark seam, so the tablet sits in the wall instead of on it */
+.tablet::before { content: ""; position: absolute; inset: -3.5% -2.8%; border-radius: 4%; z-index: 0;
+  background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,.28), rgba(0,0,0,.5) 75%), url("img/stone-tile.jpg") center / 1024px;
+  box-shadow: inset 0 .9cqi 1.4cqi rgba(0,0,0,.75), inset 0 -.2cqi .3cqi rgba(255,245,225,.22), 0 .15cqi 0 rgba(255,245,225,.25), 0 -.15cqi 0 rgba(0,0,0,.45); }
+.tablet i { position: absolute; inset: 0; z-index: 1; background: center / contain no-repeat; pointer-events: none; }
+.tablet .slab { filter: saturate(.55) brightness(.86) contrast(1.05) drop-shadow(0 .5cqi .7cqi rgba(0,0,0,.6)); transition: filter .3s; }
+.tablet .lines { opacity: 0; transition: opacity .35s, filter .35s; filter: brightness(1.25) drop-shadow(0 0 .25cqi rgba(255,214,110,.95)) drop-shadow(0 0 .9cqi rgba(255,190,70,.7)); }
+.pick.win .slab { background-image: url("img/tablet-win.webp"); } .pick.lose .slab { background-image: url("img/tablet-lose.webp"); }
+.pick.win .lines { background-image: url("img/tablet-win-lines.webp"); } .pick.lose .lines { background-image: url("img/tablet-lose-lines.webp"); }
+.pick.lose .lines { filter: brightness(1.15) sepia(.4) hue-rotate(-18deg) saturate(1.6) drop-shadow(0 0 .25cqi rgba(255,140,100,.95)) drop-shadow(0 0 .9cqi rgba(220,80,50,.7)); }
+.pick:hover .tablet { transform: translateY(-1%); } .pick:hover .lines { opacity: .75; } .pick:hover .slab { filter: saturate(.6) brightness(.92) contrast(1.05) drop-shadow(0 .9cqi 1cqi rgba(0,0,0,.6)); }
+.pick:active .tablet, .pick.pressed .tablet { transform: translateY(1.5%) scale(.985); }
+.pick.chosen .lines { opacity: 1; animation: lineglow 1.6s ease-in-out infinite alternate; }
+@keyframes lineglow { to { filter: brightness(1.45) drop-shadow(0 0 .35cqi rgba(255,224,130,1)) drop-shadow(0 0 1.4cqi rgba(255,190,70,.85)); } }
+.pick.lose.chosen .lines { animation: none; }
+.pick .word { font: 900 2.3cqi/1 var(--font-display); letter-spacing: .22em; padding-bottom: .6cqi; }
+.pick.dim { opacity: .35; filter: grayscale(1); pointer-events: none; }
+.b-foot { display: flex; justify-content: center; align-items: center; min-height: 4cqi; }
+.b-foot .linkback { font-family: var(--font-display); color: #2f281e; text-decoration-color: rgba(58,50,38,.4); text-shadow: 0 1px 0 rgba(255,244,220,.35); font-size: 1.15cqi; }
+/* the acts replace the choice in the same place */
+.act { display: none; flex-direction: column; align-items: center; gap: 1.6cqi; width: 100%; }
+.board[data-st="wheel"] .tabs, .board[data-st="wheel"] .ask, .board[data-st="defeat"] .ask { display: none; }
+.board[data-st="wheel"] .act-wheel { display: flex; }
+.board[data-st="defeat"] .act-defeat, .board[data-st="duo"] .act-duo, .board[data-st="duo2"] .act-duo { display: flex; }
+.act-wheel .wheel { flex: none; width: 31cqi; }
+.act-wheel .row { display: flex; align-items: center; gap: 3cqi; }
+.prize { min-height: 5cqi; text-align: center; } .prize small { display: block; font: 800 .95cqi/1 var(--font-display); letter-spacing: .3em; text-transform: uppercase; color: #3a3226; text-shadow: 0 1px 0 rgba(255,244,220,.35); } .prize b { display: block; margin-top: .6cqi; font: 900 2.4cqi/1 var(--font-display); }
+.board .cartouche { min-width: 0; width: 19cqi; height: 4.8cqi; } .board .cartouche span { font-size: 1.15cqi; }
+.board[data-st="defeat"] .tabs { width: 72%; }
+.act-defeat .packs3 img { height: 9cqi; }
+.act-defeat p, .act-duo p { margin: 0; font: 700 1.35cqi/1.45 var(--font-display); color: #2e271d; text-shadow: 0 1px 0 rgba(255,244,220,.3); text-align: center; }
+.act-defeat p b, .act-duo p b { color: #6e1e10; }
+.packs3 { display: flex; justify-content: center; } .packs3 img { margin-left: -2.4cqi; filter: drop-shadow(0 .8cqi 1cqi rgba(0,0,0,.7)); transform: rotate(var(--r)) translateY(var(--y)); animation: dealt .6s cubic-bezier(.2,.9,.3,1.2) both; animation-delay: var(--d); }
+.packs3 img:first-child { margin-left: 0; }
+@keyframes dealt { from { opacity: 0; transform: translateY(40%) rotate(0deg) scale(.7); } }
+.board[data-st="duo"] .tabs, .board[data-st="duo2"] .tabs { width: 72%; }
+.hourglass { display: inline-block; animation: turn 2.4s ease-in-out infinite; } @keyframes turn { 40%, 60% { transform: rotate(180deg); } 100% { transform: rotate(360deg); } }
+.duo-btns { display: flex; gap: 2cqi; }
+
+/* A on phones: the same board, one column */
+@container (max-width: 760px) {
+  .board { width: 100%; aspect-ratio: auto; height: 100%; display: flex; flex-direction: column; padding: 0 12px 10px; border-radius: 10px; overflow: hidden;
+    box-shadow: inset 0 0 0 1px #6b4c18, inset 0 0 0 2.5px #e0b54f, inset 0 0 0 3.5px #6b4c18, inset 0 0 40px rgba(0,0,0,.45), 0 20px 40px rgba(0,0,0,.7); }
+  .b-head { height: 44px; margin: 0 -12px; } .b-head::before { left: 8px; right: 8px; top: 7px; bottom: 7px; } .b-head b { font-size: 11px; padding: 5px 12px; }
+  .b-main { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; padding-top: 8px; }
+  .foe { display: grid; grid-template-columns: 74px 1fr; grid-template-rows: auto auto auto; column-gap: 12px; row-gap: 4px; text-align: left; align-items: center; width: 100%; }
+  .niche { grid-row: 1 / 4; width: 74px; } .niche .medal b { font-size: 8px; }
+  .foe small { font-size: 9.5px; } .foe .name { margin: 0; font-size: 22px; }
+  .stats { justify-content: flex-start; gap: 6px; } .stat { min-width: 0; padding: 5px 7px; } .stat small { font-size: 7.5px; } .stat b { font-size: 15px; margin-top: 3px; }
+  .choice { gap: 10px; } .choice .ask { font-size: 14px; margin-bottom: 2px; }
+  .tabs { grid-template-columns: 1fr; gap: 8px; width: 100%; }
+  .choice { flex: 1; min-height: 0; } .tabs { flex: 1; min-height: 0; grid-template-rows: 1fr 1fr; }
+  .pick { min-height: 0; } .tablet { flex: 1 1 0; min-height: 0; width: auto; max-width: 100%; aspect-ratio: 1229 / 905; align-self: center; }
+  .tablet::before { inset: -3% -2.5%; }
+  .pick { gap: 8px; } .pick .word { font-size: 15px; letter-spacing: .24em; padding-bottom: 2px; }
+  .b-foot { min-height: 28px; } .b-foot .linkback { font-size: 10px; }
+  .act { gap: 10px; }
+  .act-wheel .row { flex-direction: column; gap: 10px; }
+  .act-wheel .wheel { width: min(86%, 330px, 50cqh); margin-left: 5%; }
+  .prize small { font-size: 9px; } .prize b { font-size: 19px; margin-top: 4px; } .prize { min-height: 34px; }
+  .board .cartouche { width: 230px; height: 58px; } .board .cartouche span { font-size: 14px; }
+  .board[data-st="wheel"] .foe { display: none; }
+  .board[data-st="defeat"] .tabs, .board[data-st="duo"] .tabs, .board[data-st="duo2"] .tabs { width: 100%; }
+  .board[data-st="defeat"] .pick.win, .board[data-st="duo"] .pick.lose, .board[data-st="duo2"] .pick.lose { display: none; }
+  .board:not([data-st="board"]) .tabs { flex: none; grid-template-rows: auto; } .board:not([data-st="board"]) .tablet { flex: none; height: 17cqh; }
+  .board:not([data-st="board"]) .choice { flex: none; }
+  .act-defeat .packs3 img { height: min(92px, 12cqh); margin-left: -24px; } .act-defeat .packs3 img:first-child { margin-left: 0; }
+  .act-defeat p, .act-duo p { font-size: 13.5px; }
+  .duo-btns { gap: 8px; width: 100%; justify-content: center; } .board .duo-btns .cartouche { width: 46%; min-width: 0; }
+  .act { min-width: 0; } .act p { max-width: 100%; padding: 0 4px; }
+}
+
+/* =====================================================================
+   B · THE SCOREBOARD — the painted glass is the choice
+   ===================================================================== */
+.sb { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.2cqh; width: min(100%, 900px); }
+.sb-head { text-align: center; }
+.sb-head small { font: 800 12px/1 var(--font-main); letter-spacing: .32em; text-transform: uppercase; color: #c7b99a; text-shadow: 0 1px 4px #000; }
+.sb-head b { display: block; margin-top: 8px; font: 900 clamp(30px, 4.6cqw, 54px)/1 var(--font-display); }
+.frame { position: relative; height: min(56cqh, 520px); aspect-ratio: 952 / 792; background: url("img/stats_panel_cropped.webp") center / contain no-repeat; filter: drop-shadow(0 24px 40px rgba(0,0,0,.7)); container-type: size; }
+.glass { position: absolute; top: 15%; height: 68.6%; width: 34.2%; padding: 0; border: 0; cursor: pointer; border-radius: 3%; background: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3cqh; transition: transform .18s, filter .3s; }
+.glass.win { left: 14.2%; } .glass.lose { left: 52.2%; }
+.glass::before { content: ""; position: absolute; inset: 0; border-radius: inherit; opacity: 0; transition: opacity .3s; }
+.glass.win::before { background: radial-gradient(ellipse at 50% 40%, rgba(120,255,160,.5), transparent 70%); box-shadow: inset 0 0 0 2px rgba(170,255,190,.6); }
+.glass.lose::before { background: radial-gradient(ellipse at 50% 40%, rgba(255,120,100,.5), transparent 70%); box-shadow: inset 0 0 0 2px rgba(255,170,150,.6); }
+.glass:hover::before, .glass.chosen::before { opacity: 1; } .glass:hover { filter: brightness(1.15); } .glass:active { transform: scale(.98); }
+.glass .face { width: 74%; aspect-ratio: 1229 / 905; background: center / contain no-repeat; opacity: .9; mix-blend-mode: screen; filter: grayscale(1) contrast(2.2) brightness(.8) sepia(1) saturate(3); -webkit-mask: radial-gradient(ellipse, #000 45%, transparent 72%); mask: radial-gradient(ellipse, #000 45%, transparent 72%); }
+.glass.win .face { background-image: url("img/tablet-win.webp"); } .glass.lose .face { background-image: url("img/tablet-lose.webp"); }
+.glass b { position: relative; font: 900 6.8cqh/1 var(--font-display); letter-spacing: .1em; text-shadow: 0 2px 6px #000; }
+.glass.win b { color: #d9ffe2; } .glass.lose b { color: #ffe0d8; }
+.glass small { position: relative; font: 800 3.2cqh/1 var(--font-main); letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.75); }
+.glass small b { font: inherit; letter-spacing: inherit; color: #fff; text-shadow: none; }
+.sb-act { display: none; flex-direction: column; align-items: center; gap: 2cqh; }
+.sb-act .wheel { width: min(46cqh, 420px); }
+.sb[data-st="wheel"] .frame, .sb[data-st="defeat"] .frame { display: none; }
+.sb[data-st="wheel"] .sb-wheel, .sb[data-st="defeat"] .sb-defeat { display: flex; }
+.sb[data-st="wheel"] .sb-ask, .sb[data-st="defeat"] .sb-ask { display: none; }
+.sb .prize small { color: #c7b99a; text-shadow: 0 1px 4px #000; } .sb .prize b { font-size: 26px; }
+.sb-defeat .bigword { font: 900 clamp(46px, 8cqw, 96px)/1 var(--font-display); letter-spacing: .08em; }
+.sb-defeat p { margin: 0; font: 700 16px/1.4 var(--font-main); color: #e9d9ad; text-shadow: 0 1px 4px #000; }
+.sb-defeat .packs3 img { height: min(20cqh, 180px); margin-left: -40px; } .sb-defeat .packs3 img:first-child { margin-left: 0; }
+.sb[data-st="duo"] .glass, .sb[data-st="duo2"] .glass { pointer-events: none; } .sb[data-st="duo"] .glass.lose, .sb[data-st="duo2"] .glass.lose { filter: grayscale(1) brightness(.6); }
+.sb-duo { display: none; font: 700 15px/1.4 var(--font-main); color: #e9d9ad; text-align: center; text-shadow: 0 1px 4px #000; } .sb[data-st="duo"] .sb-duo, .sb[data-st="duo2"] .sb-duo { display: block; }
+.sb .duo-btns { display: none; } .sb[data-st="duo2"] .duo-btns { display: flex; }
+@container (max-width: 760px) {
+  .sb { gap: 12px; }
+  .sb-head b { font-size: 26px; }
+  .frame { height: auto; width: 100%; }
+  .glass b { font-size: 6cqh; }
+  .sb-act .wheel { width: min(76%, 300px, 42cqh); margin-left: 5%; }
+  .sb-defeat .packs3 img { height: 110px; margin-left: -28px; }
+  .sb .duo-btns .cartouche { min-width: 150px; }
+}
+/* short phones: the result acts tighten so Claim and the way back always fit */
+@container (max-width: 760px) and (max-height: 720px) {
+  .board:not([data-st="board"]) .tablet { height: 13cqh; }
+  .act-defeat .packs3 img { height: 10cqh; }
+  .board .cartouche { height: 50px; width: 210px; } .board .act { gap: 6px; }
+  .board .duo-btns .cartouche { width: 46%; min-width: 0; }
+  .b-head { height: 38px; } .foe { row-gap: 2px; } .niche { width: 62px; } .foe .name { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .wheel__rays, .packs3 img, .hourglass { animation: none; } }
+</style>
+</head>
+<body class="A">
+<div class="proto">
+  <div class="grp" data-g="opt"><button data-v="A" aria-pressed="true">A · The tablets</button><button data-v="B">B · The scoreboard</button></div>
+  <div class="grp" data-g="st"><button data-v="board" aria-pressed="true">Record</button><button data-v="wheel">Victory → wheel</button><button data-v="defeat">Defeat</button><button data-v="duo">Duo: waiting</button><button data-v="duo2">Duo: confirm</button></div>
+  <div class="grp" data-g="dev"><button data-v="desk" aria-pressed="true">Desktop</button><button data-v="phone">Phone frame</button></div>
+</div>
+<div class="stagebox"><div id="app">
+  <div class="wall"></div>
+  <div class="topnav"><b>GUEST</b><span>CAMPAIGN · COLLECTION · DECK BUILDER · REWARDS · MENU</span></div>
+
+  <!-- ===================== A ===================== -->
+  <div class="screen optA">
+    <div class="board" id="boardA" data-st="board">
+      <div class="b-head"><b><span class="gilt" id="aHead">Record the duel</span></b></div>
+      <div class="b-main">
+        <div class="foe">
+          <div class="niche"><img src="img/SRL.webp" alt="Spell Ruler pack"><div class="medal"><b id="aMedal"></b></div></div>
+          <small id="aEyebrow">Your opponent</small>
+          <b class="name gilt" id="aName">Spell Ruler</b>
+          <div class="stats"><div class="stat"><small>Win rate</small><b>62%</b></div><div class="stat"><small>Streak</small><b>+3</b></div><div class="stat"><small>Record</small><b>8–5</b></div></div>
+        </div>
+        <div class="choice">
+          <b class="ask carved" id="aAsk">How did the duel go?</b>
+          <div class="tabs">
+            <button class="pick win" data-pick="win" aria-label="Record a victory"><div class="tablet"><i class="slab"></i><i class="lines"></i></div><b class="word carved">Victory</b></button>
+            <button class="pick lose" data-pick="lose" aria-label="Record a defeat"><div class="tablet"><i class="slab"></i><i class="lines"></i></div><b class="word carved red">Defeat</b></button>
+          </div>
+          <div class="act act-wheel"><div class="row"><div class="wheel-slot" id="aWheelSlot" style="display:contents"></div><div style="display:flex;flex-direction:column;align-items:center;gap:1.6cqi"><div class="prize" id="aPrize"><small>Spin for your prize</small><b class="gilt">Winner's Wheel</b></div><button class="cartouche" id="aSpin"><span>Spin the wheel</span></button></div></div></div>
+          <div class="act act-defeat"><div class="packs3"><img src="img/SRL.webp" style="--r:-10deg;--y:5%;--d:.05s"><img src="img/SRL.webp" style="--r:0deg;--y:0;--d:.18s"><img src="img/SRL.webp" style="--r:10deg;--y:5%;--d:.31s"></div><p><b>3 Pity Packs</b> to rebuild your deck</p><button class="cartouche"><span>Claim pity packs</span></button></div>
+          <div class="act act-duo"><p id="aDuo"></p><div class="duo-btns" id="aDuoBtns"><button class="cartouche"><span>Confirm</span></button><button class="cartouche red"><span>Reject</span></button></div></div>
+        </div>
+      </div>
+      <div class="b-foot"><button class="linkback">← Back to campaign</button></div>
+    </div>
+  </div>
+
+  <!-- ===================== B ===================== -->
+  <div class="screen optB">
+    <div class="sb" id="sbB" data-st="board">
+      <div class="sb-head"><small id="bEyebrow">Record the duel</small><b class="gilt">Spell Ruler</b></div>
+      <div class="frame">
+        <button class="glass win" data-pick="win"><div class="face"></div><b>Victory</b><small>Wins <b>8</b></small></button>
+        <button class="glass lose" data-pick="lose"><div class="face"></div><b>Defeat</b><small>Losses <b>5</b></small></button>
+      </div>
+      <div class="sb-duo" id="bDuo"></div>
+      <div class="duo-btns"><button class="cartouche"><span>Confirm</span></button><button class="cartouche red"><span>Reject</span></button></div>
+      <div class="sb-act sb-wheel"><div id="bWheelSlot" style="display:contents"></div><div class="prize" id="bPrize"></div><button class="cartouche" id="bSpin"><span>Spin the wheel</span></button></div>
+      <div class="sb-act sb-defeat"><div class="bigword ochre">Defeat</div><div class="packs3"><img src="img/SRL.webp" style="--r:-10deg;--y:4%;--d:.05s"><img src="img/SRL.webp" style="--r:0deg;--y:0;--d:.18s"><img src="img/SRL.webp" style="--r:10deg;--y:4%;--d:.31s"></div><p>You get <b style="color:var(--gold-hi)">3 Pity Packs</b> to rebuild your deck.</p><button class="cartouche"><span>Claim pity packs</span></button></div>
+      <div class="sb-ask" style="font:700 12px/1 var(--font-main);letter-spacing:.18em;text-transform:uppercase;color:#c7b99a;text-shadow:0 1px 4px #000">Win rate 62% · streak +3</div>
+      <button class="linkback">← Back to campaign</button>
+    </div>
+  </div>
+
+  <div class="guide" id="guide"><img src="img/yugi_neutral_v2_transparent.webp" alt=""><div class="bubble" id="bubble">How did the duel go?</div></div>
+  <div class="tabbar"><i>Campaign</i><i>Collection</i><i>Deck</i><i>Rewards</i><i>Menu</i></div>
+</div></div>
+
+<script>
+const PRIZES = ["Common", "Rare", "Super Rare", "Ultra Rare", "Ult / Secret", "Starlight", "3 Tourn. Packs", "Ban", "Unban", "Redoer"];
+const LONG = { "Common": "Wildcard · Common", "Rare": "Wildcard · Rare", "Super Rare": "Wildcard · Super Rare", "Ultra Rare": "Wildcard · Ultra Rare", "Ult / Secret": "Wildcard · Ult/Secret", "Starlight": "Wildcard · Starlight", "3 Tourn. Packs": "3 Tournament Packs", "Ban": "Ban a Card", "Unban": "Unban a Card", "Redoer": "Redoer Ticket" };
+const N = PRIZES.length, SLICE = 360 / N;
+const POINTER = `<svg viewBox="0 0 54 40"><defs><linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#d4af37"/><stop offset="1" stop-color="#7a5418"/></linearGradient></defs><path d="M2 8 H30 L52 20 L30 32 H2 Q8 20 2 8 Z" fill="url(#pg)" stroke="#2a1c08" stroke-width="2"/><circle cx="12" cy="20" r="5" fill="#1d3a6e" stroke="#2a1c08" stroke-width="1.5"/><circle cx="12" cy="20" r="2" fill="#ffe08a"/></svg>`;
+function makeWheel() {
+  const w = document.createElement("div"); w.className = "wheel";
+  // gold leaf and lapis, each wedge with a fine engraved edge
+  const stops = PRIZES.map((_, i) => `${i % 2 ? "var(--lapis)" : "#dcb85e"} ${i * SLICE}deg ${(i + 1) * SLICE}deg`).join(",");
+  const lines = PRIZES.map((_, i) => `#2a1c08 ${i * SLICE - .6}deg ${i * SLICE + .6}deg, transparent ${i * SLICE + .6}deg ${(i + 1) * SLICE - .6}deg`).join(",");
+  let labels = "", pegs = "", sparks = "";
+  PRIZES.forEach((p, i) => { labels += `<div class="wheel__label ${i % 2 ? "d" : "l"}" style="transform:rotate(${i * SLICE - 90}deg)"><span>${p}</span></div>`;
+    const a = ((i + .5) * SLICE - 90) * Math.PI / 180; pegs += `<i class="wheel__peg" style="left:${50 + 46.2 * Math.cos(a)}%;top:${50 + 46.2 * Math.sin(a)}%"></i>`; });
+  for (let k = 0; k < 18; k++) { const a = Math.random() * Math.PI * 2, r = 40 + Math.random() * 40; sparks += `<i style="--x:${Math.cos(a) * r}cqi;--y:${Math.sin(a) * r}cqi;animation-delay:${Math.random() * .25}s"></i>`; }
+  w.innerHTML = `<div class="wheel__rays"></div><div class="wheel__rim"></div><div class="wheel__face"><div class="wheel__wedges" style="background:conic-gradient(from ${-SLICE / 2}deg, ${stops})"></div><div class="wheel__lines" style="background:conic-gradient(from ${-SLICE / 2}deg, ${lines})"></div>${labels}<div class="wheel__glow"></div>${pegs}</div><div class="wheel__hub"><img src="img/millennium-eye.webp" alt=""></div><div class="wheel__pointer">${POINTER}</div><div class="sparks">${sparks}</div>`;
+  w.rot = 0; return w;
+}
+// spin with a real ease-out, the pointer kicked by every peg that passes it
+function spin(w, done) {
+  const i = Math.floor(Math.random() * N), jitter = (Math.random() - .5) * SLICE * .7;
+  const from = w.rot, to = from + 6 * 360 + ((270 - i * SLICE - (from % 360)) % 360 + 360) % 360 + jitter;
+  const face = w.querySelector(".wheel__face"), ptr = w.querySelector(".wheel__pointer"), glow = w.querySelector(".wheel__glow");
+  const T = 4200, t0 = performance.now(); let lastPeg = Math.floor((from + SLICE / 2) / SLICE);
+  w.classList.add("spinning"); w.classList.remove("won");
+  const ease = (t) => 1 - Math.pow(1 - t, 4);
+  (function frame(now) {
+    const t = Math.min(1, (now - t0) / T), r = from + (to - from) * ease(t);
+    face.style.transform = `rotate(${r}deg)`;
+    const peg = Math.floor((r + SLICE / 2) / SLICE);
+    if (peg !== lastPeg) { lastPeg = peg; ptr.style.setProperty("--kick", "-16deg"); setTimeout(() => ptr.style.setProperty("--kick", "0deg"), 60); }
+    if (t < 1) return requestAnimationFrame(frame);
+    w.rot = to; w.classList.remove("spinning"); w.classList.add("won");
+    // light the winning wedge
+    glow.style.background = `conic-gradient(from ${i * SLICE - SLICE / 2}deg, rgba(255,190,60,.55) 0 ${SLICE}deg, transparent ${SLICE}deg)`;
+    done(PRIZES[i]);
+  })(t0);
+}
+const $ = (s) => document.querySelector(s);
+const wheels = { A: makeWheel(), B: makeWheel() };
+$("#aWheelSlot").append(wheels.A); $("#bWheelSlot").append(wheels.B);
+
+let state = { opt: "A", st: "board", dev: "desk" };
+const guide = (img, text) => { $("#guide img").src = `img/${img}.webp`; $("#bubble").textContent = text; };
+function render() {
+  document.body.className = `${state.opt} ${state.dev === "phone" ? "as-phone" : ""}`;
+  const st = state.st;
+  for (const el of [$("#boardA"), $("#sbB")]) { el.dataset.st = st; el.classList.remove("won"); }
+  document.querySelectorAll(".chosen, .dim").forEach((e) => e.classList.remove("chosen", "dim"));
+  if (st === "defeat") { document.querySelectorAll(".pick.lose, .glass.lose").forEach((e) => e.classList.add("chosen")); document.querySelectorAll(".pick.win").forEach((e) => e.classList.add("dim")); }
+  if (st === "duo" || st === "duo2") { document.querySelectorAll(".pick.win, .glass.win").forEach((e) => e.classList.add("chosen")); document.querySelectorAll(".pick.lose").forEach((e) => e.classList.add("dim")); }
+  $("#aHead").textContent = st === "wheel" ? "Victory reward" : st === "defeat" ? "Match result" : st.startsWith("duo") ? "Duo series" : "Record the duel";
+  $("#bEyebrow").textContent = $("#aHead").textContent;
+  $("#aAsk").textContent = st === "defeat" ? "The shadows win this round" : st === "duo" ? "Waiting for Kaiba" : st === "duo2" ? "Kaiba reports a result" : "How did the duel go?";
+  $("#aAsk").className = "ask carved" + (st === "defeat" ? " red" : "");
+  const duo = st === "duo" ? `<span class="hourglass">⌛</span> You reported a <b>victory</b>. Kaiba has to confirm it before the wheel turns.` : st === "duo2" ? `Kaiba says <b>you won</b>. Confirm to spin the wheel.` : "";
+  $("#aDuo").innerHTML = $("#bDuo").innerHTML = duo; $("#aDuoBtns").style.display = st === "duo2" ? "flex" : "none";
+  for (const k in wheels) { wheels[k].classList.remove("won"); wheels[k].querySelector(".wheel__glow").style.background = ""; }
+  $("#aSpin").firstChild.textContent = $("#bSpin").firstChild.textContent = "Spin the wheel";
+  $("#aPrize").innerHTML = `<small>Spin for your prize</small><b class="gilt">Winner's Wheel</b>`; $("#bPrize").innerHTML = "";
+  guide(st === "defeat" ? "yugi_sad_v2_transparent" : st === "wheel" ? "yugi_happy_v2_transparent" : "yugi_neutral_v2_transparent",
+        st === "defeat" ? "Every loss makes your deck stronger. Take these packs." : st === "wheel" ? "Well played! Give the wheel a spin." : st === "duo" ? "We wait for your rival's word." : st === "duo2" ? "Is that how it went?" : "How did the duel go?");
+  document.querySelectorAll(".proto .grp").forEach((g) => g.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === state[g.dataset.g]))));
+}
+document.querySelectorAll(".proto .grp").forEach((g) => g.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; state[g.dataset.g] = b.dataset.v; render(); }));
+document.querySelectorAll("[data-pick]").forEach((b) => b.addEventListener("click", () => {
+  if (state.st !== "board") return;
+  b.classList.add("pressed", "chosen"); setTimeout(() => { b.classList.remove("pressed"); state.st = b.dataset.pick === "win" ? "wheel" : "defeat"; render(); }, 420);
+}));
+function spinFlow(btn, w, prizeEl, board) {
+  btn.addEventListener("click", () => {
+    if (btn.busy) return;
+    if (w.classList.contains("won")) { btn.firstChild.textContent = "→ to the Rewards altar"; return; }
+    btn.busy = true; btn.style.opacity = .55;
+    spin(w, (p) => { btn.busy = false; btn.style.opacity = 1; btn.firstChild.textContent = "Claim prize";
+      prizeEl.innerHTML = `<small>You won</small><b class="gilt">${LONG[p]}</b>`;
+      if (board) { board.classList.add("won"); $("#aMedal").textContent = p; }
+      guide("yugi_happy_v2_transparent", `${LONG[p]}! Claim it on the Rewards altar.`); });
+  });
+}
+spinFlow($("#aSpin"), wheels.A, $("#aPrize"), $("#boardA"));
+spinFlow($("#bSpin"), wheels.B, $("#bPrize"));
+render();
+</script>
+</body>
+</html>

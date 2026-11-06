@@ -42,7 +42,7 @@ function Page({ slots, title, chapter, number, onOpen, bind }: {
                     <button key={s.key} type="button" className="binder-pocket" data-tier={s.tier} onClick={() => onOpen(s)} aria-label={s.card.name} {...(s.count ? bind(s) : {})}>
                         {s.count && art ? (
                             <>
-                                <img src={art} alt="" loading="lazy" decoding="async" />
+                                <img src={art} alt="" decoding="sync" />
                                 {s.tier !== "Common" && <span className="binder-foil" />}
                                 {s.count > 1 && <span className="binder-count">×{s.count}</span>}
                             </>
@@ -104,6 +104,15 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
         const t = setTimeout(() => setOpen(true), 450);
         return () => clearTimeout(t);
     }, []);
+
+    // The pages either side are fetched and decoded ahead, so a turn never lands on a page still loading.
+    useEffect(() => {
+        const near = slots.slice(Math.max(0, (at - 1) * per), (at + 2) * per);
+        for (const s of near) {
+            const url = s.count ? s.card.card_images[0]?.image_url_small : undefined;
+            if (url) { const img = new Image(); img.src = url; void img.decode().catch(() => {}); }
+        }
+    }, [slots, at, per]);
 
     const turn = (dir: 1 | -1) => {
         const next = at + dir;
