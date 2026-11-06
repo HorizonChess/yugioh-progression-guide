@@ -342,7 +342,7 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
         const onFront = () => {
             if (!ready) return;
             const el = els[front()]!;
-            setHint(!isUp(el) ? "Tap the front card to reveal it" : flipped.size === n ? "All revealed · tap a card for details" : "Tap it for details · swipe to turn");
+            setHint(!isUp(el) ? "Tap a card to reveal it" : flipped.size === n ? "All revealed · tap a card for details" : "Tap it for details · swipe to turn");
         };
         // The running spin, so a finger can catch the ring mid-turn.
         let spinning: gsap.core.Animation | null = null;
@@ -485,6 +485,9 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
             if (!el) return;
             const i = els.indexOf(el);
             if (i === front()) return isUp(el) ? inspect(el) : reveal(i);
+            // A face-down common flips where it is; a rare or better comes to the front for its reveal,
+            // and a face-up card comes forward to be looked at.
+            if (!isUp(el) && o.cards[i]!.tier === "Common") return reveal(i);
             const k = Math.round(state.t / step), off = (((i - (((k % n) + n) % n)) + n + Math.floor(n / 2)) % n) - Math.floor(n / 2);
             spinTo((k + off) * step);
         }, { signal });
