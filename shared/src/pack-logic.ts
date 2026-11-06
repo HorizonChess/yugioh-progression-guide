@@ -97,6 +97,66 @@ export function generateBoosterPack(setCards: Card[], setInfo: CardSet, rng: Rng
     }
 }
 
+/** Packs per booster box: the unit the foil counts and the even spread of cards are kept over. */
+export const BOX_SIZE = 24;
+
+/**
+ * The box being opened, for `generateBoosterPacks`. A real box isn't 24 independent
+ * packs: it's cut from print sheets, so its foils come in fixed counts and its cards are
+ * spread evenly. So within a box:
+ *  - the ninth slot follows a plan made once per box from the ratios: a 1:6 Super is
+ *    exactly 4 Supers in 24 packs, a 1:31 Secret is one with a 24/31 chance, placed in
+ *    random packs (the same odds per pack as the hat, without the streaks);
+ *  - every pool (the commons, the rares, each foil rarity) is dealt from its own shuffled
+ *    stack, so each card comes round once before any comes twice.
+ */
+let activeBox: { foilPlan: (string | null)[] | null; pack: number; stacks: Map<string, Card[]> } | null = null;
+
+/**
+ * Rolls `count` packs of `setInfo` the way a box (or boxes) would hold them: each run of
+ * BOX_SIZE packs is one box, and fewer packs are the first ones out of a box. Use this for
+ * any opening of several packs; `generateBoosterPack` is a lone loose pack.
+ */
+export function generateBoosterPacks(setCards: Card[], setInfo: CardSet, count: number, rng: Rng = Math.random): PulledCard[][] {
+    const previousBox = activeBox, previousRng = activeRng;
+    activeRng = rng;
+    const packs: PulledCard[][] = [];
+    try {
+        for (let i = 0; i < count; i++) {
+            if (i % BOX_SIZE === 0) activeBox = { foilPlan: null, pack: 0, stacks: new Map() };
+            packs.push(generateBoosterPack(setCards, setInfo, rng));
+            activeBox!.pack++;
+        }
+    } finally {
+        activeBox = previousBox;
+        activeRng = previousRng;
+    }
+    return packs;
+}
+
+/** The box's ninth-slot plan: how many of each foil the ratios give a full box, in random packs. */
+function planBoxFoils(odds: { rarity: string; ratio: number }[]): (string | null)[] {
+    const plan: (string | null)[] = Array(BOX_SIZE).fill(null);
+    const order = shuffled(Array.from({ length: BOX_SIZE }, (_, i) => i));
+    let next = 0;
+    for (const { rarity, ratio } of odds) {
+        const exact = BOX_SIZE / ratio;
+        const n = Math.floor(exact) + (activeRng() < exact - Math.floor(exact) ? 1 : 0);
+        for (let k = 0; k < n && next < BOX_SIZE; k++) plan[order[next++]!] = rarity;
+    }
+    return plan;
+}
+
+/** A shuffled copy (Fisher-Yates, from the active rng). */
+function shuffled<T>(items: readonly T[]): T[] {
+    const out = [...items];
+    for (let i = out.length - 1; i > 0; i--) {
+        const j = randomIndex(activeRng, i + 1);
+        [out[i], out[j]] = [out[j]!, out[i]!];
+    }
+    return out;
+}
+
 function generatePackOfType(setCards: Card[], setInfo: CardSet): PulledCard[] {
     const packType = determinePackType(setInfo);
 
@@ -686,6 +746,21 @@ function rollFoilSlot(setCards: Card[], setInfo: CardSet, config: PackConfig, fa
         .sort((a, b) => b.ratio - a.ratio);
     if (odds.length === 0) return null;
 
+    // In a box, the ninth slot follows the box's plan instead of a fresh roll.
+    if (activeBox) {
+        activeBox.foilPlan ??= planBoxFoils(odds);
+        const planned = activeBox.foilPlan[activeBox.pack % BOX_SIZE];
+        if (planned) {
+            if (planned === 'Ultimate Rare' && config.ultimateCanBeUpgrade) {
+                const ultimates = setCards.filter(c => isRarity(c, 'Ultimate Rare', setPrefix));
+                if (ultimates.length > 0) return { card: pickRandom(ultimates), rarity: 'Ultimate Rare' };
+            }
+            const result = tryGetCardWithFallback(setCards, setPrefix, planned);
+            if (result) return result;
+        }
+        return config.foilIsGuaranteed ? tryGetCardWithFallback(setCards, setPrefix, fallbackRarity) : null;
+    }
+
     // Calculate Hat Size (LCM of ratios)
     const hatSize = lcmArray(odds.map(o => o.ratio));
 
@@ -762,12 +837,36 @@ function isRarity(card: Card, rarity: string, setPrefix: string): boolean {
  */
 function pickRandom<T extends Card>(items: readonly T[]): T {
     const used = activePack?.used;
-    const fresh = used ? items.filter((c) => !used.has(c.id)) : items;
-    const pool = fresh.length ? fresh : items;
-    const item = pool[randomIndex(activeRng, pool.length)];
+    const item = activeBox ? dealFromStack(items, used) : pickFresh(items, used);
     if (item === undefined) throw new Error("pickRandom: empty pool");
     used?.add(item.id);
     return item;
+}
+
+/** A random card not yet in the pack (any card if the pool has none left). */
+function pickFresh<T extends Card>(items: readonly T[], used: Set<number> | undefined): T | undefined {
+    const fresh = used ? items.filter((c) => !used.has(c.id)) : items;
+    const pool = fresh.length ? fresh : items;
+    return pool[randomIndex(activeRng, pool.length)];
+}
+
+/**
+ * The next card of this pool's stack in the box, skipping any already in the pack. The
+ * stack is the whole pool shuffled, and is shuffled again once dealt out.
+ */
+function dealFromStack<T extends Card>(items: readonly T[], used: Set<number> | undefined): T | undefined {
+    const stacks = activeBox!.stacks;
+    const key = items.map((c) => c.id).join(',');
+    let stack = stacks.get(key) as T[] | undefined;
+    if (!stack?.length) stacks.set(key, (stack = shuffled(items)));
+    let at = used ? stack.findIndex((c) => !used.has(c.id)) : 0;
+    if (at === -1) {
+        // Every card left in the stack is already in this pack: add the next round of the stack early.
+        stack.push(...shuffled(items));
+        at = used ? stack.findIndex((c) => !used.has(c.id)) : 0;
+        if (at === -1) at = 0; // the whole pool is in this pack already
+    }
+    return stack.splice(at, 1)[0];
 }
 
 function toPulledCard(card: Card, rarity: string, setCode: string): PulledCard {
