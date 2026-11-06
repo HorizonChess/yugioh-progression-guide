@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cinzel, IM_Fell_English, Inter, Outfit, Russo_One } from "next/font/google";
+import { cinzel, fell, inter, outfit, russo } from "@/app/fonts";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProgressionProvider } from "@/context/ProgressionContext";
@@ -8,11 +8,6 @@ import GlobalBackground from "@/components/layout/GlobalBackground";
 import AppNav, { PhoneTabBar } from "@/components/layout/AppNav";
 import SeriesGate from "@/components/layout/SeriesGate";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
-const russo = Russo_One({ weight: "400", subsets: ["latin"], variable: "--font-russo" });
-const cinzel = Cinzel({ weight: ["700", "800"], subsets: ["latin"], variable: "--font-cinzel" });
-const fell = IM_Fell_English({ weight: "400", style: ["normal", "italic"], subsets: ["latin"], variable: "--font-fell-face" });
 
 const VISIBLE_HEIGHT = `(function(){var d=document.documentElement,v=window.visualViewport;function f(){var h=innerHeight;if(v)h=Math.min(h,v.height*v.scale);d.style.setProperty("--app-h",h+"px")}f();addEventListener("resize",f);if(v)v.addEventListener("resize",f)})()`;
 

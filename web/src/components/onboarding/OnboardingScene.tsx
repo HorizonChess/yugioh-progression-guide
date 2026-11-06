@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Cinzel, Felipa, IM_Fell_English } from "next/font/google";
+import { cinzel, fellLetter as fell, script } from "@/app/fonts";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useAuth } from "@/context/AuthContext";
@@ -16,9 +16,6 @@ import "./onboarding.css";
 
 gsap.registerPlugin(useGSAP);
 
-const script = Felipa({ weight: "400", subsets: ["latin"], variable: "--font-script" });
-const fell = IM_Fell_English({ weight: "400", style: ["normal", "italic"], subsets: ["latin"], variable: "--font-fell" });
-const cinzel = Cinzel({ weight: ["400", "700"], subsets: ["latin"], variable: "--font-cinzel" });
 
 type LetterState = { view: LetterView; from: DOMRect | "below"; landing?: Landing };
 /** What's on the desk. The envelope stays (off screen) while its letter is out, so its shards and exit can finish. */
