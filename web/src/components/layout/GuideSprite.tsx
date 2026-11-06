@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { asset } from '@/lib/utils';
 import { useProgression } from "@/context/ProgressionContext";
 import { Sfx } from "@/components/packs/stage/fx";
@@ -28,7 +28,8 @@ const readMs = (text: string) => 2600 + text.length * 30;
  * words typed into a stone tablet. When there's more to say (▼) he waits: tap the tablet
  * to finish the line, tap again for the next. After the last line he leaves by himself.
  * Tapping Yugi sends him off. He overlays the page and nothing moves for him. On phones
- * he and the tablet sit along the bottom, above the tab bar.
+ * he and the tablet sit along the bottom, above the tab bar, and a tap anywhere on the
+ * page moves him along as a tap on the tablet would.
  *
  * `at` (a viewport length, e.g. "17vw") stands him further in from the left edge on
  * desktop, clear of a page's own controls there.
@@ -72,10 +73,24 @@ export default function GuideSprite({ at: standAt }: { at?: string }) {
     }, [onStage, typed, typedOut, more, text, next]);
 
     // A tap finishes the line, then moves on.
-    const tap = () => (typedOut ? next() : setTyped(text.length));
+    const tap = useCallback(() => (typedOut ? next() : setTyped(text.length)), [typedOut, next, text.length]);
+
+    // Phones: his strip covers the bottom of the screen, so a tap anywhere else on the
+    // page moves him along too (and still does what it does there). Tap by tap he
+    // finishes, moves on and leaves, and nothing stays covered.
+    const root = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!onStage || !window.matchMedia("(max-width: 767px)").matches) return;
+        const away = (e: PointerEvent) => {
+            if (!root.current?.contains(e.target as Node)) tap();
+        };
+        document.addEventListener("pointerdown", away, true);
+        return () => document.removeEventListener("pointerdown", away, true);
+    }, [onStage, tap]);
 
     return (
         <div
+            ref={root}
             aria-hidden={!onStage}
             className={`guide ${onStage ? "guide--on" : ""}`}
             style={{ "--guide-stone": `url('${STONE}')`, ...(standAt && { "--guide-at": standAt }) } as React.CSSProperties}

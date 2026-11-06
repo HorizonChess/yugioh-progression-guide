@@ -1,28 +1,31 @@
-import { cardTip, haulLines, pullLine, rankLine, resultLine, setDetails, waitingLine, PRIORITY } from "@/lib/guide/lines";
+import { cardTip, haulLines, pullLine, resultLine, setDetails, waitingLine, PRIORITY } from "@/lib/guide/lines";
 import { guide } from "@/lib/guide/store";
 
-// Stages: 0 = Legend of Blue Eyes, 1 = Metal Raiders, 2 = Spell Ruler (facts.json, built from the real pool).
+// Stages: 0 = Legend of Blue Eyes, 1 = Metal Raiders, 2 = Spell Ruler, ... (data/guide/timeline.json).
 const URABY = { id: 1784619, name: "Uraby" };
-const SKULL_RED_BIRD = { id: 10202894, name: "Skull Red Bird" };
-const COLORED_FISH = { id: 23771716, name: "7 Colored Fish" };
+const FISSURE = { id: 66788016, name: "Fissure" };
+const KURIBOH = { id: 40640057, name: "Kuriboh" };
+const LON = 4, PGD = 6, AST = 10;
 
 describe("Yugi's lines", () => {
-    it("ranks a monster against the pool at the player's stage, not the whole game", () => {
-        const line = rankLine(URABY, 0)!;
-        expect(line).toContain("Uraby");
-        expect(line).toContain("Skull Red Bird"); // the only stronger no-tribute monster in LOB
-        expect(line).toContain("common");
-        // By Metal Raiders, Uraby is no longer near the top.
-        expect(rankLine(URABY, 1)).toBeNull();
+    it("only talks about cards that mattered then, not every strong-looking one", () => {
+        // Uraby had good ATK for its set, but tournaments didn't play it: nothing to say.
+        expect(cardTip(URABY, 0)).toBeNull();
+        expect(pullLine({ ...URABY, isNew: true, copies: 1 }, 0)).toBeNull();
     });
 
-    it("never calls a monster the hardest hitter when a stronger one with a catch exists", () => {
-        // In Metal Raiders, Jirai Gumo (2200, a coin toss) outhits 7 Colored Fish (1800).
-        for (const s of [0, 1, 2, 3]) {
-            const line = rankLine(COLORED_FISH, 1, s)!;
-            expect(line).toContain("Jirai Gumo");
-        }
-        expect(rankLine(SKULL_RED_BIRD, 0, 0)).not.toContain("catch");
+    it("judges a card by where the series is: Fissure is great early, not later", () => {
+        expect(cardTip(FISSURE, 0)?.text).toMatch(/Fissure/);
+        expect(cardTip(FISSURE, PGD)?.text).toMatch(/Fissure/); // its last set
+        expect(cardTip(FISSURE, PGD + 1)).toBeNull();
+        expect(pullLine({ ...FISSURE, isNew: true, copies: 1 }, AST)).toBeNull();
+    });
+
+    it("never forgets a card from his own duels", () => {
+        expect(cardTip(KURIBOH, 1)?.text).toMatch(/Kuriboh/);
+        expect(cardTip(KURIBOH, 100)?.text).toMatch(/Kuriboh/);
+        expect(cardTip({ id: 0, name: "Flame Swordsman" }, 50)?.text).toMatch(/Joey/);
+        expect(cardTip({ id: 0, name: "Saggi the Dark Clown" }, 50)?.text).toMatch(/Kaiba/);
     });
 
     it("uses his own note for a card when he has one", () => {
@@ -45,8 +48,8 @@ describe("Yugi's lines", () => {
     });
 
     it("talks about each notable pull in a haul, rarest first, else comforts", () => {
-        const lines = haulLines([{ ...URABY, rarity: "Common", isNew: true, copies: 1 }, { id: 9, name: "Pot of Greed", rarity: "Rare", isNew: true, copies: 1 }], 0, 0);
-        expect(lines.map((l) => l.text)).toEqual([expect.stringMatching(/Pot of Greed/), expect.stringMatching(/Uraby/)]);
+        const lines = haulLines([{ ...FISSURE, rarity: "Rare", isNew: true, copies: 1 }, { id: 9, name: "Pot of Greed", rarity: "Rare", isNew: true, copies: 1 }, { ...URABY, rarity: "Common", isNew: true, copies: 1 }], 0, 0);
+        expect(lines.map((l) => l.text)).toEqual([expect.stringMatching(/Fissure|Pot of Greed/), expect.stringMatching(/Fissure|Pot of Greed/)]);
         const quiet = haulLines([{ id: 1, name: "Some Ordinary Card", rarity: "Common", isNew: true, copies: 1 }], 0, 0);
         expect(quiet).toHaveLength(1);
         expect(quiet[0]!.mood).toBe("neutral");
@@ -58,11 +61,28 @@ describe("Yugi's lines", () => {
         expect(haulLines([pot], 0, 0, new Set([9]))).toEqual([]);
     });
 
-    it("says nothing on a flip unless the card is new and notable, or a third copy", () => {
+    it("says nothing on a flip unless the card is new and notable", () => {
         expect(pullLine({ id: 1, name: "Some Ordinary Card", isNew: true, copies: 1 }, 0)).toBeNull();
-        expect(pullLine({ ...URABY, isNew: false, copies: 2 }, 0)).toBeNull();
-        expect(pullLine({ ...URABY, isNew: false, copies: 3 }, 0)?.text).toMatch(/three Uraby|third Uraby/);
+        expect(pullLine({ ...FISSURE, isNew: true, copies: 1 }, 0)?.text).toMatch(/Fissure/);
     });
+
+    it("on a repeat, speaks only when more copies make the deck better, and says why", () => {
+        // Any monster's repeat: nothing, however good it is.
+        expect(pullLine({ ...URABY, isNew: false, copies: 2 }, 0)).toBeNull();
+        expect(pullLine({ ...URABY, isNew: false, copies: 3 }, 0)).toBeNull();
+        // Pot of Greed: one per deck in real tournaments, but every copy counts here.
+        const pot = { id: 55144522, name: "Pot of Greed", isNew: false };
+        expect(pullLine({ ...pot, copies: 2 }, 0)?.text).toMatch(/Pot of Greed.*Tournaments only allowed one/);
+        expect(pullLine({ ...pot, copies: 3 }, 0)?.text).toMatch(/3 Pot of Greed|third Pot of Greed/);
+        // Past what a deck can use, he's quiet again; a Dark Hole wants two at most.
+        expect(pullLine({ ...pot, copies: 4 }, 0)).toBeNull();
+        expect(pullLine({ id: 53129443, name: "Dark Hole", isNew: false, copies: 3 }, 0)).toBeNull();
+        // A Gemini Elf for the deck matters right after Labyrinth of Nightmare; much later it doesn't.
+        const elf = { id: 69140098, name: "Gemini Elf", isNew: false, copies: 2 };
+        expect(pullLine(elf, LON)?.text).toMatch(/Gemini Elf/);
+        expect(pullLine(elf, 40)).toBeNull();
+    });
+
 
     it("speaks differently in duo, naming the rival", () => {
         expect(resultLine(true, { mode: "duo", rival: "Kaiba", streak: 1 }).text).toContain("Kaiba");
@@ -71,16 +91,6 @@ describe("Yugi's lines", () => {
         expect(waitingLine("Kaiba").text).toContain("Kaiba");
     });
 
-    it("keeps every line under 140 characters", () => {
-        for (let s = 0; s < 6; s++) {
-            for (const stage of [0, 1, 2]) {
-                for (const card of [URABY, SKULL_RED_BIRD, COLORED_FISH]) {
-                    const line = rankLine(card, stage, s);
-                    if (line) expect(line.length).toBeLessThanOrEqual(140);
-                }
-            }
-        }
-    });
 });
 
 describe("the guide's one line at a time", () => {

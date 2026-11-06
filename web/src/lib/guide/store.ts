@@ -63,7 +63,8 @@ function markSeen(key: string) {
 export const guide = {
     /** Offer a line. Returns whether he'll say it (now, or later in the conversation). */
     say(line: Line | null): boolean {
-        if (!line || !enabled() || seen().has(line.key)) return false;
+        // Keyed by moment and by words: two cards that share a note don't get it twice.
+        if (!line || !enabled() || seen().has(line.key) || seen().has(`text:${line.text}`)) return false;
         const now = Date.now();
         if (isTip(line) && now - lastTip < TIP_GAP_MS) return false;
         const spoken = { ...line, at: now };
@@ -79,6 +80,7 @@ export const guide = {
         } else return false;
         if (isTip(line)) lastTip = now;
         markSeen(line.key);
+        markSeen(`text:${line.text}`);
         return true;
     },
     /** Offer several lines as one conversation, in order. */

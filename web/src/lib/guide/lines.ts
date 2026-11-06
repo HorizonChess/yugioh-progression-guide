@@ -1,39 +1,50 @@
 /**
- * What Yugi says, picked from what's true at this point in the series. The card facts
- * come from data/guide/facts.json (built from the real card pool by
- * scripts/guide/build.mjs) and the hand-written notes from data/guide/sets.json, so
- * nothing here is from memory. Every function is pure: it returns a line, or null when
- * there's nothing worth saying (he'd rather stay quiet than state the obvious).
+ * What Yugi says. Card lines come only from the hand-written notes in
+ * data/guide/sets.json: the cards that mattered in real decks of the era (staples,
+ * the beatsticks tournaments actually played), and cards he remembers from his own,
+ * Kaiba's and Joey's duels. Every card a note names is checked against its set by
+ * scripts/guide/build.mjs, and claims about the card pool are checked against that
+ * stage's real pool. Every function is pure: it returns a line, or null when there's
+ * nothing worth saying (he'd rather stay quiet than comment on every card).
  */
-import factsJson from "@/data/guide/facts.json";
 import notesJson from "@/data/guide/sets.json";
+import timelineJson from "@/data/guide/timeline.json";
 
 export type Mood = "neutral" | "happy" | "sad";
 export type Line = { key: string; text: string; mood: Mood; priority: number };
 export type GuideCard = { id: number; name: string; rarity?: string };
 
-type Ranked = { id: number; name: string; atk: number; common: boolean };
-type Tier = { top: Ranked[]; catch?: Ranked };
-type Facts = { stage: number; name: string; tiers: Tier[] };
-type Note = { intro?: string[]; cards?: Record<string, string[]> };
+/** Lines on a card; with `until` (a set code) they're only said up to that set, as a card's worth depends on what's out by then. */
+type CardNote = string[] | { lines: string[]; until?: string };
+type Note = { intro?: string[]; cards?: Record<string, CardNote> };
+/** A card worth running more than one copy of, and why (deck-building theory, not taste). */
+type Multiple = { want: number; why: string; until?: string };
 
-const FACTS = factsJson as unknown as Record<string, Facts>;
 const NOTES = notesJson as unknown as Record<string, Note>;
+const MULTIPLES = (notesJson as unknown as { _multiples: Record<string, Multiple> })._multiples;
 
 /** Priorities: a result beats a pull, a pull beats a tip. */
 export const PRIORITY = { tip: 1, details: 2, pull: 3, result: 4 } as const;
 
-/** The pool facts for a stage (by its place on the timeline). */
-export function factsAt(stage: number): Facts | undefined {
-    return Object.values(FACTS).find((f) => f.stage === stage);
-}
+/** The timeline's set codes in order (scripts/guide/build.mjs), to place an `until`. */
+const TIMELINE = timelineJson as string[];
+/** The last stage a note holds at (forever without `until`). */
+const lastStage = (until?: string) => (until ? TIMELINE.indexOf(until) : Infinity);
 
-/** card name → its lines, over every set's notes (names joined by " | " share lines). */
-const CARD_LINES = new Map<string, string[]>();
+/** card name → its lines and the last stage they hold at, over every set's notes (names joined by " | " share lines). */
+const CARD_LINES = new Map<string, { lines: string[]; last: number }>();
 for (const [code, note] of Object.entries(NOTES)) {
     if (code.startsWith("_")) continue;
-    for (const [names, lines] of Object.entries(note.cards ?? {})) for (const name of names.split(" | ")) CARD_LINES.set(name, lines);
+    for (const [names, entry] of Object.entries(note.cards ?? {})) {
+        const { lines, until } = Array.isArray(entry) ? { lines: entry, until: undefined } : entry;
+        for (const name of names.split(" | ")) CARD_LINES.set(name, { lines, last: lastStage(until) });
+    }
 }
+/** His lines on a card, if they still hold at `stage`. */
+const notesAt = (name: string, stage: number) => {
+    const note = CARD_LINES.get(name);
+    return note && stage <= note.last ? note.lines : null;
+};
 
 /** One of `options`, varied by `seed` so the same moment doesn't always get the same words. */
 function pick<T>(options: readonly T[], seed: number): T {
@@ -41,44 +52,10 @@ function pick<T>(options: readonly T[], seed: number): T {
 }
 const fill = (text: string, vars: Record<string, string | number>) => text.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ""));
 
-const COMMON = " It's a common, so expect it across the table too.";
-const COST = ["no tribute", "a single tribute", "two tributes"];
-
-/**
- * A line worked out from the pool: where this monster ranks among the ones both of
- * you can have right now, by tributes. Only the top three of each get a line.
- */
-export function rankLine(card: GuideCard, stage: number, seed = 0): string | null {
-    const facts = factsAt(stage);
-    if (!facts) return null;
-    for (const [t, tier] of facts.tiers.entries()) {
-        const at = tier.top.findIndex((m) => m.id === card.id);
-        if (at === -1 || at > 2) continue;
-        const me = tier.top[at]!;
-        const vars = { name: me.name, atk: me.atk, top: tier.top[0]!.name, catch: tier.catch?.name ?? "", cost: COST[t]! };
-        let options: string[];
-        if (at === 0 && tier.catch) {
-            options = ["{name}! {atk} ATK for {cost}. Only {catch} hits harder, and it comes with a catch!", "{name}! Nothing hits harder for {cost}, unless you count {catch}... and that one bites back."];
-        } else if (at === 0 && t === 2) {
-            options = ["{name}! The strongest monster in the packs so far. Two tributes, but it's worth it!", "{name}! Nothing in the packs so far can match it. Protect it and it'll win you duels!"];
-        } else if (at === 0) {
-            options = ["{name}! {atk} ATK for {cost}. Nothing in the packs so far hits harder!", "{name}! Nothing hits harder than this for {cost} right now. Put it in your deck!"];
-        } else if (at === 1) {
-            options = ["{name} hits for {atk} with {cost}. Only {top} is stronger so far!", "{name}! {atk} ATK for {cost}. Just {top} beats that right now."];
-        } else {
-            options = ["{name}: {atk} ATK for {cost}. That's one of the strongest you can find right now!"];
-        }
-        let text = fill(pick(options, seed), vars);
-        if (me.common && t === 0 && text.length + COMMON.length <= 140) text += COMMON;
-        return text;
-    }
-    return null;
-}
-
-/** Yugi's own words on a card: his note if he has one, else where it ranks. */
+/** Yugi's own words on a card: his note, if he has one that still holds at this stage. */
 export function cardText(card: GuideCard, stage: number, seed = 0): string | null {
-    const notes = CARD_LINES.get(card.name);
-    return notes ? pick(notes, seed) : rankLine(card, stage, seed);
+    const notes = notesAt(card.name, stage);
+    return notes ? pick(notes, seed) : null;
 }
 
 /** Looking at a card in a list or close-up. */
@@ -101,14 +78,10 @@ const byRarity = (a: GuideCard, b: GuideCard) => rarityRank(a) - rarityRank(b);
 export function setDetails(setCode: string, setName: string, cards: GuideCard[], owned: (id: number) => number, stage: number, seed = 0): Line | null {
     const note = NOTES[setCode];
     const anyOwned = cards.some((c) => owned(c.id) > 0);
-    const noted = cards.filter((c) => CARD_LINES.has(c.name)).sort(byRarity);
+    const noted = cards.filter((c) => notesAt(c.name, stage)).sort(byRarity);
     let text: string | null = null;
     if (!anyOwned) {
         if (note?.intro?.length) text = pick(note.intro, seed);
-        else {
-            const best = cards.map((c) => rankLine(c, stage, seed)).find((l) => l !== null);
-            text = best ?? null;
-        }
     } else {
         const have = noted.filter((c) => owned(c.id) > 0);
         const missing = noted.filter((c) => owned(c.id) === 0);
@@ -124,20 +97,27 @@ export function setDetails(setCode: string, setName: string, cards: GuideCard[],
 
 export type HaulCard = GuideCard & { isNew: boolean; copies: number };
 
-/** A card he'd talk about when it turns up: his note on it, or a top-three monster for its cost. */
-const worthSaying = (c: GuideCard, stage: number) => CARD_LINES.has(c.name) || rankLine(c, stage) !== null;
+/** A card he'd talk about when it turns up: one he has a note on that still holds. */
+const worthSaying = (c: GuideCard, stage: number): boolean => notesAt(c.name, stage) !== null;
+
+const ORDINAL = ["", "", "second", "third"];
+
+/** A second or third copy of a card a good deck runs more than one of (MULTIPLES), with why it matters. */
+export function copyLine(card: HaulCard, stage: number, seed = 0): Line | null {
+    const m = MULTIPLES[card.name];
+    if (!m || card.copies < 2 || card.copies > m.want || stage > lastStage(m.until)) return null;
+    const head = card.copies === m.want && m.want > 2 ? pick(["That's {n} {name}, a full set!", "Your {nth} {name}!"], seed) : pick(["A {nth} {name}!", "Another {name}!"], seed);
+    const text = `${fill(head, { name: card.name, n: card.copies, nth: ORDINAL[card.copies] ?? "" })} ${m.why}`;
+    return { key: `copy:${card.id}:${card.copies}`, text, mood: "happy", priority: PRIORITY.pull };
+}
 
 /**
  * A card just flipped face up: a word on it if it's new to you and worth one, or on a
- * third copy (a full set for the deck). Null for everything else.
+ * copy that makes your deck better (copyLine). A repeat of anything else gets nothing.
  */
 export function pullLine(card: HaulCard, stage: number, seed = 0): Line | null {
-    if (card.isNew && worthSaying(card, stage)) return { key: `pull:${card.id}`, text: cardText(card, stage, seed)!, mood: "happy", priority: PRIORITY.pull };
-    if (card.copies === 3 && worthSaying(card, stage)) {
-        const lines = ["That's three {name}! A full set for your deck.", "Your third {name}! You can run all three now."];
-        return { key: `third:${card.id}`, text: fill(pick(lines, seed), { name: card.name }), mood: "happy", priority: PRIORITY.pull };
-    }
-    return null;
+    if (card.isNew) return worthSaying(card, stage) ? { key: `pull:${card.id}`, text: cardText(card, stage, seed)!, mood: "happy", priority: PRIORITY.pull } : null;
+    return copyLine(card, stage, seed);
 }
 
 /**

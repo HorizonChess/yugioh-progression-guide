@@ -12,9 +12,10 @@ import { BASE, OUT_DIR, STORE_KEY, launchBrowser, makeSave, seedStorage } from "
 const DIR = join(OUT_DIR, "guide");
 mkdirSync(DIR, { recursive: true });
 
-// Cards by id, from data/guide/facts.json and the set notes.
+// Cards by id, from the set notes (data/guide/sets.json).
 const URABY = { id: 1784619, name: "Uraby", rarity: "Common" };
-const FISH = { id: 23771716, name: "7 Colored Fish", rarity: "Common" };
+const SAGGI = { id: 66602787, name: "Saggi the Dark Clown", rarity: "Common" };
+const TOMATO = { id: 83011277, name: "Mystic Tomato", rarity: "Rare" };
 const SKULL = { id: 70781052, name: "Summoned Skull", rarity: "Ultra Rare" };
 const RAIGEKI = { id: 12580477, name: "Raigeki", rarity: "Super Rare" };
 const POT = { id: 55144522, name: "Pot of Greed", rarity: "Rare" };
@@ -29,12 +30,13 @@ const MOMENTS = [
     ["/packs/?set=0", "Card list of Legend of Blue Eyes, owning Pot of Greed", `L.setDetails('LOB', 'x', [${JSON.stringify(POT)}, ${JSON.stringify(FISSURE)}], (id) => id === ${POT.id} ? 1 : 0, 0, 0)`],
     ["/packs/?set=0", "Same, still missing Fissure", `L.setDetails('LOB', 'x', [${JSON.stringify(POT)}, ${JSON.stringify(FISSURE)}], (id) => id === ${POT.id} ? 1 : 0, 0, 1)`],
     ["/packs/?set=1", "Card list of Metal Raiders, before opening any (stage 2)", "L.setDetails('MRD', 'Metal Raiders', [], () => 0, 1, 1)"],
-    ["/packs/?set=0", "Looking at Uraby at stage 1 (worked out from the pool)", `L.cardTip(${JSON.stringify(URABY)}, 0, 0)`],
-    ["/packs/?set=1", "Looking at 7 Colored Fish at stage 2 (a stronger monster has a catch)", `L.cardTip(${JSON.stringify(FISH)}, 1, 0)`],
+    ["/packs/?set=1", "Looking at Saggi the Dark Clown (a memory of Kaiba)", `L.cardTip(${JSON.stringify(SAGGI)}, 1, 0)`],
+    ["/packs/?set=0", "Looking at Fissure at stage 1 (still great)", `L.cardTip(${JSON.stringify(FISSURE)}, 0, 0)`],
     ["/packs/?set=1", "Looking at Summoned Skull (his note)", `L.cardTip(${JSON.stringify(SKULL)}, 1, 0)`],
     ["/packs/?set=0", "Looking at Man-Eater Bug (his note)", `L.cardTip(${JSON.stringify(MANEATER)}, 0, 0)`],
     ["/packs/?set=0", "Haul with a new Raigeki", `L.haulLines([{...${JSON.stringify(RAIGEKI)}, isNew: true, copies: 1}, {...${JSON.stringify(DULL)}, isNew: true, copies: 1}], 0, 0)`],
-    ["/packs/?set=0", "Haul with a third Uraby, nothing else new", `L.haulLines([{...${JSON.stringify(URABY)}, isNew: false, copies: 3}], 0, 0)`],
+    ["/packs/?set=2", "Haul with a second Mystic Tomato and a third Uraby", `L.haulLines([{...${JSON.stringify(TOMATO)}, isNew: false, copies: 2}, {...${JSON.stringify(URABY)}, isNew: false, copies: 3}], 2, 0)`],
+    ["/packs/?set=0", "Haul with a second Pot of Greed", `L.haulLines([{...${JSON.stringify(POT)}, isNew: false, copies: 2}], 0, 0)`],
     ["/packs/?set=0", "Haul with nothing of note", `L.haulLines([{...${JSON.stringify(DULL)}, isNew: true, copies: 1}], 0, 2)`],
     ["/record-match/", "Solo win, Spell Ruler next", "L.resultLine(true, { mode: 'solo', streak: 1, next: 'Spell Ruler', seed: 0 })"],
     ["/record-match/", "Solo, third win in a row", "L.resultLine(true, { mode: 'solo', streak: 3, next: 'Spell Ruler', seed: 0 })"],
