@@ -79,6 +79,13 @@ const CHORDS: Partial<Record<Tier, number[]>> = { Rare: [880, 1318], Super: [659
 
 export const Sfx = {
     unlock: () => soundOn() && init(),
+    /** One typewriter key: a sharp click of the type bar, then the softer thock of the key bottoming out. Each press varies a little. */
+    key: () => play((c, t) => {
+        const v = 0.85 + Math.random() * 0.3;
+        nz(c, t, 0.012, "highpass", 4200 * v, 6000 * v, 0.8, 0.32);
+        nz(c, t + 0.006, 0.045, "bandpass", 1500 * v, 700 * v, 2.2, 0.38);
+        tone(c, t + 0.004, 170 * v, 0.03, "triangle", 0.05);
+    }),
     crinkle: () => play((c, t) => nz(c, t, 0.05 + Math.random() * 0.04, "highpass", 3000 + Math.random() * 3000, 5200, 1, 0.22)),
     tear: () => play((c, t) => {
         for (let i = 0; i < 7; i++) nz(c, t + i * 0.034, 0.06, "bandpass", 2500 + Math.random() * 4000, 1800, 1.5, 0.5);

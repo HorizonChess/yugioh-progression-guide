@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { asset } from '@/lib/utils';
 import { useProgression } from "@/context/ProgressionContext";
+import { Sfx } from "@/components/packs/stage/fx";
 
 type Mood = "neutral" | "happy" | "sad";
 
@@ -71,7 +72,12 @@ export default function GuideSprite({ at }: { at?: string }) {
             return () => clearTimeout(leave.current);
         }
         const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const t = setTimeout(() => setTyped(reduced ? line.text.length : (n) => n + 1), typed === 0 ? 500 : TYPE_MS);
+        const t = setTimeout(() => {
+            if (reduced) return setTyped(line.text.length);
+            // A key sounds about every third letter (a typist's pace, not a buzz), never on a space.
+            if (typed % 3 === 0 && line.text[typed] !== " ") Sfx.key();
+            setTyped((n) => n + 1);
+        }, typed === 0 ? 500 : TYPE_MS);
         return () => clearTimeout(t);
     }, [onStage, typed, done, line.text]);
 
