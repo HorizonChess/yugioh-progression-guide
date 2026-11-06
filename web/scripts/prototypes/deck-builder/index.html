@@ -159,22 +159,24 @@ button { font: inherit; color: inherit; }
 
 /* ---------- D · desktop: today's four columns, in the game's look ---------- */
 .desk-wrap { position: absolute; inset: 0; overflow: hidden; }
-.desk { position: absolute; left: 0; top: 0; width: 1440px; height: 840px; transform-origin: 0 0; display: grid; grid-template-columns: 290px minmax(0, 1fr) 236px 300px; gap: 8px; padding: 8px; }
+.desk { position: absolute; left: 0; top: 0; width: 1440px; height: 840px; transform-origin: 0 0; display: grid; grid-template-columns: 236px minmax(0, 1fr) 196px 262px; gap: 8px; padding: 8px; }
 .panel { position: relative; min-height: 0; display: flex; flex-direction: column; border-radius: 12px; background: linear-gradient(rgba(20,14,8,.9), rgba(10,7,4,.92)); box-shadow: 0 0 0 1px rgba(224,181,79,.35), inset 0 1px 0 rgba(255,230,170,.1), 0 14px 30px rgba(0,0,0,.6); }
 .band { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; border-radius: 12px 12px 0 0; font: 800 12px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: #2a1c05; background: linear-gradient(#f3d98a, #c99a3a); box-shadow: inset 0 1px 0 rgba(255,245,210,.7); }
 .band small { font: 800 12px/1 var(--font-main); letter-spacing: 0; }
 .band.side { background: linear-gradient(#8fd3cc, #3f8f8a); } .band.extra { background: linear-gradient(#c7a7f0, #7a4fb5); color: #1c0f33; }
-.info { flex: 1; min-height: 0; padding: 12px; overflow-y: auto; }
-.info .big { width: 70%; margin: 0 auto 10px; }
-.info .ps-plate { position: relative; font-size: 12px; }
+.info { flex: 1; min-height: 0; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.info .big { flex: none; width: 62%; margin: 0 auto; }
+.info .ps-plate { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; font-size: 12px; }
+.info .ps-plate__box { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #8a6420 transparent; }
+.info .ps-plate__name, .info .ps-plate__sub, .info .ps-plate__foot { flex: none; }
 .info .none { height: 100%; display: grid; place-items: center; text-align: center; font: 600 13px/1.5 var(--font-main); color: #7d7360; border: 1px dashed rgba(224,181,79,.2); border-radius: 10px; padding: 20px; }
 .ctrls { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px 12px 12px; border-top: 1px solid rgba(224,181,79,.2); }
 .ctrls input { grid-column: 1 / -1; height: 34px; padding: 0 10px; border-radius: 8px; border: 0; outline: 0; background: linear-gradient(#f5e7bf, #e2cc93); color: #2a1c05; font: 700 14px var(--font-main); box-shadow: inset 0 2px 3px rgba(90,60,10,.4), 0 0 0 1px #8a6420; }
 .mat { flex: 1; min-height: 0; display: flex; gap: 8px; padding: 10px; border-radius: 0 0 12px 12px; background: radial-gradient(ellipse at 50% 30%, rgba(90,60,25,.35), transparent 70%), repeating-linear-gradient(45deg, rgba(255,255,255,.015) 0 2px, transparent 2px 6px), #120d08; }
-.mat .gems { flex: none; display: flex; flex-direction: column; justify-content: center; gap: 10px; }
-.mat .gems .gem { flex-direction: column; gap: 4px; font-size: 10px; } .mat .gems .gem b { font-size: 15px; }
-.mat .gems .gem i { width: 14px; height: 14px; }
-.dgrid { flex: 1; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); grid-auto-rows: max-content; gap: 6px; align-content: start; }
+.band .gems { display: flex; gap: 14px; margin-left: auto; margin-right: 14px; }
+.band .gems .gem { color: #2a1c05; } .band .gems .gem b { font-size: 13px; }
+
+.dgrid { flex: 1; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); grid-auto-rows: max-content; gap: 7px 6px; align-content: start; }
 .dgrid.small { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
 .dgrid .slot { aspect-ratio: 813/1185; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(224,181,79,.12); background: rgba(255,255,255,.015); }
 .dgrid .thumb { cursor: grab; transition: transform .12s; }
@@ -480,8 +482,8 @@ function list(root) {
 function desk(root) {
     root.innerHTML = `<div class="desk-wrap"><div class="desk">
         <section class="panel"><div class="band">Card <small></small></div><div class="info"><div class="none">Hover a card to read it here.<br>Double-click to add · right-click to remove · drag between decks</div></div>
-            <div class="ctrls"><input value="${esc(deckName)}" aria-label="Deck name"><button class="btn gold" data-a="save">Save Deck</button><button class="btn" data-a="load">Load Deck</button><button class="btn" data-a="clear">Clear Deck</button><button class="btn" data-a="sort">Sort</button><button class="btn" data-a="imp">Import</button><button class="btn" data-a="exp">Export</button></div></section>
-        <section class="panel"><div class="band">Main Deck <small class="mc"></small></div><div class="mat" data-drop="main"><div class="gems"></div><div class="dgrid" data-z="main"></div></div></section>
+            <div class="ctrls"><input value="${esc(deckName)}" aria-label="Deck name"><button class="btn gold" data-a="save">Save Deck</button><button class="btn" data-a="load">Load Deck</button><button class="btn" data-a="clear">Clear</button><button class="btn" data-a="sort">Sort</button><button class="btn" data-a="imp">Import</button><button class="btn" data-a="exp">Export</button></div></section>
+        <section class="panel"><div class="band">Main Deck <span class="gems"></span><small class="mc"></small></div><div class="mat" data-drop="main"><div class="dgrid" data-z="main"></div></div></section>
         <div class="stack"><section class="panel"><div class="band side">Side Deck <small class="sc"></small></div><div class="zone" data-drop="side"><div class="dgrid small" data-z="side"></div></div></section>
             <section class="panel"><div class="band extra">Extra Deck <small class="ec"></small></div><div class="zone" data-drop="extra"><div class="dgrid small" data-z="extra"></div></div></section></div>
         <section class="panel"><div class="band">Search <small class="rc"></small></div>
@@ -503,10 +505,10 @@ function desk(root) {
     const draw = () => {
         for (const z of ["main", "side", "extra"]) {
             const g = $(`.dgrid[data-z="${z}"]`, root), cap = z === "main" ? 60 : 15;
-            g.innerHTML = deck[z].map((id, i) => cardEl(card(id), z, i)).join("") + '<span class="slot"></span>'.repeat(Math.max(0, (z === "main" ? 40 : 15) - deck[z].length));
+            g.innerHTML = deck[z].map((id, i) => cardEl(card(id), z, i)).join("") + '<span class="slot"></span>'.repeat(Math.max(0, (z === "main" ? 60 : 15) - deck[z].length));
         }
         $(".mc", root).textContent = `${deck.main.length} / 40–60`; $(".sc", root).textContent = `${deck.side.length} / 15`; $(".ec", root).textContent = `${deck.extra.length} / 15`;
-        $(".gems", root).innerHTML = ["Monster", "Spell", "Trap"].map((x) => `<span class="gem k-${x}"><i></i><b>${deck.main.filter((id) => kindOf(card(id)) === x).length}</b>${x.slice(0, 3)}</span>`).join("") + `<span class="gem k-Extra"><i></i><b>${deck.extra.length}</b>Ext</span>`;
+        $(".gems", root).innerHTML = ["Monster", "Spell", "Trap"].map((x) => `<span class="gem k-${x}" title="${KIND_LABEL[x]}"><i></i><b>${deck.main.filter((id) => kindOf(card(id)) === x).length}</b></span>`).join("");
         const list = CARDS.filter((c) => (k === "All" || kindOf(c) === k) && (!q || c.name.toLowerCase().includes(q.toLowerCase())));
         const pages = Math.max(1, Math.ceil(list.length / PER)); page = Math.min(page, pages - 1);
         $(".pg", root).textContent = `${page + 1} / ${pages}`; $(".rc", root).textContent = `${list.length} yours`;
