@@ -12,6 +12,8 @@ import { tierOf, type StageCard } from "@/components/packs/stage/plate";
 import { parseYDK, generateYDKFromCollection, downloadYDK } from "@/lib/ydk-parser";
 import { filterCollection, type OwnedEntry } from "@/lib/collection-filter";
 import GuideSprite from "@/components/layout/GuideSprite";
+import { cardTip } from "@/lib/guide/lines";
+import { guide, seed } from "@/lib/guide/store";
 import { useIsPhone } from "@/lib/useIsPhone";
 import { useDismiss, useSwipeClose } from "@/lib/dismiss";
 import { ownedCardIds, ownedCountsById, parseCollectionKey, UNKNOWN_SET } from "@/lib/collection";
@@ -284,6 +286,8 @@ export default function Collection() {
                 onOpen={(s) => {
                     hide();
                     setSelectedKey(s.key);
+                    // Yugi's word on the card, if he has one, over the close-up.
+                    guide.say(cardTip(s.card, currentSetIndex, seed()));
                 }}
                 showKey={selectedKey}
                 bind={(s) => bind(toStage(s))}
