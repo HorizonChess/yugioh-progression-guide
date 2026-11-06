@@ -10,7 +10,7 @@ import { CARD_KINDS, CardFilterFields, useCardFilters } from "./useCardFilters";
 
 const ZONE_LABEL: Record<DeckZone, string> = { main: "Main Deck", extra: "Extra Deck", side: "Side Deck" };
 const LIMIT: Record<DeckZone, number> = { main: 60, extra: 15, side: 15 };
-const KIND_LABEL: Record<string, string> = { All: "All", Monster: "Monsters", Spell: "Spells", Trap: "Traps", Extra: "Extra Deck" };
+const KIND_LABEL: Record<string, string> = { All: "All", Monster: "Monsters", Spell: "Spells", Trap: "Traps", Extra: "Extra" };
 /** Drawer heights: a peek, half the screen, nearly all of it. */
 const DRAWER = ["low", "mid", "full"] as const;
 
@@ -143,7 +143,7 @@ export default function DeckPhone({
                 <CartoucheButton onClick={onSave} className="dp-save">Save</CartoucheButton>
             </div>
             <div className="dp-counts">
-                <span className={`dp-count ${short ? "dp-count--short" : "dp-count--ok"}`}>Main <b>{stats.total}</b>{short ? ` · ${40 - stats.total} short` : " / 60"}</span>
+                <span className={`dp-count ${short ? "dp-count--short" : "dp-count--ok"}`}>Main <b>{stats.total}</b>{short ? " / 40" : " / 60"}</span>
                 <span className="dp-count">Extra <b>{decks.extra.length}</b></span>
                 <span className="dp-count">Side <b>{decks.side.length}</b></span>
                 <span className="dp-count db-gem db-gem--mon" title="Monsters"><i /><b>{stats.monsters}</b></span>
