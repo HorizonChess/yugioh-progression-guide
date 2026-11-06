@@ -12,6 +12,7 @@ import { parseYDK, generateYDKFromCollection, downloadYDK } from "@/lib/ydk-pars
 import { filterCollection, type OwnedEntry } from "@/lib/collection-filter";
 import GuideSprite from "@/components/layout/GuideSprite";
 import { useIsPhone } from "@/lib/useIsPhone";
+import { useDismiss, useSwipeClose } from "@/lib/dismiss";
 import { ownedCardIds, ownedCountsById, parseCollectionKey, UNKNOWN_SET } from "@/lib/collection";
 
 /** The chapter for owned cards from sets outside the binder's chapters (e.g. YDK imports). */
@@ -50,6 +51,11 @@ export default function Collection() {
     const filters = useMemo(() => ({ ...panel, search }), [panel, search]);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const menuEl = useRef<HTMLDivElement>(null);
+    useDismiss(menuEl, menuOpen, () => setMenuOpen(false));
+    const drawerEl = useRef<HTMLElement>(null);
+    // the filters are a bottom sheet on phones: swipe it down to close
+    useSwipeClose(drawerEl, () => setFiltersOpen(false), { enabled: isPhone && filtersOpen });
 
     // Stable, because CollectionFilters re-sends filters whenever this handler changes.
     const handleFilterChange = useCallback((next: FilterState) => setPanel(next), []);
@@ -236,7 +242,7 @@ export default function Collection() {
                         </button>
                     </>
                 )}
-                <div className="coll__menu" onClick={(e) => e.stopPropagation()}>
+                <div className="coll__menu" ref={menuEl} onClick={(e) => e.stopPropagation()}>
                     <button className="ps-btn" aria-haspopup="true" aria-expanded={menuOpen} aria-label="More" onClick={() => setMenuOpen((v) => !v)}>⋯</button>
                     {menuOpen && (
                         <div className="coll__menu-list" role="menu">
@@ -286,7 +292,7 @@ export default function Collection() {
 
             {/* Today's filter panel, unchanged, in a drawer. It stays mounted so it keeps its choices. */}
             <div className="coll__drawer-bg" onClick={() => setFiltersOpen(false)} />
-            <aside className="coll__drawer" aria-label="Filters" aria-hidden={!filtersOpen}>
+            <aside className="coll__drawer" ref={drawerEl} aria-label="Filters" aria-hidden={!filtersOpen}>
                 <CollectionFilters onFilterChange={handleFilterChange} hideSearch />
                 <button className="ps-btn coll__drawer-done" onClick={() => setFiltersOpen(false)}>Show {filteredCards.length} cards</button>
             </aside>

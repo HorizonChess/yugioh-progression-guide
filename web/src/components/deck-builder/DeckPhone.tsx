@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDismiss, useSwipeClose } from "@/lib/dismiss";
 import { Card } from "@/lib/api";
 import { DeckZone, isExtraDeckCard } from "@/lib/deck-utils";
 import { CardPlate } from "@/components/card/CardPlate";
@@ -53,7 +54,13 @@ export default function DeckPhone({
     const [drawer, setDrawer] = useState(1);
     const [folds, setFolds] = useState<Record<DeckZone, boolean>>({ main: true, extra: true, side: true });
     const [menu, setMenu] = useState(false);
+    const menuEl = useRef<HTMLDivElement>(null);
+    useDismiss(menuEl, menu, () => setMenu(false));
+    const cardSheet = useRef<HTMLDivElement>(null);
+    const filterSheet = useRef<HTMLDivElement>(null);
     const [filters, setFilters] = useState(false);
+    useSwipeClose(cardSheet, () => setOpen(null), { enabled: !!open });
+    useSwipeClose(filterSheet, () => setFilters(false), { enabled: filters });
     const [note, setNote] = useState<{ text: string; key: number } | null>(null);
     /** The card just added, so it lands with a flash. */
     const [fresh, setFresh] = useState<{ id: number; zone: DeckZone; key: number } | null>(null);
@@ -167,7 +174,7 @@ export default function DeckPhone({
         <div className="dp">
             <div className="dp-head">
                 <input value={deckName} onChange={(e) => onDeckNameChange(e.target.value)} aria-label="Deck name" placeholder="Deck Name" />
-                <div className="dp-menu">
+                <div className="dp-menu" ref={menuEl}>
                     <button type="button" className="db-btn" aria-haspopup="true" aria-expanded={menu} aria-label="More" onClick={() => setMenu((v) => !v)}>⋯</button>
                     {menu && (
                         <div className="dp-menu__list" role="menu" onClick={() => setMenu(false)}>
@@ -238,7 +245,7 @@ export default function DeckPhone({
             {open && (
                 <>
                     <div className="dp-scrim" onClick={() => setOpen(null)} />
-                    <div className="dp-sheet" role="dialog" aria-label={open.name}>
+                    <div className="dp-sheet" role="dialog" aria-label={open.name} ref={cardSheet}>
                         <div className="dp-sheet__top">
                             <img className="dp-sheet__art" src={open.card_images[0]?.image_url} alt="" />
                             <CardPlate card={stageOf(open, printings.get(open.id), ownedCounts.get(open.id) ?? 0)} className="dp-sheet__plate" />
@@ -262,7 +269,7 @@ export default function DeckPhone({
             {filters && (
                 <>
                     <div className="dp-scrim" onClick={() => setFilters(false)} />
-                    <div className="dp-sheet" role="dialog" aria-label="Filters">
+                    <div className="dp-sheet" role="dialog" aria-label="Filters" ref={filterSheet}>
                         <CardFilterFields f={f} withName={false} />
                         <button type="button" className="db-btn db-btn--gold dp-sheet__done" onClick={() => setFilters(false)}>Show {f.filtered.length} cards</button>
                     </div>
