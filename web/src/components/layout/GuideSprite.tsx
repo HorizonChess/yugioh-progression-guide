@@ -40,8 +40,11 @@ const TALK_MS = 7000;
  * line, tap the bubble to send him off. The nav's Yugi button turns him off, and
  * turning him back on calls him in again.
  */
-/** `raised` lifts him above a phone page's action dock. */
-export default function GuideSprite({ raised = false }: { raised?: boolean }) {
+/**
+ * `raised` lifts him above a phone page's action dock; `at` (a viewport length, e.g. "17vw") stands
+ * him further in from the left edge, clear of a page's controls there.
+ */
+export default function GuideSprite({ raised = false, at }: { raised?: boolean; at?: string }) {
     const { isGuideVisible } = useProgression();
     const [spriteIndex, setSpriteIndex] = useState(0);
     const [speaking, setSpeaking] = useState(false);
@@ -74,7 +77,9 @@ export default function GuideSprite({ raised = false }: { raised?: boolean }) {
     return (
         <div
             aria-hidden={!onStage}
-            className={`fixed left-0 ${raised ? "bottom-[calc(230px+env(safe-area-inset-bottom))]" : "bottom-[calc(64px+env(safe-area-inset-bottom))]"} md:bottom-0 z-50 flex items-end pointer-events-none transition-transform duration-500 ease-[cubic-bezier(.2,.9,.3,1.15)] ${onStage ? "translate-x-0" : "-translate-x-[calc(100%+18rem)]"}`}
+            className={`fixed left-0 ${raised ? "bottom-[calc(230px+env(safe-area-inset-bottom))]" : "bottom-[calc(64px+env(safe-area-inset-bottom))]"} md:bottom-0 z-50 flex items-end pointer-events-none transition-transform duration-500 ease-[cubic-bezier(.2,.9,.3,1.15)] ${at ? "" : onStage ? "translate-x-0" : "-translate-x-[calc(100%+18rem)]"}`}
+            // Further in, he walks off by that much more.
+            style={at ? { left: at, transform: onStage ? "none" : `translateX(calc(-100% - 18rem - ${at}))` } : undefined}
         >
             <div className="relative">
                 {/* Speech bubble, to the right of his head */}

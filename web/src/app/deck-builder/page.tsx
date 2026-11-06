@@ -549,7 +549,8 @@ export default function DeckBuilder() {
 
             </div>
 
-            <GuideSprite />
+            {/* He stands on the Main Deck's mat, clear of the card panel and its buttons. */}
+            <GuideSprite at="17vw" />
             {shared}
 
             </div>
