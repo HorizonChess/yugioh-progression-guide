@@ -53,13 +53,64 @@ export function useCardPeek() {
  * it on wide screens, or in a sheet under it on phones. `action` adds a button
  * under the plate (e.g. ban this card). Click outside or press Escape to close.
  */
-export function CardCloseUp({ card, onClose, action }: { card: StageCard; onClose: () => void; action?: ReactNode }) {
+export function CardCloseUp({ card, onClose, action, onPrev, onNext, position }: {
+    card: StageCard;
+    onClose: () => void;
+    action?: ReactNode;
+    /** Step to the card before / after in its list: a swipe, the arrow keys or the side arrows. */
+    onPrev?: () => void;
+    onNext?: () => void;
+    /** Where this card is in that list, e.g. "12 / 144". */
+    position?: string;
+}) {
     const tilt = useRef<HTMLDivElement>(null);
+    // Which way the last step went, so the new card slides in from that side.
+    const [dir, setDir] = useState(0);
+    const step = (d: 1 | -1) => {
+        const go = d > 0 ? onNext : onPrev;
+        if (!go) return;
+        setDir(d);
+        go();
+    };
+    const latest = useRef({ step, onClose });
     useLayoutEffect(() => {
-        const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+        latest.current = { step, onClose };
+    });
+    useLayoutEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") latest.current.onClose();
+            if (e.key === "ArrowRight") latest.current.step(1);
+            if (e.key === "ArrowLeft") latest.current.step(-1);
+        };
         addEventListener("keydown", onKey);
         return () => removeEventListener("keydown", onKey);
-    }, [onClose]);
+    }, []);
+    // A sideways swipe steps through the list; a tap off the card and its details
+    // closes. Both are read from the pointer itself: after a swipe, phones may send
+    // no click for the next tap.
+    const press = useRef<{ x: number; y: number; at: number } | null>(null);
+    const down = (e: React.PointerEvent) => {
+        press.current = { x: e.clientX, y: e.clientY, at: performance.now() };
+    };
+    const up = (e: React.PointerEvent) => {
+        const s = press.current;
+        press.current = null;
+        if (!s) return;
+        const dx = e.clientX - s.x, dy = e.clientY - s.y;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3 && (onPrev || onNext)) return step(dx < 0 ? 1 : -1);
+        const tap = Math.hypot(dx, dy) < 10 && performance.now() - s.at < 600;
+        if (!tap || (e.target as Element).closest(".closeup__card, .closeup__side, .closeup__nav")) return;
+        // This closes on finger-up, so the tap's own click would land on whatever is
+        // underneath (another pocket would open): swallow that one click.
+        const eat = (ev: MouseEvent) => {
+            ev.stopPropagation();
+            ev.preventDefault();
+            removeEventListener("click", eat, true);
+        };
+        addEventListener("click", eat, true);
+        setTimeout(() => removeEventListener("click", eat, true), 450);
+        onClose();
+    };
     const lean = (e: React.PointerEvent) => {
         const el = tilt.current;
         if (!el) return;
@@ -77,9 +128,11 @@ export function CardCloseUp({ card, onClose, action }: { card: StageCard; onClos
     };
     if (typeof document === "undefined") return null;
     return createPortal(
-        <div className="closeup" role="dialog" aria-label={card.card.name} onClick={onClose}>
-            <span className="ps-close-hint">Tap anywhere to close</span>
-            <div className="closeup__body">
+        <div className="closeup" role="dialog" aria-label={card.card.name} onPointerDown={down} onPointerUp={up} onPointerCancel={() => (press.current = null)}>
+            <span className="ps-close-hint">{position ? <><b>{position}</b> · swipe for the next card</> : "Tap anywhere to close"}</span>
+            {onPrev && <button type="button" className="closeup__nav closeup__nav--prev" aria-label="Previous card" onClick={(e) => (e.stopPropagation(), step(-1))}>‹</button>}
+            {onNext && <button type="button" className="closeup__nav closeup__nav--next" aria-label="Next card" onClick={(e) => (e.stopPropagation(), step(1))}>›</button>}
+            <div key={`${card.card.id}-${card.code}`} className="closeup__body" data-dir={dir}>
                 <div className="closeup__card ps-card ps-card--flipped" data-tier={card.tier} onPointerMove={lean} onPointerLeave={settle} onClick={(e) => e.stopPropagation()}>
                     <div ref={tilt} className="ps-tilt">
                         <div className="ps-face closeup__face">
