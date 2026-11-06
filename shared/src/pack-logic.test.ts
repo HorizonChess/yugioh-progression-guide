@@ -62,13 +62,24 @@ describe('generateBoosterPack', () => {
         expect(pack.every(c => c.pulled_set_code === 'LOB')).toBe(true);
     });
 
-    it('never puts the same card in a pack twice', () => {
+    it('almost never puts the same card in a pack twice, and then only a common', () => {
         // 9 cards from 8 commons: before, about 1 pack in 4 of a small set repeated a common.
         const small = [...POOL.slice(0, 8), ...POOL.slice(40)];
-        for (let seed = 0; seed < 500; seed++) {
-            const pack = generateBoosterPack(small, LOB, seededRng(seed));
-            expect(new Set(pack.map(c => c.id)).size).toBe(pack.length);
+        const rng = seededRng(77);
+        let repeats = 0;
+        const N = 20_000;
+        for (let i = 0; i < N; i++) {
+            const pack = generateBoosterPack(small, LOB, rng);
+            if (new Set(pack.map(c => c.id)).size < pack.length) {
+                repeats++;
+                const seen = new Map<number, number>();
+                for (const c of pack) seen.set(c.id, (seen.get(c.id) ?? 0) + 1);
+                const twice = pack.filter(c => seen.get(c.id)! > 1);
+                expect(twice.every(c => c.pulled_rarity === 'Common')).toBe(true);
+            }
         }
+        expect(repeats / N).toBeGreaterThan(0.5 / 250);
+        expect(repeats / N).toBeLessThan(2 / 250);
     });
 
     it('repeats a card only when a slot has run out of others', () => {
@@ -133,27 +144,43 @@ describe('generateBoosterPacks (a box)', () => {
         expect(secrets / N).toBeCloseTo(24 / 31, 1);
     });
 
-    it('spreads the cards evenly: every common comes round before any comes again', () => {
-        const box = generateBoosterPacks(POOL, LOB, BOX_SIZE, seededRng(11));
-        const seen = new Map<number, number>();
-        for (const c of box.flat()) if (c.pulled_rarity === 'Common') seen.set(c.id, (seen.get(c.id) ?? 0) + 1);
-        // ~186 commons over 40 cards: each 4 or 5 times (6 at most where a pack skipped one it already held).
-        expect(seen.size).toBe(40);
-        expect(Math.max(...seen.values()) - Math.min(...seen.values())).toBeLessThanOrEqual(2);
-        // 24 rares over 10: each 2 or 3 times.
-        const rares = new Map<number, number>();
-        for (const c of box.flat()) if (c.pulled_rarity === 'Rare') rares.set(c.id, (rares.get(c.id) ?? 0) + 1);
-        expect(Math.min(...rares.values())).toBeGreaterThanOrEqual(2);
-        expect(Math.max(...rares.values())).toBeLessThanOrEqual(3);
+    it('spreads the commons out more than chance would, but still repeats plenty', () => {
+        // Fully random, a box of 24 leaves ~1 of the 40 commons unseen and gives one ~9 copies;
+        // from the 4-copies stack, the busiest common stays lower and repeats still happen.
+        let max = 0, unseen = 0;
+        const B = 300;
+        for (let seed = 0; seed < B; seed++) {
+            const seen = new Map<number, number>();
+            for (const c of generateBoosterPacks(POOL, LOB, BOX_SIZE, seededRng(seed)).flat()) if (c.pulled_rarity === 'Common') seen.set(c.id, (seen.get(c.id) ?? 0) + 1);
+            max += Math.max(...seen.values());
+            unseen += 40 - seen.size;
+        }
+        expect(max / B).toBeLessThan(8.5);
+        expect(max / B).toBeGreaterThan(5);
+        expect(unseen / B).toBeLessThan(0.5);
     });
 
-    it('still never puts a card in a pack twice', () => {
-        for (const pack of generateBoosterPacks(POOL, LOB, 48, seededRng(3))) expect(new Set(pack.map(c => c.id)).size).toBe(pack.length);
+    it('picks rares and foils at random, so a box can hold two of a good card', () => {
+        let rareDouble = 0, superDouble = 0;
+        const B = 300;
+        for (let seed = 0; seed < B; seed++) {
+            const box = generateBoosterPacks(POOL, LOB, BOX_SIZE, seededRng(seed)).flat();
+            const twice = (r: string) => { const ids = box.filter(c => c.pulled_rarity === r).map(c => c.id); return new Set(ids).size < ids.length; };
+            if (twice('Rare')) rareDouble++;
+            if (twice('Super Rare')) superDouble++;
+        }
+        expect(rareDouble / B).toBeGreaterThan(0.9); // 24 rares from 10
+        expect(superDouble / B).toBeGreaterThan(0.5); // 4 supers from 5: 1 - 5·4·3·2/5⁴ ≈ 81%
+    });
+
+    it('almost never puts a card in a pack twice in a box either', () => {
+        const packs = generateBoosterPacks(POOL, LOB, 2400, seededRng(3));
+        const repeats = packs.filter(pack => new Set(pack.map(c => c.id)).size < pack.length).length;
+        expect(repeats / packs.length).toBeLessThan(3 / 250);
     });
 
     it('opens a few packs as the first ones out of a box, and more than 24 as several boxes', () => {
-        const few = generateBoosterPacks(POOL, LOB, 5, seededRng(5));
-        expect(new Set(few.map(p => p[7]!.id)).size).toBe(5); // five different rares
+        expect(generateBoosterPacks(POOL, LOB, 5, seededRng(5))).toHaveLength(5);
         const two = generateBoosterPacks(POOL, LOB, 48, seededRng(5));
         expect(count(two.slice(0, 24), 'Super Rare')).toBe(4);
         expect(count(two.slice(24), 'Super Rare')).toBe(4);
