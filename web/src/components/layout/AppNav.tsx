@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -19,22 +20,31 @@ import NotificationBell from "@/components/layout/NotificationBell";
 export const NAV_ROUTES = new Set(["/timeline", "/collection", "/deck-builder", "/packs", "/record-match", "/rewards"]);
 
 const NAV_LINKS = [
-    { href: "/timeline", label: "CAMPAIGN" },
-    { href: "/collection", label: "COLLECTION" },
-    { href: "/deck-builder", label: "DECK BUILDER" },
-    { href: "/rewards", label: "REWARDS" },
-    { href: "/menu", label: "MENU" },
+    { href: "/timeline", label: "Campaign" },
+    { href: "/collection", label: "Collection" },
+    { href: "/deck-builder", label: "Deck Builder" },
+    { href: "/rewards", label: "Rewards" },
+    { href: "/menu", label: "Menu" },
 ];
 
-/** Tab icons for the phone tab bar, in NAV_LINKS order. */
-const TAB_ICONS = [
-    "M3 20h18M5 20V9l7-5 7 5v11M9 20v-6h6v6",
-    "M4 3h11v15H4zM9 21h9.5A1.5 1.5 0 0 0 20 19.5V7",
-    "M4 7h16M4 12h16M4 17h10",
-    "M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8-4.3-4.1 5.9-.8Z",
-    "M4 6h16M4 12h16M4 18h16",
-];
-const TAB_LABELS: Record<string, string> = { "/deck-builder": "DECK" };
+/** The section icons, drawn as filled glyphs with dark carved lines: a pyramid, a binder, a card fan, a chest and the Millennium Eye. */
+const CUT = { fill: "none", stroke: "#0b0810", strokeWidth: 1.3, strokeLinejoin: "round", strokeLinecap: "round" } as const;
+const LINE = { fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" } as const;
+const NAV_ICONS: Record<string, React.ReactNode> = {
+    "/timeline": <><circle cx="18.5" cy="5" r="2.2" /><path d="M10 5.5 20.5 21H1.5Z" /><path {...CUT} d="M10 5.5 12.5 21M6 14.5h8.6M3.8 18h12.9" /></>,
+    "/collection": <><path d="M6 2.5h12.5a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H6Z" /><path d="M4 3.5h1.2v17H4z" /><path {...CUT} d="M9.5 6.5h7v4.5h-7zM9.5 13.5h7v4.5h-7z" /><path {...LINE} d="M3 7h3.5M3 12h3.5M3 17h3.5" /></>,
+    "/deck-builder": <><rect x="3" y="5" width="9" height="13" rx="1" transform="rotate(-16 7.5 11.5)" /><rect x="12" y="5" width="9" height="13" rx="1" transform="rotate(16 16.5 11.5)" /><rect x="7.5" y="3" width="9" height="13.5" rx="1" stroke="#0b0810" strokeWidth="1.2" /><circle {...CUT} cx="12" cy="9.75" r="2.4" /></>,
+    "/rewards": <><path d="M3 11h18v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z" /><path d="M3 10a9 5.5 0 0 1 18 0v.5H3Z" /><path {...CUT} d="M3 13.5h18M12 10.5v5" /><rect x="10.4" y="12.4" width="3.2" height="3.6" rx=".5" stroke="#0b0810" strokeWidth="1.1" /></>,
+    "/menu": <><path d="M1.5 10.5Q12 1 22.5 10.5Q12 20 1.5 10.5Z" /><circle cx="12" cy="10.5" r="3.4" fill="#0b0810" /><circle cx="12" cy="10.5" r="1.6" /><path {...LINE} d="M12 16.6v5M8.5 15.8 6.5 20M15.5 15.8l2 4.2" /></>,
+};
+const NavIcon = ({ href }: { href: string }) => (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{NAV_ICONS[href]}</svg>
+);
+const TAB_LABELS: Record<string, string> = { "/deck-builder": "Deck" };
+
+/** "Stage 3 · Solo", under the duelist's name in both bars. */
+const stageLine = (series: { currentSetIndex: number; mode?: string } | null | undefined) =>
+    series ? `Stage ${series.currentSetIndex + 1} · ${series.mode === "duo" ? "Duo" : "Solo"}` : "No save picked";
 
 const useNavPath = () => usePathname().replace(/(.)\/$/, "$1"); // trailingSlash makes it "/timeline/"
 
@@ -45,10 +55,10 @@ export function PhoneTabBar() {
     if (!NAV_ROUTES.has(pathname)) return null;
     return (
         <nav className="phone-tabs md:hidden" aria-label="Main">
-            {NAV_LINKS.map(({ href, label }, i) => {
+            {NAV_LINKS.map(({ href, label }) => {
                 const inner = (
                     <>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d={TAB_ICONS[i]} /></svg>
+                        <NavIcon href={href} />
                         {TAB_LABELS[href] ?? label}
                     </>
                 );
@@ -68,7 +78,7 @@ function PhoneBar({ duelistName, signedIn }: { duelistName: string; signedIn: bo
     const { isGuideVisible, toggleGuide, series, matchHistory } = useProgression();
     const wins = matchHistory.filter((m) => m.winner === "player").length;
     const losses = matchHistory.filter((m) => m.winner === "opponent").length;
-    const sub = series ? `Stage ${series.currentSetIndex + 1} · ${series.mode === "duo" ? "Duo" : "Solo"}` : "No save picked";
+    const sub = stageLine(series);
     return (
         <header className="phone-bar md:hidden">
             <button
@@ -103,66 +113,44 @@ function PhoneBar({ duelistName, signedIn }: { duelistName: string; signedIn: bo
 
 export default function AppNav() {
     const pathname = useNavPath();
-    const { isGuideVisible, toggleGuide, activeSeriesId } = useProgression();
+    const { isGuideVisible, toggleGuide, activeSeriesId, series } = useProgression();
     const user = useAuth().user;
     const duelistName = user?.duelistName ?? "Guest";
 
     if (!NAV_ROUTES.has(pathname)) return null;
+    const sub = stageLine(series);
 
     return (
         <>
         <PhoneBar duelistName={duelistName} signedIn={!!user} />
-        <div className="hidden md:flex z-[100] bg-gradient-to-b from-gray-900 to-black border-b-2 border-gray-700 p-3 justify-between items-center shadow-lg">
-            <div className="flex items-center gap-4">
-                <Link href="/menu" className="group flex items-center gap-4 hover:opacity-80 transition-opacity">
-                    <div>
-                        <h2 className="text-primary font-bold text-lg tracking-wider uppercase leading-none">{duelistName}</h2>
-                        <p className="text-[10px] text-gray-500 font-mono">ID: 8492-001</p>
-                    </div>
-                </Link>
-
-                {/* Guide Toggle - Pixel Art Head */}
-                <button
-                    onClick={toggleGuide}
-                    className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transition-all duration-200 ${isGuideVisible
-                        ? 'border-primary shadow-[0_0_10px_var(--primary)] bg-primary/20'
-                        : 'border-gray-600 opacity-50 hover:opacity-100 hover:border-gray-400'
-                        }`}
-                    title={isGuideVisible ? "Hide Guide" : "Show Guide"}
-                >
-                    <img
-                        src={asset("/sprites/yugi_neutral_v2_transparent.webp")}
-                        alt="Toggle Guide"
-                        className="w-full h-full object-cover object-top scale-150 translate-y-1"
-                    />
-                </button>
-            </div>
-
-            <div className="flex items-center gap-6">
-                <div className="hidden md:flex gap-4 text-xs font-bold tracking-widest text-gray-500">
-                    {NAV_LINKS.map(({ href, label }) => !activeSeriesId && href !== "/menu" ? (
-                        <span key={href} aria-disabled="true" title="Pick a save first" className="topbar-nav-link opacity-40 cursor-not-allowed">
-                            {label}
-                        </span>
-                    ) : (
-                        <Link
-                            key={href}
-                            href={href}
-                            aria-current={pathname === href ? "page" : undefined}
-                            className={`topbar-nav-link ${pathname === href ? "topbar-nav-link--active" : ""}`}
-                        >
-                            {label}
-                        </Link>
-                    ))}
-                </div>
-                {user && <NotificationBell />}
-                <div className="text-right">
-                    <h1 className="text-xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] pr-1">
-                        PROGRESSION
-                    </h1>
-                </div>
-            </div>
-        </div>
+        <header className="app-bar hidden md:flex">
+            <button
+                type="button"
+                onClick={toggleGuide}
+                className={`app-bar__face ${isGuideVisible ? "" : "app-bar__face--off"}`}
+                style={{ backgroundImage: `url('${asset("/sprites/yugi_neutral_v2_transparent.webp")}')` }}
+                aria-label={isGuideVisible ? "Hide Guide" : "Show Guide"}
+                aria-pressed={isGuideVisible}
+                title={isGuideVisible ? "Hide Guide" : "Show Guide"}
+            />
+            <Link href="/menu" className="app-bar__who">
+                <div className="app-bar__name">{duelistName}</div>
+                <div className="app-bar__sub">{sub}</div>
+            </Link>
+            <nav className="app-bar__links" aria-label="Main">
+                {NAV_LINKS.map(({ href, label }, i) => (
+                    <Fragment key={href}>
+                        {i > 0 && <span className="app-bar__sep" aria-hidden="true" />}
+                        {!activeSeriesId && href !== "/menu" ? (
+                            <span aria-disabled="true" title="Pick a save first">{label}</span>
+                        ) : (
+                            <Link href={href} aria-current={pathname === href ? "page" : undefined}>{label}</Link>
+                        )}
+                    </Fragment>
+                ))}
+            </nav>
+            <div className="app-bar__end">{user && <NotificationBell />}</div>
+        </header>
         </>
     );
 }

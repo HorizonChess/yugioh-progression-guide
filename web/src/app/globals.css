@@ -1019,15 +1019,57 @@ html::-webkit-scrollbar-corner,
  * SHELL — the persistent AppNav chrome.
  * ============================================================ */
 
-/* A top-bar nav link (CAMPAIGN / COLLECTION / …); brightens on hover */
-.topbar-nav-link {
-  @apply hover:text-white transition-colors;
+/* Desktop: the phone bar's lacquer and gold meander at full width, with gold-engraved links.
+   The current page glows, with a gold rule and a diamond under it. */
+.app-bar {
+  position: relative; z-index: 100; height: 66px; align-items: center; gap: 14px; padding: 0 22px;
+  background: radial-gradient(120% 140% at 20% 0%, #2a1f3a, transparent 60%), linear-gradient(#1a1324, #0a070f);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
 }
+.app-bar::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -7px; height: 7px; pointer-events: none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='7'%3E%3Cpath d='M0 6H4V1H12V4H8V6H16' fill='none' stroke='%233a2405' stroke-width='1.2'/%3E%3C/svg%3E") 0 0 / 16px 7px repeat-x,
+    linear-gradient(#fff1bf, #d4af37 45%, #8a6420);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+.app-bar__face {
+  flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+  background: #1b1426 center 8% / 250% auto no-repeat;
+  box-shadow: 0 0 0 2px var(--primary), 0 0 0 4px #3a2405, 0 0 12px rgba(212, 175, 55, 0.5); transition: opacity 0.2s, filter 0.2s, transform 0.15s;
+}
+.app-bar__face:hover { transform: scale(1.06); }
+.app-bar__face--off { opacity: 0.55; filter: grayscale(0.7); }
+/* Name and links share the row; the side columns are equal so the links sit at the true centre. */
+.app-bar__who, .app-bar__end { flex: 1 1 0; min-width: 0; }
+.app-bar__end { display: flex; justify-content: flex-end; }
+.app-bar__name { font: 800 19px/1 var(--font-display); color: #ffe08a; letter-spacing: 0.05em; text-shadow: 0 1px 0 #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-bar__sub { margin-top: 4px; font: 600 11px/1.2 var(--font-heading); letter-spacing: 0.16em; color: #c7b99a; text-transform: uppercase; white-space: nowrap; }
+.app-bar__links { display: flex; align-items: center; gap: 6px; }
+.app-bar__links a, .app-bar__links span[aria-disabled] {
+  position: relative; padding: 10px 16px; font: 700 14px/1 var(--font-display); letter-spacing: 0.14em; color: #a99878;
+  text-decoration: none; text-shadow: 0 1px 0 #000; white-space: nowrap; transition: color 0.2s, text-shadow 0.2s;
+}
+.app-bar__links a:hover { color: #f3e3b5; }
+.app-bar__links span[aria-disabled] { opacity: 0.4; cursor: not-allowed; }
+.app-bar__links a[aria-current="page"] { color: #ffe08a; text-shadow: 0 1px 0 #000, 0 0 12px rgba(255, 214, 110, 0.55); }
+.app-bar__links a[aria-current="page"]::after {
+  content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary) 20%, #ffe08a 50%, var(--primary) 80%, transparent);
+}
+.app-bar__links a[aria-current="page"]::before {
+  content: ""; position: absolute; left: 50%; bottom: -3px; width: 7px; height: 7px; margin-left: -3.5px;
+  transform: rotate(45deg); background: #ffe08a; box-shadow: 0 0 6px var(--primary);
+}
+.app-bar__sep { flex: none; width: 5px; height: 5px; transform: rotate(45deg); background: #5c4a25; }
+@media (max-width: 1100px) { .app-bar__links a, .app-bar__links span[aria-disabled] { padding: 10px 9px; font-size: 13px; letter-spacing: 0.1em; } .app-bar__sub { letter-spacing: 0.1em; } }
 
-/* The link for the route we're currently on — pinned bright (gold), not grey. */
-.topbar-nav-link--active {
-  @apply text-primary;
+/* The bell, in both bars: a dark lacquer disc with a gold rim. */
+.nav-bell {
+  position: relative; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 0; cursor: pointer;
+  color: #d9c58e; background: radial-gradient(circle at 50% 35%, #2c2238, #120c18); box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.45); transition: color 0.2s, box-shadow 0.2s;
 }
+.nav-bell:hover, .nav-bell[aria-expanded="true"] { color: #ffe08a; box-shadow: inset 0 0 0 1px var(--primary), 0 0 10px rgba(212, 175, 55, 0.35); }
 
 /* ============================================================
  * DECK BUILDER (/deck-builder) — control-panel widgets.
@@ -1185,16 +1227,32 @@ html::-webkit-scrollbar-corner,
 .phone-bar__score .stats-gem__label { font-size: 6px; }
 .phone-bar__score .stats-gem__value { font-size: 17px; }
 
+/* The tab bar: the top bar's lacquer and meander, turned upside down; the current tab glows gold with a diamond above it. */
 .phone-tabs {
-  display: flex; height: calc(60px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); position: relative; z-index: 100;
-  background: linear-gradient(#0f172a, #020617); border-top: 1px solid #1e293b;
+  display: flex; height: calc(62px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); position: relative; z-index: 100;
+  background: radial-gradient(120% 140% at 20% 100%, #2a1f3a, transparent 60%), linear-gradient(#1a1324, #0a070f);
+  box-shadow: 0 -6px 14px rgba(0, 0, 0, 0.6);
+}
+.phone-tabs::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -7px; height: 7px; pointer-events: none; transform: scaleY(-1);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='7'%3E%3Cpath d='M0 6H4V1H12V4H8V6H16' fill='none' stroke='%233a2405' stroke-width='1.2'/%3E%3C/svg%3E") 0 0 / 16px 7px repeat-x,
+    linear-gradient(#fff1bf, #d4af37 45%, #8a6420);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 .phone-tabs a, .phone-tabs span {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  color: #94a3b8; text-decoration: none; font: 700 10px/1 var(--font-heading); letter-spacing: 0.1em;
+  flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0;
+  color: #8f8470; text-decoration: none; font: 700 10px/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
 }
-.phone-tabs svg { width: 22px; height: 22px; }
-.phone-tabs [aria-current="page"] { color: var(--primary); }
+.phone-tabs svg { width: 25px; height: 25px; transition: filter 0.2s; }
+.phone-tabs [aria-current="page"] { color: #ffe08a; text-shadow: 0 0 8px rgba(255, 214, 110, 0.5); }
+.phone-tabs [aria-current="page"] svg { filter: drop-shadow(0 0 6px rgba(255, 214, 110, 0.6)); }
+.phone-tabs [aria-current="page"]::after {
+  content: ""; position: absolute; top: 4px; left: 50%; width: 6px; height: 6px; margin-left: -3px; transform: rotate(45deg);
+  background: #ffe08a; box-shadow: 0 0 6px var(--primary);
+}
+.phone-tabs a:active svg { transform: translateY(1px); }
 .phone-tabs [aria-disabled="true"] { opacity: 0.4; }
 
 /* ---------- the pack screen: the timeline's pack, at centre stage ---------- */

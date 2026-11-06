@@ -51,7 +51,7 @@ export default function NotificationBell() {
                 onClick={() => (open ? close() : setOpen(true))}
                 aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
                 aria-expanded={open}
-                className="relative w-9 h-9 flex items-center justify-center rounded-full border border-gray-600 text-gray-300 hover:text-white hover:border-gray-400"
+                className="nav-bell"
             >
                 <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden>
                     <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3a1.5 1.5 0 0 0-3 0v1.16A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z" />
