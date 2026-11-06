@@ -64,6 +64,7 @@ export const GuestSaveBodySchema = z.strictObject({
         )
         .max(2000),
     bannedCardIds: cards(2000),
+    marks: cards(500).optional(),
     savedDecks: z
         .array(
             z.strictObject({

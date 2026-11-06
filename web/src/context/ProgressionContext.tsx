@@ -59,6 +59,10 @@ interface ProgressionContextType {
     claimReward: (rewardId: string, cardId?: number, printing?: string) => Promise<Opening | null>;
     rivalBinder: () => Promise<Collection>;
     rivalRewards: () => Promise<RivalReward[]>;
+    /** Cards marked to look at later: shown in the binder and deck builder, cleared once looked at there. */
+    marks: ReadonlySet<number>;
+    /** Marks or unmarks a card; the change shows at once, and is undone if it can't be saved. */
+    setMark: (cardId: number, on: boolean) => void;
     saveDeck: (deck: SavedDeck) => Promise<void>;
     deleteDeck: (deckId: string) => Promise<void>;
     importCollection: (cardIds: number[], mode: 'add' | 'replace') => Promise<void>;
@@ -176,6 +180,31 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
         return result;
     };
 
+    // Marks change at once on screen; the repository catches up behind (no reload for a mark).
+    // Edits belong to one series: switching runs starts from that run's own marks.
+    const [markEdits, setMarkEdits] = useState<{ series: string | null; edits: ReadonlyMap<number, boolean> }>({ series: null, edits: new Map() });
+    const savedMarks = active?.me.marks;
+    const edits = markEdits.series === activeSeriesId ? markEdits.edits : null;
+    const marks = useMemo(() => {
+        const all = new Set(savedMarks ?? []);
+        for (const [cardId, on] of edits ?? []) {
+            if (on) all.add(cardId);
+            else all.delete(cardId);
+        }
+        return all as ReadonlySet<number>;
+    }, [savedMarks, edits]);
+    const setMark = (cardId: number, on: boolean) => {
+        if (!activeSeriesId || marks.has(cardId) === on) return;
+        const series = activeSeriesId;
+        const edit = (value: boolean) =>
+            setMarkEdits((m) => ({ series, edits: new Map(m.series === series ? m.edits : []).set(cardId, value) }));
+        edit(on);
+        repo.setMark(activeSeriesId, cardId, on).catch((e) => {
+            edit(!on);
+            alertRepoError(e);
+        });
+    };
+
     // Yugi on or off, remembered on this device (the nav's Yugi button and the menu's Options).
     const isGuideVisible = useSyncExternalStore(guideStore.subscribe, guideStore.get, () => true);
     const setGuide = guideStore.set;
@@ -214,6 +243,8 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
             claimReward: (rewardId, cardId, printing) => onActive((id) => repo.claimReward(id, rewardId, cardId, printing))(),
             rivalBinder: () => onActive((id) => repo.rivalBinder(id), false)(),
             rivalRewards: () => onActive((id) => repo.rivalRewards(id), false)(),
+            marks,
+            setMark,
             saveDeck: (deck) => onActive((id) => repo.saveDeck(id, deck))(),
             deleteDeck: (deckId) => onActive((id) => repo.deleteDeck(id, deckId))(),
             importCollection: (cardIds, mode) => onActive((id) => repo.importCollection(id, cardIds, mode))(),

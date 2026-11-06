@@ -18,8 +18,10 @@ const DeckBodySchema = z.strictObject({
 // An empty replace clears the collection.
 const ImportBodySchema = z.strictObject({ cardIds: cardIds(MAX_IMPORT), mode: z.enum(['add', 'replace']) });
 const DECK_ID = /^[\w-]{1,64}$/;
+/** Marks kept at once: plenty for a run, and a bound on the document. */
+export const MAX_MARKS = 500;
 
-/** `/api/series/:seriesId`: PUT|DELETE /decks/:deckId, POST /collection/import */
+/** `/api/series/:seriesId`: PUT|DELETE /decks/:deckId, PUT|DELETE /marks/:cardId, POST /collection/import */
 export async function deckRoutes(app: FastifyInstance): Promise<void> {
     const guard = { preHandler: [requireAuth, requireSeriesMember], config: { rateLimit: { max: 30, timeWindow: '1 minute' } } };
     const players = () => seriesPlayersCollection(app.db);
@@ -48,6 +50,32 @@ export async function deckRoutes(app: FastifyInstance): Promise<void> {
     app.delete('/decks/:deckId', guard, async (request, reply) => {
         const { deckId } = request.params as { deckId: string };
         await players().updateOne({ seriesId: request.series!._id, userId: request.user!._id }, { $pull: { savedDecks: { id: deckId } } });
+        return reply.code(204).send();
+    });
+
+    // Marks: cards to look at later. Marking happens as packs open (before the opening is
+    // saved), so any real card may be marked, not only owned ones. Looking at cards clears
+    // marks quickly, hence the roomier rate limit.
+    const markGuard = { ...guard, config: { rateLimit: { max: 240, timeWindow: '1 minute' } } };
+    const markId = (request: { params: unknown }) => {
+        const n = Number((request.params as { cardId: string }).cardId);
+        return Number.isInteger(n) && n > 0 ? n : null;
+    };
+    app.put('/marks/:cardId', markGuard, async (request, reply) => {
+        const cardId = markId(request);
+        if (cardId === null) return reply.code(400).send({ error: 'Invalid input' });
+        if (!(await app.catalog.knownIds([cardId])).has(cardId)) return reply.code(400).send({ error: 'Unknown card' });
+        const result = await players().updateOne(
+            { seriesId: request.series!._id, userId: request.user!._id, [`marks.${MAX_MARKS - 1}`]: { $exists: false } },
+            { $addToSet: { marks: cardId } },
+        );
+        if (!result.matchedCount) return reply.code(409).send({ error: `You can mark at most ${MAX_MARKS} cards` });
+        return reply.code(204).send();
+    });
+    app.delete('/marks/:cardId', markGuard, async (request, reply) => {
+        const cardId = markId(request);
+        if (cardId === null) return reply.code(400).send({ error: 'Invalid input' });
+        await players().updateOne({ seriesId: request.series!._id, userId: request.user!._id }, { $pull: { marks: cardId } });
         return reply.code(204).send();
     });
 

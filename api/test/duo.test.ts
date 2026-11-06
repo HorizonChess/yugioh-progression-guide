@@ -75,7 +75,7 @@ describe('duo series invites', () => {
         const { series, me } = (await kaiba.call('GET', `/api/series/${id}`)).json();
         expect(series.status).toBe('active');
         expect(series.members.map((m: { duelistName: string }) => m.duelistName)).toEqual(['Yami', 'Kaiba']);
-        expect(me).toEqual({ collection: {}, savedDecks: [], rewards: [], ydkImportUsed: false });
+        expect(me).toEqual({ collection: {}, savedDecks: [], rewards: [], ydkImportUsed: false, marks: [] });
         expect((await yami.notifications())[0]).toMatchObject({ type: 'invite-accepted', payload: { from: 'Kaiba' } });
         expect((await kaiba.call('GET', '/api/invites')).json().invites).toEqual([]);
     });

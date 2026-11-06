@@ -1,5 +1,6 @@
 "use client";
 
+import { MarkBadge } from "@/components/card/LookLater";
 import { useState } from "react";
 import { Card } from "@/lib/api";
 
@@ -19,10 +20,12 @@ interface DeckSlotProps {
     isUnavailable?: boolean;
     /** Cosmetic ban (Phase 5): greyed like unavailable, not draggable, marked "BANNED". */
     banned?: boolean;
+    /** Marked to look at later: a bookmark on it. */
+    marked?: boolean;
     dragContext?: 'search' | 'deck';
 }
 
-export default function DeckSlot({ card, index, onClick, onDoubleClick, onContextMenu, onHover, className = "", onDragStart, onDrop, onDragOver, onDrag, onDragEnd, isUnavailable, banned, dragContext }: DeckSlotProps) {
+export default function DeckSlot({ card, index, onClick, onDoubleClick, onContextMenu, onHover, className = "", onDragStart, onDrop, onDragOver, onDrag, onDragEnd, isUnavailable, banned, marked, dragContext }: DeckSlotProps) {
     const [isDragOver, setIsDragOver] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
@@ -108,6 +111,7 @@ export default function DeckSlot({ card, index, onClick, onDoubleClick, onContex
                         />
                         {/* Hover Shine */}
                         <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 pointer-events-none rounded-[1px]" />
+                        {marked && <MarkBadge />}
                         {/* Cosmetic ban marker */}
                         {banned && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

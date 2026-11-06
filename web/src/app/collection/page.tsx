@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import CollectionFilters, { DEFAULT_FILTERS, FilterState } from "@/components/collection/CollectionFilters";
 import Binder, { type BinderChapter, type BinderSlot } from "@/components/collection/Binder";
 import { CardCloseUp, useCardPeek } from "@/components/card/CardPlate";
+import { LookedAt, MarkToggle } from "@/components/card/LookLater";
 import { tierOf, type StageCard } from "@/components/packs/stage/plate";
 import { parseYDK, generateYDKFromCollection, downloadYDK } from "@/lib/ydk-parser";
 import { filterCollection, type OwnedEntry } from "@/lib/collection-filter";
@@ -299,8 +300,12 @@ export default function Collection() {
 
             {peek}
             {selectedIndex >= 0 && (
+                <LookedAt key={slots[selectedIndex]!.card.id} cardId={slots[selectedIndex]!.card.id} />
+            )}
+            {selectedIndex >= 0 && (
                 <CardCloseUp
                     card={toStage(slots[selectedIndex]!)}
+                    action={<MarkToggle cardId={slots[selectedIndex]!.card.id} />}
                     onClose={() => setSelectedKey(null)}
                     onPrev={selectedIndex > 0 ? () => setSelectedKey(slots[selectedIndex - 1]!.key) : undefined}
                     onNext={selectedIndex < slots.length - 1 ? () => setSelectedKey(slots[selectedIndex + 1]!.key) : undefined}

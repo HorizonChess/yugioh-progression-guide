@@ -1,6 +1,8 @@
 "use client";
 
 import { edgeSwipe } from "@/lib/swipe-nav";
+import { useProgression } from "@/context/ProgressionContext";
+import { MarkBadge } from "@/components/card/LookLater";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Card } from "@/lib/api";
 import type { Tier } from "@/components/packs/stage/fx";
@@ -32,6 +34,7 @@ function Page({ slots, title, chapter, number, onOpen, bind }: {
     slots: (BinderSlot | null)[]; title: string; chapter: string; number: number;
     onOpen: (s: BinderSlot) => void; bind: (s: BinderSlot) => object;
 }) {
+    const { marks } = useProgression();
     return (
         <div className="binder-page">
             <div className="binder-page__title">{title}</div>
@@ -46,6 +49,7 @@ function Page({ slots, title, chapter, number, onOpen, bind }: {
                                 <img src={art} alt="" decoding="sync" />
                                 {s.tier !== "Common" && <span className="binder-foil" />}
                                 {s.count > 1 && <span className="binder-count">×{s.count}</span>}
+                                {marks.has(s.card.id) && <MarkBadge />}
                             </>
                         ) : (
                             <span className="binder-ghost"><b>{s.code}</b><span>{s.card.name}</span></span>

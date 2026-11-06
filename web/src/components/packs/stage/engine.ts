@@ -25,6 +25,8 @@ export type StageOptions = {
     /** The cards are out and can be flipped. */
     onReady: () => void;
     onAllFlipped: () => void;
+    /** Marks to look at later: the close-up gets a toggle for its card. */
+    marks?: { has: (cardId: number) => boolean; set: (cardId: number, on: boolean) => void };
 };
 
 export type PackStage = { flipAll: () => void; spin: (dir: 1 | -1) => void; destroy: () => void };
@@ -154,6 +156,25 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
     }
 
     /** A face-up card flies up into a close-up, its details beside it (wide) or in a sheet below (phone). */
+    /** "Look later": a bookmark toggle, inside the details so a tap on it doesn't close them. */
+    function markToggle(cardId: number, marks: NonNullable<StageOptions["marks"]>) {
+        const b = document.createElement("button");
+        b.type = "button";
+        const show = (on: boolean) => {
+            b.className = `mark-toggle ${on ? "mark-toggle--on" : ""}`;
+            b.setAttribute("aria-pressed", String(on));
+            b.innerHTML = `<span class="mark-toggle__icon" aria-hidden="true"></span>${on ? "Marked to look at later" : "Look at later"}`;
+        };
+        show(marks.has(cardId));
+        b.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const on = !marks.has(cardId);
+            marks.set(cardId, on);
+            show(on);
+        });
+        return b;
+    }
+
     function inspect(from: CardEl) {
         hidePeek();
         inspecting = true;
@@ -164,6 +185,7 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
         ov.setAttribute("aria-label", s.card.name);
         ov.innerHTML = `<span class="ps-close-hint">Tap anywhere to close</span>`;
         const panel = plate(s, wide ? "" : "ps-sheet");
+        if (o.marks) panel.append(markToggle(s.card.id, o.marks));
         ov.append(panel);
         const above = wide ? VH : VH - panel.offsetHeight;
         const ch = wide ? Math.min(VH * 0.72, 560) : Math.min(above - 64, (VW * 0.72) / ASPECT), cw = ch * ASPECT;

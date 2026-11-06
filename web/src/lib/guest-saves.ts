@@ -33,6 +33,7 @@ function toBody(save: SaveSlot): GuestSaveBody {
                 ...(r.bannedCardId ? { bannedCardId: r.bannedCardId } : {}),
             })),
         bannedCardIds: save.bannedCardIds,
+        marks: (save.marks ?? []).slice(0, 500),
         savedDecks: save.savedDecks.map((d) => ({
             id: d.id.replace(/[^\w-]/g, "").slice(0, 64) || crypto.randomUUID(),
             name: clip(d.name, "Untitled Deck"),
