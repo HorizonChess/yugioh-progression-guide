@@ -143,7 +143,7 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
             shade?.animate([{ opacity: 0 }, { opacity: 1, offset: 0.5 }, { opacity: 0 }], { duration: 640 });
         } else {
             const angle = turning.dir > 0 ? -180 : 180;
-            a = el.animate([{ transform: "rotateY(0deg)" }, { transform: `rotateY(${angle / 2}deg) translateZ(30px)` }, { transform: `rotateY(${angle}deg)` }], { duration: 700, easing: "cubic-bezier(.45,.05,.3,1)" });
+            a = el.animate([{ transform: "rotateY(0deg)" }, { transform: `rotateY(${angle / 2}deg) translateZ(30px)` }, { transform: `rotateY(${angle}deg)` }], { duration: 700, easing: "cubic-bezier(.45,.05,.3,1)", fill: "both" });
             shade?.animate([{ opacity: 0 }, { opacity: 1, offset: 0.5 }, { opacity: 0 }], { duration: 700 });
         }
         a.onfinish = () => setTurning(null);

@@ -16,10 +16,10 @@
 }
 .binder-shell::before { content: ""; position: absolute; inset: 9px; border-radius: 12px; border: 1.5px dashed rgba(230, 190, 120, 0.45); pointer-events: none; }
 .binder-spine {
-  position: absolute; top: 0; bottom: 0; left: 50%; width: 9%; transform: translateX(-50%); z-index: 1;
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 9%; transform: translateX(-50%) translateZ(1px); z-index: 1;
   background: var(--pebble), linear-gradient(90deg, #2a0e06, #5a2414 30%, #6e2e19 50%, #5a2414 70%, #2a0e06); box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.6);
 }
-@media (max-width: 767px) { .binder-spine { left: 0; width: 13%; transform: none; border-radius: 18px 0 0 18px; } }
+@media (max-width: 767px) { .binder-spine { left: 0; width: 13%; transform: translateZ(1px); border-radius: 18px 0 0 18px; } }
 
 /* the open pages, each on a stack of sheet edges */
 .binder-sheets, .binder-leaf { position: absolute; top: 4.2%; bottom: 4.2%; z-index: 2; display: flex; }
@@ -91,7 +91,8 @@ button.binder-pocket { cursor: pointer; }
 .binder-ghost span { font: 600 clamp(6px, 0.6vw, 9px)/1.2 var(--font-main); color: rgba(241, 231, 204, 0.28); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* the rings */
-.binder-rings { position: absolute; top: 9%; bottom: 9%; left: 50%; width: 9%; transform: translateX(-50%); z-index: 6; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+/* the spine and rings sit a hair in front in 3D, so a turned sheet lying over them never hides them */
+.binder-rings { position: absolute; top: 9%; bottom: 9%; left: 50%; width: 9%; transform: translateX(-50%) translateZ(2px); z-index: 6; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
 @media (max-width: 767px) { .binder-rings { left: 7.5%; width: 12%; } }
 .binder-rings i { position: relative; display: block; height: 13%; }
 .binder-rings i::before {
