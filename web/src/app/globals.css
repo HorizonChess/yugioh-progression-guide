@@ -1050,9 +1050,15 @@ html::-webkit-scrollbar-corner,
 @media (max-width: 767px) {
   .closeup { align-items: stretch; padding: 40px 0 0; touch-action: none; }
   .closeup .ps-plate { touch-action: pan-y; }
-  .closeup__body { flex-direction: column; justify-content: space-between; gap: 16px; width: 100%; }
-  .closeup__card { height: auto; width: min(72vw, var(--app-h, 100dvh) * 0.52 * 0.686); margin: 0 auto; }
-  .closeup__side { width: 100%; }
+  /* The details sheet keeps its own height (its text scrolls past a cap) and the card takes the
+     rest, shrinking on short screens, so the sheet and its button never run under a browser's
+     bottom bar. */
+  .closeup__body { flex-direction: column; justify-content: space-between; gap: 16px; width: 100%; height: 100%; min-height: 0; }
+  .closeup__card {
+    flex: 1 1 0; min-height: 120px; width: auto; align-self: center; margin: 0 auto;
+    height: auto; max-height: min(calc(var(--app-h, 100dvh) * 0.52), calc(72vw * 1185 / 813));
+  }
+  .closeup__side { width: 100%; flex: none; }
   .closeup__nav { top: 40%; width: 38px; height: 38px; font-size: 20px; background: rgba(10, 7, 4, 0.55); }
   .closeup__nav--prev { left: 6px; }
   .closeup__nav--next { right: 6px; }
