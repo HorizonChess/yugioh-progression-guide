@@ -467,3 +467,8 @@ Next steps (user, 2026-11-06): finish the do-over with a desktop top bar and a p
 - What he says: per-set notes (what the set adds to the game, cards to look out for, one-line tips on key cards as you view them), comments worked out from your pulls (a watch-list card, a third copy, synergy with what you own, a banlist card, an empty pack) and reactions to wins and losses. Each line stays under about 140 characters. Written for the first 8–10 sets first, to settle the tone, then era by era.
 - Pack details is `SetCardList` (already in the new look). `PackDetails.tsx` is unused and goes.
 - To do (user, 2026-11-06): look for other dead components like `PackDetails.tsx` (files nothing imports, exports nothing uses) and remove them.
+
+Guide look and lines (user, 2026-11-06): the stone tablet (option C of `web/scripts/prototypes/guide/`), with all three moods cropped to one shared frame. The lines must:
+- Sound like Yugi talking to a friend, not like an AI reading out card facts: short, warm, in his voice.
+- Be accurate to what both duelists can have at that point in the series, which is the sets unlocked so far, not the whole game. Example from the user: Monster Reborn isn't in these early sets, so warning that the opponent might Reborn something is wrong. Uraby's 1500 ATK is the second best in its set, which matters because there are no strong common spells or traps yet.
+- So comparisons ("second strongest", "no answer to it yet") are worked out from the real card pool in the app's data, never from memory. Every card a hand-written line names is checked by a script against the pool for that stage.

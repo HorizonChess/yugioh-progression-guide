@@ -87,7 +87,7 @@ export default function Timeline() {
                         <button type="button">Bonus matches</button>
                     </div>
                 </nav>
-                <GuideSprite raised />
+                <GuideSprite />
             </main>
         );
     }

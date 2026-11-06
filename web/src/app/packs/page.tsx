@@ -243,7 +243,7 @@ function PacksShell({
     // for summary/details.
     return (
         <div className="h-full overflow-hidden grid grid-rows-[1fr]">
-            {withSprite && <GuideSprite raised={fixed} />}
+            {withSprite && <GuideSprite />}
             {fixed ? (
                 // Pack-opening board: row-locked, centered, never scrolls.
                 <div className="min-h-0 min-w-0 flex items-center justify-center p-4">{children}</div>

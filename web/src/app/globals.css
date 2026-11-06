@@ -1419,3 +1419,47 @@ html::-webkit-scrollbar-corner,
   .store__pack img, .store__light { animation: none; }
   .wall-torch, .stats-living::before, .stats-living::after, .chain-gold, .cartouche-btn--next::after { animation: none; }
 }
+/* ============================================================
+ * GUIDE — Yugi slides in from the left with his words carved in a stone tablet.
+ * He overlays the page (nothing moves for him) and leaves again.
+ * ============================================================ */
+.guide {
+  position: fixed; left: var(--guide-at, 0px); bottom: 0; z-index: 50; display: flex; align-items: flex-end; pointer-events: none;
+  transform: translateX(calc(-100% - 40px - var(--guide-at, 0px))); transition: transform 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+.guide--on { transform: none; }
+.guide--on .guide__yugi, .guide--on .guide__tablet { pointer-events: auto; }
+.guide__yugi { position: relative; flex: none; height: 290px; margin: 0 -6px 14px 26px; padding: 0; border: 0; background: none; cursor: pointer; transition: transform 0.2s; transform-origin: bottom center; }
+.guide__yugi:hover { transform: scale(1.03); }
+.guide__yugi img {
+  display: block; height: 100%; width: auto;
+  /* a faint gold rim picks him out of the wall */
+  filter: drop-shadow(0 0 1px rgba(255, 236, 170, 0.75)) drop-shadow(0 0 10px rgba(212, 175, 55, 0.25)) drop-shadow(0 10px 12px rgba(0, 0, 0, 0.55));
+}
+/* a soft pool of shadow under his feet, so he stands on the floor */
+.guide__yugi::after { content: ""; position: absolute; left: 8%; right: 8%; bottom: -6px; height: 16px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, 0.65), transparent); z-index: -1; }
+.guide__tablet {
+  position: relative; width: 470px; margin: 0 0 30px; padding: 22px 26px 18px; border: 0; border-radius: 6px; text-align: left; cursor: pointer;
+  background: linear-gradient(rgba(40, 28, 14, 0.35), rgba(15, 10, 5, 0.6)), var(--guide-stone) center / 360px auto;
+  box-shadow: inset 0 1px 0 rgba(255, 235, 190, 0.2), inset 0 0 0 2px rgba(0, 0, 0, 0.5), inset 0 0 0 4px rgba(212, 175, 55, 0.45), 0 16px 30px rgba(0, 0, 0, 0.6);
+  font: 600 17px/1.45 var(--font-heading); color: #f6dc8e; text-shadow: 0 1px 0 #000, 0 0 8px rgba(0, 0, 0, 0.8);
+}
+.guide__plate {
+  position: absolute; left: 22px; top: -11px; padding: 4px 12px 3px; border-radius: 3px; background: #2a1d10; box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.6);
+  font: 800 11px/1 var(--font-display); letter-spacing: 0.22em; text-transform: uppercase; color: #f6dc8e;
+}
+.guide__rest { visibility: hidden; }
+.guide__caret { display: inline-block; margin-left: 6px; font-size: 0.7em; color: var(--primary); visibility: hidden; }
+.guide__tablet--done .guide__caret { visibility: visible; animation: guide-blink 1s steps(2) infinite; }
+@keyframes guide-blink { 50% { visibility: hidden; } }
+
+/* Phones: along the bottom, just above the tab bar (and its trim), as a strip with Yugi at its left end. */
+@media (max-width: 767px) {
+  .guide { left: 0; right: 0; bottom: calc(69px + env(safe-area-inset-bottom)); transform: translateX(calc(-100% - 40px)); }
+  .guide--on { transform: none; }
+  .guide__yugi { height: 132px; margin: 0 -4px 0 6px; z-index: 1; }
+  .guide__yugi::after { bottom: -4px; height: 10px; }
+  .guide__tablet { flex: 1; width: auto; min-height: 86px; margin: 0 8px 8px 0; padding: 15px 14px 12px; font-size: 14.5px; line-height: 1.38; background-size: 260px auto; }
+  .guide__plate { left: 12px; top: -10px; font-size: 10px; letter-spacing: 0.2em; }
+}
+@media (prefers-reduced-motion: reduce) { .guide { transition: opacity 0.3s; } }

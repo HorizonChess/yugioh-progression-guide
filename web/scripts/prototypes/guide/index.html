@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yugi options</title>
+<style>
+@font-face { font-family: "Cinzel"; src: url("img/cinzel.woff2") format("woff2"); font-weight: 400 900; }
+@font-face { font-family: "Outfit"; src: url("img/outfit.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Fell"; src: url("img/im-fell-english.woff2") format("woff2"); }
+:root {
+    --gold: #d4af37; --gold-hi: #ffe08a; --ink: #3a2405;
+    --display: "Cinzel", Georgia, serif; --heading: "Outfit", sans-serif; --fell: "Fell", Georgia, serif;
+    --lacquer: radial-gradient(120% 140% at 20% 0%, #2a1f3a, transparent 60%), linear-gradient(#1a1324, #0a070f);
+    --meander: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='7'%3E%3Cpath d='M0 6H4V1H12V4H8V6H16' fill='none' stroke='%233a2405' stroke-width='1.2'/%3E%3C/svg%3E") 0 0 / 16px 7px repeat-x;
+    --gold-strip: linear-gradient(#fff1bf, #d4af37 45%, #8a6420);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #120d18; color: #eee; font-family: var(--heading); }
+button { font: inherit; color: inherit; cursor: pointer; }
+
+.viewer { position: sticky; top: 0; z-index: 500; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; padding: 10px 16px; background: #0b0810; border-bottom: 1px dashed #6e5320; }
+.viewer h1 { margin: 0; font: 700 15px var(--display); color: var(--gold-hi); letter-spacing: .06em; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { font: 600 12px/1 var(--heading); letter-spacing: .08em; text-transform: uppercase; color: #a99d80; background: transparent; border: 1px solid #3d3220; border-radius: 6px; padding: 8px 10px; }
+.seg button[aria-pressed="true"] { color: var(--gold-hi); border-color: #8a6a2c; background: rgba(224,181,79,.12); }
+.seg span { font: 600 11px var(--heading); color: #6f6553; align-self: center; margin-right: 2px; text-transform: uppercase; letter-spacing: .1em; }
+.replay { font: 700 12px/1 var(--heading); letter-spacing: .1em; text-transform: uppercase; color: #2a1a04; background: var(--gold-strip); border: 0; border-radius: 6px; padding: 9px 14px; }
+.note { max-width: 1100px; margin: 14px auto 0; padding: 0 16px; font-size: 14px; line-height: 1.5; color: #c9bfa8; }
+.note b { color: var(--gold-hi); }
+section[hidden] { display: none; }
+
+.stage-wrap { margin: 14px auto 30px; width: min(1440px, calc(100vw - 32px)); aspect-ratio: 1440 / 900; position: relative; }
+.stage { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; transform-origin: 0 0; overflow: hidden; border-radius: 6px; box-shadow: 0 0 0 1px #3d3220, 0 20px 50px rgba(0,0,0,.6); background: #000 0 0 / 1440px auto no-repeat; }
+.phones { display: flex; flex-wrap: wrap; justify-content: center; gap: 28px; margin: 18px auto 40px; padding: 0 16px; }
+.phone-col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.phone-col h2 { margin: 0; font: 700 14px var(--display); color: var(--gold-hi); letter-spacing: .06em; }
+.phone-col p { margin: 0; max-width: 340px; font-size: 13px; color: #b8ad95; text-align: center; line-height: 1.4; }
+.phone { width: 390px; height: 844px; position: relative; overflow: hidden; border-radius: 34px; box-shadow: 0 0 0 8px #050307, 0 0 0 9px #3d3220, 0 20px 50px rgba(0,0,0,.6); background: #000 0 0 / 390px auto no-repeat; }
+
+/* ---------- the guide, shared ---------- */
+/* The sprite is cropped to one shared frame for all moods (306x640, feet on the bottom edge). */
+.guide { position: absolute; left: 0; bottom: 0; z-index: 20; display: flex; align-items: flex-end; pointer-events: none;
+    transform: translateX(calc(-100% - 40px)); transition: transform .5s cubic-bezier(.2,.9,.3,1.1); }
+.guide.on { transform: none; }
+.guide .yugi { position: relative; flex: none; pointer-events: auto; cursor: pointer; }
+.guide .yugi img { display: block; height: 100%; width: auto; }
+.guide .say { pointer-events: auto; cursor: pointer; }
+.caret { display: inline-block; margin-left: 6px; font-size: .7em; color: var(--gold); animation: blink 1s steps(2) infinite; opacity: 0; }
+.done .caret { opacity: 1; }
+@keyframes blink { 50% { visibility: hidden; } }
+/* a soft pool of shadow under his feet, so he stands on the floor */
+.floor::after { content: ""; position: absolute; left: 8%; right: 8%; bottom: -6px; height: 16px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.65), transparent); z-index: -1; }
+/* a faint gold rim light, picking him out of the wall */
+.rim img { filter: drop-shadow(0 0 1px rgba(255,236,170,.75)) drop-shadow(0 0 10px rgba(212,175,55,.25)) drop-shadow(0 10px 12px rgba(0,0,0,.55)); }
+
+/* Today: the square sprite and the comic balloon, as in the app */
+.today .yugi { height: 300px; width: 300px; }
+.today .yugi img { width: 300px; height: 300px; object-fit: contain; filter: drop-shadow(0 0 5px rgba(255,255,255,.2)); }
+.today .say { position: absolute; left: 210px; bottom: 180px; width: 256px; background: #fff; color: #000; padding: 14px; border-radius: 16px; border: 4px solid #000; text-align: center; font: 700 14px/1.25 "Comic Sans MS", "Comic Neue", cursive; }
+.phone .today { bottom: 69px; }
+.phone .today .yugi, .phone .today .yugi img { width: 170px; height: 170px; }
+.phone .today .say { left: 120px; bottom: 90px; width: 208px; padding: 10px; }
+
+/* D-A: a dialogue box in the bars' lacquer, a name plate, typed-out text */
+.dA .yugi { height: 290px; margin: 0 -6px 14px 26px; }
+.dA .say { position: relative; width: 470px; margin: 0 0 30px; padding: 22px 24px 18px; background: var(--lacquer); border-radius: 4px;
+    box-shadow: inset 0 0 0 1px rgba(255,236,170,.15), 0 0 0 2px #8a6420, 0 0 0 3px #3a2405, 0 16px 30px rgba(0,0,0,.6);
+    font: 500 17px/1.45 var(--heading); color: #f1e6c8; }
+.dA .say::before { content: ""; position: absolute; left: 0; right: 0; top: -2px; height: 7px; background: var(--meander), var(--gold-strip); }
+.dA .plate { position: absolute; left: 18px; top: -15px; padding: 5px 14px 4px; font: 800 12px/1 var(--display); letter-spacing: .2em; color: #2a1a04; background: var(--gold-strip); border-radius: 3px; box-shadow: 0 0 0 1px #3a2405, 0 3px 6px rgba(0,0,0,.6); }
+
+/* D-B: a parchment note in dark ink, with a tail to his head */
+.dB .yugi { height: 290px; margin: 0 6px 14px 26px; }
+.dB .say { position: relative; width: 400px; margin: 0 0 150px; padding: 18px 24px; border-radius: 6px; color: #2b1c0c;
+    background: radial-gradient(130% 120% at 30% 20%, #f6ead0, #e7d2a6 70%, #d3b77f); box-shadow: inset 0 0 18px rgba(120,80,20,.35), 0 0 0 1px #8a6420, 0 12px 26px rgba(0,0,0,.55);
+    font: 19px/1.35 var(--fell); }
+.dB .say::before { content: ""; position: absolute; left: -15px; bottom: 26px; width: 22px; height: 22px; background: #ead7ad; transform: rotate(45deg) skew(10deg, 10deg); box-shadow: -1px 1px 0 #8a6420; border-radius: 0 0 0 3px; }
+.dB .plate { display: block; margin-bottom: 4px; font: 800 11px/1 var(--display); letter-spacing: .24em; color: #8a5a14; }
+
+/* D-C: a carved tablet of the wall's stone, gold-inlaid lettering */
+.dC .yugi { height: 290px; margin: 0 -6px 14px 26px; }
+.dC .say { position: relative; width: 470px; margin: 0 0 30px; padding: 22px 26px 18px; border-radius: 6px;
+    background: linear-gradient(rgba(40,28,14,.35), rgba(15,10,5,.6)), url("img/stone_texture.webp") center / 360px auto;
+    box-shadow: inset 0 1px 0 rgba(255,235,190,.2), inset 0 0 0 2px rgba(0,0,0,.5), inset 0 0 0 4px rgba(212,175,55,.45), 0 16px 30px rgba(0,0,0,.6);
+    font: 600 17px/1.45 var(--heading); color: #f6dc8e; text-shadow: 0 1px 0 #000, 0 0 8px rgba(0,0,0,.8); }
+.dC .plate { position: absolute; left: 22px; top: -11px; padding: 4px 12px 3px; font: 800 11px/1 var(--display); letter-spacing: .22em; color: #f6dc8e; background: #2a1d10; box-shadow: inset 0 0 0 1px rgba(212,175,55,.6); border-radius: 3px; }
+
+/* P-A: a dialogue strip across the bottom, above the tab bar; Yugi stands at its left end */
+.phone .pA { left: 0; right: 0; bottom: 69px; }
+.pA .yugi { height: 132px; margin: 0 -4px 0 6px; z-index: 2; }
+.pA .say { flex: 1; position: relative; min-height: 86px; margin: 0 8px 8px 0; padding: 14px 14px 12px 14px; background: var(--lacquer); border-radius: 4px;
+    box-shadow: 0 0 0 1px #8a6420, 0 0 0 2px #3a2405, 0 8px 18px rgba(0,0,0,.65); font: 500 14.5px/1.38 var(--heading); color: #f1e6c8; }
+.pA .say::before { content: ""; position: absolute; left: 0; right: 0; top: -2px; height: 6px; background: var(--meander), var(--gold-strip); background-size: 14px 6px, auto; }
+.pA .plate { position: absolute; left: 10px; top: -11px; padding: 4px 10px 3px; font: 800 10px/1 var(--display); letter-spacing: .2em; color: #2a1a04; background: var(--gold-strip); border-radius: 3px; box-shadow: 0 0 0 1px #3a2405; }
+
+/* P-B: Yugi in the corner with a small lacquer balloon at his shoulder */
+.phone .pB { bottom: 69px; }
+.pB .yugi { height: 128px; margin: 0 0 4px 8px; }
+.pB .say { position: relative; width: 236px; margin: 0 0 58px 4px; padding: 11px 13px 10px; background: var(--lacquer); border-radius: 10px;
+    box-shadow: 0 0 0 1px #c9a246, 0 0 0 2px #3a2405, 0 8px 16px rgba(0,0,0,.65); font: 500 13.5px/1.36 var(--heading); color: #f1e6c8; }
+.pB .say::before { content: ""; position: absolute; left: -7px; bottom: 16px; width: 12px; height: 12px; background: #150f1e; transform: rotate(45deg); box-shadow: -1px 1px 0 #c9a246; }
+.pB .plate { display: block; margin-bottom: 3px; font: 800 9.5px/1 var(--display); letter-spacing: .22em; color: var(--gold); }
+</style>
+</head>
+<body>
+
+<div class="viewer">
+  <h1>Yugi options</h1>
+  <div class="seg" id="mode"><button aria-pressed="true" data-v="desktop">Desktop</button><button aria-pressed="false" data-v="phone">Phone</button></div>
+  <div class="seg" id="dopt"><span>Option</span><button aria-pressed="false" data-v="today">Today</button><button aria-pressed="true" data-v="dA">A · Dialogue box</button><button aria-pressed="false" data-v="dB">B · Parchment</button><button aria-pressed="false" data-v="dC">C · Stone tablet</button></div>
+  <div class="seg" id="scene"><span>Moment</span><button aria-pressed="true" data-v="set">New set</button><button aria-pressed="false" data-v="card">Card tip</button><button aria-pressed="false" data-v="pull">Your pull</button><button aria-pressed="false" data-v="win">Win</button><button aria-pressed="false" data-v="loss">Loss</button></div>
+  <div class="seg" id="play"><span>Series</span><button aria-pressed="true" data-v="solo">Solo</button><button aria-pressed="false" data-v="duo">Duo</button></div>
+  <button class="replay" id="replay">▶ Replay</button>
+</div>
+
+<section id="desktop">
+  <p class="note" id="dnote"></p>
+  <div class="stage-wrap"><div class="stage" id="stage"></div></div>
+</section>
+<section id="phone" hidden>
+  <p class="note"><b>On phones</b> he still slides in every time, but smaller and lower: at the bottom, just above the tab bar, instead of mid-screen. He's 130 px tall, down from 170 px. Tap him or his words to send him off early. While he's on screen only he and his box take taps, so the rest of the page still works.</p>
+  <div class="phones" id="phones"></div>
+</section>
+
+<script>
+const IMG = { neutral: "img/yugi-neutral.webp", happy: "img/yugi-happy.webp", sad: "img/yugi-sad.webp" };
+const TODAY_IMG = { neutral: "img/yugi_neutral_v2_transparent.webp", happy: "img/yugi_happy_v2_transparent.webp", sad: "img/yugi_sad_v2_transparent.webp" };
+// Sample lines, to judge the look and the length. The real ones are written per set later.
+const SCENES = {
+    set:  { bg: "timeline", mood: "neutral", solo: "Spell Ruler brings the first rituals that matter. Black Luster Soldier is the big pull, and Toon World is the other Ultra to chase." },
+    card: { bg: "packs-summary", mood: "neutral", solo: "Uraby hits for 1500 with no tribute. That's a solid attacker for this era, so keep it in your deck." },
+    pull: { bg: "packs-summary", mood: "happy", solo: "Gravedigger Ghoul is the keeper here. It clears their graveyard before they can Monster Reborn anything." },
+    win:  { bg: "record-match", mood: "happy", solo: "That's the game! Pharaoh's Servant is open now, and Jinzo is waiting in there.", duo: "You beat Kaiba! Once they confirm, the wheel is yours to spin." },
+    loss: { bg: "record-match", mood: "sad", solo: "We'll get them next time. Three pity packs are waiting. Let's see what they hold.", duo: "Kaiba took this one. Don't let him gloat. Three pity packs are waiting for you." },
+};
+const DNOTES = {
+    today: "<b>Today.</b> The sprite is a 640×640 square, but Yugi fills only a strip about 210–300 px wide in its middle. So on desktop his box is 300×300 for a figure about 100 px wide. The bubble is placed against that empty box, and each mood stands at a slightly different spot. The white comic balloon, the thick black border and the comic font are the only things in the app that ignore the stone and gold look.",
+    dA: "<b>A · Dialogue box,</b> like old RPGs. The box uses the new top bar's lacquer and meander, with a gold YUGI name plate. The words type themselves out, and a ▼ blinks when he's done. Every mood is cropped to the same frame, so he no longer shifts between moods. He gets a floor shadow and a faint gold rim light. He always stands in the same bottom-left spot, overlays the page and leaves. Nothing on the page moves for him.",
+    dB: "<b>B · Parchment,</b> a note in dark ink in the parchment's serif, with a tail to his head. The warmest option, and the closest to a speech bubble. It sits higher, beside his face.",
+    dC: "<b>C · Stone tablet,</b> a slab of the wall's stone with gold lettering, like the record-match tablets. The most part-of-the-wall option, but it's harder to read over busy screens.",
+};
+const POPT = [
+    ["today", "Today", "Mid-screen on many pages, 170 px tall, with the comic balloon."],
+    ["pA", "A · Dialogue strip", "A lacquer strip across the bottom, above the tab bar, with Yugi at its left end. The same box as desktop A. Easy to read, but it covers the page's bottom buttons for a few seconds."],
+    ["pB", "B · Corner", "Yugi in the corner with a small balloon at his shoulder. It covers less of the screen, but long lines take more rows."],
+];
+const state = { mode: "desktop", opt: "dA", scene: "set", play: "solo" };
+const line = () => SCENES[state.scene][state.play] || SCENES[state.scene].solo;
+
+function guide(opt) {
+    const s = SCENES[state.scene];
+    const src = opt === "today" ? TODAY_IMG[s.mood] : IMG[s.mood];
+    const fancy = opt !== "today";
+    return `<div class="guide ${opt}">
+        <div class="yugi ${fancy ? "floor rim" : ""}"><img src="${src}" alt=""></div>
+        <div class="say">${fancy ? '<span class="plate">YUGI</span>' : ""}<span class="txt"></span>${fancy ? '<span class="caret">▼</span>' : ""}</div>
+    </div>`;
+}
+
+let timers = [];
+function animate(root, opt) {
+    const g = root.querySelector(".guide"), txt = g.querySelector(".txt"), say = g.querySelector(".say");
+    const text = line();
+    const leave = () => g.classList.remove("on");
+    g.querySelector(".yugi").onclick = leave; say.onclick = leave;
+    timers.push(setTimeout(() => g.classList.add("on"), 250));
+    if (opt === "today") { txt.textContent = text; }
+    else {
+        let i = 0;
+        timers.push(setTimeout(function type() {
+            txt.textContent = text.slice(0, ++i);
+            if (i < text.length) timers.push(setTimeout(type, 22)); else say.classList.add("done");
+        }, 650));
+    }
+    timers.push(setTimeout(leave, 650 + text.length * 22 + 2600 + text.length * 30));
+}
+
+function render() {
+    timers.forEach(clearTimeout); timers = [];
+    document.getElementById("desktop").hidden = state.mode !== "desktop";
+    document.getElementById("phone").hidden = state.mode !== "phone";
+    document.getElementById("dopt").style.display = state.mode === "desktop" ? "" : "none";
+    const bg = SCENES[state.scene].bg;
+    if (state.mode === "desktop") {
+        const stage = document.getElementById("stage");
+        stage.style.backgroundImage = `url("img/desktop-${bg}.webp")`;
+        stage.innerHTML = guide(state.opt);
+        document.getElementById("dnote").innerHTML = DNOTES[state.opt];
+        fit(); animate(stage, state.opt);
+    } else {
+        const host = document.getElementById("phones");
+        host.innerHTML = POPT.map(([o, t, p]) => `<div class="phone-col"><h2>${t}</h2><div class="phone" data-o="${o}" style="background-image:url('img/phone-${bg}.webp')">${guide(o)}</div><p>${p}</p></div>`).join("");
+        host.querySelectorAll(".phone").forEach((ph) => animate(ph, ph.dataset.o));
+    }
+}
+function fit() { const w = document.querySelector(".stage-wrap"); document.getElementById("stage").style.transform = `scale(${w.clientWidth / 1440})`; }
+for (const [id, key] of [["mode", "mode"], ["dopt", "opt"], ["scene", "scene"], ["play", "play"]]) {
+    document.getElementById(id).addEventListener("click", (e) => {
+        const b = e.target.closest("button"); if (!b) return;
+        state[key] = b.dataset.v;
+        for (const x of e.currentTarget.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b));
+        render();
+    });
+}
+document.getElementById("replay").onclick = render;
+addEventListener("resize", fit);
+render();
+</script>
+</body>
+</html>
