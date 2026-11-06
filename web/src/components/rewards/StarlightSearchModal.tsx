@@ -15,7 +15,7 @@ import { ownedCountsById } from "@/lib/collection";
 import CardGallery, { type GalleryItem } from "@/components/card/CardGallery";
 import { CardCloseUp } from "@/components/card/CardPlate";
 import type { StageCard } from "@/components/packs/stage/plate";
-import CartoucheButton from "@/components/ui/CartoucheButton";
+import TabletButton from "@/components/ui/TabletButton";
 import RewardRite, { RiteNote, RiteSearch } from "@/components/rewards/RewardRite";
 
 interface StarlightSearchModalProps {
@@ -157,7 +157,7 @@ export default function StarlightSearchModal({ entry, onChoose, onClose }: Starl
                     onClose={() => setPending(null)}
                     action={
                         <div className="rite__confirm">
-                            <CartoucheButton next onClick={confirmChoice}>Claim as Starlight</CartoucheButton>
+                            <TabletButton onClick={confirmChoice}>Claim as Starlight</TabletButton>
                         </div>
                     }
                 />

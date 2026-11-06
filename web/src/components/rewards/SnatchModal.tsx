@@ -7,7 +7,7 @@ import { useProgression } from "@/context/ProgressionContext";
 import CardGallery, { type GalleryItem } from "@/components/card/CardGallery";
 import { CardCloseUp } from "@/components/card/CardPlate";
 import { tierOf } from "@/components/packs/stage/plate";
-import CartoucheButton from "@/components/ui/CartoucheButton";
+import TabletButton from "@/components/ui/TabletButton";
 import RewardRite, { RiteNote } from "@/components/rewards/RewardRite";
 
 interface SnatchModalProps {
@@ -85,7 +85,7 @@ export default function SnatchModal({ loadBinder, onChoose, onClose, rivalName =
                     onClose={() => setPending(null)}
                     action={
                         <div className="rite__confirm">
-                            <CartoucheButton next onClick={() => onChoose(pending.key)}>Snatch It</CartoucheButton>
+                            <TabletButton onClick={() => onChoose(pending.key)}>Snatch It</TabletButton>
                             <p>{rivalName} holds ×{pending.count}</p>
                         </div>
                     }

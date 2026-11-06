@@ -8,7 +8,7 @@ import { ownedCountsById } from "@/lib/collection";
 import CardGallery, { type GalleryItem } from "@/components/card/CardGallery";
 import { CardCloseUp } from "@/components/card/CardPlate";
 import { tierOf } from "@/components/packs/stage/plate";
-import CartoucheButton from "@/components/ui/CartoucheButton";
+import TabletButton from "@/components/ui/TabletButton";
 import RewardRite, { RiteNote } from "@/components/rewards/RewardRite";
 
 /** The card's printing in this set: by the set's name first, since reprints (a 25th anniversary, a tin)
@@ -127,7 +127,7 @@ export default function WildcardModal({ entry, onChoose, onClose }: WildcardModa
                     onClose={() => setPending(null)}
                     action={
                         <div className="rite__confirm">
-                            <CartoucheButton next onClick={confirmChoice}>Add to Collection</CartoucheButton>
+                            <TabletButton onClick={confirmChoice}>Add to Collection</TabletButton>
                         </div>
                     }
                 />
