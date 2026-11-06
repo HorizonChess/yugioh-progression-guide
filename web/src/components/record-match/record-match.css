@@ -1,0 +1,147 @@
+/* The record-match screen: one temple-stone board. The opponent's pack sits in a niche on the
+   left; the choice, the wheel or the pity packs take the right in turn. The art (stone, frieze,
+   tablets) comes in as custom properties set by the page through asset(). */
+
+.rm-screen { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 2.5% 2.5% 2.5% max(2.5%, 230px); container: rm / size; }
+
+.rm-board {
+  position: relative; width: min(100%, 1180px, (100cqh - 6cqh) * 1.62); aspect-ratio: 1.62; container-type: inline-size;
+  display: grid; grid-template-rows: auto 1fr auto; padding: 0 3.2cqi 2.2cqi; border-radius: 10px;
+  background: var(--rm-stone) 0 0 / 1024px repeat, #6f6b62;
+  box-shadow: inset 0 0 0 .25cqi #6b4c18, inset 0 0 0 .45cqi #e0b54f, inset 0 0 0 .6cqi #6b4c18, inset 0 0 6cqi rgba(0, 0, 0, .45), 0 0 0 2px #1a140b, 0 30px 60px rgba(0, 0, 0, .75);
+  color: #2f281e;
+}
+.rm-gilt { font-family: var(--font-display); color: transparent; background: linear-gradient(#fff1bf, #d4af37 55%, #8a6420); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .8)); }
+/* letters cut into the stone: dark in the groove, a light lip below */
+.rm-carved { font-family: var(--font-display); text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255, 244, 220, .4), 0 -1px 0 rgba(0, 0, 0, .5); }
+.rm-carved--red { color: #5c1a10; }
+
+/* the frieze across the top, with the screen's name on a plate */
+.rm-head { position: relative; display: grid; place-items: center; height: 9cqi; margin: 0 -3.2cqi; }
+.rm-head::before { content: ""; position: absolute; left: 1.4cqi; right: 1.4cqi; top: 1.3cqi; bottom: 1.3cqi; border-radius: 4px; background: var(--rm-frieze) center / cover; opacity: .9; box-shadow: inset 0 2px 6px rgba(0, 0, 0, .6), 0 1px 0 rgba(255, 240, 200, .25); }
+.rm-head b { position: relative; padding: .6cqi 3cqi; border-radius: 4px; background: rgba(40, 32, 22, .82); box-shadow: 0 0 0 1px rgba(224, 181, 79, .45); font: 900 1.7cqi/1 var(--font-display); letter-spacing: .32em; text-transform: uppercase; }
+
+.rm-main { display: grid; grid-template-columns: 30% 1fr; gap: 3cqi; align-items: center; min-height: 0; }
+
+/* the opponent: their pack in a niche cut into the stone; a won prize takes its place */
+.rm-foe { display: flex; flex-direction: column; align-items: center; gap: 1.4cqi; text-align: center; }
+.rm-niche { position: relative; width: 64%; aspect-ratio: .64; border-radius: 6px; display: grid; place-items: center;
+  background: linear-gradient(rgba(0, 0, 0, .35), rgba(0, 0, 0, .18)), var(--rm-stone) 0 0 / 1024px;
+  box-shadow: inset 0 1.2cqi 2cqi rgba(0, 0, 0, .7), inset 0 -2px 0 rgba(255, 240, 210, .25), 0 0 0 .3cqi #6b4c18, 0 0 0 .45cqi #e0b54f, 0 0 0 .6cqi #3b2a10; }
+.rm-niche img { width: 82%; filter: drop-shadow(0 1cqi 1.2cqi rgba(0, 0, 0, .75)); transition: transform .5s, opacity .4s; }
+.rm-medal { position: absolute; display: grid; place-items: center; width: 80%; aspect-ratio: 1; border-radius: 50%; opacity: 0; transform: scale(.6); transition: .5s .15s;
+  background: radial-gradient(circle at 38% 30%, #fff3c4, #d9b45a 45%, #7a5418); box-shadow: 0 0 0 .35cqi #3b2a10, 0 0 0 .6cqi #c9a14a, 0 0 3cqi rgba(255, 214, 90, .6); }
+.rm-medal b { font: 900 1.5cqi/1.05 var(--font-display); color: #2a1c05; text-align: center; text-transform: uppercase; padding: 0 12%; text-shadow: 0 1px 0 rgba(255, 240, 190, .6); }
+.rm-foe--won .rm-niche img { opacity: 0; transform: scale(.6) rotate(-14deg); }
+.rm-foe--won .rm-medal { opacity: 1; transform: none; }
+.rm-foe small { font: 800 1.05cqi/1 var(--font-display); letter-spacing: .3em; text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255, 244, 220, .4); }
+.rm-foe__name { margin-top: -.6cqi; font: 900 3cqi/1.05 var(--font-display); }
+.rm-stats { display: flex; gap: 1cqi; justify-content: center; }
+.rm-stat { min-width: 7.4cqi; padding: .8cqi 1cqi; border-radius: 4px; background: rgba(28, 22, 15, .78); box-shadow: inset 0 2px 5px rgba(0, 0, 0, .7), 0 1px 0 rgba(255, 240, 210, .3); }
+.rm-stat small { display: block; font: 800 .8cqi/1 var(--font-display); letter-spacing: .2em; text-transform: uppercase; color: #a99d80; text-shadow: none; }
+.rm-stat b { display: block; margin-top: .4cqi; font: 900 2cqi/1 var(--font-display); color: #ffe08a; text-shadow: 0 2px 3px #000; }
+
+/* the right side: one act at a time */
+.rm-stage { position: relative; display: grid; min-height: 0; }
+.rm-act { grid-area: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.8cqi; min-width: 0; }
+.rm-ask { margin-bottom: 1cqi; font: 900 2cqi/1.1 var(--font-display); letter-spacing: .16em; text-align: center; }
+.rm-note { margin: 0; max-width: 100%; padding: 0 4px; font: 700 1.35cqi/1.45 var(--font-display); text-align: center; color: #2e271d; text-shadow: 0 1px 0 rgba(255, 244, 220, .3); }
+.rm-note b { color: #6e1e10; }
+.rm-btns { display: flex; gap: 2cqi; justify-content: center; }
+.rm-board .cartouche-btn { width: 19cqi; }
+.rm-board .cartouche-btn__label { font-size: 1.15cqi; }
+/* the silver cartouche: the same painted button in silver, for the lesser choice */
+.cartouche-btn.rm-cartouche--silver { filter: grayscale(1) brightness(1.12) contrast(1.08) drop-shadow(0 10px 12px rgba(0, 0, 0, .6)); }
+.rm-cartouche--silver .cartouche-btn__label { color: #26282c; text-shadow: 0 1px 0 rgba(255, 255, 255, .6); }
+
+/* the tablets: set into a bed cut in the board, toned to its stone; only the gold lines glow */
+.rm-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3cqi; width: 100%; }
+.rm-tabs--one { grid-template-columns: 1fr; width: 30%; }
+.rm-stage { grid-template-columns: 100%; grid-template-rows: 100%; height: 100%; }
+.rm-act { gap: 1.3cqi; }
+.rm-pick { display: flex; flex-direction: column; align-items: center; gap: 2cqi; padding: 0; border: 0; background: none; cursor: pointer; color: inherit; }
+.rm-pick:disabled { cursor: default; }
+.rm-tablet { position: relative; width: 100%; aspect-ratio: 1229 / 905; transition: transform .2s cubic-bezier(.2, .9, .3, 1.3); }
+.rm-tablet::before { content: ""; position: absolute; inset: -3.5% -2.8%; border-radius: 4%;
+  background: radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, .28), rgba(0, 0, 0, .5) 75%), var(--rm-stone) center / 1024px;
+  box-shadow: inset 0 .9cqi 1.4cqi rgba(0, 0, 0, .75), inset 0 -.2cqi .3cqi rgba(255, 245, 225, .22), 0 .15cqi 0 rgba(255, 245, 225, .25), 0 -.15cqi 0 rgba(0, 0, 0, .45); }
+.rm-tablet i { position: absolute; inset: 0; background: center / contain no-repeat; pointer-events: none; }
+.rm-tablet__slab { filter: saturate(.55) brightness(.86) contrast(1.05) drop-shadow(0 .5cqi .7cqi rgba(0, 0, 0, .6)); transition: filter .3s; }
+.rm-tablet__lines { opacity: 0; transition: opacity .35s; filter: brightness(1.25) drop-shadow(0 0 .25cqi rgba(255, 214, 110, .95)) drop-shadow(0 0 .9cqi rgba(255, 190, 70, .7)); }
+.rm-pick--win .rm-tablet__slab { background-image: var(--rm-tab-win); } .rm-pick--win .rm-tablet__lines { background-image: var(--rm-tab-win-lines); }
+.rm-pick--lose .rm-tablet__slab { background-image: var(--rm-tab-lose); } .rm-pick--lose .rm-tablet__lines { background-image: var(--rm-tab-lose-lines); }
+.rm-pick--lose .rm-tablet__lines { filter: brightness(1.15) sepia(.4) hue-rotate(-18deg) saturate(1.6) drop-shadow(0 0 .25cqi rgba(255, 140, 100, .95)) drop-shadow(0 0 .9cqi rgba(220, 80, 50, .7)); }
+.rm-pick:not(:disabled):hover .rm-tablet { transform: translateY(-1%); }
+.rm-pick:not(:disabled):hover .rm-tablet__lines { opacity: .75; }
+.rm-pick:not(:disabled):active .rm-tablet { transform: translateY(1.5%) scale(.985); }
+.rm-pick--chosen .rm-tablet__lines { opacity: 1; }
+.rm-pick--win.rm-pick--chosen .rm-tablet__lines { animation: rm-lines 1.6s ease-in-out infinite alternate; }
+@keyframes rm-lines { to { filter: brightness(1.45) drop-shadow(0 0 .35cqi rgba(255, 224, 130, 1)) drop-shadow(0 0 1.4cqi rgba(255, 190, 70, .85)); } }
+.rm-pick--dim { opacity: .35; filter: grayscale(1); }
+.rm-word { font: 900 2.3cqi/1 var(--font-display); letter-spacing: .22em; padding-bottom: .6cqi; }
+
+/* the pity packs, dealt in a fan */
+.rm-packs { display: flex; justify-content: center; }
+.rm-packs img { height: 7cqi; margin-left: -2.4cqi; filter: drop-shadow(0 .8cqi 1cqi rgba(0, 0, 0, .7)); transform: rotate(var(--r)) translateY(var(--y)); animation: rm-dealt .6s cubic-bezier(.2, .9, .3, 1.2) both; animation-delay: var(--d); }
+.rm-packs img:first-child { margin-left: 0; }
+@keyframes rm-dealt { from { opacity: 0; transform: translateY(40%) rotate(0deg) scale(.7); } }
+.rm-hourglass { display: inline-block; animation: rm-turn 2.4s ease-in-out infinite; }
+@keyframes rm-turn { 40%, 60% { transform: rotate(180deg); } 100% { transform: rotate(360deg); } }
+
+/* the Winner's Wheel on the stone: the app's own wheel (its spin, landing and labels), set
+   beside the prize; lapis wedges between the gold */
+.rm-wheel { display: flex; align-items: center; justify-content: center; gap: 3cqi; width: 100%; }
+.rm-wheel__dial { flex: none; width: 31cqi; aspect-ratio: 1; }
+.rm-wheel__dial .wheel-row { height: 100%; }
+.rm-wheel__side { display: flex; flex-direction: column; align-items: center; gap: 1.6cqi; min-width: 0; }
+.rm-board .wheel { --wheel-wedge-dark: #1d3a6e; }
+.rm-board .wheel__label { font-family: var(--font-display); font-size: 3.3cqmin; letter-spacing: 0; }
+.rm-board .wheel-prize { text-align: center; }
+.rm-board .wheel-prize__kicker { font: 800 .95cqi/1 var(--font-display); letter-spacing: .3em; text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255, 244, 220, .35); }
+.rm-board .wheel-prize__name { margin-top: .6cqi; min-height: 0; font: 900 2.4cqi/1.1 var(--font-display); color: transparent; background: linear-gradient(#fff1bf, #d4af37 55%, #8a6420); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .8)); }
+
+.rm-foot { display: flex; justify-content: center; align-items: center; min-height: 4cqi; }
+.rm-back { border: 0; background: none; cursor: pointer; padding: 6px; font: 700 1.15cqi/1 var(--font-display); letter-spacing: .16em; text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255, 244, 220, .35); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(58, 50, 38, .4); }
+
+/* (a container can't restyle itself, so the screen's own padding follows the viewport) */
+@media (max-width: 760px) { .rm-screen { padding: 8px; align-items: stretch; } }
+/* ---------- phones: the same board, one column that shares out the height ---------- */
+@container rm (max-width: 760px) {
+  .rm-board { width: 100%; aspect-ratio: auto; height: 100%; display: flex; flex-direction: column; padding: 0 12px 10px; overflow: hidden;
+    box-shadow: inset 0 0 0 1px #6b4c18, inset 0 0 0 2.5px #e0b54f, inset 0 0 0 3.5px #6b4c18, inset 0 0 40px rgba(0, 0, 0, .45), 0 20px 40px rgba(0, 0, 0, .7); }
+  .rm-head { flex: none; height: 44px; margin: 0 -12px; } .rm-head::before { left: 8px; right: 8px; top: 7px; bottom: 7px; } .rm-head b { font-size: 11px; padding: 5px 12px; }
+  .rm-main { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; padding-top: 8px; }
+  .rm-foe { flex: none; display: grid; grid-template-columns: 74px 1fr; grid-template-rows: auto auto auto; column-gap: 12px; row-gap: 4px; text-align: left; align-items: center; width: 100%; }
+  .rm-niche { grid-row: 1 / 4; width: 74px; } .rm-medal b { font-size: 8px; }
+  .rm-foe small { font-size: 9.5px; } .rm-foe__name { margin: 0; font-size: 22px; }
+  .rm-stats { justify-content: flex-start; gap: 6px; } .rm-stat { min-width: 0; padding: 5px 7px; } .rm-stat small { font-size: 7.5px; } .rm-stat b { font-size: 15px; margin-top: 3px; }
+  .rm-stage { flex: 1; min-height: 0; } .rm-act { gap: 10px; min-height: 0; justify-content: flex-start; }
+  .rm-ask { font-size: 14px; margin-bottom: 2px; }
+  .rm-act--choose { justify-content: center; }
+  .rm-tabs { grid-template-columns: 1fr; gap: 8px; width: 100%; } .rm-tabs--one { width: 100%; }
+  .rm-pick { min-height: 0; gap: 8px; }
+  /* each tablet takes half of what the stage has left, sized by width so its bed hugs it */
+  .rm-stage { container: rmstage / size; width: 100%; grid-template-columns: 100%; grid-template-rows: 100%; }
+  .rm-act--choose .rm-tablet { flex: none; width: min(100%, (100cqh - 118px) / 2 * 1229 / 905); height: auto; }
+  .rm-act--choose .rm-tabs { align-content: center; grid-template-rows: auto auto; }
+  .rm-tabs--one .rm-tablet { width: auto; height: 26cqh; }
+  .rm-tablet::before { inset: -3% -2.5%; }
+  .rm-word { font-size: 15px; letter-spacing: .24em; padding-bottom: 2px; }
+  .rm-note { font-size: 13.5px; }
+  .rm-board .cartouche-btn { width: 230px; } .rm-board .cartouche-btn__label { font-size: 14px; }
+  .rm-btns { gap: 8px; width: 100%; } .rm-board .rm-btns .cartouche-btn { width: 46%; }
+  .rm-packs img { height: min(96px, 19cqh); margin-left: -24px; }
+  .rm-wheel { flex-direction: column; gap: 10px; }
+  .rm-wheel__dial { width: min(86%, 330px, 46cqh); margin-left: 5%; }
+  .rm-board .wheel-prize__kicker { font-size: 9px; } .rm-board .wheel-prize__name { font-size: 19px; margin-top: 4px; }
+  .rm-foe--wheel { display: none; }
+  .rm-foot { flex: none; min-height: 28px; } .rm-back { font-size: 10px; }
+}
+/* short phones: the result acts tighten so the buttons and the way back always fit */
+@container rm (max-width: 760px) and (max-height: 640px) {
+  .rm-tabs--one .rm-tablet { height: 22cqh; }
+  .rm-packs img { height: 17cqh; }
+  .rm-board .cartouche-btn { width: 200px; } .rm-act { gap: 6px; }
+  .rm-head { height: 38px; } .rm-foe { row-gap: 2px; } .rm-niche { width: 62px; } .rm-foe__name { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .rm-packs img, .rm-hourglass, .rm-pick--win.rm-pick--chosen .rm-tablet__lines { animation: none; } }
