@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useSwipeClose } from "@/lib/dismiss";
 import { createPortal } from "react-dom";
 import { plate, type StageCard } from "@/components/packs/stage/plate";
+import { MarkToggle } from "@/components/card/LookLater";
 import "@/components/packs/stage/pack-stage.css";
 
 /** The card-styled details plate (frame, name plate, stars, text box), as the opener shows it. */
@@ -54,10 +55,12 @@ export function useCardPeek() {
  * it on wide screens, or in a sheet under it on phones. `action` adds a button
  * under the plate (e.g. ban this card). Click outside or press Escape to close.
  */
-export function CardCloseUp({ card, onClose, action, onPrev, onNext, position }: {
+export function CardCloseUp({ card, onClose, action, mark = false, onPrev, onNext, position }: {
     card: StageCard;
     onClose: () => void;
     action?: ReactNode;
+    /** A bookmark beside the card, to mark it to look at later. */
+    mark?: boolean;
     /** Step to the card before / after in its list: a swipe, the arrow keys or the side arrows. */
     onPrev?: () => void;
     onNext?: () => void;
@@ -146,6 +149,7 @@ export function CardCloseUp({ card, onClose, action, onPrev, onNext, position }:
                             <div className="ps-glare closeup__glare" />
                         </div>
                     </div>
+                    {mark && <MarkToggle icon cardId={card.card.id} className="closeup__mark" />}
                 </div>
                 <div className="closeup__side" onClick={(e) => e.stopPropagation()}>
                     <CardPlate card={card} className="closeup__plate" />

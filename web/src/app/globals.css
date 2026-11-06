@@ -1135,8 +1135,11 @@ html::-webkit-scrollbar-corner,
 /* a bookmark ribbon, outlined until marked */
 .mark-toggle__icon { width: 10px; height: 14px; flex: none; background: currentColor; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%); opacity: 0.35; }
 .mark-toggle--on .mark-toggle__icon { opacity: 1; }
-/* in the opener's close-up, under the details */
-.ps-plate .mark-toggle { margin-top: 12px; align-self: flex-start; }
+/* Just the bookmark, beside a close-up's card: to its left, level with its top. */
+.mark-toggle--icon { width: 40px; height: 40px; padding: 0; justify-content: center; border-radius: 50%; }
+.mark-toggle--icon .mark-toggle__icon { width: 13px; height: 19px; opacity: 0.55; }
+.mark-toggle--icon.mark-toggle--on .mark-toggle__icon { opacity: 1; }
+.closeup__mark { position: absolute; top: 0; right: calc(100% + 10px); z-index: 2; cursor: pointer; }
 
 .mark-badge {
   position: absolute; top: -2px; right: 8%; z-index: 4; width: 14%; min-width: 9px; max-width: 16px; aspect-ratio: 10 / 16; pointer-events: none;

@@ -9,22 +9,24 @@ import { useProgression } from "@/context/ProgressionContext";
  * there; it can be switched on or off by hand wherever its details show.
  */
 
-/** "Look at later": the bookmark toggle in a card's details. */
-export function MarkToggle({ cardId, className = "" }: { cardId: number; className?: string }) {
+/** "Look at later": the bookmark toggle in a card's details; `icon` makes it just the bookmark (beside a close-up's card). */
+export function MarkToggle({ cardId, className = "", icon = false }: { cardId: number; className?: string; icon?: boolean }) {
     const { marks, setMark } = useProgression();
     const on = marks.has(cardId);
     return (
         <button
             type="button"
-            className={`mark-toggle ${on ? "mark-toggle--on" : ""} ${className}`}
+            className={`mark-toggle ${icon ? "mark-toggle--icon" : ""} ${on ? "mark-toggle--on" : ""} ${className}`}
             aria-pressed={on}
+            aria-label={icon ? (on ? "Marked to look at later" : "Look at later") : undefined}
+            title={icon ? (on ? "Marked to look at later" : "Look at later") : undefined}
             onClick={(e) => {
                 e.stopPropagation();
                 setMark(cardId, !on);
             }}
         >
             <span className="mark-toggle__icon" aria-hidden="true" />
-            {on ? "Marked to look at later" : "Look at later"}
+            {!icon && (on ? "Marked to look at later" : "Look at later")}
         </button>
     );
 }
