@@ -9,7 +9,10 @@ import AppNav, { PhoneTabBar } from "@/components/layout/AppNav";
 import SeriesGate from "@/components/layout/SeriesGate";
 
 
-const VISIBLE_HEIGHT = `(function(){var d=document.documentElement,v=window.visualViewport;function f(){var h=innerHeight;if(v)h=Math.min(h,v.height*v.scale);d.style.setProperty("--app-h",h+"px")}f();addEventListener("resize",f);if(v)v.addEventListener("resize",f)})()`;
+// The visible height, as --app-h: it follows the browser's own bars as they slide in and out, but
+// not the on-screen keyboard (a text field focused and the view a keyboard's height shorter), so the
+// page and its tab bar stay put while you type instead of jumping up above the keys.
+const VISIBLE_HEIGHT = `(function(){var d=document.documentElement,v=window.visualViewport;function typing(){var a=document.activeElement;return!!a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))}function f(){var h=innerHeight;if(v)h=Math.min(h,v.height*v.scale);if(typing()&&innerHeight-h>140)return;d.style.setProperty("--app-h",h+"px")}f();addEventListener("resize",f);if(v)v.addEventListener("resize",f);addEventListener("focusout",function(){setTimeout(f,350)})})()`;
 
 export const metadata: Metadata = {
   title: "Yu-Gi-Oh! Progression Series",
