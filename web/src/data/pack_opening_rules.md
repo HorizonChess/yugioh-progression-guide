@@ -36,8 +36,9 @@ The Box would have 4 Super Rares, 2 Ultra Rares, and 1 or 0 Secret Rares.
 
 We open packs as boxes (`generateBoosterPacks` in `shared/src/pack-logic.ts`): every run of 24 packs is one box, and an opening of fewer packs is the first packs out of a box.
 - **Foils:** the ninth slot follows a plan made once per box. Each ratio gives a whole number of foils per box (1:6 is exactly 4 Supers), and the leftover fraction is a chance of one more (1:31 is a Secret with a 24/31 chance). They're placed in random packs. So the odds per pack are the same as the hat's, without a box of 7 Supers or no Ultras.
-- **Even spread:** the commons, the rares and each foil rarity are dealt from their own shuffled stack, like cards cut from a print sheet. Every card comes around once before any comes twice. Before this, a 24-pack LOB opening left 4 to 8 commons unseen and gave others 6 to 8 copies. Now every common shows up, at most 3 times.
-- **No repeats in a pack:** a pack never holds two copies of a card, as in the real packs of these eras.
+- **Commons:** each box deals its commons from a shuffled stack holding 4 copies of each card. Real boxes were cut from print sheets, so they were somewhat more even than pure chance, but still had plenty of repeats. A 24-pack LOB box now leaves about 3 of its 82 commons unseen, and the most common card shows up about 4 times. Fully at random it's about 8 unseen and 6 to 8 copies of one card.
+- **Rares and foils:** picked at random within their rarity, so a box can hold two of a good card. About 6 of LOB's 22 rares come twice in a box, and half of all boxes repeat a Super.
+- **Repeats in a pack:** almost never. A pack holds a common twice about 1 time in 250, our estimate for collation slips, since no measured rate is known. Otherwise no card is in a pack twice.
 - **Rarity from the set itself:** a card's rarity is read from its printing in that exact set (by set name), not from any printing whose code starts the same way. A code prefix also matches other products, such as LOB's 25th Anniversary reprint (where LOB's Short Prints are Commons) or a set's promo printings (`STON-ENSE1`).
 
 ## Pack Ratios Per Set
