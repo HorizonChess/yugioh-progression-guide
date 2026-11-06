@@ -5,6 +5,9 @@ import type { CardSet, PulledCard } from "@/lib/api";
 import CartoucheButton from "@/components/ui/CartoucheButton";
 import CardGallery, { byTier, type GalleryItem } from "@/components/card/CardGallery";
 import { TIER_LABEL, toStageCard } from "@/components/packs/stage/plate";
+import { useEffect } from "react";
+import { cardTip, haulLine } from "@/lib/guide/lines";
+import { guide, seed } from "@/lib/guide/store";
 
 /**
  * The haul, once every pack is open: the set, how many packs and cards, the best
@@ -22,6 +25,7 @@ export default function OpeningSummary({
     onReroll,
     saveLabel = "Done & Save",
     backLabel = "Back to the campaign",
+    stage,
 }: {
     set: CardSet;
     cards: PulledCard[];
@@ -34,7 +38,19 @@ export default function OpeningSummary({
     onReroll?: () => void;
     saveLabel?: string;
     backLabel?: string;
+    /** The player's stage in the series, for Yugi's word on the haul (left out: he stays quiet). */
+    stage?: number;
 }) {
+    // The haul is in: Yugi on the best of it, or a word of comfort.
+    useEffect(() => {
+        if (stage === undefined || !cards.length) return;
+        const pulled = new Map<number, number>();
+        for (const c of cards) pulled.set(c.id, (pulled.get(c.id) ?? 0) + 1);
+        const haul = cards.map((c) => ({ id: c.id, name: c.name, rarity: c.pulled_rarity, isNew: ownedCount(c.id) === 0, copies: ownedCount(c.id) + (pulled.get(c.id) ?? 0) }));
+        const t = setTimeout(() => guide.say(haulLine(haul, stage, seed())), 900);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- once per haul
+    }, [cards.length, stage]);
     // One tile per card and printed rarity, counting duplicates.
     const tiles = new Map<string, GalleryItem>();
     for (const c of cards) {
@@ -66,7 +82,7 @@ export default function OpeningSummary({
                 )}
             </header>
 
-            <CardGallery items={items} />
+            <CardGallery items={items} onLook={stage === undefined ? undefined : (c) => guide.say(cardTip(c, stage, seed()))} />
 
             <nav className="haul__dock" aria-label="Finish opening">
                 <CartoucheButton onClick={onSave} next className="haul__btn">{saveLabel}</CartoucheButton>

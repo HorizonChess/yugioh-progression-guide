@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, ReactNode } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { guide } from '@/lib/guide/store';
 import { Collection } from '@/lib/collection';
 import { LocalRepo } from '@/lib/repo/local';
 import { RemoteRepo } from '@/lib/repo/remote';
@@ -92,6 +93,7 @@ const guideStore = (() => {
             } catch {
                 /* storage blocked: the choice lasts this visit */
             }
+            if (!on) guide.silence();
             listeners.forEach((l) => l());
         },
         subscribe: (l: () => void) => {

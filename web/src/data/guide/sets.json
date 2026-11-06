@@ -1,0 +1,170 @@
+{
+  "_about": "Yugi's notes on each set. intro: said when you open a set's card list before you own any of it. cards: a few lines per card (names joined by ' | ' share lines), said when you look at the card or pull it. Every name is checked against the set by scripts/guide/build.mjs. Keep lines under 140 characters, in Yugi's voice, and true for the cards both duelists can have at this point.",
+  "_catch": [],
+  "_noCatch": [
+    "Barrel Dragon"
+  ],
+  "_catchAbout": "Monsters whose ATK comes with a drawback aren't ranked as the hardest hitters. build.mjs spots most from their text; _catch adds ones it misses, _noCatch removes ones it wrongly flags.",
+  "LOB": {
+    "intro": [
+      "This is where it all began! Grandpa's Blue-Eyes is in here somewhere... but Pot of Greed and Fissure will win you more duels.",
+      "Our very first set! Don't chase the dragons. Every pack has a Rare, and the good ones are what you really need."
+    ],
+    "cards": {
+      "Blue-Eyes White Dragon": [
+        "Blue-Eyes White Dragon! 3000 ATK, the strongest monster in the whole set. Kaiba would be so jealous!"
+      ],
+      "Dark Magician": [
+        "My Dark Magician! If he's in your deck, I'll be cheering extra loud."
+      ],
+      "Red-Eyes Black Dragon": [
+        "Red-Eyes Black Dragon! Joey's favorite. It's got potential, just like him."
+      ],
+      "Exodia the Forbidden One | Left Arm of the Forbidden One | Right Arm of the Forbidden One | Left Leg of the Forbidden One | Right Leg of the Forbidden One": [
+        "A piece of Exodia! Get all five in your hand and you win on the spot. It's a long road, though."
+      ],
+      "Monster Reborn": [
+        "Monster Reborn! Bring back the best monster in either Graveyard. Hardly anyone will have one of these."
+      ],
+      "Raigeki": [
+        "Raigeki wipes out every monster they control. Wow, the heart of the cards is really with you!"
+      ],
+      "Dark Hole": [
+        "Dark Hole clears the whole field, yours too. Save it for when they're ahead."
+      ],
+      "Man-Eater Bug": [
+        "Man-Eater Bug looks goofy, but when it flips, any monster on the field is gone. Set it and wait!"
+      ],
+      "Trap Hole": [
+        "Trap Hole! When they summon something with 1000 ATK or more, it's gone before it can swing."
+      ],
+      "Swords of Revealing Light": [
+        "Swords of Revealing Light flips their monsters up and stops their attacks for three turns. That's time to build!"
+      ],
+      "Pot of Greed": [
+        "Pot of Greed! Two free cards, no catch. Every deck wants this one."
+      ],
+      "Fissure": [
+        "Fissure takes out their weakest face-up monster. Simple, but it clears the way to attack!"
+      ],
+      "Hane-Hane": [
+        "Hane-Hane flips and bounces any monster back to the hand. Great against their tribute monsters!"
+      ],
+      "Gaia The Fierce Knight": [
+        "Gaia the Fierce Knight! Fuse him with Curse of Dragon and you get Gaia the Dragon Champion."
+      ],
+      "Celtic Guardian": [
+        "Celtic Guardian! 1400 ATK and no tribute. A loyal swordsman for the front line."
+      ]
+    }
+  },
+  "MRD": {
+    "intro": [
+      "Metal Raiders brings the first great traps, like Mirror Force and Solemn Judgment. They're Ultras, so treasure any you find!",
+      "Summoned Skull and Kuriboh are both in here! And 7 Colored Fish is a common now... 1800 ATK with no tribute."
+    ],
+    "cards": {
+      "Summoned Skull": [
+        "Summoned Skull! 2500 ATK for a single tribute. That's a monster they'll have to answer right away."
+      ],
+      "Mirror Force": [
+        "Mirror Force! When they attack, all their Attack Position monsters are destroyed. Let them come!"
+      ],
+      "Change of Heart": [
+        "Change of Heart! Borrow their best monster for a turn. This one's always been special to me."
+      ],
+      "Solemn Judgment": [
+        "Solemn Judgment stops anything, at the cost of half your Life Points. Use it when it really counts."
+      ],
+      "Magic Jammer": [
+        "Magic Jammer! Toss a card and their spell is gone. Save it for their Raigeki or Dark Hole."
+      ],
+      "Horn of Heaven": [
+        "Horn of Heaven stops a summon cold. Tribute a weak monster and their big play is wasted!"
+      ],
+      "Heavy Storm": [
+        "Heavy Storm clears every spell and trap on the field. Perfect before you attack into their back row."
+      ],
+      "Tribute to the Doomed": [
+        "Tribute to the Doomed! Discard a card and destroy any monster. That's an answer to almost everything."
+      ],
+      "Kuriboh": [
+        "Kuriboh! Discard him and you take no damage from that attack. He's saved me more times than I can count."
+      ],
+      "Time Wizard": [
+        "Time Wizard is a coin toss... call it right and their whole field is gone. I like those odds!"
+      ],
+      "Barrel Dragon": [
+        "Barrel Dragon shoots down a monster with a few lucky coin flips. Bandit Keith's favorite, though..."
+      ],
+      "Catapult Turtle": [
+        "Catapult Turtle launches your monsters for damage. Fun, but it costs you cards. Think before you fire!"
+      ],
+      "Gate Guardian": [
+        "Gate Guardian! You need Sanga, Kazejin and Suijin on the field to call it. Tough, but what a sight!"
+      ],
+      "Sanga of the Thunder | Kazejin | Suijin": [
+        "One of the three guardians! When it's attacked, it can drop the attacker's ATK to 0."
+      ],
+      "7 Colored Fish": [
+        "7 Colored Fish! 1800 ATK, no tribute, and it's a common. Expect to see a few across the table too."
+      ]
+    }
+  },
+  "SRL": {
+    "intro": [
+      "Spell Ruler is all about spells! Snatch Steal and Mystical Space Typhoon are the ones to dream about.",
+      "Pegasus's Toons and Relinquished are in here! They're tricky to play, but they can surprise anyone."
+    ],
+    "cards": {
+      "Snatch Steal": [
+        "Snatch Steal! Take their best monster and keep it. They gain some Life Points, but who cares?"
+      ],
+      "Mystical Space Typhoon": [
+        "Mystical Space Typhoon! Destroy any spell or trap, even on their turn. Their Mirror Force won't save them!"
+      ],
+      "Toon World": [
+        "Toon World! Pegasus's favorite. The Toons can't be played without it, so build around it carefully."
+      ],
+      "Blue-Eyes Toon Dragon | Toon Summoned Skull | Toon Mermaid": [
+        "A Toon! It needs Toon World on the field first. Pegasus made it look easy... it isn't."
+      ],
+      "Relinquished": [
+        "Relinquished absorbs one of their monsters and takes its strength. Pegasus used it on me... scary!"
+      ],
+      "Black Illusion Ritual": [
+        "Black Illusion Ritual summons Relinquished. Without it, he can't come out to play."
+      ],
+      "Confiscation": [
+        "Confiscation lets you peek at their hand and throw away their best card. Knowing their plan is half the duel!"
+      ],
+      "Delinquent Duo": [
+        "Delinquent Duo! Pay 1000 and they lose two cards from their hand. That's a huge swing."
+      ],
+      "The Forceful Sentry": [
+        "The Forceful Sentry! See their hand and send their best card back to the deck."
+      ],
+      "Painful Choice": [
+        "Painful Choice digs through your deck for the card you need. Whatever they pick, you win something."
+      ],
+      "Axe of Despair": [
+        "Axe of Despair gives 1000 ATK, and it keeps coming back. Your monsters will hit like dragons!"
+      ],
+      "Messenger of Peace": [
+        "Messenger of Peace stops anything with 1500 ATK or more from attacking. Great if your deck is full of walls!"
+      ],
+      "Giant Trunade": [
+        "Giant Trunade sends every spell and trap back to the hand. Clear their traps, then attack!"
+      ],
+      "Invader of the Throne": [
+        "Invader of the Throne swaps itself for one of their monsters when it flips. Sneaky!"
+      ],
+      "Maha Vailo": [
+        "Maha Vailo gains 500 ATK for every equip on it. Give it an Axe of Despair and watch out!"
+      ],
+      "Banisher of the Light": [
+        "Banisher of the Light banishes anything that would go to the Graveyard. No Monster Reborn for anyone!"
+      ]
+    }
+  }
+}

@@ -1463,7 +1463,7 @@ html::-webkit-scrollbar-corner,
 }
 .guide__rest { visibility: hidden; }
 .guide__caret { display: inline-block; margin-left: 6px; font-size: 0.7em; color: var(--primary); visibility: hidden; }
-.guide__tablet--done .guide__caret { visibility: visible; animation: guide-blink 1s steps(2) infinite; }
+.guide__text--done .guide__caret { visibility: visible; animation: guide-blink 1s steps(2) infinite; }
 @keyframes guide-blink { 50% { visibility: hidden; } }
 
 /* Phones: along the bottom, just above the tab bar (and its trim), as a strip with Yugi at its left end. */

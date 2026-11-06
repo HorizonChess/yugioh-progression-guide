@@ -10,6 +10,8 @@ import RecordMatch from "@/components/record-match/RecordMatch";
 import WinnersWheel from "@/components/record-match/WinnersWheel";
 import DefeatAct from "@/components/record-match/DefeatAct";
 import GuideSprite from "@/components/layout/GuideSprite";
+import { resultLine, waitingLine } from "@/lib/guide/lines";
+import { guide, seed } from "@/lib/guide/store";
 import PendingReportPanel from "@/components/record-match/PendingReportPanel";
 import { useAuth } from "@/context/AuthContext";
 import { wheelPrizesFor } from "@ygo/shared";
@@ -87,10 +89,18 @@ export default function RecordMatchPage() {
     // Reporting advances the set and books the reward (a wheel spin or pity
     // packs) at once; the act that follows only spends it.
     // In duo the result waits for the rival; the page then shows it as pending.
+    // Yugi on the result. In solo the opponent is the set; in duo, the rival.
+    const rivalName = series?.members.find((m) => m.id !== userId)?.duelistName ?? "your rival";
+    const cheer = (won: boolean) => {
+        const after = won ? (streak > 0 ? streak + 1 : 1) : streak < 0 ? streak - 1 : -1;
+        guide.say(resultLine(won, { mode: series?.mode ?? "solo", rival: rivalName, streak: after, next: sets[currentSetIndex + 1]?.set_name, seed: seed() }));
+    };
+
     const handleRecordMatch = async (winner: "player" | "opponent") => {
         try {
             const outcome = await reportMatch(winner === "player");
-            if (outcome.status === "pending") return;
+            if (outcome.status === "pending") return void guide.say(waitingLine(rivalName, seed()));
+            cheer(winner === "player");
             setSpinRewardId(outcome.reward.id);
             setStage(winner === "player" ? "wheel" : "defeat");
         } catch (error) {
@@ -110,6 +120,7 @@ export default function RecordMatchPage() {
             if (!confirm) return await rejectReport(report.id);
             setAnswered(report);
             const reward = await confirmReport(report.id);
+            cheer(reward.prizeId === "wheel-spin");
             setSpinRewardId(reward.id);
             setStage(reward.prizeId === "wheel-spin" ? "wheel" : "defeat");
         } catch (error) {

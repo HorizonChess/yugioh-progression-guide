@@ -203,9 +203,9 @@ function PacksPageContent() {
     const owned = ownedCountsById(collection);
     const ownedCount = (id: number) => owned.get(id) ?? 0;
     return (
-        <PacksShell withSprite={!pack.isOpening}>
+        <PacksShell withSprite={!pack.isOpening || pack.showSummary}>
             {viewDetails ? (
-                <SetCardList set={currentSet} cards={setCards} ownedCount={ownedCount} onBack={() => setViewDetails(false)} />
+                <SetCardList set={currentSet} cards={setCards} ownedCount={ownedCount} onBack={() => setViewDetails(false)} stage={currentSetIndex} />
             ) : (
                 <OpeningSummary
                     set={currentSet}
@@ -216,6 +216,7 @@ function PacksPageContent() {
                     onBack={handleDiscardAndExit}
                     onOpenMore={repo.freePacks ? pack.reset : undefined}
                     onReroll={hasTicket ? handleReroll : undefined}
+                    stage={currentSetIndex}
                 />
             )}
         </PacksShell>
