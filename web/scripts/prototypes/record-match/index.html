@@ -97,7 +97,7 @@ body.A .optA, body.B .optB { display: flex; }
    ===================================================================== */
 .board { position: relative; width: min(100%, 1180px, (100cqh - 56px - 6cqh) * 1.62); aspect-ratio: 1.62; container-type: inline-size;
   display: grid; grid-template-rows: auto 1fr auto; padding: 0 3.2cqi 2.2cqi; border-radius: 10px;
-  background: var(--board, url("img/stone.webp")) center / cover, #77705f;
+  background: url("img/stone-tile.jpg") 0 0 / 1024px repeat, #77705f;
   box-shadow: inset 0 0 0 .25cqi #6b4c18, inset 0 0 0 .45cqi #e0b54f, inset 0 0 0 .6cqi #6b4c18, inset 0 0 6cqi rgba(0,0,0,.45), 0 0 0 2px #1a140b, 0 30px 60px rgba(0,0,0,.75); }
 .b-head { position: relative; display: grid; place-items: center; height: 9cqi; margin: 0 -3.2cqi; }
 .b-head::before { content: ""; position: absolute; left: 1.4cqi; right: 1.4cqi; top: 1.3cqi; bottom: 1.3cqi; border-radius: 4px; background: url("img/frieze-hd.webp") center / cover, url("img/frieze.webp") center / cover; opacity: .9; box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 1px 0 rgba(255,240,200,.25); }
@@ -106,7 +106,7 @@ body.A .optA, body.B .optB { display: flex; }
 /* the opponent: their pack in a niche cut into the stone */
 .foe { display: flex; flex-direction: column; align-items: center; gap: 1.4cqi; text-align: center; }
 .niche { position: relative; width: 64%; aspect-ratio: .64; border-radius: 6px; display: grid; place-items: center;
-  background: linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.18)), var(--board, url("img/stone.webp")) center / 400%;
+  background: linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.18)), url("img/stone-tile.jpg") 0 0 / 1024px repeat;
   box-shadow: inset 0 1.2cqi 2cqi rgba(0,0,0,.7), inset 0 -2px 0 rgba(255,240,210,.25), 0 0 0 .3cqi #6b4c18, 0 0 0 .45cqi #e0b54f, 0 0 0 .6cqi #3b2a10; }
 .niche img { width: 82%; filter: drop-shadow(0 1cqi 1.2cqi rgba(0,0,0,.75)); transition: transform .5s, opacity .4s; }
 .niche .medal { position: absolute; opacity: 0; transform: scale(.6); transition: .5s .15s; }
@@ -137,7 +137,7 @@ body.A .optA, body.B .optB { display: flex; }
 .pick .word { font: 900 2.3cqi/1 var(--font-display); letter-spacing: .22em; padding-bottom: .6cqi; }
 .pick.dim { opacity: .35; filter: grayscale(1); pointer-events: none; }
 .b-foot { display: flex; justify-content: center; align-items: center; min-height: 4cqi; }
-.b-foot .linkback { font-family: var(--font-display); color: #2f281e; text-decoration-color: rgba(58,50,38,.4); text-shadow: 0 1px 0 rgba(255,244,220,.35); font-size: .95cqi; }
+.b-foot .linkback { font-family: var(--font-display); color: #2f281e; text-decoration-color: rgba(58,50,38,.4); text-shadow: 0 1px 0 rgba(255,244,220,.35); font-size: 1.15cqi; }
 /* the acts replace the choice in the same place */
 .act { display: none; flex-direction: column; align-items: center; gap: 1.6cqi; width: 100%; }
 .board[data-st="wheel"] .tabs, .board[data-st="wheel"] .ask, .board[data-st="defeat"] .ask { display: none; }
