@@ -58,6 +58,7 @@ for (const [route, caption, call] of MOMENTS) {
     }
     const text = await page.evaluate((call) => {
         window.__guide.reset();
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- read by the eval below
         const L = window.__guideLines;
         const out = eval(call);
         const line = Array.isArray(out) ? out[0] : out;

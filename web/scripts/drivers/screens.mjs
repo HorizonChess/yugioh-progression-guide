@@ -56,16 +56,22 @@ for (const [size, options] of Object.entries(SIZES).filter(([s]) => wanted.inclu
         if (size === "phone" && overflow > 1) console.log(`OVERFLOW  ${route} scrolls sideways by ${overflow}px`);
     }
 
-    // Pack opener: open the set's packs, flip some, then the summary.
+    // Pack opener: open the set's pack, flip it, then the summary.
     await page.goto(`${BASE}/packs/?set=0`, { waitUntil: "networkidle" });
     const open = page.getByRole("button", { name: /open/i }).first();
     if (await open.isVisible().catch(() => false)) {
         await open.click();
         await page.waitForTimeout(1500);
         await shot("packs-opening");
-        const cards = page.locator(".pack-card");
-        for (let i = 0; i < Math.min(4, await cards.count()); i++) await cards.nth(i).click({ force: true });
-        await page.waitForTimeout(800);
+        // Open the pack (a click on desktop, a tap near the top strip on phones), then flip every card.
+        const box = await page.locator(".ps-pack").boundingBox();
+        if (box) {
+            if (options.hasTouch) await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height * 0.2);
+            else await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        }
+        await page.waitForTimeout(2500);
+        await page.getByRole("button", { name: "Flip All" }).click({ timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(3500);
         await shot("packs-flipped");
         await page.getByRole("button", { name: "Open All" }).click().catch(() => {});
         await page.waitForTimeout(1200);

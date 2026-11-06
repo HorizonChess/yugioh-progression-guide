@@ -23,7 +23,7 @@ const SPIN_MS = 3600;              // wheel-settle duration
  * WinnersWheel — the "you won, spin for a prize" CONTENT (win path only).
  *
  * The WHEEL CONTENT of the win moment: heading → spinning wheel → spin/claim.
- * It is rendered INSIDE the shared, always-mounted `.win-panel` (see
+ * It is rendered INSIDE the record-match board (see
  * app/record-match/page.tsx) — it curtains IN where the record board vortexed
  * OUT, without the panel box moving. So this is just the inner stack; the panel,
  * centering, and glass surface live in the page.
