@@ -17,7 +17,8 @@ import WildcardModal from "@/components/rewards/WildcardModal";
 import StarlightSearchModal from "@/components/rewards/StarlightSearchModal";
 import BanInput from "@/components/rewards/BanInput";
 import SnatchModal from "@/components/rewards/SnatchModal";
-import { LOCK, prizeDoes, relicFor } from "@/components/rewards/relics";
+import { prizeDoes } from "@/components/rewards/relics";
+import Relic from "@/components/rewards/Relic";
 import "@/components/rewards/rewards.css";
 
 /**
@@ -50,12 +51,6 @@ import "@/components/rewards/rewards.css";
 const REDOER_NOTE = "Spend it from the pack summary to reroll an opening";
 /** How long a relic plays its opening before the reward's own flow takes over. */
 const OPENING_MS = 650;
-
-const Relic = ({ prizeId, locked = false }: { prizeId: PrizeId; locked?: boolean }) => {
-    // One drawing per reward (its gradients carry unique ids), kept across renders.
-    const [svg] = useState(() => relicFor(prizeId) + (locked ? LOCK : ""));
-    return <span style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: svg }} />;
-};
 
 const shortDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "");
 
@@ -396,6 +391,7 @@ export default function RewardsPage() {
                     bannedCardIds={bannedCardIds}
                     onPick={(card) => claim(banEntry, card.id, () => setBanEntry(null))}
                     onClose={() => setBanEntry(null)}
+                    wonFrom={banEntry.wonFromPackName}
                 />
             )}
 
@@ -404,6 +400,8 @@ export default function RewardsPage() {
                     loadBinder={rivalBinder}
                     onChoose={(printing) => claim(snatchEntry, undefined, () => setSnatchEntry(null), printing)}
                     onClose={() => setSnatchEntry(null)}
+                    rivalName={rivalName}
+                    wonFrom={snatchEntry.wonFromPackName}
                 />
             )}
 

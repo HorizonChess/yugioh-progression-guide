@@ -20,6 +20,8 @@ export default function OpeningSummary({
     onBack,
     onOpenMore,
     onReroll,
+    saveLabel = "Done & Save",
+    backLabel = "Back to the campaign",
 }: {
     set: CardSet;
     cards: PulledCard[];
@@ -30,6 +32,8 @@ export default function OpeningSummary({
     onBack: () => void;
     onOpenMore?: () => void;
     onReroll?: () => void;
+    saveLabel?: string;
+    backLabel?: string;
 }) {
     // One tile per card and printed rarity, counting duplicates.
     const tiles = new Map<string, GalleryItem>();
@@ -65,10 +69,10 @@ export default function OpeningSummary({
             <CardGallery items={items} />
 
             <nav className="haul__dock" aria-label="Finish opening">
-                <CartoucheButton onClick={onSave} next className="haul__btn">Done &amp; Save</CartoucheButton>
+                <CartoucheButton onClick={onSave} next className="haul__btn">{saveLabel}</CartoucheButton>
                 {onOpenMore && <CartoucheButton onClick={onOpenMore} className="haul__btn">Open More</CartoucheButton>}
                 {onReroll && <CartoucheButton onClick={onReroll} className="haul__btn">Reroll</CartoucheButton>}
-                <Link href="/timeline" onClick={(e) => (e.preventDefault(), onBack())} className="haul__back">Back to the campaign</Link>
+                <Link href="/timeline" onClick={(e) => (e.preventDefault(), onBack())} className="haul__back">{backLabel}</Link>
             </nav>
         </div>
     );
