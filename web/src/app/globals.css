@@ -100,6 +100,10 @@
   --font-fell: var(--font-fell-face), Georgia, serif;
 }
 
+/* the document itself is dark: when a phone keyboard shrinks the page, the strip left below it
+   shows this, not white */
+html { background-color: #07050a; }
+
 html,
 body {
   max-width: 100vw;
@@ -1343,6 +1347,11 @@ html::-webkit-scrollbar-corner,
   .closeup__nav { top: 40%; width: 38px; height: 38px; font-size: 20px; background: rgba(10, 7, 4, 0.55); }
   .closeup__nav--prev { left: 6px; }
   .closeup__nav--next { right: 6px; }
+  /* a pick: the card keeps its size; the plate and the button under it share the sheet the plate
+     alone had, so the button is always on screen and close under the text */
+  .closeup__side:has(.closeup__action) { display: flex; flex-direction: column; background: #0d0a07; box-shadow: 0 -2px 0 #6e5320; border-radius: 14px 14px 0 0; }
+  .closeup__side:has(.closeup__action) .ps-plate { max-height: calc(var(--app-h, 100dvh) * 0.46 - 66px); padding-bottom: 12px; }
+  .closeup__side .closeup__action { margin: 0; padding: 8px 0 calc(10px + env(safe-area-inset-bottom)); }
   .closeup__side .ps-plate { border-radius: 14px 14px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom)); max-height: calc(var(--app-h, 100dvh) * 0.46); overflow-y: auto; }
 }
 .ps-peek--react .ps-plate { animation: ps-fade-in 0.18s ease-out both; }

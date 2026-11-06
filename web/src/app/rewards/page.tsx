@@ -273,7 +273,7 @@ export default function RewardsPage() {
 
     return (
         <div className="h-full overflow-hidden grid grid-rows-[1fr] relative">
-            <div className="min-h-0 overflow-y-auto custom-scrollbar">
+            <div className="min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
                 <div className="rw">
                     <header className="rw-head">
                         <p className="rw-kicker">{tab === "waiting" ? `The altar · ${waitingCount} waiting` : "The chronicle"}</p>
@@ -298,7 +298,7 @@ export default function RewardsPage() {
                                     }}
                                 >
                                     <div className="rw-pool" aria-hidden="true" />
-                                    <button type="button" className="rw-arrow" onClick={() => go(at - 1)} disabled={at === 0} aria-label="Previous reward">‹</button>
+                                    <button type="button" className="rw-arrow rw-arrow--prev" onClick={() => go(at - 1)} disabled={at === 0} aria-label="Previous reward">‹</button>
                                     <div className="rw-altar">
                                         <div key={current.id} className={`rw-holder rw-holder--in ${canClaim(current) ? "" : "rw-holder--locked"} ${opening === current.id ? "rw-opening" : ""}`}>
                                             <Relic prizeId={current.prizeId} locked={!canClaim(current)} />
@@ -306,7 +306,7 @@ export default function RewardsPage() {
                                         </div>
                                         <div className="rw-slab" aria-hidden="true" />
                                     </div>
-                                    <button type="button" className="rw-arrow" onClick={() => go(at + 1)} disabled={at >= available.length - 1} aria-label="Next reward">›</button>
+                                    <button type="button" className="rw-arrow rw-arrow--next" onClick={() => go(at + 1)} disabled={at >= available.length - 1} aria-label="Next reward">›</button>
                                 </div>
                                 <div className="rw-info">
                                     <h2>{getPrize(current.prizeId)?.label ?? current.prizeId}</h2>

@@ -7,7 +7,7 @@ import { ownedCountsById } from "@/lib/collection";
 import CardGallery, { type GalleryItem } from "@/components/card/CardGallery";
 import { CardCloseUp } from "@/components/card/CardPlate";
 import { printedIn, type StageCard } from "@/components/packs/stage/plate";
-import CartoucheButton from "@/components/ui/CartoucheButton";
+import TabletButton from "@/components/ui/TabletButton";
 import RewardRite, { RiteNote, RiteSearch } from "@/components/rewards/RewardRite";
 
 interface BanInputProps {
@@ -120,7 +120,7 @@ export default function BanInput({ mode, bannedCardIds = [], onPick, onClose, wo
                     onClose={() => setPending(null)}
                     action={
                         <div className="rite__confirm">
-                            <CartoucheButton next onClick={() => onPick(pending.card)}>{isBan ? "Ban This Card" : "Lift the Ban"}</CartoucheButton>
+                            <TabletButton onClick={() => onPick(pending.card)}>{isBan ? "Ban This Card" : "Lift the Ban"}</TabletButton>
                         </div>
                     }
                 />

@@ -105,7 +105,14 @@
 .rw-entry--rival .rw-text b::first-letter { color: #3a2405; }
 .rw-entry--rival .rw-stamp { color: #8a1c10; border-color: #8a1c10; }
 
+/* the altar column may shrink, and long set names wrap instead of widening the page */
+.rw-altar { min-width: 0; }
+.rw-info { overflow-wrap: anywhere; padding: 0 6px; }
 @media (max-width: 520px) {
+  /* the arrows sit on the altar's edges, so they never push the page wider than the screen */
+  .rw-stage { gap: 0; }
+  .rw-arrow { position: absolute; top: 28%; z-index: 2; width: 40px; height: 40px; font-size: 20px; }
+  .rw-arrow--prev { left: 2px; } .rw-arrow--next { right: 2px; }
   .rw-entry { gap: 10px; }
   .rw-text b { font-size: 18px; }
   .rw-stamp { padding: 4px 6px; font-size: 9px; letter-spacing: 0.1em; }
@@ -149,5 +156,22 @@
 .rite__search svg { position: absolute; left: 15px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: #6b4a12; pointer-events: none; }
 /* the confirm under a picked card's close-up */
 .rite__confirm { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.rite__confirm .cartouche-btn { width: clamp(180px, 10vw + 120px, 240px); }
+/* the pick's confirm: a small slanted tablet, as on the main menu */
+@property --tb-lean { syntax: "<angle>"; inherits: true; initial-value: -10deg; }
+@property --tb-slide { syntax: "<length>"; inherits: true; initial-value: 0px; }
+.tablet-btn {
+  --tb-lean: -10deg; --tb-slide: 0px;
+  position: relative; overflow: hidden; min-width: 200px; padding: 12px 34px; border: 0; border-radius: 3px; cursor: pointer; color: #ffe08a;
+  transform: translateX(var(--tb-slide)) skewX(var(--tb-lean));
+  transition: --tb-lean .3s cubic-bezier(.4, 0, .2, 1), --tb-slide .3s cubic-bezier(.4, 0, .2, 1), box-shadow .3s, filter .3s;
+  background: radial-gradient(120% 160% at 0% 0%, rgba(120, 80, 20, .45), transparent 60%), linear-gradient(100deg, rgba(40, 28, 14, .97), rgba(14, 10, 6, .94));
+  box-shadow: inset 4px 0 0 #ffe08a, inset 0 1px 0 rgba(255, 230, 170, .2), 0 0 0 1px rgba(255, 224, 138, .55), 0 0 22px rgba(212, 175, 55, .2), 0 10px 22px rgba(0, 0, 0, .55);
+  -webkit-tap-highlight-color: transparent;
+}
+.tablet-btn::before { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255, 240, 200, .14) 50%, transparent 65%) -200% 0 / 200% 100% no-repeat; transition: background-position .8s; }
+.tablet-btn__words { position: relative; display: block; transform: skewX(calc(-1 * var(--tb-lean))); font: 800 15px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; text-shadow: 0 2px 6px #000; }
+.tablet-btn:hover, .tablet-btn:focus-visible, .tablet-btn:active { --tb-lean: -16deg; --tb-slide: 8px; filter: brightness(1.12); outline: none;
+  box-shadow: inset 4px 0 0 #fff1bf, inset 0 1px 0 rgba(255, 230, 170, .25), 0 0 0 1px rgba(255, 224, 138, .8), 0 0 26px rgba(212, 175, 55, .35), 0 12px 24px rgba(0, 0, 0, .6); }
+.tablet-btn:hover::before { background-position: 200% 0; }
+@media (prefers-reduced-motion: reduce) { .tablet-btn { transition: box-shadow .3s, filter .3s; } }
 .rite__confirm p { margin: 0; font: 700 12px/1.3 var(--font-main); letter-spacing: 0.12em; text-transform: uppercase; color: #e9d9ad; text-align: center; }
