@@ -1,8 +1,9 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { listenForSwipes } from "@/lib/swipe-nav";
 import { useAuth } from "@/context/AuthContext";
 import { useProgression } from "@/context/ProgressionContext";
 import { asset } from '@/lib/utils';
@@ -51,7 +52,24 @@ const useNavPath = () => usePathname().replace(/(.)\/$/, "$1"); // trailingSlash
 /** Phones: the app sections as a bottom tab bar (the layout puts it below the page). */
 export function PhoneTabBar() {
     const pathname = useNavPath();
+    const router = useRouter();
     const { activeSeriesId } = useProgression();
+
+    // A swipe across a tab's page goes to the neighbouring tab (locked ones skipped). Only
+    // from the tabs themselves: the pack and record screens aren't in the row.
+    useEffect(() => {
+        const at = NAV_LINKS.findIndex((l) => l.href === pathname);
+        if (at === -1 || !window.matchMedia("(max-width: 767px)").matches) return;
+        const open = NAV_LINKS.filter((l) => activeSeriesId || l.href === "/menu");
+        return listenForSwipes((dir) => {
+            const here = open.findIndex((l) => l.href === pathname);
+            const next = here === -1 ? undefined : open[here + dir];
+            if (!next) return false;
+            router.push(next.href);
+            return true;
+        });
+    }, [pathname, activeSeriesId, router]);
+
     if (!NAV_ROUTES.has(pathname)) return null;
     return (
         <nav className="phone-tabs md:hidden" aria-label="Main">

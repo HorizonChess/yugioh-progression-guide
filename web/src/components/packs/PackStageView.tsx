@@ -126,7 +126,7 @@ export default function PackStageView({
                 </div>
             </header>
 
-            <div ref={host} className="ps-stage flex-1 min-h-0 mx-2 md:mx-6" />
+            <div ref={host} data-own-swipe className="ps-stage flex-1 min-h-0 mx-2 md:mx-6" />
 
             <div className="ps-bar shrink-0">
                 {isPhone && <button className="ps-btn ps-btn--round" onClick={() => stage.current?.spin(-1)} disabled={!ready} aria-label="Turn left">‹</button>}

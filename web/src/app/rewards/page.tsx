@@ -289,6 +289,7 @@ export default function RewardsPage() {
                             <>
                                 <div
                                     className="rw-stage"
+                                    data-own-swipe
                                     onPointerDown={(e) => (swipe.current = e.clientX)}
                                     onPointerUp={(e) => {
                                         if (swipe.current == null) return;

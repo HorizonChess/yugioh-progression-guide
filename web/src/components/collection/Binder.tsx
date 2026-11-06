@@ -1,5 +1,6 @@
 "use client";
 
+import { edgeSwipe } from "@/lib/swipe-nav";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Card } from "@/lib/api";
 import type { Tier } from "@/components/packs/stage/fx";
@@ -181,7 +182,7 @@ export default function Binder({ owner, title, chapterCode, slots, chapters, act
     );
 
     return (
-        <div className="binder-stage" onPointerDown={(e) => (swipe.current = e.clientX)} onPointerUp={(e) => {
+        <div className="binder-stage" data-own-swipe={edgeSwipe(at, pages)} onPointerDown={(e) => (swipe.current = e.clientX)} onPointerUp={(e) => {
             if (swipe.current !== null && Math.abs(e.clientX - swipe.current) > 50) turn(e.clientX < swipe.current ? 1 : -1);
             swipe.current = null;
         }}>
