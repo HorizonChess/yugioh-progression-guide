@@ -244,7 +244,9 @@ export function Hand({ cards, marks, onTap, onHover }: { cards: DuelCardView[]; 
                     type="button"
                     data-uid={c.uid}
                     className={`df-hand__card ${marks.glow.has(c.uid) ? "is-glow" : ""} ${marks.picked.has(c.uid) ? "is-picked" : ""} ${marks.raised === c.uid ? "is-raised" : ""}`}
-                    style={{ rotate: (i - mid) * (tight ? 3 : 4), y: Math.abs(i - mid) * 4, marginInline: tight ? "calc(var(--cw) * -0.32)" : "3px" }}
+                    // Each card stacks over the one before it. (Explicitly: the middle card has no tilt, so no
+                    // transform, and would otherwise sink under both its tilted neighbours.)
+                    style={{ rotate: (i - mid) * (tight ? 3 : 4), y: Math.abs(i - mid) * 4, marginInline: tight ? "calc(var(--cw) * -0.32)" : "3px", zIndex: i + 1 }}
                     onClick={() => onTap(c)}
                     onPointerEnter={(e) => e.pointerType === "mouse" && onHover?.(c.code)}
                     aria-label={`Card in hand ${c.code}`}

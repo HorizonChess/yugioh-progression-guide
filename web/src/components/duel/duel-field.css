@@ -186,7 +186,7 @@
 .df-card.is-picked .df-card__turn, .df-hand__card.is-picked, .df-listcard.is-picked img { box-shadow: 0 0 0 3px #8dff8d, 0 0 16px #8dff8d; border-radius: 4px; }
 /* The card you've picked up rises out of the hand (or off its zone). */
 .df-hand__card { transition: translate 0.18s ease-out, scale 0.18s ease-out; }
-.df-hand__card.is-raised { translate: 0 calc(var(--hw) * -0.32); scale: 1.12; z-index: 5; }
+.df-hand__card.is-raised { translate: 0 calc(var(--hw) * -0.32); scale: 1.12; z-index: 60 !important; }
 .df-card.is-raised .df-card__turn { translate: 0 -5px; scale: 1.08; filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.7)); }
 .df-card__turn { transition: transform 0.35s cubic-bezier(0.3, 0.7, 0.3, 1), translate 0.18s ease-out, scale 0.18s ease-out; }
 @keyframes df-glow {
@@ -325,7 +325,7 @@
 }
 
 .df-hand { display: flex; justify-content: center; align-items: flex-end; }
-.df-hand__card { flex: none; width: var(--hw); aspect-ratio: 59 / 86; padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 50% 120%; }
+.df-hand__card { position: relative; flex: none; width: var(--hw); aspect-ratio: 59 / 86; padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 50% 120%; }
 .df-hand__card:not(.is-raised):hover { translate: 0 -10px; }
 .df-rival-hand { display: flex; justify-content: center; overflow: hidden; }
 .df-rival-hand__card { width: calc(var(--cw) * 0.8); height: auto; aspect-ratio: 59 / 86; margin: 0 calc(var(--cw) * -0.1); transform: translateY(-40%); }

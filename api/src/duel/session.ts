@@ -234,17 +234,29 @@ export class DuelSession {
         if (answers.length) {
             this.frames = [[], []];
             this.delivered = [true, true];
+            this.moved = [true, true];
+            this.opening = [[], []];
         }
     }
 
     /** Whether a player has been sent this duel's frames yet: the first connection gets them from the start. */
     private delivered: [boolean, boolean] = [false, false];
+    /** Whether a player has answered anything yet; before that, the frames of the duel so far (the opening). */
+    private moved: [boolean, boolean] = [false, false];
+    private opening: [DuelFrame[], DuelFrame[]] = [[], []];
 
     /**
      * What a player connecting now should watch: the duel from its start if they're the first to
      * look (the opening hands drawn, the bot's first turn), otherwise nothing (they get the board as it is).
      */
     framesOnConnect(team: Team): DuelFrame[] {
+        // Until they've made a move, every look starts from the top (a page that connects twice
+        // while it loads still shows the opening hands drawn).
+        if (!this.moved[team]) {
+            this.frames[team] = [];
+            this.delivered[team] = true;
+            return [...this.opening[team]];
+        }
         const fresh = !this.delivered[team];
         const frames = this.takeFrames(team);
         return fresh ? frames : [];
@@ -266,6 +278,11 @@ export class DuelSession {
         if (!q || q.team !== team || seq !== this.seq || this.result) return false;
         const response = q.toResponse(answer);
         if (!response) return false;
+        // A quiet chain window is passed by the page on its own the moment it connects: not a move.
+        if (!(q.prompt.kind === 'chain' && q.prompt.quiet)) {
+            this.moved[team] = true;
+            this.opening[team] = [];
+        }
         this.respond(response);
         return true;
     }
@@ -373,8 +390,10 @@ export class DuelSession {
     private pushFrame(events: DuelEvent[], team: Team) {
         if (!events.length) return;
         const list = this.frames[team];
-        list.push({ events, view: this.view(team) });
+        const frame = { events, view: this.view(team) };
+        list.push(frame);
         if (list.length > FRAME_CAP) list.splice(0, list.length - FRAME_CAP);
+        if (!this.moved[team] && this.opening[team].length < FRAME_CAP) this.opening[team].push(frame);
     }
 
     /** Questions nobody needs to see: zone placement, ordering, passing with nothing to chain. */

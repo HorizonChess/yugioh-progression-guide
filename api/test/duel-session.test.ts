@@ -167,4 +167,23 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
         }
         expect(oldForced).toBeGreaterThan(0);
     });
+
+    it('shows the opening hands being drawn to every look until the first move', async () => {
+        const duel = new DuelSession(await loadEngine(), setup([false, true], 3));
+        duel.start();
+        const first = duel.framesOnConnect(0);
+        expect(first[0]!.events.every((e) => e.k === 'draw')).toBe(true);
+        // The page connected again while loading: the opening plays again, from the top.
+        expect(duel.framesOnConnect(0)).toEqual(first);
+        // Quiet windows the page passes by itself don't count as a move.
+        let { prompt, seq } = duel.state(0, 'd');
+        while (prompt!.kind === 'chain' && prompt!.quiet) {
+            expect(duel.answer(0, seq, { kind: 'choice', id: prompt!.pass! })).toBe(true);
+            ({ prompt, seq } = duel.state(0, 'd'));
+            expect(duel.framesOnConnect(0)[0]).toEqual(first[0]);
+        }
+        expect(duel.answer(0, seq, humanAnswer(prompt!))).toBe(true);
+        // After a move, a fresh look gets the board as it is.
+        expect(duel.framesOnConnect(0)).toEqual([]);
+    });
 });

@@ -86,11 +86,17 @@ async function deal(uid: string, side: Side, reveal: boolean, sound: boolean) {
     const dx = t.left + t.width / 2 - (d.left + d.width / 2), dy = t.top + t.height / 2 - (d.top + d.height / 2);
     const sx = t.width / d.width, sy = t.height / d.height;
     // Up off the deck, across, and down where it belongs; turning edge-on at the end if it's revealed.
+    // The rival's deck sits right by their hand, at the screen's edge: their card swings down into
+    // view first, held up a moment like a drawn card, so you see it happen.
+    const rival = side === "opp";
+    const lift = rival ? Math.max(70, Math.abs(dy) + 60) : -30;
+    const big = rival ? 1.3 : 1.12;
     await anim(ghost, [
         { transform: "translate(0,0) scale(1)", filter: "drop-shadow(0 2px 3px rgba(0,0,0,.6))" },
-        { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 30}px) scale(${(1 + sx) / 2 * 1.12}, ${(1 + sy) / 2 * 1.12}) rotate(${side === "me" ? -6 : 6}deg)`, filter: "drop-shadow(0 16px 12px rgba(0,0,0,.6))", offset: 0.5 },
+        { transform: `translate(${dx * 0.45}px, ${dy * 0.45 + lift}px) scale(${(1 + sx) / 2 * big}, ${(1 + sy) / 2 * big}) rotate(${rival ? 6 : -6}deg)`, filter: "drop-shadow(0 16px 12px rgba(0,0,0,.6))", offset: rival ? 0.45 : 0.5 },
+        ...(rival ? [{ transform: `translate(${dx * 0.6}px, ${dy * 0.6 + lift * 0.85}px) scale(${(1 + sx) / 2 * big}, ${(1 + sy) / 2 * big}) rotate(3deg)`, filter: "drop-shadow(0 16px 12px rgba(0,0,0,.6))", offset: 0.62 }] : []),
         { transform: `translate(${dx}px, ${dy}px) scale(${reveal ? 0.02 : 1} , 1) scale(${sx}, ${sy})`, filter: "drop-shadow(0 2px 3px rgba(0,0,0,.6))" },
-    ], { duration: 430, easing: "cubic-bezier(.45,.05,.35,1)", fill: "forwards" });
+    ], { duration: rival ? 720 : 460, easing: "cubic-bezier(.45,.05,.35,1)", fill: "forwards" });
     ghost.remove();
     target.style.opacity = "";
     // The face comes round: the card opens out from edge-on.
