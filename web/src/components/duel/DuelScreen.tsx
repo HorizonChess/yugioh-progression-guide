@@ -79,7 +79,11 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     const duel = useDuel(duelId, onEvent);
     const { state, view, prompt, effects } = duel;
     const cards = useCards(codesOf(view, prompt));
-    const name = useCallback((code: number) => (code ? (cards.get(code)?.name ?? "a card") : "a Set card"), [cards]);
+    // Tokens aren't in the card catalog: their names come with them, and are kept once seen (a
+    // destroyed token leaves the field for good, but the log still names it).
+    const tokenNames = useRef(new Map<number, string>());
+    if (view) for (const side of [view.me, view.opp]) for (const c of [...side.monsters, ...side.spells]) if (c?.token) tokenNames.current.set(c.code, c.token);
+    const name = useCallback((code: number) => (code ? (cards.get(code)?.name ?? tokenNames.current.get(code) ?? "a card") : "a Set card"), [cards]);
     useEffect(() => {
         namesRef.current = name;
     }, [name]);
@@ -423,12 +427,20 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                     const k = `${o.code}:${o.text ?? ""}:${o.where}`;
                     return seen.has(k) ? false : (seen.add(k), true);
                 });
-                question = sheet(prompt.forced ? "Activate an effect" : last ? `Respond to ${name(last.code)}?` : "Activate a card?", (
+                // On top of a card of your own (your rival let it be): another card of yours can join the chain.
+                // Forced: effects that must happen, more than one at once (a lone one, or copies of one, need no
+                // question). They all happen; the player only picks the order they go on the chain.
+                const title = prompt.forced ? "These all happen: which goes on the chain first?" : !last ? "Activate a card?" : last.side === "me" ? "Chain another card?" : `Respond to ${name(last.code)}?`;
+                question = sheet(title, (
                     <div className="df-sheet__options">
                         {distinct.map((o) => option(name(o.code), () => answer({ kind: "choice", id: o.id }), { note: o.text }))}
-                        {prompt.pass !== null && option(last ? "Don't respond" : "Pass", () => answer({ kind: "choice", id: prompt.pass! }), { quiet: true })}
+                        {prompt.pass !== null && option(last && last.side === "opp" ? "Don't respond" : last ? "No, resolve it" : "Pass", () => answer({ kind: "choice", id: prompt.pass! }), { quiet: true })}
                     </div>
-                ), { text: last ? `${last.side === "me" ? "You" : view.opp.name} activated it as chain link ${view.chain.length}.` : undefined, code: last?.code });
+                ), {
+                    text: prompt.forced ? "None of them can be skipped. Chain links resolve last first: the one you pick first resolves last."
+                        : last ? `${last.side === "me" ? "You" : view.opp.name} activated it as chain link ${view.chain.length}.` : undefined,
+                    code: last?.code,
+                });
                 break;
             }
             case "cards": {

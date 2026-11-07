@@ -100,3 +100,36 @@ describe.skipIf(!engineDataAvailable())('asking in the damage step', () => it('a
     expect(asks[1]).toMatch(/^\d+BP:lily$/);
     expect(asks.filter((x) => x.includes('lily')).length).toBeGreaterThan(0);
 }));
+
+// Copies of one mandatory effect at once (Masks of the Accursed in the Standby Phase): the order
+// changes nothing, so nobody is asked. Duels started under the older rules still are (replays).
+describe.skipIf(!engineDataAvailable())('copies of a mandatory effect', () => it('happen without a question', async () => {
+    const engine = await loadEngine();
+    const MASK = 56948373;
+    const me = Array.from({ length: 40 }, (_, i) => (i % 3 === 0 ? MON[i % MON.length]! : MASK));
+    const forcedAsks = async (rules: number) => {
+        const duel = new DuelSession(engine, { seed: ['5', '11400714819323198485', '77', '2685821657736338717'], mode: 'MR1', decks: [{ main: me, extra: [] }, { main: MON.concat(MON, MON, MON, MON, MON), extra: [] }], names: ['A', 'B'], bots: [false, false], rules });
+        duel.start();
+        let asked = 0;
+        for (let i = 0; i < 400 && !duel.result; i++) {
+            const team = duel.waitingFor()!;
+            const s = duel.state(team, 'd'); const p = s.prompt!;
+            if (s.view.turn > 7) break;
+            if (p.kind === 'chain' && p.forced) asked++;
+            let a: DuelAnswer;
+            if (p.kind === 'actions') {
+                const x = team === 0 ? (p.actions.find((x) => x.verb === 'activate' && x.code === MASK) ?? p.actions.find((x) => x.verb === 'summon')) : undefined;
+                a = { kind: 'choice', id: x ? x.id : (p.next.find((n) => n.to === 'EP') ?? p.next[0])!.id };
+            } else if (p.kind === 'chain') a = { kind: 'choice', id: p.pass ?? p.options[0]!.id };
+            else a = generic(p);
+            expect(duel.answer(team, s.seq, a)).toBe(true);
+        }
+        return { asked, lp: duel.state(0, 'd').view.me.lp };
+    };
+    const now = await forcedAsks(3), before = await forcedAsks(2);
+    expect(before.asked).toBeGreaterThan(0);
+    expect(now.asked).toBe(0);
+    // The damage is dealt all the same.
+    expect(now.lp).toBe(before.lp);
+    expect(now.lp).toBeLessThan(8000);
+}));

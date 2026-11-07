@@ -29,6 +29,8 @@ export interface DuelCardView {
     negated?: boolean;
     /** Counters on it, all kinds together. */
     counters?: number;
+    /** A token's name: tokens aren't in the card catalog, and some have no picture. */
+    token?: string;
 }
 
 export interface DuelSideView {

@@ -33,12 +33,14 @@ export interface DuelSetup {
      * to what the server answers by itself must not apply to duels already underway: their stored
      * answers would land on the wrong questions. Missing means 1.
      *   2: a lone mandatory effect resolves without asking.
+     *   3: so do several copies of one mandatory effect at once (two Masks of the Accursed): the
+     *      order they go on the chain changes nothing. (See RULES.md.)
      */
     rules?: number;
 }
 
 /** The rules new duels start under (see DuelSetup.rules). */
-export const DUEL_RULES = 2;
+export const DUEL_RULES = 3;
 
 export const MODE_FLAGS: Record<DuelModeId, bigint> = {
     MR1: OcgDuelMode.MODE_MR1,
@@ -488,7 +490,15 @@ export class DuelSession {
                 // Nothing to activate: pass. One mandatory effect (Ekibyo Drakmord destroying its monster):
                 // there's no choice to make, so it just happens.
                 if (!m.selects.length && !m.forced) return { type: R.SELECT_CHAIN, index: null };
-                return m.forced && m.selects.length === 1 && (this.setup.rules ?? 1) >= 2 ? { type: R.SELECT_CHAIN, index: 0 } : null;
+                if (m.forced && m.selects.length === 1 && (this.setup.rules ?? 1) >= 2) return { type: R.SELECT_CHAIN, index: 0 };
+                // Several mandatory effects at once are put on the chain in the order their player picks.
+                // When they're all the same effect of the same card (copies of Mask of the Accursed each
+                // inflicting its 500 damage), every order comes to the same thing: no question.
+                if (m.forced && m.selects.length > 1 && (this.setup.rules ?? 1) >= 3) {
+                    const same = m.selects.every((c) => c.code === m.selects[0]!.code && BigInt(c.description) === BigInt(m.selects[0]!.description));
+                    if (same) return { type: R.SELECT_CHAIN, index: 0 };
+                }
+                return null;
             case M.SELECT_COUNTER: {
                 let left = m.count;
                 const counters = m.cards.map((c) => {
@@ -751,8 +761,10 @@ export class DuelSession {
         // The owner sees their own hand and Set cards; nobody sees the rival's.
         const visible = up || controller === viewer;
         const field = location === L.MZONE;
+        const token = visible && c.code && this.engine.isToken(c.code) ? this.engine.name(c.code) : null;
         return {
             uid: this.tracker.uidAt(controller, location, sequence),
+            ...(token ? { token } : {}),
             code: visible ? this.show(c.code ?? 0) : 0,
             faceUp: location === L.HAND ? controller === viewer : up,
             defense: field && (position & P.DEFENSE) !== 0,
@@ -839,20 +851,22 @@ export class DuelSession {
                     return { id: i, uid: r.uid, code: this.show(c.code), where: r.where, ...(text ? { text } : {}) };
                 });
                 const pass = m.forced ? null : 1 << 20;
-                // A window is worth asking about only to answer your rival. With a chain, that's when its
-                // newest link is theirs. Without one: never on your own turn (cards you can use on your own
-                // turn are offered as actions, like an attack), and on theirs only after their play, when
-                // the engine flags a card of yours as made for the moment (spe_count: Trap Hole on a summon).
+                // One question per moment, listing every card you can legally use then; none if there's
+                // nothing (the engine offers only what's legal, and gives priority: after a play, the other
+                // player answers first). Beyond that, a window is worth asking about:
+                // - with a chain: always, if you can add to it. Its newest link is the rival's (respond to
+                //   it), or yours and the rival passed (chain a second card of yours on top);
+                // - without one: never on your own turn (cards you can use then are offered as actions,
+                //   like an attack), and on theirs only after their play, when the engine flags a card of
+                //   yours as made for the moment (spe_count: Trap Hole on a summon);
+                // - in a battle's damage step, once per card per attack, where it counts: not at its start
+                //   (anything usable then still is right before damage calculation), and Lily, usable only
+                //   during the calculation, then.
                 // Optional triggers ("you can...") are asked separately, so none is lost by passing here.
-                // The damage step is different: anything usable there (Injection Fairy Lily during damage
-                // calculation, on your own attack too) can only be used then, so it's always asked.
                 const top = this.chain[this.chain.length - 1];
-                // In the damage step you're asked once per card per attack, where it counts: not at its
-                // start (anything usable then still is right before damage calculation), and only for
-                // cards you haven't been offered yet in it (Lily only becomes usable during the calculation).
                 const fresh = this.damageStep && Number(m.hint_timing) !== 0 ? options.map((o) => `${o.uid}:${o.text ?? ''}`).filter((k) => !this.damageOffered[team].has(k)) : [];
                 fresh.forEach((k) => this.damageOffered[team].add(k));
-                const quiet = !m.forced && !fresh.length && (top ? top.team === team : this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team);
+                const quiet = !m.forced && (!options.length || (!top && !fresh.length && (this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team)));
                 return q({ kind: 'chain', forced: m.forced, options, pass, ...(quiet ? { quiet } : {}) }, (a) => {
                     const id = choice(a);
                     if (id === null) return null;

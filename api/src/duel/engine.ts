@@ -50,11 +50,14 @@ export interface Engine {
     effectKind(code: number): 'buff' | 'wipe' | 'other';
     /** A Continuous Trap (it stays on the field once flipped). */
     isContinuousTrap(code: number): boolean;
+    /** A token (Sheep Token, Ojama Token): made by an effect, never in a deck. */
+    isToken(code: number): boolean;
 }
 
 const TYPE_MONSTER = 0x1;
 const TYPE_TRAP = 0x4;
 const TYPE_CONTINUOUS = 0x20000;
+const TYPE_TOKEN = 0x4000;
 const TYPE_LINK = 0x4000000;
 
 /** Where the engine data lives: next to the source in development, next to dist/ when built. */
@@ -152,6 +155,7 @@ async function build(): Promise<Engine> {
         victoryReason: (reason) => strings.victory[String(reason)] ?? 'The duel is over',
         codeByName: (name) => byName.get(name.trim().toLowerCase()) ?? null,
         isMonster: (code) => ((row(code)?.type ?? 0) & TYPE_MONSTER) !== 0,
+        isToken: (code) => ((row(code)?.type ?? 0) & TYPE_TOKEN) !== 0,
         isContinuousTrap: (code) => ((row(learned.get(code) ?? code)?.type ?? 0) & (TYPE_TRAP | TYPE_CONTINUOUS)) === (TYPE_TRAP | TYPE_CONTINUOUS),
         learn(code, name) {
             if (row(code) || learned.has(code)) return true;

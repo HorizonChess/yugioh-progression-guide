@@ -97,7 +97,7 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
                             <img className="df-flip__back" src={CARD_BACK} alt="" draggable={false} />
                         </span>
                     ) : (
-                        <img src={up ? cardImage(card.code) : CARD_BACK} alt="" draggable={false} />
+                        <Face key={up ? card.code : 0} card={card} up={up} />
                     )}
                     {!up && card.code > 0 && <i className="df-card__peek">Set</i>}
                 </span>
@@ -261,4 +261,14 @@ export function Hand({ cards, marks, onTap, onHover }: { cards: DuelCardView[]; 
             ))}
         </div>
     );
+}
+
+/**
+ * A card's face on the field. A token has no card of its own in the catalog and some have no
+ * picture: then it shows as a plain token with its name.
+ */
+function Face({ card, up }: { card: DuelCardView; up: boolean }) {
+    const [missing, setMissing] = useState(false);
+    if (up && card.token && missing) return <span className="df-token"><b>{card.token}</b><small>Token</small></span>;
+    return <img src={up ? cardImage(card.code) : CARD_BACK} alt="" draggable={false} onError={up && card.token ? () => setMissing(true) : undefined} />;
 }
