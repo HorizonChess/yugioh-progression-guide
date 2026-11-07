@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { DuelCardView, DuelView, Side, Zone as ZoneName } from "@ygo/shared";
+import { zoneKey, type DuelCardView, type DuelView, type Side, type Zone as ZoneName } from "@ygo/shared";
 import { Hand, LifePoints, Pile, RivalHand, Zone, type CardMarks } from "./parts";
 
 export interface BoardProps {
@@ -20,6 +20,8 @@ export interface BoardProps {
 }
 
 const top = (cards: DuelCardView[]) => cards[cards.length - 1];
+/** A row's zone shown at position `i`: the rival's rows are mirrored, so their sequence runs backwards. */
+const seqAt = (side: Side, i: number) => (side === "opp" ? 4 - i : i);
 
 /** The rows of a side, as the viewer sees them: the rival's are mirrored, as across a table. */
 function rows(view: DuelView, side: Side) {
@@ -37,7 +39,7 @@ function ExtraMonsterZones({ view, marks, onCard, onHover }: Pick<BoardProps, "v
     return (
         <div className="df-emz">
             {view.extraMonsters.map((z, i) => (
-                <Zone key={i} card={z?.card ?? null} className="df-zone--monster" marks={marks} side={z?.side ?? "me"} onHover={onHover} onTap={(c) => onCard(c, z?.side ?? "me", "monster")} />
+                <Zone key={i} card={z?.card ?? null} className="df-zone--monster" zone={zoneKey(z?.side ?? "me", "extra-monster", i)} marks={marks} side={z?.side ?? "me"} onHover={onHover} onTap={(c) => onCard(c, z?.side ?? "me", "monster")} />
             ))}
         </div>
     );
@@ -54,8 +56,8 @@ export function PhoneBoard({ view, marks, onCard, onPile, phaseBar, overlay }: B
             <div className={`df-bar df-bar--${side}`}>
                 <LifePoints value={s.lp} side={side} name={s.name} floats={marks.floats} active={view.turnPlayer === side} />
                 <div className="df-bar__zones">
-                    <Zone card={s.field} label="Field" className="df-zone--mini" marks={marks} side={side} onTap={(c) => onCard(c, side, "field")} />
-                    {view.mode === "MR3" && s.pendulum.map((p, i) => <Zone key={i} card={p} label="P" className="df-zone--mini" marks={marks} side={side} onTap={(c) => onCard(c, side, "pendulum")} />)}
+                    <Zone card={s.field} label="Field" className="df-zone--mini" zone={zoneKey(side, "field", 0)} marks={marks} side={side} onTap={(c) => onCard(c, side, "field")} />
+                    {view.mode === "MR3" && s.pendulum.map((p, i) => <Zone key={i} card={p} label="P" className="df-zone--mini" zone={zoneKey(side, "pendulum", i)} marks={marks} side={side} onTap={(c) => onCard(c, side, "pendulum")} />)}
                     <Pile small label="GY" count={s.grave.length} top={top(s.grave)} onTap={() => onPile(side, "grave")} />
                     {s.banished.length > 0 && <Pile small label="Banished" count={s.banished.length} top={top(s.banished)} onTap={() => onPile(side, "banished")} />}
                     <Pile small label="Extra" count={s.extra} back />
@@ -66,8 +68,8 @@ export function PhoneBoard({ view, marks, onCard, onPile, phaseBar, overlay }: B
     };
     const mat = (side: Side) => {
         const r = rows(view, side);
-        const monsters = r.monsters.map((c, i) => <Zone key={`m${i}`} card={c} className="df-zone--monster" marks={marks} side={side} onTap={(x) => onCard(x, side, "monster")} />);
-        const spells = r.spells.map((c, i) => <Zone key={`s${i}`} card={c} className="df-zone--spell" marks={marks} side={side} onTap={(x) => onCard(x, side, "spell")} />);
+        const monsters = r.monsters.map((c, i) => <Zone key={`m${i}`} card={c} className="df-zone--monster" zone={zoneKey(side, "monster", seqAt(side, i))} marks={marks} side={side} onTap={(x) => onCard(x, side, "monster")} />);
+        const spells = r.spells.map((c, i) => <Zone key={`s${i}`} card={c} className="df-zone--spell" zone={zoneKey(side, "spell", seqAt(side, i))} marks={marks} side={side} onTap={(x) => onCard(x, side, "spell")} />);
         return <div className={`df-mat df-mat--${side}`}>{side === "opp" ? <>{spells}{monsters}</> : <>{monsters}{spells}</>}</div>;
     };
     return (
@@ -97,9 +99,9 @@ export function DesktopBoard({ view, marks, onCard, onPile, onHover, phaseBar, o
         const s = view[side];
         const r = rows(view, side);
         const zone = (c: DuelCardView | null, i: number, row: "m" | "s") => (
-            <Zone key={`${row}${i}`} card={c} className={row === "s" ? "df-zone--spell" : "df-zone--monster"} marks={marks} side={side} onHover={onHover} onTap={(x) => onCard(x, side, row === "m" ? "monster" : "spell")} />
+            <Zone key={`${row}${i}`} card={c} className={row === "s" ? "df-zone--spell" : "df-zone--monster"} zone={zoneKey(side, row === "s" ? "spell" : "monster", seqAt(side, i))} marks={marks} side={side} onHover={onHover} onTap={(x) => onCard(x, side, row === "m" ? "monster" : "spell")} />
         );
-        const field = <Zone key="field" card={s.field} label="Field" className="df-zone--side" marks={marks} side={side} onHover={onHover} onTap={(c) => onCard(c, side, "field")} />;
+        const field = <Zone key="field" card={s.field} label="Field" className="df-zone--side" zone={zoneKey(side, "field", 0)} marks={marks} side={side} onHover={onHover} onTap={(c) => onCard(c, side, "field")} />;
         const gy = <Pile key="gy" label="GY" count={s.grave.length} top={top(s.grave)} onTap={() => onPile(side, "grave")} onHover={onHover} />;
         const deck = <Pile key="deck" label="Deck" count={s.deck} back />;
         const extra = <Pile key="extra" label="Extra" count={s.extra} back />;
@@ -111,7 +113,7 @@ export function DesktopBoard({ view, marks, onCard, onPile, onHover, phaseBar, o
         <div className={`df-side-block df-side-block--${s}`}>
             <LifePoints value={view[s].lp} side={s} name={view[s].name} floats={marks.floats} active={view.turnPlayer === s} />
             <div className="df-side-block__piles">
-                {view.mode === "MR3" && view[s].pendulum.map((p, i) => <Zone key={i} card={p} label={i ? "Right P" : "Left P"} className="df-zone--mini" marks={marks} side={s} onHover={onHover} onTap={(c) => onCard(c, s, "pendulum")} />)}
+                {view.mode === "MR3" && view[s].pendulum.map((p, i) => <Zone key={i} card={p} label={i ? "Right P" : "Left P"} className="df-zone--mini" zone={zoneKey(s, "pendulum", i)} marks={marks} side={s} onHover={onHover} onTap={(c) => onCard(c, s, "pendulum")} />)}
                 <Pile small label="Banished" count={view[s].banished.length} top={top(view[s].banished)} onTap={() => onPile(s, "banished")} onHover={onHover} />
                 <span className="df-side-block__hand">{view[s].hand.length} in hand</span>
             </div>

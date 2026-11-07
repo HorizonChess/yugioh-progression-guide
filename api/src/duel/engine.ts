@@ -34,6 +34,12 @@ export interface Engine {
     /** A card's passcode by its exact name (case ignored), for "declare a card name". */
     codeByName(name: string): number | null;
     isMonster(code: number): boolean;
+    /**
+     * Teaches the engine a passcode it doesn't have, by the card's name: YGOPRODeck lists a few
+     * cards under an alternate-art passcode (Barrel Dragon's 81480461) that EDOPro doesn't use.
+     * False if no card of that name exists here (video-game prize cards).
+     */
+    learn(code: number, name: string): boolean;
     baseAttack(code: number): number;
 }
 
@@ -78,14 +84,22 @@ async function build(): Promise<Engine> {
 
     const data = new Map<number, OcgCardData>();
     const scripts = new Map<string, string | null>();
+    /** Passcodes learned from their names: code → the engine's own code for that card. */
+    const learned = new Map<number, number>();
     const row = (code: number) => rows[String(code)];
 
-    return {
+    const engine: Engine = {
         core,
         version,
         cardData(code) {
             const cached = data.get(code);
             if (cached) return cached;
+            const base = learned.get(code);
+            if (base) {
+                const card = { ...engine.cardData(base)!, code, alias: base };
+                data.set(code, card);
+                return card;
+            }
             const r = row(code);
             if (!r) return null;
             const set = BigInt(r.setcode);
@@ -104,13 +118,20 @@ async function build(): Promise<Engine> {
             if (scripts.has(name)) return scripts.get(name)!;
             // Only plain script names: never a path out of the scripts folder.
             if (!/^[\w.-]+\.lua$/.test(name)) return null;
-            const file = /^c\d+\.lua$/.test(name) ? path.join(scriptsDir, 'official', name) : path.join(scriptsDir, name);
+            // A learned passcode plays its card's script.
+            const alt = /^c(\d+)\.lua$/.exec(name);
+            const base = alt && learned.get(Number(alt[1]));
+            if (base) return engine.readScript(`c${base}.lua`);
+            // Card scripts are in official/, or (older versions) in pre-errata/ or goat/.
+            const file = /^c\d+\.lua$/.test(name)
+                ? (['official', 'pre-errata', 'goat'].map((d) => path.join(scriptsDir, d, name)).find((f) => existsSync(f)) ?? '')
+                : path.join(scriptsDir, name);
             // Normal Monsters have no script; the engine asks anyway.
-            const text = existsSync(file) ? readFileSync(file, 'utf-8') : null;
+            const text = file && existsSync(file) ? readFileSync(file, 'utf-8') : null;
             scripts.set(name, text);
             return text;
         },
-        name: (code) => row(code)?.name ?? `Card ${code}`,
+        name: (code) => row(learned.get(code) ?? code)?.name ?? `Card ${code}`,
         describe(description) {
             const d = BigInt(description);
             const code = Number(d >> 20n), index = Number(d & 0xfffffn);
@@ -120,6 +141,14 @@ async function build(): Promise<Engine> {
         victoryReason: (reason) => strings.victory[String(reason)] ?? 'The duel is over',
         codeByName: (name) => byName.get(name.trim().toLowerCase()) ?? null,
         isMonster: (code) => ((row(code)?.type ?? 0) & TYPE_MONSTER) !== 0,
+        learn(code, name) {
+            if (row(code) || learned.has(code)) return true;
+            const base = byName.get(name.trim().toLowerCase());
+            if (!base) return false;
+            learned.set(code, base);
+            return true;
+        },
         baseAttack: (code) => row(code)?.atk ?? 0,
     };
+    return engine;
 }

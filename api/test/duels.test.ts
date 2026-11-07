@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { ObjectId } from 'mongodb';
 import type { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { collectionKey, type DuelAnswer, type DuelPrompt, type DuelServerMessage } from '@ygo/shared';
+import { cardVersionAt, collectionKey, type DuelAnswer, type DuelPrompt, type DuelServerMessage } from '@ygo/shared';
 import { cardSetsCollection, cardsCollection } from '../src/cards/sync';
 import { engineDataAvailable } from '../src/duel/engine';
 import { packSessions } from '../src/game/packs';
@@ -19,9 +19,10 @@ const CARDS: [number, string, string, number][] = [
     [90357090, 'Silver Fang', 'Normal Monster', 3], [15025844, 'Mystical Elf', 'Normal Monster', 3], [54652250, 'Man-Eater Bug', 'Flip Effect Monster', 3],
     [66788016, 'Fissure', 'Spell Card', 2], [83764718, 'Monster Reborn', 'Spell Card', 1], [53129443, 'Dark Hole', 'Spell Card', 1],
     [59197169, 'Yami', 'Spell Card', 2], [4206964, 'Trap Hole', 'Trap Card', 3], [17814387, 'Reinforcements', 'Trap Card', 3], [50045299, 'Dragon Capture Jar', 'Trap Card', 2],
+    [26202165, 'Sangan', 'Effect Monster', 3],
 ];
 // 40 cards: everything above, as many copies as listed, minus a few to land on 40.
-const DECK = CARDS.flatMap(([id, , , n]) => Array<number>(n).fill(id)).slice(0, 40);
+const DECK = [26202165, ...CARDS.flatMap(([id, , , n]) => Array<number>(n).fill(id)).slice(0, 39)];
 
 beforeAll(async () => {
     mongo = await startMongo();
@@ -73,6 +74,7 @@ function humanAnswer(p: DuelPrompt): DuelAnswer {
         case 'yesno': return { kind: 'choice', id: 1 };
         case 'declare': return { kind: 'many', ids: p.options.slice(0, p.count).map((o) => o.id) };
         case 'card-name': return { kind: 'name', name: 'Dark Magician' };
+        case 'place': return { kind: 'many', ids: p.zones.slice(0, p.count).map((z) => z.id) };
         default: return { kind: 'choice', id: p.options[0]!.id };
     }
 }
@@ -121,6 +123,13 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         const stored = await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) });
         expect(stored).toMatchObject({ status: 'finished' });
         expect(stored!.openKey).toBeUndefined();
+        // A 2002 series plays Sangan as first printed (its errata came in 2016), and shows it as the player's own Sangan.
+        const sangan = cardVersionAt('Sangan', '2002-03-08')!;
+        expect(stored!.setup.decks[0].main).toContain(sangan.code);
+        expect(stored!.setup.decks[0].main).not.toContain(26202165);
+        expect(stored!.setup.shown).toMatchObject({ [sangan.code]: 26202165 });
+        // Reinforcements has a 2005 GOAT version, which a 2002 set plays too.
+        expect(Object.values(stored!.setup.shown)).toContain(17814387);
         // Practice records nothing on the series.
         expect((await seriesCollection(app.db).findOne({ _id: new ObjectId(id) }))!.matchHistory).toEqual([]);
     });

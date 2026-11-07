@@ -6,13 +6,16 @@
 //
 // - Card scripts: ProjectIgnis/CardScripts (AGPL-3.0), the root rule library and `official/`.
 // - Card data: ProjectIgnis/BabelCDB cards.cdb (SQLite), turned into cards.json.
+// - Older versions: BabelCDB goat-entries.cdb and cards-unofficial.cdb (scripts in goat/ and pre-errata/).
 // - System strings (effect prompts like "Activate the effect?"): ProjectIgnis/Distribution strings.conf.
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 export const ENGINE_PINS = {
+    /** Bumped when what this script writes changes. */
+    format: 2,
     scripts: '4dc7e9d06ef710dbec72ab594c0999087233558a',
     cards: '86104104d6b6c157765ccf97cea8a47d046928fb',
     strings: '54a6e2395c532648ff762540e9615319fac4f51b',
@@ -66,8 +69,33 @@ for (const r of rows) {
 }
 db.close();
 rmSync(cdbPath);
+
+// 2b. Older versions of cards, each its own passcode with an alias to the real card: GOAT format
+// (2005) versions and pre-errata versions. Kept with their text, for showing the card as printed then.
+let versions = 0;
+for (const [file, dir, kind] of [['goat-entries.cdb', 'goat', 'goat'], ['cards-unofficial.cdb', 'pre-errata', 'pre-errata']] as const) {
+    const extraPath = path.join(DIR, file);
+    writeFileSync(extraPath, await download(`https://raw.githubusercontent.com/ProjectIgnis/BabelCDB/${ENGINE_PINS.cards}/${file}`));
+    const extra = new DatabaseSync(extraPath, { readOnly: true });
+    const q = extra.prepare('SELECT d.*, t.* FROM datas d JOIN texts t ON t.id = d.id WHERE d.id = ?');
+    q.setReadBigInts(true);
+    for (const f of readdirSync(path.join(scripts, dir))) {
+        const r = q.get(Number(f.slice(1, -4))) as Row | undefined;
+        if (!r || !Number(r.alias)) continue;
+        const strs = Array.from({ length: 16 }, (_, i) => String(r[`str${i + 1}`] ?? ''));
+        while (strs.length && !strs[strs.length - 1]) strs.pop();
+        cards[String(r.id)] = {
+            alias: Number(r.alias), setcode: String(r.setcode), type: Number(r.type), atk: Number(r.atk), def: Number(r.def),
+            level: Number(r.level), race: String(r.race), attribute: Number(r.attribute), name: String(r.name), strs,
+            version: kind, desc: String(r.desc ?? ''),
+        };
+        versions++;
+    }
+    extra.close();
+    rmSync(extraPath);
+}
 writeFileSync(path.join(DIR, 'cards.json'), JSON.stringify(cards));
-console.log(`Card data ready: ${rows.length} cards.`);
+console.log(`Card data ready: ${rows.length} cards and ${versions} older versions.`);
 
 // 3. System strings ("!system 30 Activate ...?").
 const conf = (await download(`https://raw.githubusercontent.com/ProjectIgnis/Distribution/${ENGINE_PINS.strings}/config/strings.conf`)).toString('utf-8');

@@ -1,3 +1,4 @@
+import { eraText } from "@/lib/card-era";
 import type { Card } from "@/lib/api";
 import type { FilterState } from "@/components/collection/CollectionFilters";
 import { parseCollectionKey, UNKNOWN_SET, type Collection } from "@/lib/collection";
@@ -23,7 +24,7 @@ export function filterCollection(collection: Collection, cards: Card[], filters:
             // Search
             if (filters.search) {
                 const searchLower = filters.search.toLowerCase();
-                if (!card.name.toLowerCase().includes(searchLower) && !card.desc.toLowerCase().includes(searchLower)) {
+                if (!card.name.toLowerCase().includes(searchLower) && !eraText(card).text.toLowerCase().includes(searchLower)) {
                     return false;
                 }
             }

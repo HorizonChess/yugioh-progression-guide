@@ -3,7 +3,7 @@ import { MongoServerError, ObjectId, type Db } from 'mongodb';
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import type { OcgResponse } from 'ocgcore-wasm';
-import { DuelClientMessageSchema, ruleEraFor, resolveSetIndex, type DuelModeId, type DuelServerMessage } from '@ygo/shared';
+import { DuelClientMessageSchema, cardVersionAt, ruleEraFor, resolveSetIndex, type DuelModeId, type DuelServerMessage } from '@ygo/shared';
 import { confirmReport, reportDuoMatch } from '../game/matches';
 import { findSeries } from '../game/series';
 import { loadEngine } from './engine';
@@ -121,6 +121,8 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             return cached;
         }
         const engine = await loadEngine();
+        // After a restart, relearn any alternate passcodes the decks use before rebuilding.
+        await unknownCards(duel.setup!.decks.flatMap((d) => [...d.main, ...d.extra]));
         const session = new DuelSession(engine, duel.setup!);
         session.start(duel.answers.map(decode));
         const entry = { session, stored: session.answers.length, touched: Date.now() };
@@ -180,10 +182,31 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(message));
     };
 
+    /** Cards the engine can't play: it's taught the ones it knows by another passcode first. */
     async function unknownCards(codes: number[]) {
         const engine = await loadEngine();
-        return [...new Set(codes)].filter((c) => !engine.cardData(c));
+        const unknown = [...new Set(codes)].filter((c) => !engine.cardData(c));
+        if (!unknown.length) return [];
+        const names = new Map((await app.catalog.cardsByIds(unknown)).map((c) => [c.id, c.name]));
+        return unknown.filter((c) => !engine.learn(c, names.get(c) ?? ''));
     }
+
+    /**
+     * The deck as the engine plays it at `date`: each card that had an older version then (its
+     * original text before an errata, or its 2005 GOAT version) is swapped for it. `shown` maps
+     * each swap back, so players still see the card they own.
+     */
+    async function playedAt(deck: { main: number[]; extra: number[] }, date: string | undefined, shown: Record<string, number>) {
+        const names = new Map((await app.catalog.cardsByIds([...deck.main, ...deck.extra])).map((c) => [c.id, c.name]));
+        const swap = (code: number) => {
+            const version = cardVersionAt(names.get(code) ?? '', date);
+            if (!version) return code;
+            shown[String(version.code)] = code;
+            return version.code;
+        };
+        return { main: deck.main.map(swap), extra: deck.extra.map(swap) };
+    }
+    const setDate = async (duel: Pick<DuelDoc, 'setName'>) => (await app.catalog.timeline()).find((s) => s.set_name === duel.setName)?.tcg_date;
 
     async function start(duel: DuelDoc) {
         await sessionOf(duel);
@@ -226,7 +249,9 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 const bot: DuelPlayer = { userId: null, name: 'Practice Bot', deckId: null, bot: true };
                 const players = randomBytes(1)[0]! & 1 ? [me, bot] : [bot, me];
                 doc.players = players;
-                doc.setup = { seed: newSeed(), mode, decks: [deck, deck], names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot] };
+                const shown: Record<string, number> = {};
+                const played = await playedAt(deck, at.set.tcg_date, shown);
+                doc.setup = { seed: newSeed(), mode, decks: [played, played], names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown };
             } else {
                 doc.challengerDeck = deck;
             }
@@ -248,8 +273,11 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             const rival: DuelPlayer = { userId, name, deckId, bot: false };
             const flip = randomBytes(1)[0]! & 1;
             const players = flip ? [challenger, rival] : [rival, challenger];
-            const decks = (flip ? [challengerDeck, deck] : [deck, challengerDeck]) as DuelSetup['decks'];
-            const setup: DuelSetup = { seed: newSeed(), mode: duel.mode, decks, names: [players[0]!.name, players[1]!.name], bots: [false, false] };
+            const shown: Record<string, number> = {};
+            const date = await setDate(duel);
+            const [mine, theirs] = [await playedAt(challengerDeck, date, shown), await playedAt(deck, date, shown)];
+            const decks = (flip ? [mine, theirs] : [theirs, mine]) as DuelSetup['decks'];
+            const setup: DuelSetup = { seed: newSeed(), mode: duel.mode, decks, names: [players[0]!.name, players[1]!.name], bots: [false, false], shown };
             const updated = await duels().findOneAndUpdate(
                 { _id: duel._id, status: 'waiting' },
                 { $set: { status: 'active', players, setup, updatedAt: new Date() }, $unset: { challengerDeck: '' } },

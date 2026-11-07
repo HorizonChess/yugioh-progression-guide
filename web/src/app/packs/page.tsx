@@ -2,13 +2,13 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
-import { fetchAllSets, fetchCardsInSet, Card, CardSet } from "@/lib/api";
+import { fetchAllSets, fetchCardsByIds, fetchCardsInSet, Card, CardSet } from "@/lib/api";
 import type { Opening } from "@/lib/repo/types";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import GuideSprite from "@/components/layout/GuideSprite";
-import { pullLine, ruleLines } from "@/lib/guide/lines";
-import { ruleChangeAt } from "@ygo/shared";
+import { errataLine, pullLine, ruleLines } from "@/lib/guide/lines";
+import { errataBetween, ruleChangeAt } from "@ygo/shared";
 import { guide, seed } from "@/lib/guide/store";
 import StoreView from "@/components/packs/StoreView";
 import PackStageView from "@/components/packs/PackStageView";
@@ -90,6 +90,15 @@ function PacksPageContent() {
                     // Reaching a set where the duel rules change: Yugi says what's different.
                     const change = targetSetIndex === currentSetIndex ? ruleChangeAt(set.tcg_date, sets[targetSetIndex - 1]?.tcg_date) : null;
                     if (change) setTimeout(() => guide.sayAll(ruleLines(change)), 1200);
+                    // Cards the player owns whose errata takes effect with this set.
+                    const owned = [...ownedCountsById(collection).keys()];
+                    const prev = targetSetIndex === currentSetIndex ? sets[targetSetIndex - 1]?.tcg_date : null;
+                    const errata = errataBetween(prev, set.tcg_date);
+                    if (errata.length && owned.length) {
+                        const ownedNames = new Set((await fetchCardsByIds(owned)).map((c) => c.name));
+                        const line = errataLine(errata.map((v) => v.name).filter((n) => ownedNames.has(n)));
+                        if (line) setTimeout(() => guide.say(line), 1600);
+                    }
                     setSetCards(await fetchCardsInSet(set.set_name));
                 }
                 const unsaved = await activeOpening("set");

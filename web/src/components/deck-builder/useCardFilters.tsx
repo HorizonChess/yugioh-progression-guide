@@ -1,5 +1,6 @@
 "use client";
 
+import { eraText } from "@/lib/card-era";
 import { useMemo, useState } from "react";
 import { Card } from "@/lib/api";
 
@@ -26,7 +27,7 @@ export function useCardFilters(cards: Card[]) {
         const result = cards.filter((card) => {
             if (!card) return false;
             if (name && !card.name.toLowerCase().includes(name.toLowerCase())) return false;
-            if (desc && !card.desc.toLowerCase().includes(desc.toLowerCase())) return false;
+            if (desc && !eraText(card).text.toLowerCase().includes(desc.toLowerCase())) return false;
             if (cardType !== "All") {
                 if (cardType === "Monster") {
                     if (card.type.includes("Spell") || card.type.includes("Trap")) return false;

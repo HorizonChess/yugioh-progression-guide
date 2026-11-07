@@ -7,6 +7,7 @@ import { NotificationsProvider } from "@/context/NotificationsContext";
 import GlobalBackground from "@/components/layout/GlobalBackground";
 import AppNav, { PhoneTabBar } from "@/components/layout/AppNav";
 import SeriesGate from "@/components/layout/SeriesGate";
+import CardEraSync from "@/components/layout/CardEraSync";
 
 
 // The visible height, as --app-h: it follows the browser's own bars as they slide in and out, but
@@ -41,6 +42,7 @@ export default function RootLayout({
         <ProgressionProvider>
         <NotificationsProvider>
           <GlobalBackground />
+          <CardEraSync />
           {/* Row 1 (auto): the ONE persistent nav. AppNav shows it only on the
               app-zone pages that opted in; it never unmounts or animates across
               those navigations, so it stays identical. */}

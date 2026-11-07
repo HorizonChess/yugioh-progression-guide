@@ -4,7 +4,7 @@ import {
     type OcgCardLoc, type OcgDuelHandle, type OcgMessage, type OcgResponse,
 } from 'ocgcore-wasm';
 import type {
-    ActionVerb, DuelAnswer, DuelCardView, DuelEvent, DuelFrame, DuelModeId, DuelPrompt, DuelSideView, DuelState, DuelView, Phase, PromptCard, Side, Zone,
+    ActionVerb, DuelAnswer, DuelCardView, PlaceZone, DuelEvent, DuelFrame, DuelModeId, DuelPrompt, DuelSideView, DuelState, DuelView, Phase, PromptCard, Side, Zone,
 } from '@ygo/shared';
 import { botAnswer } from './bot';
 import type { Engine } from './engine';
@@ -24,6 +24,8 @@ export interface DuelSetup {
     decks: [{ main: number[]; extra: number[] }, { main: number[]; extra: number[] }];
     names: [string, string];
     bots: [boolean, boolean];
+    /** Older versions played in place of a deck card (engine code → the card's own code), shown as the card itself. */
+    shown?: Record<string, number>;
 }
 
 export const MODE_FLAGS: Record<DuelModeId, bigint> = {
@@ -173,6 +175,9 @@ export class DuelSession {
     botActions = 0;
 
     constructor(private readonly engine: Engine, readonly setup: DuelSetup) {}
+
+    /** The code a player sees: an older version shows as the card they own. */
+    private show = (code: number) => this.setup.shown?.[String(code)] ?? code;
 
     /** Starts the duel, replaying `answers` (from storage) to rebuild where it was. */
     start(answers: readonly OcgResponse[] = []): void {
@@ -337,6 +342,8 @@ export class DuelSession {
         switch (m.type) {
             case M.SELECT_PLACE:
             case M.SELECT_DISFIELD: {
+                // A player chooses the zone (as on EDOPro), unless there's no choice to make; the bot takes the middle-most.
+                if (!this.setup.bots[m.player as Team] && openZones(m.field_mask).length > m.count) return null;
                 const places = [];
                 let mask = m.field_mask;
                 for (let i = 0; i < m.count; i++) {
@@ -479,14 +486,15 @@ export class DuelSession {
             switch (e.k) {
                 case 'turn': return { k: 'turn', side: side(e.team), turn: e.turn };
                 case 'draw': return { k: 'draw', side: side(e.team), count: e.count };
-                case 'summon': return { k: 'summon', side: side(e.team), code: e.code, how: e.how };
+                case 'summon': return { k: 'summon', side: side(e.team), code: this.show(e.code), how: e.how };
                 case 'set': return { k: 'set', side: side(e.team) };
-                case 'activate': return { k: 'activate', side: side(e.team), code: e.code, uid: e.uid, link: e.link };
+                case 'activate': return { k: 'activate', side: side(e.team), code: this.show(e.code), uid: e.uid, link: e.link };
                 case 'attack': return { k: 'attack', side: side(e.team), attacker: e.attacker, target: e.target };
-                case 'move': return { k: 'move', uid: e.uid, code: e.public || e.team === team ? e.code : 0, side: side(e.team), from: e.from, to: e.to };
-                case 'reposition': return { k: 'reposition', uid: e.uid, code: e.public ? e.code : 0 };
+                case 'move': return { k: 'move', uid: e.uid, code: e.public || e.team === team ? this.show(e.code) : 0, side: side(e.team), from: e.from, to: e.to };
+                case 'reposition': return { k: 'reposition', uid: e.uid, code: e.public ? this.show(e.code) : 0 };
                 case 'damage': case 'pay': case 'recover': return { k: e.k, side: side(e.team), amount: e.amount };
                 case 'win': return { k: 'win', side: e.team === null ? null : side(e.team), reason: e.reason };
+                case 'destroyed': return { k: 'destroyed', uid: e.uid, code: this.show(e.code) };
                 default: return e;
             }
         });
@@ -517,7 +525,7 @@ export class DuelSession {
             me,
             opp,
             extraMonsters: emz,
-            chain: this.chain.map((c) => ({ code: c.code, side: c.team === team ? 'me' : 'opp', uid: c.uid })),
+            chain: this.chain.map((c) => ({ code: this.show(c.code), side: c.team === team ? 'me' : 'opp', uid: c.uid })),
         };
     }
 
@@ -555,7 +563,7 @@ export class DuelSession {
         const field = location === L.MZONE;
         return {
             uid: this.tracker.uidAt(controller, location, sequence),
-            code: visible ? (c.code ?? 0) : 0,
+            code: visible ? this.show(c.code ?? 0) : 0,
             faceUp: location === L.HAND ? controller === viewer : up,
             defense: field && (position & P.DEFENSE) !== 0,
             ...(field && up ? { atk: c.attack, def: c.defense, baseAtk: c.baseAttack, baseDef: c.baseDefense } : {}),
@@ -566,7 +574,7 @@ export class DuelSession {
 
     private ref(c: OcgCardLoc, id: number, asker: Team): PromptCard {
         return {
-            id, code: c.location === L.DECK && c.controller !== asker ? 0 : c.code, side: c.controller === asker ? 'me' : 'opp',
+            id, code: c.location === L.DECK && c.controller !== asker ? 0 : this.show(c.code), side: c.controller === asker ? 'me' : 'opp',
             where: zoneOf(c.location, c.sequence),
             ...(c.location !== L.DECK ? { uid: this.tracker.uidAt(c.controller, c.location, c.sequence) } : {}),
         };
@@ -592,7 +600,7 @@ export class DuelSession {
                 const actions = groups.flatMap(([action, verb, list]) => list.map((c, index) => {
                     const r = this.ref(c, action * 1000 + index, team);
                     const text = 'description' in c ? describe((c as { description: bigint }).description) : undefined;
-                    return { id: r.id, uid: r.uid, code: c.code, where: r.where, verb, ...(text ? { text } : {}) };
+                    return { id: r.id, uid: r.uid, code: this.show(c.code), where: r.where, verb, ...(text ? { text } : {}) };
                 }));
                 const next = [...(m.to_bp ? [{ id: I.TO_BP * 1000, to: 'BP' as const }] : []), ...(m.to_ep ? [{ id: I.TO_EP * 1000, to: 'EP' as const }] : [])];
                 const ids = new Set([...actions.map((a) => a.id), ...next.map((n) => n.id)]);
@@ -608,11 +616,11 @@ export class DuelSession {
                     ...m.chains.map((c, index) => {
                         const r = this.ref(c, B.SELECT_CHAIN * 1000 + index, team);
                         const text = describe(c.description);
-                        return { id: r.id, uid: r.uid, code: c.code, where: r.where, verb: 'activate' as const, ...(text ? { text } : {}) };
+                        return { id: r.id, uid: r.uid, code: this.show(c.code), where: r.where, verb: 'activate' as const, ...(text ? { text } : {}) };
                     }),
                     ...m.attacks.map((c, index) => {
                         const r = this.ref(c, B.SELECT_BATTLE * 1000 + index, team);
-                        return { id: r.id, uid: r.uid, code: c.code, where: r.where, verb: c.can_direct ? ('attack-direct' as const) : ('attack' as const) };
+                        return { id: r.id, uid: r.uid, code: this.show(c.code), where: r.where, verb: c.can_direct ? ('attack-direct' as const) : ('attack' as const) };
                     }),
                 ];
                 const next = [...(m.to_m2 ? [{ id: B.TO_M2 * 1000, to: 'M2' as const }] : []), ...(m.to_ep ? [{ id: B.TO_EP * 1000, to: 'EP' as const }] : [])];
@@ -628,7 +636,7 @@ export class DuelSession {
                 const options = m.selects.map((c, i) => {
                     const r = this.ref(c, i, team);
                     const text = describe(c.description);
-                    return { id: i, uid: r.uid, code: c.code, where: r.where, ...(text ? { text } : {}) };
+                    return { id: i, uid: r.uid, code: this.show(c.code), where: r.where, ...(text ? { text } : {}) };
                 });
                 const pass = m.forced ? null : 1 << 20;
                 return q({ kind: 'chain', forced: m.forced, options, pass }, (a) => {
@@ -673,7 +681,7 @@ export class DuelSession {
             case M.SELECT_YESNO: {
                 const code = m.type === M.SELECT_EFFECTYN ? m.code : undefined;
                 const text = describe(m.description) ?? (code ? `Use the effect of ${this.engine.name(code)}?` : 'Yes or no?');
-                return q({ kind: 'yesno', title: text.replace('[%ls]', code ? this.engine.name(code) : ''), ...(code ? { code } : {}) }, (a) => {
+                return q({ kind: 'yesno', title: text.replace('[%ls]', code ? this.engine.name(code) : ''), ...(code ? { code: this.show(code) } : {}) }, (a) => {
                     const id = choice(a);
                     if (id !== 0 && id !== 1) return null;
                     return m.type === M.SELECT_EFFECTYN ? { type: R.SELECT_EFFECTYN, yes: id === 1 } : { type: R.SELECT_YESNO, yes: id === 1 };
@@ -688,7 +696,7 @@ export class DuelSession {
             }
             case M.SELECT_POSITION: {
                 const options = [P.FACEUP_ATTACK, P.FACEDOWN_ATTACK, P.FACEUP_DEFENSE, P.FACEDOWN_DEFENSE].filter((p) => m.positions & p).map((p) => ({ id: p, label: POSITION_LABEL[p]! }));
-                return q({ kind: 'position', code: m.code, options }, (a) => {
+                return q({ kind: 'position', code: this.show(m.code), options }, (a) => {
                     const id = choice(a);
                     return id !== null && options.some((o) => o.id === id) ? { type: R.SELECT_POSITION, position: id as P } : null;
                 });
@@ -710,6 +718,24 @@ export class DuelSession {
                     const ids = many(a);
                     if (!ids || ids.length !== m.count || ids.some((i) => !options.some((o) => o.id === i))) return null;
                     return race ? { type: R.ANNOUNCE_RACE, races: ids.map((i) => 1n << BigInt(i)) as never } : { type: R.ANNOUNCE_ATTRIB, attributes: ids.map((i) => 1 << i) as never };
+                });
+            }
+            case M.SELECT_PLACE:
+            case M.SELECT_DISFIELD: {
+                const disable = m.type === M.SELECT_DISFIELD;
+                const zones = openZones(m.field_mask).map((bit) => {
+                    const mine = bit < 16, seq = bit % 8, spell = bit % 16 >= 8;
+                    const zone: PlaceZone['zone'] = !spell ? (seq >= 5 ? 'extra-monster' : 'monster') : seq === 5 ? 'field' : seq >= 6 ? 'pendulum' : 'spell';
+                    // Extra Monster Zones are one shared row: as the asker sees it, the rival's are mirrored.
+                    const index = zone === 'extra-monster' ? (mine ? seq - 5 : 6 - seq) : zone === 'pendulum' ? seq - 6 : zone === 'field' ? 0 : seq;
+                    return { id: bit, side: (mine ? 'me' : 'opp') as Side, zone, index };
+                });
+                const title = disable ? `Choose ${m.count > 1 ? `${m.count} zones` : 'a zone'} to block` : `Choose ${m.count > 1 ? `${m.count} zones` : 'a zone'} for the card`;
+                return q({ kind: 'place', title, count: m.count, disable, zones }, (a) => {
+                    const ids = a.kind === 'many' ? a.ids : a.kind === 'choice' ? [a.id] : null;
+                    if (!ids || ids.length !== m.count || new Set(ids).size !== ids.length || ids.some((id) => !zones.some((z) => z.id === id))) return null;
+                    const places = ids.map((bit) => ({ player: bit < 16 ? m.player : 1 - m.player, location: bit % 16 >= 8 ? L.SZONE : L.MZONE, sequence: bit % 8 }));
+                    return disable ? { type: R.SELECT_DISFIELD, places } : { type: R.SELECT_PLACE, places };
                 });
             }
             case M.ANNOUNCE_CARD:
@@ -764,6 +790,13 @@ type TeamEvent =
     | { k: 'reposition'; uid: string; code: number; public: boolean }
     | { k: 'damage' | 'pay' | 'recover'; team: Team; amount: number }
     | { k: 'win'; team: Team | null; reason: string };
+
+/** The zones a placement mask leaves open (a set bit is a blocked zone), as bit numbers. */
+function openZones(mask: number): number[] {
+    const out = [];
+    for (const base of [0, 8, 16, 24]) for (let seq = 0; seq < 8; seq++) if (!(mask & (1 << (base + seq)))) out.push(base + seq);
+    return out;
+}
 
 /** The first open zone, nearest the middle, as players usually place cards. A set bit is a blocked zone. */
 function freePlace(mask: number, player: number) {

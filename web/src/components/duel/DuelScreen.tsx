@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import type { ActionVerb, DuelCardView, DuelEvent, DuelPrompt, DuelView, Phase, PromptCard, Side, Zone } from "@ygo/shared";
+import { zoneKey, type ActionVerb, type DuelCardView, type DuelEvent, type DuelPrompt, type DuelView, type Phase, type PlaceZone, type PromptCard, type Side, type Zone } from "@ygo/shared";
 import { CardCloseUp, CardPlate } from "@/components/card/CardPlate";
 import { printedIn, type StageCard } from "@/components/packs/stage/plate";
 import { fetchCardsByIds, type Card } from "@/lib/api";
@@ -112,8 +112,22 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             prompt.cards.filter((c) => picked.includes(c.id)).forEach((c) => chosen.add(c.uid!));
             prompt.step?.chosen.forEach((c) => c.uid && chosen.add(c.uid));
         }
-        return { glow, picked: chosen, destroying: effects.destroying, floats: effects.floats };
-    }, [prompt, boardPick, picked, effects]);
+        // Zones a placement question offers. The Extra Monster Zones are one shared row, keyed as you see it.
+        const keyOf = (z: PlaceZone) => zoneKey(z.zone === "extra-monster" ? "me" : z.side, z.zone, z.index);
+        const zones = new Set<string>(), chosenZones = new Set<string>();
+        if (prompt?.kind === "place") {
+            prompt.zones.forEach((z) => zones.add(keyOf(z)));
+            prompt.zones.filter((z) => picked.includes(z.id)).forEach((z) => chosenZones.add(keyOf(z)));
+        }
+        const onZone = (key: string) => {
+            if (prompt?.kind !== "place") return;
+            const z = prompt.zones.find((x) => keyOf(x) === key);
+            if (!z) return;
+            if (prompt.count === 1) return answer({ kind: "choice", id: z.id });
+            setPicked((p) => (p.includes(z.id) ? p.filter((x) => x !== z.id) : p.length < prompt.count ? [...p, z.id] : p));
+        };
+        return { glow, picked: chosen, destroying: effects.destroying, floats: effects.floats, zones, chosenZones, onZone };
+    }, [prompt, boardPick, picked, effects, answer]);
 
     const togglePick = (id: number, max: number, min: number) => {
         if (prompt?.kind !== "cards") return;
@@ -274,6 +288,14 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                     ))}</div>
                     <div className="df-sheet__options">{option("Declare", () => answer({ kind: "many", ids: picked }), { disabled: picked.length !== prompt.count })}</div>
                 </>);
+                break;
+            case "place":
+                question = sheet(prompt.title, (
+                    <div className="df-sheet__bar">
+                        <span>{prompt.disable ? "Tap the glowing zones" : "Tap a glowing zone"}</span>
+                        {prompt.count > 1 && option(`Confirm (${picked.length}/${prompt.count})`, () => answer({ kind: "many", ids: picked }), { disabled: picked.length !== prompt.count })}
+                    </div>
+                ), { compact: true });
                 break;
             case "card-name":
                 question = sheet(prompt.title, <form className="df-sheet__form" onSubmit={(e) => (e.preventDefault(), answer({ kind: "name", name: nameGuess }))}>

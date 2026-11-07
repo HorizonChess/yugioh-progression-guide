@@ -105,6 +105,12 @@
     pointer-events: none;
 }
 
+/* A zone a placement question offers: it glows, and the whole zone is the button. */
+.df-zone.is-offered::before { border-color: #f5c542; animation: df-glow 1s ease-in-out infinite alternate; }
+.df-zone.is-chosen::before { border-color: #8dff8d; box-shadow: 0 0 0 2px #8dff8d, 0 0 16px #8dff8d; }
+.df-zone__pick { position: absolute; inset: 0; z-index: 4; padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 6px; }
+.df-zone__pick:hover { background: rgba(245, 197, 66, 0.12); }
+
 /* ---------------------------------------------------------------- cards */
 .df-card {
     position: relative;

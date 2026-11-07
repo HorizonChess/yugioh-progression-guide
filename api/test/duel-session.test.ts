@@ -41,6 +41,8 @@ function humanAnswer(p: DuelPrompt): DuelAnswer {
             return { kind: 'many', ids: p.options.slice(0, p.count).map((o) => o.id) };
         case 'card-name':
             return { kind: 'name', name: 'Dark Magician' };
+        case 'place':
+            return { kind: 'many', ids: p.zones.slice(0, p.count).map((z) => z.id) };
     }
 }
 
@@ -74,6 +76,8 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
         }
         expect(duel.result).not.toBeNull();
         expect(kinds).toContain('actions');
+        // Summoning or setting asks where, as on EDOPro.
+        expect(kinds).toContain('place');
         expect(duel.takeFrames(0).length).toBeGreaterThan(10);
 
         // The seed and the answers rebuild the same duel.

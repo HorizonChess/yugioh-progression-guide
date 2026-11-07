@@ -1,0 +1,2090 @@
+[
+ {
+  "name": "A Cat of Ill Omen",
+  "kind": "goat",
+  "code": 504700042,
+  "base": 24140059,
+  "until": "2005-10-01",
+  "text": "FLIP: Select 1 Trap Card from your Deck and place it on top of your Deck. If \"Necrovalley\" is on the field, you can add the selected Trap Card to your hand instead.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "A Deal with Dark Ruler",
+  "kind": "goat",
+  "code": 504700010,
+  "base": 6850209,
+  "until": "2005-10-01",
+  "text": "You can only activate this card during a turn in which a Level 8 or higher monster on your side of the field was sent to the Graveyard. Special Summon 1 \"Berserk Dragon\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "A-Team: Trap Disposal Unit",
+  "kind": "goat",
+  "code": 504700019,
+  "base": 13026402,
+  "until": "2005-10-01",
+  "text": "This effect can be used during either player's turn. When your opponent activates a Trap Card, Tribute this face-up card to negate the activation of the Trap Card and destroy it.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Abyssal Designator",
+  "kind": "goat",
+  "code": 504700155,
+  "base": 89801755,
+  "until": "2005-10-01",
+  "text": "Pay 1000 Life Points. Declare a Type and an Attribute. Your opponent must send 1 monster with both the Type and Attribute declared from his/her hand or Deck to the Graveyard.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Altar for Tribute",
+  "kind": "goat",
+  "code": 504700180,
+  "base": 21070956,
+  "until": "2005-10-01",
+  "text": "Select 1 monster on your side of the field and send it to the Graveyard. Increase your Life Points by an amount equal to the original ATK of the monster.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "An Owl of Luck",
+  "kind": "goat",
+  "code": 504700041,
+  "base": 23927567,
+  "until": "2005-10-01",
+  "text": "FLIP: Select 1 Field Spell Card from your Deck and place it on top of your Deck. If \"Necrovalley\" is on the field, you can add the selected Field Spell Card to your hand instead.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Ancient Fairy Dragon",
+  "kind": "pre-errata",
+  "code": 25862691,
+  "base": 25862681,
+  "until": null,
+  "text": "1 Tuner + 1+ non-Tuner monsters\r\nOnce per turn: You can Special Summon 1 Level 4 or lower monster from your hand. You cannot conduct your Battle Phase the turn you activate this effect. Once per turn: You can destroy as many Field Spells on the field as possible, and if you do, gain 1000 LP, then you can add 1 Field Spell from your Deck to your hand.",
+  "source": "Errata first printed on MAZE-EN050 (2023)"
+ },
+ {
+  "name": "Andro Sphinx",
+  "kind": "goat",
+  "code": 504700021,
+  "base": 15013468,
+  "until": "2005-10-01",
+  "text": "You can pay 500 Life Points to Special Summon this card when \"Pyramid of Light\" is on the field. This card cannot attack during the turn that it is Normal Summoned or Special Summoned. This card cannot be Special Summoned from the Graveyard. If this card destroys a Defense Position monster as a result of battle, inflict damage to your opponent's Life Points equal to half of the ATK of the destroyed monster.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Apprentice Magician",
+  "kind": "goat",
+  "code": 504700013,
+  "base": 9156135,
+  "until": "2005-10-01",
+  "text": "When this card is successfully Normal Summoned, Flip Summoned, or Special Summoned, put 1 Spell Counter on a face-up card on the field that you can put a Spell Counter on. If this card is destroyed as a result of battle, you can select 1 Spellcaster-Type monster Level 2 or lower from your deck and Special Summon it on the field in face-down Defense Position.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Aqua Chorus",
+  "kind": "goat",
+  "code": 504700166,
+  "base": 95132338,
+  "until": "2005-10-01",
+  "text": "If there are monsters with the same name on the field, increase the ATK and DEF of all of those monsters with the same name by 500 points.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Armed Dragon LV3",
+  "kind": "goat",
+  "code": 504700003,
+  "base": 980973,
+  "until": "2005-10-01",
+  "text": "During your Standby Phase, send this face-up card to the Graveyard to Special Summon 1 \"Armed Dragon LV5\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Armed Dragon LV5",
+  "kind": "goat",
+  "code": 504700075,
+  "base": 46384672,
+  "until": "2005-10-01",
+  "text": "Send 1 Monster Card from your hand to the Graveyard to destroy 1 face-up monster on your opponent's side of the field with an ATK equal to or less than the ATK of the sent monster. During the End Phase of a turn that this card destroyed a monster as a result of battle, send this card to the Graveyard to Special Summon 1 \"Armed Dragon LV7\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Arsenal Robber",
+  "kind": "goat",
+  "code": 504700089,
+  "base": 55348096,
+  "until": "2005-10-01",
+  "text": "Your opponent selects 1 Equip Spell Card from his/her Deck and sends it to the Graveyard.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Arsenal Summoner",
+  "kind": "goat",
+  "code": 504700146,
+  "base": 85489096,
+  "until": "2005-10-01",
+  "text": "FLIP: Add 1 card that includes \"Guardian\" in its card name from your Deck to your hand. You cannot add \"Celtic Guardian\", \"Winged Dragon, Guardian of the Fortress #1\", \"Winged Dragon, Guardian of the Fortress #2\", \"Guardian of of the Labyrinth\", or \"The Reliable Guardian\".",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Atomic Firefly",
+  "kind": "goat",
+  "code": 504700150,
+  "base": 87340664,
+  "until": "2005-10-01",
+  "text": "When this face-up card on the field attacks or is attacked and it is destroyed as a result of battle, the player who destroyed it takes 1000 points of damage.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Attack and Receive",
+  "kind": "goat",
+  "code": 504700103,
+  "base": 63689843,
+  "until": "2005-10-01",
+  "text": "You can only activate this card when you take damage to your Life Points. Inflict 700 points of damage to your opponent's Life Points. Also, inflict 300 points of damage to your opponent's Life Points for each \"Attack and Receive\" card in your Graveyard.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Axe of Despair",
+  "kind": "goat",
+  "code": 504700068,
+  "base": 40619825,
+  "until": "2005-10-01",
+  "text": "Increase the ATK of a monster equipped with this card by 1000 points. When this card is sent from the field to the Graveyard, if you Tribute 1 monster on your side of the field, this card returns to the top of your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Balloon Lizard",
+  "kind": "goat",
+  "code": 504700065,
+  "base": 39892082,
+  "until": "2005-10-01",
+  "text": "Put 1 counter on this card during each of your Standby Phases. When this card is destroyed, inflict damage to the controller of the card that destroyed it equal to the number of counters x 400 points.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Bark of Dark Ruler",
+  "kind": "goat",
+  "code": 504700070,
+  "base": 41925941,
+  "until": "2005-10-01",
+  "text": "You can only activate this card during the Damage Step of a Battle Phase if a Fiend-Type monster on your side of the field battles. Pay Life Points (in multiples of 100 points) to decrease 1 of your opponent's monster's ATK and DEF by the same amount of points until End Phase of that turn.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Behemoth the King of All Animals",
+  "kind": "goat",
+  "code": 504700035,
+  "base": 22996376,
+  "until": "2005-10-01",
+  "text": "This card can be Normal Summoned or Set with 1 Tribute Monster. In that case, the original ATK of this card becomes 2000. When this card is Tribute Summoned successfully, you can return from your Graveyard to the owner's hand a number of Beast-Type monsters equal to the number of Tributed monsters.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Birdface",
+  "kind": "goat",
+  "code": 504700073,
+  "base": 45547649,
+  "until": "2005-10-01",
+  "text": "When this card is sent to the Graveyard as a result of battle, you can add 1 \"Harpie Lady\" from your Deck to your hand. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Black Luster Soldier - Envoy of the Beginning",
+  "kind": "goat",
+  "code": 504700118,
+  "base": 72989439,
+  "until": "2005-10-01",
+  "text": "This card cannot be Normal Summoned or Set. This card can only be Special Summoned by removing from play 1 LIGHT and 1 DARK monster in your Graveyard. Once during each of your turns, you can select and activate 1 of the following effects:\r\n● Remove from play 1 monster on the field. If you activate this effect, this card cannot attack during this turn.\r\n● If this card destroyed your opponent's monster as a result of battle, it can attack once again in a row.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Blast with Chain",
+  "kind": "goat",
+  "code": 504700173,
+  "base": 98239899,
+  "until": "2005-10-01",
+  "text": "After activation, this card is treated as an Equip Card that increases the ATK of the equipped monster by 500 points. Equip a monster on your side of the field with this card. If this card is destroyed by the effect of another card while it is an Equip Card, select 1 card on the field and destroy it.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Blue-Eyes Toon Dragon",
+  "kind": "goat",
+  "code": 504700086,
+  "base": 53183600,
+  "until": "2005-10-01",
+  "text": "This card cannot be Normal Summoned or Set. This card can only be Special Summoned while \"Toon World\" is on your side the field. You can Special Summon this monster from your hand, but Tributes are required for monsters Level 5 or more. This card cannot attack in the turn that it is Summoned. Unless you pay 500 Life Points, this monster cannot attack. When \"Toon World\" on the field is destroyed, this card is also destroyed. If your opponent doesn't control a Toon Monster, this card can attack your opponent's Life Points directly. If a face-up Toon Monster is on your opponent's side of the field, you must select the Toon Monster as an attack target.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Bottomless Trap Hole",
+  "kind": "goat",
+  "code": 504700052,
+  "base": 29401950,
+  "until": "2005-10-01",
+  "text": "When your opponent Normal Summons, Flip Summons, or Special Summons a monster(s) with an ATK of 1500 or more, destroy and remove from play the monster(s).",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Brain Control",
+  "kind": "pre-errata",
+  "code": 511002995,
+  "base": 87910978,
+  "until": "2017-03-30",
+  "text": "Pay 800 LP, then target 1 face-up monster your opponent controls; take control of that target until the End Phase.",
+  "source": "Errata first printed on DUSA-EN046 (Duelist Saga)"
+ },
+ {
+  "name": "Brionac, Dragon of the Ice Barrier",
+  "kind": "pre-errata",
+  "code": 511002993,
+  "base": 50321796,
+  "until": "2017-03-30",
+  "text": "1 Tuner + 1+ non-Tuner monsters\r\nYou can discard any number of cards, then target an equal number of cards on the field; return them to the hand.",
+  "source": "Errata first printed on DUSA-EN073 (Duelist Saga)"
+ },
+ {
+  "name": "Bubble Crash",
+  "kind": "goat",
+  "code": 504700100,
+  "base": 61622107,
+  "until": "2005-10-01",
+  "text": "This card can only be activated when any player has 6 or more cards on the field and/or in their hand. The player(s) then select and send cards to their respective Graveyards until the amount remaining on the field and in their hand is 5.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Bubonic Vermin",
+  "kind": "goat",
+  "code": 504700008,
+  "base": 6104968,
+  "until": "2005-10-01",
+  "text": "FLIP: You can Special Summon 1 \"Bubonic Vermin\" from your Deck in face-down Defense Position. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Burning Land",
+  "kind": "goat",
+  "code": 504700043,
+  "base": 24294108,
+  "until": "2005-10-01",
+  "text": "Destroy all Field Spell Cards on the field. Inflict 500 points of damage to each player's Life Points during his/her Standby Phase.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Burst Stream of Destruction",
+  "kind": "goat",
+  "code": 504700026,
+  "base": 17655904,
+  "until": "2005-10-01",
+  "text": "You can only activate this card while there is a face-up \"Blue-Eyes White Dragon\" on your side of the field. Destroy all monsters on your opponent's side of the field. No \"Blue-Eyes White Dragon\" can attack during the turn you activate this card.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Castle Walls",
+  "kind": "goat",
+  "code": 504700072,
+  "base": 44209392,
+  "until": "2005-10-01",
+  "text": "Increase a selected monster's DEF by 500 points during the turn this card is activated.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Catapult Turtle",
+  "kind": "pre-errata",
+  "code": 511000228,
+  "base": 95727991,
+  "until": "2014-06-27",
+  "text": "You can Tribute 1 monster; inflict damage to your opponent equal to half the Tributed monster's ATK on the field.",
+  "source": "Errata first printed on DL18-EN001 (Duelist League 18)"
+ },
+ {
+  "name": "Chaosrider Gustaph",
+  "kind": "goat",
+  "code": 504700078,
+  "base": 47829960,
+  "until": "2005-10-01",
+  "text": "You can remove up to 2 Spell Cards in your Graveyard from play to increase the ATK of this monster by 300 points for each card removed from play until the end of your opponent's next turn. This effect can only be used once during your turn.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Cipher Soldier",
+  "kind": "goat",
+  "code": 504700139,
+  "base": 79853073,
+  "until": "2005-10-01",
+  "text": "When this card battles with a Warrior-Type monster, increase the ATK and DEF of this monster by 2000 points only during damage calculation.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Cipher Soldier",
+  "kind": "pre-errata",
+  "code": 511006006,
+  "base": 79853073,
+  "until": "2007-09-06",
+  "text": "If this card battles a Warrior-Type monster, during damage calculation: This card gains 2000 ATK and DEF during that damage calculation only.",
+  "source": "Errata first printed on CP04-EN010 (Champion Pack: Game Four)"
+ },
+ {
+  "name": "Clear World",
+  "kind": "pre-errata",
+  "code": 33900658,
+  "base": 33900648,
+  "until": null,
+  "text": "During each of your End Phases, pay 500 Life Points or destroy this card. Each player receives effects, depending on the monster Attributes they control.\r\n● LIGHT: Play with your hand revealed at all times.\r\n● DARK: If you control 2 or more monsters, you cannot declare an attack.\r\n● EARTH: During your Standby Phase: Target 1 face-up Defense Position monster you control; destroy that target.\r\n● WATER: During your End Phase: Discard 1 card.\r\n● FIRE: During your End Phase: Take 1000 damage.\r\n● WIND: You must pay 500 Life Points to activate a Spell Card.",
+  "source": "Errata first printed on MZTM-EN098 (2025)"
+ },
+ {
+  "name": "Cocoon of Evolution",
+  "kind": "goat",
+  "code": 504700067,
+  "base": 40240595,
+  "until": "2005-10-01",
+  "text": "You can equip this card from your hand as an Equip Spell Card to a face-up \"Petit Moth\" on the field. If equipped, the ATK and DEF of \"Cocoon of Evolution\" is applied to \"Petit Moth\".",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Combination Attack",
+  "kind": "goat",
+  "code": 504700012,
+  "base": 8964854,
+  "until": "2005-10-01",
+  "text": "During a Battle Phase, you can use this effect on 1 monster that has attacked this turn and is equipped with a Union Monster. Change the Union Monster back to a monster in face-up Attack or Defense Position. Also, the monster that was equipped with the Union Monster may attack again this turn.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Continuous Destruction Punch",
+  "kind": "goat",
+  "code": 504700110,
+  "base": 68057622,
+  "until": "2005-10-01",
+  "text": "If the DEF of the attacked Defense Position monster on your side of the field is higher than the ATK of the attacking monster on your opponent's side of the field, destroy the attacking monster. Damage calculation is applied normally.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Cost Down",
+  "kind": "goat",
+  "code": 504700039,
+  "base": 23265313,
+  "until": "2005-10-01",
+  "text": "Discard 1 card from your hand. Downgrade all Monster Cards in your hand by 2 Levels until the End Phase of the turn this card is activated.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Covering Fire",
+  "kind": "goat",
+  "code": 504700127,
+  "base": 74458486,
+  "until": "2005-10-01",
+  "text": "If your opponent's monster attacks a monster on your side of the field, you can activate this card during the Damage Step. Increase the ATK of your attacked monster by the ATK of 1 other face-up monster on your side of the field during the Damage Step.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Crimson Sentry",
+  "kind": "goat",
+  "code": 504700187,
+  "base": 28358902,
+  "until": "2005-10-01",
+  "text": "Offer this face-up card as a Tribute to return 1 of your monsters destroyed in battle during this turn to the bottom of your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Crush Card Virus",
+  "kind": "pre-errata",
+  "code": 511000822,
+  "base": 57728570,
+  "until": "2015-03-19",
+  "text": "Tribute 1 DARK monster with 1000 or less ATK; Check all monsters your opponent controls, your opponent's hand, and all cards they draw (until the end of your opponent's 3rd turn after this card's activation), and destroy all monsters with 1500 or more ATK.",
+  "source": "Errata first printed on PGL2-EN070 (Premium Gold: Return of the Bling)"
+ },
+ {
+  "name": "Crush Card Virus",
+  "kind": "pre-errata",
+  "code": 511000823,
+  "base": 57728570,
+  "until": "2015-03-19",
+  "text": "Tribute 1 DARK monster with 1000 or less ATK; Check all monsters your opponent controls, your opponent's hand, and all cards they draw (until the end of your opponent's 3rd turn after this card's activation), and destroy all monsters with 1500 or more ATK.",
+  "source": "Errata first printed on PGL2-EN070 (Premium Gold: Return of the Bling)"
+ },
+ {
+  "name": "Curse of Aging",
+  "kind": "goat",
+  "code": 504700069,
+  "base": 41398771,
+  "until": "2005-10-01",
+  "text": "Discard 1 card from your hand. Decrease the ATK and DEF of all monsters on your opponent's side of the field by 500 points until the end of the turn this card is activated.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Curse of Royal",
+  "kind": "goat",
+  "code": 504700133,
+  "base": 2926176,
+  "until": "2005-10-01",
+  "text": "Negate the activation and the effect of a Spell or Trap Card that includes the effect of destroying 1 Spell or Trap Card and destroy it.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Cyber Blader",
+  "kind": "pre-errata",
+  "code": 511002991,
+  "base": 10248389,
+  "until": null,
+  "text": "\"Etoile Cyber\" + \"Blader Skater\"\r\nA Fusion Summon of this card can only be done with the above Fusion Materials. Apply these effects, depending on the number of monsters your opponent controls; ● 1: Cannot be destroyed by battle. ● 2: Double this card's ATK. ● 3: Negate all cards and effects your opponent controls.",
+  "source": "Errata first printed on SGX1-ENE21 (2022)"
+ },
+ {
+  "name": "Cyber Jar",
+  "kind": "goat",
+  "code": 504700188,
+  "base": 34124316,
+  "until": "2005-10-01",
+  "text": "FLIP: Destroy all monsters on the field. Both players then pick up 5 cards from the top of their respective Decks and Special Summon all Level 4 or lower Monster Cards among them on the field in face-up Attack Position or face-down Defense Position. The rest of the cards picked up are added to their respective hands.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "D.D. Crazy Beast",
+  "kind": "goat",
+  "code": 504700079,
+  "base": 48148828,
+  "until": "2005-10-01",
+  "text": "A monster that this card destroys as a result of battle is removed from play.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Dark Jeroid",
+  "kind": "goat",
+  "code": 504700159,
+  "base": 90980792,
+  "until": "2005-10-01",
+  "text": "When this card is Normal Summoned, Flip Summoned, or Special Summoned successfully, select 1 face-up monster on the field. As long as the monster remains face-up on the field, decrease its ATK by 800 points.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Dark Magician of Chaos",
+  "kind": "pre-errata",
+  "code": 511001039,
+  "base": 40737112,
+  "until": "2015-11-12",
+  "text": "When this card is Normal or Special Summoned: You can target 1 Spell in your Graveyard; add it to your hand. Banish any monster this card destroys by battle, instead of sending it to the Graveyard. If this face-up card would leave the field, banish it instead.",
+  "source": "Errata first printed on YGLD-ENC02 (Yugi's Legendary Decks)"
+ },
+ {
+  "name": "Dark Mimic LV1",
+  "kind": "goat",
+  "code": 504700129,
+  "base": 74713516,
+  "until": "2005-10-01",
+  "text": "FLIP: Draw 1 card from your Deck. Also, during your Standby Phase, send this face-up card to the Graveyard to Special Summon 1 \"Dark Mimic LV3\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Dark Scorpion - Meanae the Thorn",
+  "kind": "goat",
+  "code": 504700125,
+  "base": 74153887,
+  "until": "2005-10-01",
+  "text": "When this card inflicts Battle Damage to your opponent's Life Points, you can select and activate 1 of the following effects:\r\n● Add 1 card that includes \"Dark Scorpion\" in its card name, or is named \"Cliff the Trap Remover\", from your Deck to your hand.\r\n● Add 1 card that includes \"Dark Scorpion\" in its card name, or is named \"Cliff the Trap Remover\", from your Graveyard to your hand.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Dark Strike Fighter",
+  "kind": "pre-errata",
+  "code": 511000229,
+  "base": 32646477,
+  "until": "2014-10-23",
+  "text": "1 Tuner + 1+ non-Tuner monsters\r\nYou can Tribute 1 monster; inflict damage to your opponent equal to the Tributed monster's Level on the field x 200.",
+  "source": "Errata first printed on LC5D-EN234 (Legendary Collection 5D's)"
+ },
+ {
+  "name": "Deal of Phantom",
+  "kind": "goat",
+  "code": 504700112,
+  "base": 69122763,
+  "until": "2005-10-01",
+  "text": "Select 1 monster face-up on the field. Increase the selected monster's ATK by 100 points for each monster in your Graveyard during the turn this card is activated. The number of monster(s) are applied when this card is activated.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Dedication through Light and Darkness",
+  "kind": "goat",
+  "code": 504700113,
+  "base": 69542930,
+  "until": "2005-10-01",
+  "text": "You can only activate this card by Tributing \"Dark Magician\" on your side of the field. Select 1 \"Dark Magician of Chaos\" from your hand, your Graveyard or your Deck and Special Summon it.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Destiny HERO - Disk Commander",
+  "kind": "pre-errata",
+  "code": 511003116,
+  "base": 56570271,
+  "until": null,
+  "text": "If this card is Special Summoned from the Graveyard: Draw 2 cards.",
+  "source": "Errata first printed on LEHD-ENA08 (2018)"
+ },
+ {
+  "name": "Dewloren, Tiger King of the Ice Barrier",
+  "kind": "pre-errata",
+  "code": 70583996,
+  "base": 70583986,
+  "until": null,
+  "text": "1 Tuner + 1 or more non-Tuner WATER monsters\r\nOnce per turn, you can return any number of face-up cards you control to the owner's hand. For each card returned to the owner's hand by this effect, this card gains 500 ATK until the End Phase.",
+  "source": "Errata first printed on SDFC-EN042 (2021)"
+ },
+ {
+  "name": "Disc Fighter",
+  "kind": "goat",
+  "code": 504700029,
+  "base": 19612721,
+  "until": "2005-10-01",
+  "text": "If this card attacks a Defense Position monster with DEF 2000 or more, destroy the monster with this card's effect without applying Damage Calculation.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Dragon Seeker",
+  "kind": "pre-errata",
+  "code": 511003018,
+  "base": 28563545,
+  "until": "2005-07-27",
+  "text": "When a \"Dragon Seeker\" is changed to Attack Position: You can target 1 face-up Dragon-Type monster on the field; destroy it.",
+  "source": "Errata first printed on DB2-EN101 (Dark Beginning 2)"
+ },
+ {
+  "name": "Elegant Egotist",
+  "kind": "goat",
+  "code": 504700157,
+  "base": 90219263,
+  "until": "2005-10-01",
+  "text": "You can only activate this card when there are 1 or more \"Harpie Lady\" on the field. Special Summon 1 \"Harpie Lady\" or \"Harpie Lady Sisters\" from your hand or your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Element Doom",
+  "kind": "goat",
+  "code": 504700036,
+  "base": 23118924,
+  "until": "2005-10-01",
+  "text": "This monster gets the following effect(s) while there is a monster(s) with the following Attribute(s) on the field:\r\n●EARTH: Negate the effect of an Effect Monster that is destroyed by this monster as a result of battle.\r\n●WIND: If this card destroyed your opponent's monster as a result of battle, it can attack once again in a row.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Element Dragon",
+  "kind": "goat",
+  "code": 504700053,
+  "base": 30314994,
+  "until": "2005-10-01",
+  "text": "This monster gets the following effect(s) while there is a monster(s) with the following Attribute(s) on the field:\r\n● FIRE: Increase the ATK of this card by 500 points.\r\n● WIND: If this card destroyed your opponent's monster as a result of battle, it can attack once again in a row.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Element Magician",
+  "kind": "goat",
+  "code": 504700107,
+  "base": 65260293,
+  "until": "2005-10-01",
+  "text": "This monster gets the following effect(s) while there is a monster(s) with the following Attribute(s) on the field:\r\n●WATER: Control of this card cannot switch.\r\n●WIND: If this card destroyed your opponent's monster as a result of battle, it can attack once again in a row.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Elemental Mistress Doriado",
+  "kind": "goat",
+  "code": 504700181,
+  "base": 99414168,
+  "until": "2005-10-01",
+  "text": "This card can only be Ritual Summoned with the Ritual Spell Card, \"Doriado's Blessing\". The Attribute of this card is also treated as WIND, WATER, FIRE, and EARTH.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Emblem of Dragon Destroyer",
+  "kind": "goat",
+  "code": 504700009,
+  "base": 6390406,
+  "until": "2005-10-01",
+  "text": "Add 1 \"Buster Blader\" from your Deck or your Graveyard to your hand.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Energy Drain",
+  "kind": "goat",
+  "code": 504700090,
+  "base": 56916805,
+  "until": "2005-10-01",
+  "text": "Select 1 face-up monster on your side of the field. Increase the ATK and DEF of the monster by an amount equal to the number of cards in your opponent's hand x 200 points until the End Phase.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Exchange of the Spirit",
+  "kind": "pre-errata",
+  "code": 511000820,
+  "base": 17484499,
+  "until": "2015-03-19",
+  "text": "While there are 15 or more cards in your Graveyard: Pay 1000 LP; Both players swap the card(s) in their Graveyard with the card(s) in their Deck. Then, both players shuffle their Deck.",
+  "source": "Errata first printed on PGL2-EN066 (Premium Gold: Return of the Bling)"
+ },
+ {
+  "name": "Falling Down",
+  "kind": "goat",
+  "code": 504700056,
+  "base": 32919136,
+  "until": "2005-10-01",
+  "text": "Destroy this card if there is no Archfiend card on your side of the field. Take control of 1 of your opponent's monsters that is equipped with this card. You take 800 points of damage during each of your opponent's Standby Phases.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Fenrir",
+  "kind": "goat",
+  "code": 504700001,
+  "base": 218704,
+  "until": "2005-10-01",
+  "text": "This card cannot be Normal Summoned or Set. This card can only be Special Summoned by removing from play 2 WATER monsters in your Graveyard. When this card destroys an opponent's monster as a result of battle, your opponent skips their next Draw Phase.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Firebird",
+  "kind": "goat",
+  "code": 504700151,
+  "base": 87473172,
+  "until": "2005-10-01",
+  "text": "As long as this card remains face-up on the field, each time a Winged Beast-Type monster(s) on your side of the field is destroyed, increase the ATK of this card by 500 points.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Flying Kamakiri #1",
+  "kind": "goat",
+  "code": 504700145,
+  "base": 84834865,
+  "until": "2005-10-01",
+  "text": "When this card is sent to the Graveyard as a result of battle, you can Special Summon 1 WIND monster with an ATK of 1500 or less in face-up Attack Position from your Deck. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Formation Union",
+  "kind": "goat",
+  "code": 504700048,
+  "base": 26931058,
+  "until": "2005-10-01",
+  "text": "Select and activate 1 of the following effects:\r\n● Equip 1 Union Monster on your side of the field to an appropriate monster on your side of the field as an Equip Spell Card.\r\n● Unequip 1 of your equipped Union Monsters and Special Summon it to your side of the field in face-up Attack Position.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Freed the Matchless General",
+  "kind": "goat",
+  "code": 504700082,
+  "base": 49681811,
+  "until": "2005-10-01",
+  "text": "Negate the effect of any Spell Card that targets this card and destroy it. As long as this card remains face-up on the field, you can add 1 Level 4 or lower Warrior-Type monster from your Deck to your hand per turn instead of drawing 1 card from your Deck during your Draw Phase. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Fusion Sage",
+  "kind": "goat",
+  "code": 504700047,
+  "base": 26902560,
+  "until": "2005-10-01",
+  "text": "Add 1 \"Polymerization\" from your Deck to your hand.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Future Fusion",
+  "kind": "pre-errata",
+  "code": 511002997,
+  "base": 77565204,
+  "until": "2017-03-30",
+  "text": "Reveal 1 Fusion Monster in your Extra Deck and send the Fusion Materials from your Deck to the Graveyard for that Fusion Monster. During your 2nd Standby Phase after this card's activation, Fusion Summon 1 Fusion Monster of the same name from your Extra Deck and target it with this card. When this card leaves the field, destroy that target. When that target is destroyed, destroy this card.",
+  "source": "Errata first printed on DUSA-EN062 (Duelist Saga)"
+ },
+ {
+  "name": "Gather Your Mind",
+  "kind": "goat",
+  "code": 504700011,
+  "base": 7512044,
+  "until": "2005-10-01",
+  "text": "Add 1 \"Gather Your Mind\" card from your Deck to your hand. Your Deck is then shuffled. You can only use 1 \"Gather Your Mind\" per turn.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Gearfried the Iron Knight",
+  "kind": "goat",
+  "code": 504700182,
+  "base": 423705,
+  "until": "2005-10-01",
+  "text": "When an Equip Spell Card is equipped to this card, destroy the Equip Spell Card.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Giant Germ",
+  "kind": "goat",
+  "code": 504700167,
+  "base": 95178994,
+  "until": "2005-10-01",
+  "text": "When this card is sent to the Graveyard as a result of battle, inflict 500 points of damage to your opponent's Life Points. You can also Special Summon up to 2 \"Giant Germ\" cards from your Deck to your side of the field in face-up Attack Position. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Giant Rat",
+  "kind": "goat",
+  "code": 504700172,
+  "base": 97017120,
+  "until": "2005-10-01",
+  "text": "When this card is destroyed as a result of battle and sent to the Graveyard, you can Special Summon 1 EARTH monster with an ATK of 1500 or less in face-up Attack Position from your Deck. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Goyo Guardian",
+  "kind": "pre-errata",
+  "code": 511002994,
+  "base": 7391448,
+  "until": "2017-03-30",
+  "text": "1 Tuner + 1+ non-Tuner monsters\r\nWhen this card destroys an opponent's monster by battle and sends it to the Graveyard: You can Special Summon that monster to your side of the field in Defense Position.",
+  "source": "Errata first printed on DUSA-EN075 (Duelist Saga)"
+ },
+ {
+  "name": "Graceful Dice",
+  "kind": "goat",
+  "code": 504700124,
+  "base": 74137509,
+  "until": "2005-10-01",
+  "text": "Roll 1 six-sided die. The result is multiplied by 100 points and added to the ATK and DEF of all monsters you control until the end of your turn. Monsters summoned after this card's activation are excluded.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Grandsoil the Elemental Lord",
+  "kind": "pre-errata",
+  "code": 511003062,
+  "base": 61468779,
+  "until": null,
+  "text": "Cannot be Normal Summoned/Set. Must be Special Summoned (from your hand) by having exactly 5 EARTH monsters in your Graveyard, and cannot be Special Summoned by other ways. When this card is Special Summoned: You can target 1 monster in either player's Graveyard; Special Summon that target to your side of the field. If this card leaves the field, skip the Battle Phase of your next turn.",
+  "source": "Errata first printed on FLOD-ENSE1 (2018)"
+ },
+ {
+  "name": "Gravekeeper's Servant",
+  "kind": "goat",
+  "code": 504700024,
+  "base": 16762927,
+  "until": "2005-10-01",
+  "text": "Unless your opponent sends 1 card from the top of his/her Deck to the Graveyard, he/she cannot declare an attack.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Gravekeeper's Spy",
+  "kind": "goat",
+  "code": 504700044,
+  "base": 24317029,
+  "until": "2005-10-01",
+  "text": "FLIP: Special Summon 1 Monster Card that includes \"Gravekeeper's\" in its card name with an ATK of 1500 or less from your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Great Dezard",
+  "kind": "goat",
+  "code": 504700154,
+  "base": 88989706,
+  "until": "2005-10-01",
+  "text": "When this monster destroys the following number of monsters as a result of battle, the following effects are activated in order:\r\nOne: As long as this card remains face-up on the field, negate the activation and effects of all Spell and Trap Cards that target this card and destroy them.\r\nTwo: You can Special Summon 1 \"Fushioh Richie\" from your hand or your Deck by Tributing this card during your Main Phase.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Hallowed Life Barrier",
+  "kind": "goat",
+  "code": 504700153,
+  "base": 88789641,
+  "until": "2005-10-01",
+  "text": "Discard 1 card from your hand. During this turn, any damage you take from your opponent becomes 0.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Hand of Nephthys",
+  "kind": "goat",
+  "code": 504700175,
+  "base": 98446407,
+  "until": "2005-10-01",
+  "text": "Tribute 2 monsters on your side of the field, including this card, to Special Summon 1 \"Sacred Phoenix of Nephthys\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Heavy Mech Support Platform",
+  "kind": "pre-errata",
+  "code": 511002851,
+  "base": 23265594,
+  "until": "2016-10-20",
+  "text": "Once per turn, you can either: Target 1 Machine-Type monster you control, equip this card to that target, OR: Unequip this card and Special Summon it in Attack Position. While equipped by this effect, the equipped monster gains 500 ATK/DEF. (A monster can only be equipped with 1 Union monster at a time. If the equipped monster would be destroyed, destroy this card instead.)",
+  "source": "Errata first printed on SDKS-EN008 (Seto Kaiba Structure Deck)"
+ },
+ {
+  "name": "Helping Robo for Combat",
+  "kind": "goat",
+  "code": 504700076,
+  "base": 47025270,
+  "until": "2005-10-01",
+  "text": "Each time this card destroys your opponent's monster as a result of battle, draw 1 card, then select and return 1 card from your hand to the bottom of your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Hero Signal",
+  "kind": "goat",
+  "code": 504700031,
+  "base": 22020907,
+  "until": "2005-10-01",
+  "text": "You can only activate this card when a monster on your side of the field is destroyed and sent to the Graveyard as a result of battle. Special Summon 1 Level 4 or lower monster from your hand or Deck that includes \"Elemental Hero\" in its card name.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Hino-Kagu-Tsuchi",
+  "kind": "goat",
+  "code": 504700131,
+  "base": 75745607,
+  "until": "2005-10-01",
+  "text": "This card cannot be Special Summoned. This card returns to the owner's hand during the End Phase of the turn that this card is Normal Summoned or flipped face-up. If this card inflicts Battle Damage to your opponent's Life Points, your opponent discards all cards in their hand during the next Draw Phase, before they draw.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Horn of Light",
+  "kind": "goat",
+  "code": 504700063,
+  "base": 38552107,
+  "until": "2005-10-01",
+  "text": "Increase the DEF of a monster equipped with this card by 800 points. When this card is sent from the field to the Graveyard, if you pay 500 Life Points, this card returns to the top of your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Horus the Black Flame Dragon LV4",
+  "kind": "goat",
+  "code": 504700132,
+  "base": 75830094,
+  "until": "2005-10-01",
+  "text": "As long as this card remains face-up on your side of the field, control of this card cannot switch. During the End Phase of a turn that this card destroyed a monster as a result of battle, send this card to the Graveyard to Special Summon 1 \"Horus the Black Flame Dragon LV6\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Horus the Black Flame Dragon LV6",
+  "kind": "goat",
+  "code": 504700015,
+  "base": 11224103,
+  "until": "2005-10-01",
+  "text": "As long as this card remains face-up on your side of the field, it is unaffected by any Spell Cards. During the End Phase of a turn that this card destroyed a monster as a result of battle, send this card to the Graveyard, Special Summon 1 \"Horus the Black Flame Dragon LV8\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Howling Insect",
+  "kind": "goat",
+  "code": 504700162,
+  "base": 93107608,
+  "until": "2005-10-01",
+  "text": "When this card is destroyed and sent to the Graveyard as a result of battle, you can Special Summon 1 Insect-Type monster with an ATK of 1500 or less to your side of the field from your Deck. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Hyena",
+  "kind": "goat",
+  "code": 504700034,
+  "base": 22873798,
+  "until": "2005-10-01",
+  "text": "When this card is sent to the Graveyard as a result of battle, you can Special Summon any \"Hyena\"(s) from the Deck to the field. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Imperial Custom",
+  "kind": "pre-errata",
+  "code": 9995776,
+  "base": 9995766,
+  "until": null,
+  "text": "Face-up Continuous Trap Cards cannot be destroyed, except \"Imperial Custom\". You can only control 1 \"Imperial Custom\".",
+  "source": "Errata first printed on SDSA-EN038 (2020)"
+ },
+ {
+  "name": "Imperial Order",
+  "kind": "pre-errata",
+  "code": 511002996,
+  "base": 61740673,
+  "until": "2017-03-30",
+  "text": "Negate all Spell effects on the field. Once per turn, during your Standby Phase, pay 700 LP or destroy this card.",
+  "source": "Errata first printed on DUSA-EN049 (Duelist Saga)"
+ },
+ {
+  "name": "Inferno Fire Blast",
+  "kind": "goat",
+  "code": 504700085,
+  "base": 52684508,
+  "until": "2005-10-01",
+  "text": "Select 1 face-up \"Red-Eyes Black Dragon\" on your side of the field to activate this card. Inflict damage to your opponent's Life Points equal to the original ATK of the selected \"Red-Eyes Black Dragon\". \"Red-Eyes Black Dragon\" cannot attack during the turn you use this card.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Injection Fairy Lily",
+  "kind": "goat",
+  "code": 504700138,
+  "base": 79575620,
+  "until": "2005-10-01",
+  "text": "This card's effect can only be activated during the Damage Step of either player's turn when this card battles. Pay 2000 Life Points to increase the ATK of this monster by 3000 points during the Damage Step only.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Insect Imitation",
+  "kind": "goat",
+  "code": 504700171,
+  "base": 96965364,
+  "until": "2005-10-01",
+  "text": "Tribute 1 monster on your side of the field. Select 1 Insect-Type monster from your Deck that is 1 Level higher than the Tributed monster and Special Summon it on your side of the field in face-up Attack Position or face-down Defense Position. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Insect Princess",
+  "kind": "goat",
+  "code": 504700061,
+  "base": 37957847,
+  "until": "2005-10-01",
+  "text": "While this card is face-up on the field, battle positions of all face-up Insect-Type monsters on your opponent's side of the field are changed into Attack Position. Each time this card destroys an Insect-Type monster as a result of battle, increase the ATK of this card by 500 points.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Iron Blacksmith Kotetsu",
+  "kind": "goat",
+  "code": 504700120,
+  "base": 73431236,
+  "until": "2005-10-01",
+  "text": "FLIP: Select 1 Equip Spell Card from your Deck and add it to your hand.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Jade Insect Whistle",
+  "kind": "goat",
+  "code": 504700168,
+  "base": 95214051,
+  "until": "2005-10-01",
+  "text": "Your opponent selects 1 Insect-Type Monster from their Deck. After shuffling the Deck, place the card on top of the Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Jirai Gumo",
+  "kind": "goat",
+  "code": 504700190,
+  "base": 94773007,
+  "until": "2005-10-01",
+  "text": "When you declare an attack with this card, toss a coin and call it. If you call it right, attack normally. If you call it wrong, lose half your Life Points before attacking.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Kazejin",
+  "kind": "goat",
+  "code": 504700101,
+  "base": 62340868,
+  "until": "2005-10-01",
+  "text": "You can only activate this card's effect during your opponent's damage calculation. Make the ATK of a monster attacking this card 0 during damage calculation. This effect can only be used once as long as this card remains face-up on the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "King of the Swamp",
+  "kind": "goat",
+  "code": 504700137,
+  "base": 79109599,
+  "until": "2005-10-01",
+  "text": "You can substitute this card for any 1 Fusion Material Monster. When you do this, the other Fusion Material Monster(s) must be the correct one(s). Discard this card from your hand to the Graveyard to add a \"Polymerization\" from your Deck to your hand. The Deck is then shuffled.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "King Tiger Wanghu",
+  "kind": "goat",
+  "code": 504700143,
+  "base": 83986578,
+  "until": "2005-10-01",
+  "text": "As long as this card remains face-up on the field, destroy all monsters with an ATK equal to 1400 or less that are Normal Summoned or Special Summoned.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Knight's Title",
+  "kind": "goat",
+  "code": 504700149,
+  "base": 87210505,
+  "until": "2005-10-01",
+  "text": "Activate this card by offering 1 face-up \"Dark Magician\" on your side of the field as a Tribute. Special Summon 1 \"Dark Magician Knight\" from your hand, Deck or Graveyard.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Last Will",
+  "kind": "goat",
+  "code": 504700147,
+  "base": 85602018,
+  "until": "2005-10-01",
+  "text": "You can only use this card's effect once, and only during this turn. When a monster on your side of the field is sent to your Graveyard, you can Special Summon 1 monster with an ATK of 1500 points or less from your Deck. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Level Up!",
+  "kind": "goat",
+  "code": 504700046,
+  "base": 25290459,
+  "until": "2005-10-01",
+  "text": "Send 1 face-up monster on your side of the field that has \"LV\" in its card name to the Graveyard to activate this card. Special Summon the monster that is written in the card text of that monster from your hand or Deck, ignoring the Summoning conditions.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Levia-Dragon - Daedalus",
+  "kind": "goat",
+  "code": 504700060,
+  "base": 37721209,
+  "until": "2005-10-01",
+  "text": "By sending \"Umi\" on your side of the field to the Graveyard, destroy all cards on the field except this card.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Limiter Removal",
+  "kind": "goat",
+  "code": 504700037,
+  "base": 23171610,
+  "until": "2005-10-01",
+  "text": "Double the ATK of all face-up Machine-Type monsters that are on your side of the field when you activate this card. During the End Phase, destroy all Monster Cards that were affected by this effect.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Machine Duplication",
+  "kind": "goat",
+  "code": 504700104,
+  "base": 63995093,
+  "until": "2005-10-01",
+  "text": "Select 1 Machine-Type monster with an ATK of 500 or less on your side of the field and activate this card. You can Special Summon up to 2 cards with the same name from your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Magical Hats",
+  "kind": "goat",
+  "code": 504700140,
+  "base": 81210420,
+  "until": "2005-10-01",
+  "text": "Select 2 non-Monster Cards from your Deck and 1 of your Monster Cards on the field, then shuffle your Deck. Shuffle the 3 selected cards and Set them on the field in face-down Defense Position. The 2 cards selected from your Deck are treated as monsters (ATK 0/DEF 0) and are destroyed at the end of the Battle Phase. You can only use this effect during your opponent's Battle Phase.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Magical Labyrinth",
+  "kind": "goat",
+  "code": 504700105,
+  "base": 64389297,
+  "until": "2005-10-01",
+  "text": "Equip \"Labyrinth Wall\" with this card. If you Tribute \"Labyrinth Wall\" equipped with this card, you can Special Summon \"Wall Shadow\" from your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Maji-Gire Panda",
+  "kind": "goat",
+  "code": 504700097,
+  "base": 60102563,
+  "until": "2005-10-01",
+  "text": "As long as this card remains face-up on the field, each time a Beast-Type monster(s) on the field is destroyed, increase the ATK of this card by 500 points.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Makyura the Destructor",
+  "kind": "pre-errata",
+  "code": 21593987,
+  "base": 21593977,
+  "until": null,
+  "text": "During the turn this card was sent to the Graveyard, you can activate Trap Cards from your hand.",
+  "source": "Errata first printed on LED7-EN008 (2020)"
+ },
+ {
+  "name": "Malevolent Nuzzler",
+  "kind": "goat",
+  "code": 504700176,
+  "base": 99597615,
+  "until": "2005-10-01",
+  "text": "Increase the ATK of a monster equipped with this card by 700 points. When this card is sent from the field to the Graveyard, if you pay 500 Life Points, this card returns to the top of your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Manga Ryu-Ran",
+  "kind": "goat",
+  "code": 504700062,
+  "base": 38369349,
+  "until": "2005-10-01",
+  "text": "This card cannot be Normal Summoned or Set. This card can only be Special Summoned while \"Toon World\" is on your side the field. You can Special Summon this monster from your hand, but Tributes are required for monsters Level 5 or more. This card cannot attack in the turn that it is Summoned. Unless you pay 500 Life Points, this monster cannot attack. When \"Toon World\" on the field is destroyed, this card is also destroyed. If your opponent doesn't control a Toon Monster, this card can attack your opponent's Life Points directly. If a face-up Toon Monster is on your opponent's side of the field, you must select the Toon Monster as an attack target.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Manju of the Ten Thousand Hands",
+  "kind": "goat",
+  "code": 504700169,
+  "base": 95492061,
+  "until": "2005-10-01",
+  "text": "When this card is Normal Summoned or Flip Summoned, you can select 1 Ritual Monster Card or 1 Ritual Spell Card from your Deck and add it to your hand.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Manticore of Darkness",
+  "kind": "goat",
+  "code": 504700186,
+  "base": 77121851,
+  "until": "2005-10-01",
+  "text": "During the End Phase, if this card is in the GY because it was sent there this turn: You can send 1 Beast, Beast-Warrior, or Winged Beast monster from your hand or face-up field to the GY; Special Summon this card from your GY.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Mask of the Accursed",
+  "kind": "goat",
+  "code": 504700091,
+  "base": 56948373,
+  "until": "2005-10-01",
+  "text": "The monster equipped with this card cannot attack. The controller of the equipped monster takes 500 points of damage during each of your Standby Phases.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Mask of Weakness",
+  "kind": "goat",
+  "code": 504700094,
+  "base": 57882509,
+  "until": "2005-10-01",
+  "text": "Decrease the ATK of 1 attacking monster by 700 points until the end of the turn.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Masked Dragon",
+  "kind": "goat",
+  "code": 504700064,
+  "base": 39191307,
+  "until": "2005-10-01",
+  "text": "When this card is destroyed and sent to the Graveyard as a result of battle, you can Special Summon 1 Dragon-Type monster with an ATK of 1500 or less to your side of the field from your Deck. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Mermail Abyssteus",
+  "kind": "pre-errata",
+  "code": 511003071,
+  "base": 22446869,
+  "until": "2017-07-06",
+  "text": "You can discard 1 other WATER monster to the Graveyard; Special Summon this card from your hand. If Summoned this way: Add 1 Level 4 or lower \"Mermail\" monster from your Deck to your hand. You can only use this effect of \"Mermail Abyssteus\" once per turn.",
+  "source": "Errata first printed on BLLR-EN051 (Battles of Legend: Light's Revenge)"
+ },
+ {
+  "name": "Metalmorph",
+  "kind": "goat",
+  "code": 504700111,
+  "base": 68540058,
+  "until": "2005-10-01",
+  "text": "After activation, this card is used to equip a face-up monster. The monster equipped with this card increases its ATK and DEF by 300 points. When attacking with a monster equipped with this card, you can further increase its ATK by an amount equal to half the ATK of your target.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Michizure",
+  "kind": "goat",
+  "code": 504700059,
+  "base": 37580756,
+  "until": "2005-10-01",
+  "text": "You can activate this card when a monster is sent from the field to your Graveyard. Destroy 1 monster on the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Micro Ray",
+  "kind": "goat",
+  "code": 504700028,
+  "base": 18190572,
+  "until": "2005-10-01",
+  "text": "The DEF of 1 face-up monster on the field becomes 0 until the end of the End Phase.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Mirage Knight",
+  "kind": "goat",
+  "code": 504700080,
+  "base": 49217579,
+  "until": "2005-10-01",
+  "text": "This card cannot be Normal Summoned or Set. This card cannot be Special Summoned except by the effect of \"Dark Flare Knight\". When this card battles another monster, during damage calculation increase the ATK of this card by the original ATK of the opponent's monster. During the End Phase after this card was involved in battle, remove this card from play.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Mirror Wall",
+  "kind": "goat",
+  "code": 504700032,
+  "base": 22359980,
+  "until": "2005-10-01",
+  "text": "Halve the ATK of all your opponent's attacking monsters. Pay 2000 Life Points during each of your Standby Phases. If you do not, destroy this card.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Mokey Mokey Smackdown",
+  "kind": "goat",
+  "code": 504700005,
+  "base": 1965724,
+  "until": "2005-10-01",
+  "text": "While a face-up \"Mokey Mokey\" is on your side of the field, if a Fairy-Type monster on your side of the field is destroyed, the ATK of all \"Mokey Mokey\" on your side of the field becomes 3000 until the End Phase of this turn.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Monster Gate",
+  "kind": "goat",
+  "code": 504700071,
+  "base": 43040603,
+  "until": "2005-10-01",
+  "text": "Offer 1 monster on your side of the field as a Tribute. Pick up cards from your Deck until you pick up a monster than can be Normal Summoned, and Special Summon it. Send any other cards picked up to the Graveyard.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Mother Grizzly",
+  "kind": "goat",
+  "code": 504700093,
+  "base": 57839750,
+  "until": "2005-10-01",
+  "text": "When this card is sent to the Graveyard as a result of battle, you can Special Summon 1 WATER monster with an ATK of 1500 or less in face-up Attack Position from your Deck. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "My Body as a Shield",
+  "kind": "goat",
+  "code": 504700189,
+  "base": 69279219,
+  "until": "2005-10-01",
+  "text": "When your opponent activates a card that has an effect which destroys 1 or more monster(s) on the field, pay 1500 Life Points to negate the activation of that card and destroy it.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Mysterious Puppeteer",
+  "kind": "goat",
+  "code": 504700088,
+  "base": 54098121,
+  "until": "2005-10-01",
+  "text": "Each time you or your opponent Normal Summons or Flip Summons a monster, increase your Life Points by 500 points.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Mystic Swordsman LV2",
+  "kind": "goat",
+  "code": 504700077,
+  "base": 47507260,
+  "until": "2005-10-01",
+  "text": "If this card attacks a face-down Defense Position monster, destroy the monster immediately with this card's effect without flipping it face-up or applying damage calculation. During the End Phase of a turn that this card destroyed a monster as a result of battle, send this card to the Graveyard to Special Summon 1 \"Mystic Swordsman LV4\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Mystic Swordsman LV4",
+  "kind": "goat",
+  "code": 504700128,
+  "base": 74591968,
+  "until": "2005-10-01",
+  "text": "If you Normal Summon this card, you must place it in face-down Defense Position. If this card attacks a face-down Defense Position monster, destroy the monster immediately with this card's effect without flipping it face-up or applying damage calculation. During the End Phase of a turn that this card destroyed a monster as a result of battle send this card to the Graveyard, Special Summon 1 \"Mystic Swordsman LV6\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Mystic Tomato",
+  "kind": "goat",
+  "code": 504700142,
+  "base": 83011277,
+  "until": "2005-10-01",
+  "text": "When this card is sent to the Graveyard as a result of battle, you can Special Summon 1 DARK monster with an ATK of 1500 or less in face-up Attack Position from your Deck. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Narrow Pass",
+  "kind": "goat",
+  "code": 504700066,
+  "base": 40172183,
+  "until": "2005-10-01",
+  "text": "This card can only be activated when both players have 2 monsters or less on their respective sides of the field. Both players can only Normal Summon up to 2 additional monsters on their sides of the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Night Assailant",
+  "kind": "pre-errata",
+  "code": 16226796,
+  "base": 16226786,
+  "until": "2010-09-25",
+  "text": "FLIP: Target 1 monster your opponent controls; destroy that target.\r\nWhen this card is sent from the hand to the GY: Target 1 Flip monster in your GY, except this card; return that target to the hand.",
+  "source": "Errata first printed on DT03-EN056 (Duel Terminal 3)"
+ },
+ {
+  "name": "Nimble Momonga",
+  "kind": "goat",
+  "code": 504700033,
+  "base": 22567609,
+  "until": "2005-10-01",
+  "text": "When this card is sent to the Graveyard as a result of battle, increase your Life Points by 1000 points. You can also Special Summon up to 2 \"Nimble Momonga\" cards from your Deck to your side of the field in face-down Defense Position. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Ninjitsu Art of Transformation",
+  "kind": "goat",
+  "code": 504700115,
+  "base": 70861343,
+  "until": "2005-10-01",
+  "text": "Activate this card by Tributing 1 face-up monster on your side of the field that includes \"Ninja\" in its card name. Special Summon 1 Beast-Type, Winged Beast-Type, or Insect-Type monster with a Level equal to or less than the Level of the Tributed card + 3 from your hand or Deck to your side of the field. When this card is removed from your side of the field, destroy the monster.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Nobleman of Crossout",
+  "kind": "goat",
+  "code": 504700116,
+  "base": 71044499,
+  "until": "2005-10-01",
+  "text": "Destroy 1 face-down monster and remove it from play. If the monster is a Flip Effect Monster, both players check their respective Decks and remove all monsters of the same name from play. Then shuffle the Decks.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Nobleman of Extermination",
+  "kind": "goat",
+  "code": 504700025,
+  "base": 17449108,
+  "until": "2005-10-01",
+  "text": "Destroy 1 face-down Spell or Trap Card and remove it from play. If the card is a Trap Card, both players must remove all Trap Cards of the same name from their respective Decks and remove them from play. The Decks are then shuffled.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Nobleman-Eater Bug",
+  "kind": "goat",
+  "code": 504700109,
+  "base": 65878864,
+  "until": "2005-10-01",
+  "text": "FLIP: Destroy 2 monsters on the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Nutrient Z",
+  "kind": "goat",
+  "code": 504700051,
+  "base": 29389368,
+  "until": "2005-10-01",
+  "text": "This card can only be activated during your opponent's Damage Step. During this turn, if you take Battle Damage of 2000 points or more, increase your Life Points by 4000 points before the damage is subtracted from your Life Points.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Paladin of White Dragon",
+  "kind": "goat",
+  "code": 504700119,
+  "base": 73398797,
+  "until": "2005-10-01",
+  "text": "This monster can only be Ritual Summoned with the Ritual Spell Card, \"White Dragon Ritual.\" You must also Tribute monsters whose total Levels equal 4 or more from the field or your hand. When this monster attacks a face-down Defense Position monster, destroy the face-down monster with this card's effect. You can Tribute this card to Special Summon 1 \"Blue-Eyes White Dragon\" from your hand or your Deck. (\"Blue-Eyes White Dragon\" cannot attack during that turn.)",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Pandemonium",
+  "kind": "goat",
+  "code": 504700165,
+  "base": 94585852,
+  "until": "2005-10-01",
+  "text": "Neither player has to pay Life Points during the Standby Phase for Archfiend monsters. Each time a player's Archfiend Monster Card(s) are destroyed and sent to the Graveyard, except as a result of battle, that player can select 1 Archfiend Monster Card from his/her Deck that has a lower Level than the destroyed card and add it to his/her hand.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Penguin Soldier",
+  "kind": "goat",
+  "code": 504700163,
+  "base": 93920745,
+  "until": "2005-10-01",
+  "text": "FLIP: You can return up to 2 Monster Cards from the field to the owner's hand.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Performage Plushfire",
+  "kind": "pre-errata",
+  "code": 7563589,
+  "base": 7563579,
+  "until": null,
+  "text": "[ Pendulum Effect ]\r\nIf a \"Performage\" monster(s) you control is destroyed by battle or card effect: You can Special Summon this card from your Pendulum Zone, then take 500 damage. You can only use this effect of \"Performage Plushfire\" once per turn.\r\n----------------------------------------\r\n[ Monster Effect ]\r\nIf this card on the field is destroyed by battle or card effect: You can Special Summon 1 \"Performage\" monster from your hand or Deck, except \"Performage Plushfire\".",
+  "source": "Errata first printed on OP27-EN013 (2025)"
+ },
+ {
+  "name": "Peten the Dark Clown",
+  "kind": "goat",
+  "code": 504700084,
+  "base": 52624755,
+  "until": "2005-10-01",
+  "text": "When this card is sent to your Graveyard, you can remove this card from the Graveyard to Special Summon 1 \"Peten the Dark Clown\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Pyramid Energy",
+  "kind": "goat",
+  "code": 504700134,
+  "base": 76754619,
+  "until": "2005-10-01",
+  "text": "You can select and activate 1 of the following effects:\n●Increase the ATK of all face-up monsters on your side of the field by 200 points until the End Phase of the turn this card is activated.\n●Increase the DEF of all face-up monsters on your side of the field by 500 points until the End Phase of the turn this card is activated.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Pyramid Turtle",
+  "kind": "goat",
+  "code": 504700135,
+  "base": 77044671,
+  "until": "2005-10-01",
+  "text": "When this card is sent to the Graveyard as a result of battle, you can Special Summon 1 Zombie-Type monster with a DEF 2000 or less from the Deck to the field. Then shuffle the Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Rare Metalmorph",
+  "kind": "goat",
+  "code": 504700017,
+  "base": 12503902,
+  "until": "2005-10-01",
+  "text": "Increase the ATK of 1 Machine-Type monster on the field by 500 points. Only once, negate the effect of a Spell Card that designates the monster. When the selected monster is removed from the field, destroy this card.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Reasoning",
+  "kind": "goat",
+  "code": 504700096,
+  "base": 58577036,
+  "until": "2005-10-01",
+  "text": "Your opponent declares a monster Level. Then pick up cards from the top of your Deck until a monster that can be Normal Summoned is picked up. If that monster is the same Level as the one declared by your opponent, send all picked up cards to the Graveyard. If not, Special Summon the picked up monster and send the remaining cards to the Graveyard.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Reinforcement of the Army",
+  "kind": "goat",
+  "code": 504700055,
+  "base": 32807846,
+  "until": "2005-10-01",
+  "text": "Add 1 Level 4 or lower Warrior-Type monster from your Deck to your hand. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Reinforcements",
+  "kind": "goat",
+  "code": 504700027,
+  "base": 17814387,
+  "until": "2005-10-01",
+  "text": "Increase 1 selected monster's ATK by 500 points during the turn this card is activated.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Release Restraint",
+  "kind": "goat",
+  "code": 504700130,
+  "base": 75417459,
+  "until": "2005-10-01",
+  "text": "Tribute 1 \"Gearfried the Iron Knight\" on your side of the field to Special Summon 1 \"Gearfried the Swordmaster\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Relinquished",
+  "kind": "goat",
+  "code": 504700106,
+  "base": 64631466,
+  "until": "2005-10-01",
+  "text": "Select 1 monster on your opponent's side of the field and equip it to this card (this effect can only be used once per turn and you can only equip 1 monster at a time to this card). The ATK and DEF of this card become the same amounts as the monster equipped to this card. If this card is destroyed as a result of battle, the equipped monster is destroyed instead, and any battle damage you received from the battle is also inflicted to your opponent's Life Points.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Rescue Cat",
+  "kind": "goat",
+  "code": 504700179,
+  "base": 14878871,
+  "until": "2005-10-01",
+  "text": "Send this face-up card on your side of the field to the Graveyard to Special Summon 2 Level 3 or lower Beast-Type monsters from your Deck to the field. The monsters Special Summoned in this way are destroyed during the End Phase.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Rescue Cat",
+  "kind": "pre-errata",
+  "code": 511002992,
+  "base": 14878871,
+  "until": "2017-03-30",
+  "text": "You can send this card to the Graveyard; Special Summon 2 Level 3 or lower Beast-Type monsters from your Deck, but destroy them during the End Phase.",
+  "source": "Errata first printed on DUSA-EN072 (Duelist Saga)"
+ },
+ {
+  "name": "Ring of Destruction",
+  "kind": "pre-errata",
+  "code": 511000824,
+  "base": 83555666,
+  "until": "2015-03-19",
+  "text": "Target 1 face-up monster; Destroy it, and if you do, inflict damage to both players equal to its ATK.",
+  "source": "Errata first printed on PGL2-EN063 (Premium Gold: Return of the Bling)"
+ },
+ {
+  "name": "Ring of Destruction",
+  "kind": "pre-errata",
+  "code": 511000825,
+  "base": 83555666,
+  "until": "2015-03-19",
+  "text": "Target 1 face-up monster; Destroy it, and if you do, inflict damage to both players equal to its ATK.",
+  "source": "Errata first printed on PGL2-EN063 (Premium Gold: Return of the Bling)"
+ },
+ {
+  "name": "Ring of Magnetism",
+  "kind": "goat",
+  "code": 504700030,
+  "base": 20436034,
+  "until": "2005-10-01",
+  "text": "You can only equip this card to a monster on your side of the field. Decrease the ATK and DEF of a monster equipped with this card by 500 points. In addition, all the monsters on your opponent's side of the field can only attack the monster equipped with this card, if they attack.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Rivalry of Warlords",
+  "kind": "goat",
+  "code": 504700158,
+  "base": 90846359,
+  "until": "2005-10-01",
+  "text": "Each player sends monsters from his/her side of the field to the Graveyard so that he/she only controls 1 Type of monster. As long as this card remains on the field, each player can only have 1 Type of monster on the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Rush Recklessly",
+  "kind": "goat",
+  "code": 504700114,
+  "base": 70046172,
+  "until": "2005-10-01",
+  "text": "Increase 1 face-up monster's ATK by 700 points until the end of this turn.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Ryko, Lightsworn Hunter",
+  "kind": "pre-errata",
+  "code": 511003007,
+  "base": 21502796,
+  "until": "2014-06-27",
+  "text": "FLIP: Apply these effects in sequence.\r\n● You can target 1 card on the field; destroy that target.\r\n● Send the top 3 cards of your Deck to the Graveyard.",
+  "source": "Errata first printed on SDLI-EN015 (Realm of Light Structure Deck)"
+ },
+ {
+  "name": "Sacred Phoenix of Nephthys",
+  "kind": "goat",
+  "code": 504700099,
+  "base": 61441708,
+  "until": "2005-10-01",
+  "text": "If this card is destroyed by a card effect, Special Summon this card during your next Standby Phase. If you Special Summon this card successfully in this way, destroy all Spell and Trap Cards on the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Sage's Stone",
+  "kind": "goat",
+  "code": 504700020,
+  "base": 13604200,
+  "until": "2005-10-01",
+  "text": "You can only activate this card when there is a face-up \"Dark Magician Girl\" on your side of the field. Special Summon 1 \"Dark Magician\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Sangan",
+  "kind": "goat",
+  "code": 504700178,
+  "base": 26202165,
+  "until": "2005-10-01",
+  "text": "When this card is sent from the field to the Graveyard, select 1 monster with an ATK of 1500 or less from your Deck, show it to your opponent, and add it to your hand. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Sangan",
+  "kind": "pre-errata",
+  "code": 511002631,
+  "base": 26202165,
+  "until": "2016-09-15",
+  "text": "When this card is sent from the field to the Graveyard: Add 1 monster with 1500 or less ATK from your Deck to your hand.",
+  "source": "Errata first printed on DPRP-EN038 (Duelist Pack: Rivals of the Pharaoh)"
+ },
+ {
+  "name": "Sasuke Samurai #2",
+  "kind": "goat",
+  "code": 504700016,
+  "base": 11760174,
+  "until": "2005-10-01",
+  "text": "Once per turn, during your Main Phase, you can pay 800 Life Points. If you do this, until the End Phase, Spell and Trap Cards cannot be activated.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Scapegoat",
+  "kind": "goat",
+  "code": 504700123,
+  "base": 73915051,
+  "until": "2005-10-01",
+  "text": "If you activate this card, you cannot Normal Summon, Flip Summon or Special Summon during this turn. Special Summon 4 \"Sheep Tokens\" (Beast-Type/EARTH/Level 1/ATK 0/DEF 0) in Defense Position to your side of the field. The \"Sheep Tokens\" cannot be used as a Tribute for a Tribute Summon (or Set).",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Senet Switch",
+  "kind": "pre-errata",
+  "code": 63394882,
+  "base": 63394872,
+  "until": null,
+  "text": "Once per turn, during your Main Phase, you can move 1 monster on your side of the field to an adjacent (horizontal) unoccupied Monster Card Zone.",
+  "source": "Errata first printed on TAMA-EN042 (2022)"
+ },
+ {
+  "name": "Senju of the Thousand Hands",
+  "kind": "goat",
+  "code": 504700040,
+  "base": 23401839,
+  "until": "2005-10-01",
+  "text": "When this card is Normal Summoned or Flip Summoned, you can select 1 Ritual Monster Card from your Deck and add it to your hand. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Serpentine Princess",
+  "kind": "goat",
+  "code": 504700117,
+  "base": 71829750,
+  "until": "2005-10-01",
+  "text": "If this face-up card is returned from the field to your Deck, select and Special Summon 1 Level 3 or lower monster from your Deck to your side of the field. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Shadow Spell",
+  "kind": "goat",
+  "code": 504700050,
+  "base": 29267084,
+  "until": "2005-10-01",
+  "text": "Select 1 face-up monster on your opponent's side of the field. Decrease the ATK of the selected monster by 700 points. The monster cannot attack or change its battle position. When the selected monster is destroyed or removed from the field, this card is also destroyed.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Shinato, King of a Higher Plane",
+  "kind": "goat",
+  "code": 504700148,
+  "base": 86327225,
+  "until": "2005-10-01",
+  "text": "This card can only be Ritual Summoned with the Ritual Spell Card, \"Shinato's Ark\". You must also Tribute monsters whose total Levels equal 8 or more from the field or your hand. When this card destroys a Defense Position monster and sends it to the Graveyard as a result of battle, inflict damage to your opponent's Life Points equal to the original ATK of the destroyed monster.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Shining Angel",
+  "kind": "goat",
+  "code": 504700170,
+  "base": 95956346,
+  "until": "2005-10-01",
+  "text": "When this card is sent to the Graveyard as a result of battle, you can Special Summon 1 LIGHT monster with an ATK of 1500 or less in face-up Attack Position from your Deck. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Silent Swordsman LV3",
+  "kind": "goat",
+  "code": 504700006,
+  "base": 1995985,
+  "until": "2005-10-01",
+  "text": "Negate the effects of your opponent's Spell Cards that designate this card. During your Standby Phase, send this face-up card to the Graveyard to Special Summon 1 \"Silent Swordsman LV5\" from your hand or Deck. (You cannot activate this effect the turn that this card is Normal Summoned, Special Summoned, or flipped face-up.)",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Silent Swordsman LV5",
+  "kind": "goat",
+  "code": 504700126,
+  "base": 74388798,
+  "until": "2005-10-01",
+  "text": "This card is unaffected by your opponent's Spell Cards. If this card successfully attacks your opponent's Life Points directly, during your next Standby Phase, send this face-up card to the Graveyard to Special Summon 1 \"Silent Swordsman LV7\" from your hand or Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Sinister Serpent",
+  "kind": "pre-errata",
+  "code": 511000818,
+  "base": 8131171,
+  "until": "2015-03-19",
+  "text": "During your Standby Phase, if there is a \"Sinister Serpent\" in your Graveyard: you can add this card from your Graveyard to your hand.",
+  "source": "Errata first printed on PGL2-EN027 (Premium Gold: Return of the Bling)"
+ },
+ {
+  "name": "Skilled Dark Magician",
+  "kind": "goat",
+  "code": 504700122,
+  "base": 73752131,
+  "until": "2005-10-01",
+  "text": "Each time you or your opponent activates 1 Spell Card, put 1 Spell Counter on this card (max. 3). Tribute this card with 3 Spell Counters on it to Special Summon 1 \"Dark Magician\" from your hand, Deck, or Graveyard.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Skilled White Magician",
+  "kind": "goat",
+  "code": 504700074,
+  "base": 46363422,
+  "until": "2005-10-01",
+  "text": "Each time you or your opponent activates 1 Spell Card, put 1 Spell Counter on this card (max. 3). Tribute this card with 3 Spell Counters on it to Special Summon 1 \"Buster Blader\" from your hand, Deck, or Graveyard.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Skull Dice",
+  "kind": "goat",
+  "code": 504700000,
+  "base": 126218,
+  "until": "2005-10-01",
+  "text": "Roll 1 six-sided die. The result is multiplied by 100 points and subtracted from the ATK and DEF of all monsters in your opponent's control until the end of your turn. Monsters summoned after this card's activation are excluded.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Skull Knight #2",
+  "kind": "goat",
+  "code": 504700022,
+  "base": 15653824,
+  "until": "2005-10-01",
+  "text": "If you Tribute Summon a Fiend-Type monster by Tributing this monster, Special Summon 1 \"Skull Knight #2\" from your Deck. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Slate Warrior",
+  "kind": "goat",
+  "code": 504700136,
+  "base": 78636495,
+  "until": "2005-10-01",
+  "text": "FLIP: Increase the ATK and DEF of this monster by 500 points. The ATK and DEF of a monster that destroys this monster as a result of battle is decreased by 500 points.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Snake Fang",
+  "kind": "goat",
+  "code": 504700002,
+  "base": 596051,
+  "until": "2005-10-01",
+  "text": "Decrease 1 selected monster's DEF by 500 points during the turn this card is activated.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Sonic Bird",
+  "kind": "goat",
+  "code": 504700092,
+  "base": 57617178,
+  "until": "2005-10-01",
+  "text": "When this card is Normal Summoned or Flip Summoned, you can select 1 Ritual Spell Card from your Deck and add it to your hand. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Spear Cretin",
+  "kind": "goat",
+  "code": 504700095,
+  "base": 58551308,
+  "until": "2005-10-01",
+  "text": "FLIP: After this card is flipped, when it is sent to the Graveyard, both you and your opponent select 1 monster from your respective Graveyards and Special Summon it on the field in face-up Attack Position or face-down Defense Position (no Tribute is required for monsters of Level 5 or more).",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Sphinx Teleia",
+  "kind": "goat",
+  "code": 504700083,
+  "base": 51402177,
+  "until": "2005-10-01",
+  "text": "You can pay 500 Life Points to Special Summon this card when \"Pyramid of Light\" is on the field. This card cannot attack during the turn that it is Normal Summoned or Special Summoned. This card cannot be Special Summoned from the Graveyard. If this card destroys a Defense Position monster as a result of battle, inflict damage to your opponent's Life Points equal to half of the DEF of the destroyed monster.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Spirit Reaper",
+  "kind": "goat",
+  "code": 504700038,
+  "base": 23205979,
+  "until": "2005-10-01",
+  "text": "This card is not destroyed as a result of battle. Destroy this card when it is targeted by the effect of a Spell, Trap, or Effect Monster. If this card successfully attacks your opponent's Life Points directly, your opponent discards 1 card randomly from his/her hand.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Spirit Ryu",
+  "kind": "goat",
+  "code": 504700185,
+  "base": 67957315,
+  "until": "2005-10-01",
+  "text": "You can only activate this effect during your Battle Step, if this card battles during your turn. Discard 1 Dragon-Type monster from your hand to the Graveyard to increase the ATK and DEF of this card by 1000 points until the End Step.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Spiritual Energy Settle Machine",
+  "kind": "pre-errata",
+  "code": 511003021,
+  "base": 99173029,
+  "until": "2005-07-27",
+  "text": "Spirit monsters do not return to the hand during the End Phase. Once per turn, during your End Phase, discard 1 card or destroy this card.",
+  "source": "Errata first printed on DB2-EN191 (Dark Beginning 2)"
+ },
+ {
+  "name": "Stronghold the Moving Fortress",
+  "kind": "pre-errata",
+  "code": 511003022,
+  "base": 13955608,
+  "until": "2009-07-07",
+  "text": "Special Summon this card in Defense Position as an Effect Monster (Machine-Type/EARTH/Level 4/ATK 0/DEF 2000). (This card is also still a Trap Card.) While you control \"Green Gadget\", \"Red Gadget\", and \"Yellow Gadget\", this card's ATK becomes 3000.",
+  "source": "Errata first printed on DPYG-EN030 (Duelist Pack: Yugi)"
+ },
+ {
+  "name": "Suijin",
+  "kind": "goat",
+  "code": 504700174,
+  "base": 98434877,
+  "until": "2005-10-01",
+  "text": "You can only activate this card's effect during your opponent's damage calculation. Make the ATK of a monster attacking this card 0 during damage calculation. This effect can only be used once as long as this card remains face-up on the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Summoner of Illusions",
+  "kind": "goat",
+  "code": 504700184,
+  "base": 14644902,
+  "until": "2005-10-01",
+  "text": "FLIP: Offer 1 monster on your side of the field as a Tribute (excluding this monster). Special Summon 1 Fusion Monster Card from your Fusion Deck. The Fusion Monster is destroyed at the end of the turn this card is activated.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Super Rejuvenation",
+  "kind": "goat",
+  "code": 504700049,
+  "base": 27770341,
+  "until": "2005-10-01",
+  "text": "During the End Phase of the turn this card is activated, draw 1 card from your Deck for each Dragon-Type monster discarded from your hand and/or Tributed during this turn.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Swords of Concealing Light",
+  "kind": "goat",
+  "code": 504700018,
+  "base": 12923641,
+  "until": "2005-10-01",
+  "text": "When you activate this card, change all monsters on your opponent's side of the field to face-down Defense Position. As long as this card remains face-up on the field, monsters on your opponent's side of the field cannot change their Battle Positions. Destroy this card during your 2nd Standby Phase after activation.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Temple of the Kings",
+  "kind": "pre-errata",
+  "code": 511000821,
+  "base": 29762407,
+  "until": "2015-03-19",
+  "text": "You can activate Trap Cards the turn they are Set. If you control \"Mystical Beast of Serket\" and this card: you can send both to the Graveyard; Special Summon 1 monster from your hand, Deck or Extra Deck.",
+  "source": "Errata first printed on PGL2-EN056 (Premium Gold: Return of the Bling)"
+ },
+ {
+  "name": "Terraforming",
+  "kind": "goat",
+  "code": 504700121,
+  "base": 73628505,
+  "until": "2005-10-01",
+  "text": "Add 1 Field Spell Card from your Deck to your hand.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "The Big March of Animals",
+  "kind": "goat",
+  "code": 504700004,
+  "base": 1689516,
+  "until": "2005-10-01",
+  "text": "Until the End Phase, increase the ATK of all face-up Beast-Type monsters on your side of the field by 200 points for each Beast-Type monster on your side of the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "The Reliable Guardian",
+  "kind": "goat",
+  "code": 504700023,
+  "base": 16430187,
+  "until": "2005-10-01",
+  "text": "Increase 1 face-up monster's DEF by 700 points until the end of this turn.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Thousand-Eyes Restrict",
+  "kind": "goat",
+  "code": 504700102,
+  "base": 63519819,
+  "until": "2005-10-01",
+  "text": "\"Relinquished\" + \"Thousand-Eyes Idol\"\r\nAs long as this card remains face-up on the field, other monsters cannot change their Battle Positions or attack. Select 1 monster on your opponent's side of the field and equip it to this card (this effect can only be used once per turn and you can only equip 1 monster at a time to this card). The ATK and DEF of this card become the same amounts as the monster equipped to this card. If this card is destroyed as a result of battle, the equipped monster is destroyed instead.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Thunder Dragon",
+  "kind": "goat",
+  "code": 504700054,
+  "base": 31786629,
+  "until": "2005-10-01",
+  "text": "Discard this card from your hand to the Graveyard to add up to 2 \"Thunder Dragon\" cards from your Deck to your hand. Then shuffle your deck. You can only use this effect during your Main Phase.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Toll",
+  "kind": "goat",
+  "code": 504700141,
+  "base": 82003859,
+  "until": "2005-10-01",
+  "text": "Each player must pay 500 Life Points to declare an attack.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Toon Gemini Elf",
+  "kind": "goat",
+  "code": 504700183,
+  "base": 42386471,
+  "until": "2005-10-01",
+  "text": "Cannot attack the turn it is Summoned. If \"Toon World\" on the field is destroyed, destroy this card. While you control \"Toon World\" and your opponent controls no Toon monsters, this card can attack your opponent directly. If this card inflicts battle damage to your opponent: Discard 1 random card from your opponent's hand.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Toon Mermaid",
+  "kind": "goat",
+  "code": 504700108,
+  "base": 65458948,
+  "until": "2005-10-01",
+  "text": "This card cannot be Normal Summoned or Set. This card can only be Special Summoned while \"Toon World\" is on your side the field. You can Special Summon this monster from your hand, but Tributes are required for monsters Level 5 or more. This card cannot attack in the turn that it is Summoned. Unless you pay 500 Life Points, this monster cannot attack. When \"Toon World\" on the field is destroyed, this card is also destroyed. If your opponent doesn't control a Toon Monster, this card can attack your opponent's Life Points directly. If a face-up Toon Monster is on your opponent's side of the field, you must select the Toon Monster as an attack target.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Toon Summoned Skull",
+  "kind": "goat",
+  "code": 504700160,
+  "base": 91842653,
+  "until": "2005-10-01",
+  "text": "This card cannot be Normal Summoned or Set. This card can only be Special Summoned while \"Toon World\" is on your side the field. You can Special Summon this monster from your hand, but Tributes are required for monsters Level 5 or more. This card cannot attack in the turn that it is Summoned. Unless you pay 500 Life Points, this monster cannot attack. When \"Toon World\" on the field is destroyed, this card is also destroyed. If your opponent doesn't control a Toon Monster, this card can attack your opponent's Life Points directly. If a face-up Toon Monster is on your opponent's side of the field, you must select the Toon Monster as an attack target.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Toon Table of Contents",
+  "kind": "goat",
+  "code": 504700156,
+  "base": 89997728,
+  "until": "2005-10-01",
+  "text": "Add 1 card from your Deck to your hand that includes \"Toon\" in its card name, or is named \"Manga Ryu-Ran\".",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Twin-Headed Behemoth",
+  "kind": "pre-errata",
+  "code": 511000868,
+  "base": 43586926,
+  "until": "2015-10-23",
+  "text": "During the End Phase, if this card was destroyed on the field and sent to the Graveyard this turn: Special Summon it from the Graveyard, and if you do, its ATK/DEF become 1000. You can only use the effect of each \"Twin-Headed Behemoth\" once per Duel.",
+  "source": "Errata first printed on AP08-EN016 (Astral Pack Eight)"
+ },
+ {
+  "name": "Tyrant Dragon",
+  "kind": "goat",
+  "code": 504700164,
+  "base": 94568601,
+  "until": "2005-10-01",
+  "text": "When there is a monster on your opponent's side of the field after this monster's first attack of your Battle Phase, this monster can attack once again during the same Battle Phase. In addition, negate the effect of a Trap Card that targets this card and destroy it. If this card is Special Summoned from the Graveyard by another card's effect, you must Tribute 1 Dragon-Type monster on your side of the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "UFO Turtle",
+  "kind": "goat",
+  "code": 504700098,
+  "base": 60806437,
+  "until": "2005-10-01",
+  "text": "When this card is sent to the Graveyard as a result of battle, you can Special Summon 1 FIRE monster with an ATK of 1500 or less in face-up Attack Position from your Deck. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Ultimate Insect LV1",
+  "kind": "goat",
+  "code": 504700081,
+  "base": 49441499,
+  "until": "2005-10-01",
+  "text": "As long as this card remains face-up on the field, it is unaffected by any Spell Cards. During your Standby Phase, send this face-up card to the Graveyard to Special Summon 1 \"Ultimate Insect LV3\" from your hand or Deck. (You cannot activate this effect the turn this card is Normal Summoned, Special Summoned, or flipped face-up.)",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Ultimate Insect LV3",
+  "kind": "goat",
+  "code": 504700057,
+  "base": 34088136,
+  "until": "2005-10-01",
+  "text": "If this card was Special Summoned by the effect of \"Ultimate Insect LV1\", as long as this card remains face-up on the field, decrease the ATK of all your opponent's monsters by 300 points. During your Standby Phase, send this face-up card to the Graveyard to Special Summon 1 \"Ultimate Insect LV5\" from your hand or Deck. (You cannot activate this effect the turn this card is Normal Summoned, Special Summoned, or flipped face-up.)",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Ultimate Insect LV5",
+  "kind": "goat",
+  "code": 504700058,
+  "base": 34830502,
+  "until": "2005-10-01",
+  "text": "If this card was Special Summoned by the effect of \"Ultimate Insect LV3\", as long as this card remains face-up on the field, decrease the ATK of all your opponent's monsters by 500 points. During your Standby Phase, send this face-up card to the Graveyard to Special Summon 1 \"Ultimate Insect LV7\" from your hand or Deck. (You cannot activate this effect the turn this card is Normal Summoned, Special Summoned or flipped face-up.)",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Ultimate Tyranno",
+  "kind": "pre-errata",
+  "code": 511003009,
+  "base": 15894048,
+  "until": "2017-04-13",
+  "text": "If this card is in face-up Attack Position at the start of your Battle Phase, it must attack first, and attack all monsters your opponent controls once each.",
+  "source": "Errata first printed on SR04-EN006 (Dinosmasher's Fury Structure Deck)"
+ },
+ {
+  "name": "Vampire Lord",
+  "kind": "goat",
+  "code": 504700087,
+  "base": 53839837,
+  "until": "2005-10-01",
+  "text": "Each time this card inflicts Battle Damage to your opponent's Life Points, declare 1 card type (Monster, Spell, or Trap). Your opponent selects 1 card of that type from his/her Deck and sends it to the Graveyard. Also, if this card is destroyed and sent to your Graveyard by your opponent's card effect, it is Special Summoned to the field during your next Standby Phase.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Weapon Change",
+  "kind": "goat",
+  "code": 504700014,
+  "base": 10035717,
+  "until": "2005-10-01",
+  "text": "Only once during each of your Standby Phases, you can pay 700 Life Points to activate this card's effect. Switch the ATK and DEF of 1 Warrior-Type or Machine-Type monster on your side of the field until the end of your opponent's next End Phase. When this card is destroyed, the effect is negated.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Witch of the Black Forest",
+  "kind": "goat",
+  "code": 504700144,
+  "base": 78010363,
+  "until": "2005-10-01",
+  "text": "When this card is sent from the field to the Graveyard, select 1 monster with a DEF of 1500 or less from your Deck, show it to your opponent, and add it to your hand. Then shuffle your Deck.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Witch of the Black Forest",
+  "kind": "pre-errata",
+  "code": 511003012,
+  "base": 78010363,
+  "until": "2017-07-06",
+  "text": "When this card is sent from the field to the Graveyard: Add 1 monster with 1500 or less DEF from your Deck to your hand.",
+  "source": "Errata first printed on BLLR-EN046 (Battles of Legend: Light's Revenge)"
+ },
+ {
+  "name": "Wulf, Lightsworn Beast",
+  "kind": "pre-errata",
+  "code": 511003020,
+  "base": 58996430,
+  "until": "2014-06-27",
+  "text": "Cannot be Normal Summoned/Set. If this card is sent from your Deck to the Graveyard: Special Summon it.",
+  "source": "Errata first printed on SDLI-EN010 (Realm of Light Structure Deck)"
+ },
+ {
+  "name": "XY-Dragon Cannon",
+  "kind": "goat",
+  "code": 504700007,
+  "base": 2111707,
+  "until": "2005-10-01",
+  "text": "\"X-Head Cannon\" + \"Y-Dragon Head\"\r\nThis card cannot be Special Summoned except by removing from play the above cards on your side of the field; then you can Special Summon this card from your Fusion Deck (You do not use \"Polymerization\"). Discard 1 card from your hand to destroy 1 face-up Spell or Trap Card on your opponent's side of the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "XYZ-Dragon Cannon",
+  "kind": "goat",
+  "code": 504700161,
+  "base": 91998119,
+  "until": "2005-10-01",
+  "text": "\"X-Head Cannon\" + \"Y-Dragon Head\" + \"Z-Metal Tank\"\r\nThis card cannot be Special Summoned except by removing from play the above cards on your side of the field; then you can Special Summon this card from your Fusion Deck (You do not use \"Polymerization\"). Discard 1 card from your hand to destroy 1 card on your opponent's side of the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "XZ-Tank Cannon",
+  "kind": "goat",
+  "code": 504700177,
+  "base": 99724761,
+  "until": "2005-10-01",
+  "text": "\"X-Head Cannon\" + \"Z-Metal Tank\"\r\nThis card cannot be Special Summoned except by removing from play the above cards on your side of the field; then you can Special Summon this card from your Fusion Deck (You do not use \"Polymerization\"). Discard 1 card from your hand to destroy 1 face-down Spell or Trap Card on your opponent's side of the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Y-Dragon Head",
+  "kind": "pre-errata",
+  "code": 511002852,
+  "base": 65622692,
+  "until": "2016-10-20",
+  "text": "Once per turn, you can either: Target 1 \"X-Head Cannon\" you control; equip this card to that target, OR: Unequip this card and Special Summon it in face-up Attack Position. While equipped by this effect, the equipped monster gains 400 ATK/DEF. (A monster can only be equipped with 1 Union monster at a time. If the equipped monster would be destroyed by battle, destroy this card instead.)",
+  "source": "Errata first printed on SDKS-EN006 (Seto Kaiba Structure Deck)"
+ },
+ {
+  "name": "YZ-Tank Dragon",
+  "kind": "goat",
+  "code": 504700045,
+  "base": 25119460,
+  "until": "2005-10-01",
+  "text": "\"Y-Dragon Head\" + \"Z-Metal Tank\"\r\nThis card cannot be Special Summoned except by removing from play the above cards on your side of the field; then you can Special Summon this card from your Fusion Deck (You do not use \"Polymerization\"). Discard 1 card from your hand to destroy 1 face-down Monster Card on your opponent's side of the field.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ },
+ {
+  "name": "Z-Metal Tank",
+  "kind": "pre-errata",
+  "code": 511002853,
+  "base": 64500000,
+  "until": "2016-10-20",
+  "text": "Once per turn, you can either: Target 1 \"X-Head Cannon\" or \"Y-Dragon Head\" you control; equip this card to that target, OR: Unequip this card and Special Summon it in face-up Attack Position. While equipped by this effect, the equipped monster gains 600 ATK/DEF. (A monster can only be equipped with 1 Union monster at a time. If the equipped monster would be destroyed by battle, destroy this card instead.)",
+  "source": "Errata first printed on SDKS-EN007 (Seto Kaiba Structure Deck)"
+ },
+ {
+  "name": "Zombyra the Dark",
+  "kind": "goat",
+  "code": 504700152,
+  "base": 88472456,
+  "until": "2005-10-01",
+  "text": "This card cannot attack a player directly. Each time this card destroys 1 monster as a result of battle, decrease the ATK of this card by 200 points.",
+  "source": "GOAT format (TCG, April to September 2005)"
+ }
+]

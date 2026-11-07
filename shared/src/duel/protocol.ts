@@ -108,7 +108,20 @@ export type DuelPrompt =
     | { kind: 'position'; code: number; options: { id: number; label: string }[] }
     | { kind: 'number'; title: string; options: { id: number; label: string }[] }
     | { kind: 'declare'; title: string; what: 'type' | 'attribute'; count: number; options: { id: number; label: string }[] }
-    | { kind: 'card-name'; title: string };
+    | { kind: 'card-name'; title: string }
+    /** Choose zones on the field: where to put a card, or (`disable`) which zones an effect shuts. */
+    | { kind: 'place'; title: string; count: number; disable: boolean; zones: PlaceZone[] };
+
+/** A zone a `place` question offers. `index` is the owner's left-to-right position (as in the side's arrays). */
+export interface PlaceZone {
+    id: number;
+    side: Side;
+    zone: 'monster' | 'spell' | 'field' | 'pendulum' | 'extra-monster';
+    index: number;
+}
+
+/** The key a board gives a zone, to light it up for a `place` question. */
+export const zoneKey = (side: Side, zone: PlaceZone['zone'], index: number) => `${side}:${zone}:${index}`;
 
 export const DuelAnswerSchema = z.discriminatedUnion('kind', [
     /** One of the question's ids (an action, a chain option, yes = 1 / no = 0, a position...). */

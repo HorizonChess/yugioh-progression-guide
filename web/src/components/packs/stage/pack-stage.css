@@ -188,3 +188,5 @@
 @media (prefers-reduced-motion: reduce) {
   .ps-tear-line span, .ps-holo, .ps-card--glowing .ps-back, .ps-banner--Secret { animation: none; }
 }
+/* A card shown as it read at the series' current set (before a later errata, or as in 2005). */
+.ps-plate__era { margin-top: 6px; padding-top: 4px; border-top: 1px dashed rgba(60, 40, 15, 0.35); font: italic 600 10px/1.3 var(--font-main); color: rgba(90, 50, 10, 0.85); }

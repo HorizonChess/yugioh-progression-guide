@@ -2,6 +2,8 @@ import type { Card, PulledCard } from "@/lib/api";
 import type { Tier } from "./fx";
 
 /** A pulled card as the stage shows it. `owned` is how many the player had before this one. */
+import { eraText } from "@/lib/card-era";
+
 export type StageCard = {
     card: Card;
     image: string;
@@ -79,13 +81,16 @@ export function plate(s: StageCard, extra = "") {
 
     const box = document.createElement("div");
     box.className = "ps-plate__box";
+    // The text as it read at the series' current set (its original wording before a later errata).
+    const era = eraText(c);
     if (monster) {
         box.append(text("div", "ps-tl", `[${c.race}/${c.type.replace(" Monster", "").replace(/ /g, "/")}]`));
-        box.append(text("p", kind === "Normal" ? "ps-flavor" : "", c.desc));
+        box.append(text("p", kind === "Normal" ? "ps-flavor" : "", era.text));
         box.append(text("div", "ps-plate__stats", `ATK/${c.atk ?? "?"}  DEF/${c.def ?? "?"}`));
     } else {
-        box.append(text("p", "", c.desc));
+        box.append(text("p", "", era.text));
     }
+    if (era.note) box.append(text("div", "ps-plate__era", era.note));
 
     const foot = document.createElement("div");
     foot.className = "ps-plate__foot";

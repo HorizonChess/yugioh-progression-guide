@@ -12,3 +12,5 @@ export * from './claims';
 export * from './schemas/series';
 export * from './duel/eras';
 export * from './duel/protocol';
+export * from './duel/versions';
+export * from './duel/errata-dates';

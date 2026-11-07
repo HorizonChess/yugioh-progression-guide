@@ -208,3 +208,16 @@ const RULE_LINES: Record<DuelModeId, string[]> = {
 export function ruleLines(era: RuleEra): Line[] {
     return RULE_LINES[era.id].map((text, i) => ({ key: `rules:${era.id}:${i}`, text, mood: "neutral" as const, priority: PRIORITY.pull }));
 }
+
+/**
+ * Cards you own whose errata takes effect with this set (from the errata dates in @ygo/shared):
+ * same cards in the binder, read and played by their new text from now on.
+ */
+export function errataLine(names: string[]): Line | null {
+    if (!names.length) return null;
+    const list = names.length === 1 ? names[0]! : names.length === 2 ? `${names[0]} and ${names[1]}` : `${names[0]}, ${names[1]} and ${names.length - 2} more`;
+    const text = names.length === 1
+        ? `Heads up: ${list} got errata with this set. Your copies play by the new text from now on!`
+        : `Errata day! ${list} play by their new text from this set on. Same cards, new rules!`;
+    return { key: `errata:${names.join(",")}`, text, mood: "neutral", priority: PRIORITY.pull };
+}

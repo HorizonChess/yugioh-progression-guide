@@ -16,6 +16,10 @@ export interface CardMarks {
     picked: ReadonlySet<string>;
     destroying: readonly string[];
     floats: readonly Float[];
+    /** Zones a `place` question offers (by zoneKey), and what a tap on one does. */
+    zones: ReadonlySet<string>;
+    chosenZones: ReadonlySet<string>;
+    onZone: (key: string) => void;
 }
 
 /** A card on the field: flies between zones by its uid, turns sideways in Defense Position, shows its ATK or DEF. */
@@ -58,7 +62,7 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
 }
 
 /** An empty zone or one holding a card. */
-export function Zone({ card, label, marks, onTap, onHover, side, className = "" }: {
+export function Zone({ card, label, marks, onTap, onHover, side, className = "", zone }: {
     card: DuelCardView | null;
     label?: string;
     marks: CardMarks;
@@ -66,10 +70,15 @@ export function Zone({ card, label, marks, onTap, onHover, side, className = "" 
     onHover?: (code: number) => void;
     side: Side;
     className?: string;
+    /** This zone's key, so a `place` question can offer it. */
+    zone?: string;
 }) {
+    const offered = zone !== undefined && marks.zones.has(zone);
+    const chosen = zone !== undefined && marks.chosenZones.has(zone);
     return (
-        <div className={`df-zone ${label ? "df-zone--labelled" : ""} ${className}`} data-label={label}>
+        <div className={`df-zone ${label ? "df-zone--labelled" : ""} ${offered ? "is-offered" : ""} ${chosen ? "is-chosen" : ""} ${className}`} data-label={label} data-zone={zone}>
             {card && <FieldCard card={card} marks={marks} onTap={onTap} onHover={onHover} side={side} />}
+            {offered && <button type="button" className="df-zone__pick" aria-label="Put the card here" onClick={() => marks.onZone(zone!)} />}
         </div>
     );
 }
