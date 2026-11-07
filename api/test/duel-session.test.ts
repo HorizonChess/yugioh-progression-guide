@@ -127,9 +127,14 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
         ...(rules ? { rules } : {}),
     });
     const playEkibyo = (duel: DuelSession) => {
-        let forcedSingles = 0, equipped = 0;
+        let forcedSingles = 0, equipped = 0, marked = 0;
         for (let asked = 0; asked < 600 && !duel.result; asked++) {
-            const { prompt, seq } = duel.state(0, 'd');
+            const { prompt, seq, view } = duel.state(0, 'd');
+            // The monster Ekibyo is equipped to shows it, from both sides of the table.
+            if (view.opp.monsters.some((m) => m?.by?.some((b) => b.code === EKIBYO))) {
+                marked++;
+                expect(duel.state(1, 'd').view.me.monsters.some((m) => m?.by?.some((b) => b.code === EKIBYO))).toBe(true);
+            }
             if (prompt!.kind === 'chain' && prompt!.forced && prompt!.options.length === 1) forcedSingles++;
             let a = humanAnswer(prompt!);
             if (prompt!.kind === 'actions') {
@@ -138,7 +143,7 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
             }
             duel.answer(0, seq, a);
         }
-        return { forcedSingles, equipped };
+        return { forcedSingles, equipped, marked };
     };
 
     it('a lone mandatory effect just happens, and older duels still replay', async () => {
@@ -148,9 +153,10 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
             // Started before rules 2: the mandatory effect was asked, and that answer is in its history.
             const old = new DuelSession(engine, ekibyo(undefined, seed));
             old.start();
-            const { forcedSingles, equipped } = playEkibyo(old);
+            const { forcedSingles, equipped, marked } = playEkibyo(old);
             oldForced += forcedSingles;
             expect(equipped).toBeGreaterThan(0);
+            expect(marked).toBeGreaterThan(0);
             const again = new DuelSession(engine, ekibyo(undefined, seed));
             again.start(old.answers);
             expect(again.state(0, 'd').view).toEqual(old.state(0, 'd').view);

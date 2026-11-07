@@ -102,10 +102,20 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
                     {!up && card.code > 0 && <i className="df-card__peek">Set</i>}
                 </span>
                 {stat && (
-                    <span className={`df-stat ${card.defense ? "is-def" : ""}`}>
-                        <b className={tone ? `is-${tone}` : ""}>{stat.value}</b>
+                    <span className={`df-stat ${card.defense ? "is-def" : ""} ${tone ? `is-${tone}` : ""}`} title={tone ? `${card.defense ? "DEF" : "ATK"} ${stat.base} → ${stat.value}` : undefined}>
+                        {tone && <i aria-hidden>{tone === "up" ? "▲" : "▼"}</i>}
+                        <b>{stat.value}</b>
                     </span>
                 )}
+                {/* What acts on it: the Equip Spell or continuous card's art, negation, counters. */}
+                {up && (card.by?.length || card.negated || card.counters) ? (
+                    <span className={`df-affect ${card.defense ? "is-def" : ""}`} aria-label={affectLabel(card)}>
+                        {card.by?.slice(0, 2).map((b) => <img key={b.uid} src={cardImage(b.code)} alt="" draggable={false} />)}
+                        {(card.by?.length ?? 0) > 2 && <b>+{card.by!.length - 2}</b>}
+                        {card.negated && <i className="df-affect__neg">⊘</i>}
+                        {card.counters ? <i className="df-affect__count">{card.counters}</i> : null}
+                    </span>
+                ) : null}
             </span>
             {breaking && (
                 <span className={`df-shards ${card.defense ? "is-def" : ""}`} aria-hidden style={{ "--img": `url(${up ? cardImage(card.code) : CARD_BACK})` } as CSSProperties}>
@@ -118,6 +128,9 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
         </motion.button>
     );
 }
+
+const affectLabel = (card: DuelCardView) =>
+    [card.by?.length ? `affected by ${card.by.length} card${card.by.length > 1 ? "s" : ""}` : "", card.negated ? "negated" : "", card.counters ? `${card.counters} counters` : ""].filter(Boolean).join(", ");
 
 /** An empty zone or one holding a card. */
 export function Zone({ card, label, marks, onTap, onHover, side, className = "", zone }: {

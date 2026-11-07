@@ -159,8 +159,26 @@
 }
 .df-stat.is-def { bottom: calc((var(--ch) - var(--cw)) / 2 - 8px); border-color: rgba(90, 160, 215, 0.75); color: #d6eaff; }
 .df-stat b { font-weight: 400; }
-.df-stat .is-up { color: #8dff8d; }
-.df-stat .is-down { color: #ff8a7a; }
+/* Raised or lowered from its printed value: the whole badge says so, at a glance. */
+.df-stat i { margin-right: 2px; font-style: normal; font-size: 0.75em; }
+.df-stat.is-up { color: #9dffa0; border-color: #4ccf5a; background: linear-gradient(rgba(14, 48, 20, 0.95), rgba(6, 22, 9, 0.95)); box-shadow: 0 0 8px rgba(76, 207, 90, 0.55); }
+.df-stat.is-down { color: #ffa395; border-color: #e0533f; background: linear-gradient(rgba(58, 14, 10, 0.95), rgba(26, 6, 4, 0.95)); box-shadow: 0 0 8px rgba(224, 83, 63, 0.55); }
+
+/* Something acts on the card: a chip on its corner with the card doing it (an equip, a continuous
+   card targeting it), a ⊘ when it's negated, its counters. Sits on the card's top-right corner,
+   upright or sideways. */
+.df-affect {
+    position: absolute; z-index: 3; top: -5px; left: calc(50% + var(--cw) / 2 - 12px); display: flex; align-items: center; gap: 2px;
+    padding: 2px; border-radius: 5px; pointer-events: none;
+    background: rgba(24, 10, 40, 0.92); border: 1px solid #b07cff; box-shadow: 0 0 8px rgba(176, 124, 255, 0.7);
+    animation: df-affect-in 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.df-affect.is-def { top: calc((var(--ch) - var(--cw)) / 2 - 5px); left: calc(100% - 12px); }
+.df-affect img { width: 11px; height: 16px; border-radius: 1px; object-fit: cover; outline: 1px solid rgba(255, 255, 255, 0.35); }
+.df-affect b, .df-affect i { font: 9px/1 var(--font-techno); font-style: normal; color: #e6d4ff; padding: 0 1px; }
+.df-affect__neg { color: #ff8a7a !important; font-size: 11px !important; }
+.df-affect__count { min-width: 12px; text-align: center; border-radius: 6px; background: #b07cff; color: #1a0b2e !important; font-weight: 700; padding: 1px 2px !important; }
+@keyframes df-affect-in { from { scale: 0.3; opacity: 0; } }
 
 /* The glow traces the card itself: upright, or sideways in Defense Position (the card's frame turns with it). */
 .df-card.is-glow .df-card__turn, .df-hand__card.is-glow { animation: df-glow 1s ease-in-out infinite alternate; border-radius: 4px; }

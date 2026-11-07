@@ -23,6 +23,12 @@ export interface DuelCardView {
     def?: number;
     baseAtk?: number;
     baseDef?: number;
+    /** Face-up cards on the field acting on this one: an Equip Spell equipped to it, a continuous card targeting it. */
+    by?: { uid: string; code: number }[];
+    /** Its effects are negated. */
+    negated?: boolean;
+    /** Counters on it, all kinds together. */
+    counters?: number;
 }
 
 export interface DuelSideView {

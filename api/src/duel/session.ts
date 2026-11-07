@@ -51,6 +51,10 @@ const FRAME_CAP = 300;
 const START_LP = 8000;
 const CARD_FLAGS = (Q.CODE | Q.POSITION | Q.ATTACK | Q.DEFENSE | Q.BASE_ATTACK | Q.BASE_DEFENSE) as OcgQueryFlags;
 const STAT_FLAGS = (Q.ATTACK | Q.DEFENSE | Q.POSITION | Q.CODE) as OcgQueryFlags;
+/** What acts on a card on the field: what it's equipped to, what it targets, its counters and status. */
+const LINK_FLAGS = (Q.CODE | Q.POSITION | Q.EQUIP_CARD | Q.TARGET_CARD | Q.COUNTERS | Q.STATUS) as OcgQueryFlags;
+/** ocgcore's STATUS_DISABLED: the card's effects are negated. */
+const STATUS_DISABLED = 0x0001;
 type MessageOf<T extends M> = Extract<OcgMessage, { type: T }>;
 
 /** A seeded Fisher-Yates shuffle (mulberry32), so a replay deals the same cards. */
@@ -553,6 +557,7 @@ export class DuelSession {
     view(team: Team): DuelView {
         const side = (t: Team): DuelSideView => this.sideView(t, team);
         const me = side(team), opp = side((1 - team) as Team);
+        this.markAffected({ [team]: me, [1 - team]: opp } as Record<Team, DuelSideView>);
         const emz: DuelView['extraMonsters'] = [null, null];
         if (this.setup.mode === 'MR4' && this.handle) {
             for (const t of [0, 1] as const) {
@@ -600,6 +605,33 @@ export class DuelSession {
             deck: core.duelQueryCount(this.handle, t, L.DECK),
             extra: core.duelQueryCount(this.handle, t, L.EXTRA),
         };
+    }
+
+    /** Marks the cards on the field that something acts on, so the board can show it. */
+    private markAffected(sides: Record<Team, DuelSideView>) {
+        if (!this.handle) return;
+        const { core } = this.engine;
+        const at = (t: number, location: number, seq: number): DuelCardView | null => {
+            const side = sides[t as Team];
+            if (location === L.MZONE) return side.monsters[seq] ?? null;
+            if (location === L.SZONE) return seq < 5 ? (side.spells[seq] ?? null) : seq === 5 ? side.field : (side.pendulum[seq - 6] ?? null);
+            return null;
+        };
+        for (const t of [0, 1] as const) {
+            for (const location of [L.MZONE, L.SZONE]) {
+                core.duelQueryLocation(this.handle, { flags: LINK_FLAGS, controller: t, location }).forEach((c, seq) => {
+                    const card = c && at(t, location, seq);
+                    if (!c || !card || !faceUp(c.position ?? 0)) return;
+                    const total = Object.values(c.counters ?? {}).reduce((a, n) => a + n, 0);
+                    if (total) card.counters = total;
+                    if ((c.status ?? 0) & STATUS_DISABLED) card.negated = true;
+                    for (const target of [...(c.equipCard ? [c.equipCard] : []), ...(c.targetCards ?? [])]) {
+                        const hit = at(target.controller, target.location, target.sequence);
+                        if (hit && hit.uid !== card.uid && !hit.by?.some((b) => b.uid === card.uid)) (hit.by ??= []).push({ uid: card.uid, code: card.code });
+                    }
+                });
+            }
+        }
     }
 
     private cardView(c: { code?: number; position?: number; attack?: number; defense?: number; baseAttack?: number; baseDefense?: number }, controller: Team, location: number, sequence: number, viewer: Team): DuelCardView {
