@@ -160,7 +160,7 @@ export default function DeckBuilder() {
         }
     };
 
-    const handleLoadDeck = async (deck: SavedDeck) => {
+    const handleLoadDeck = async (deck: SavedDeck, announce = true) => {
         if (!deck) return;
         setDeckName(deck.name);
 
@@ -184,8 +184,20 @@ export default function DeckBuilder() {
         setExtraDeck(getCards(deck.extraDeck));
         setSideDeck(getCards(deck.sideDeck));
         setShowLoadModal(false);
-        void gameAlert(`"${deck.name}" is loaded.`, { title: "Deck loaded" });
+        if (announce) void gameAlert(`"${deck.name}" is loaded.`, { title: "Deck loaded" });
     };
+
+    // Open on the deck you last saved (saving stamps it, so the newest stamp is the last one),
+    // unless you've already started building. Once per visit.
+    const autoLoaded = useRef(false);
+    useEffect(() => {
+        if (autoLoaded.current || savedDecks.length === 0) return;
+        autoLoaded.current = true;
+        if (mainDeck.length + extraDeck.length + sideDeck.length > 0) return;
+        const last = savedDecks.reduce((a, b) => (b.createdAt > a.createdAt ? b : a));
+        void handleLoadDeck(last, false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the saved decks first arrive
+    }, [savedDecks]);
 
     const handleDeleteDeck = async (id: string) => {
         const name = savedDecks.find(d => d.id === id)?.name;
@@ -450,7 +462,7 @@ export default function DeckBuilder() {
             {showLoadModal && (
                 <LoadDeckModal
                     savedDecks={savedDecks}
-                    onLoad={handleLoadDeck}
+                    onLoad={(deck) => void handleLoadDeck(deck)}
                     onDelete={handleDeleteDeck}
                     onClose={() => setShowLoadModal(false)}
                 />

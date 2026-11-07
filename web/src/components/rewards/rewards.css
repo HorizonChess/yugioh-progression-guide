@@ -38,8 +38,7 @@
   width: min(70vw, 360px); height: 34px; margin-top: -20px; border-radius: 6px 6px 2px 2px;
   background: linear-gradient(#8a6f48, #4a3922 60%, #2b2114); box-shadow: 0 -2px 0 #a2865a, 0 12px 20px rgba(0, 0, 0, 0.6), inset 0 6px 10px rgba(255, 230, 170, 0.15);
 }
-.rw-arrow { position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%; border: 1px solid #8a6a2c; background: rgba(10, 7, 4, 0.7); color: #ffe08a; font-size: 24px; line-height: 1; cursor: pointer; }
-.rw-arrow:disabled { opacity: 0.3; cursor: default; }
+.rw-arrow { position: relative; }
 .rw-info { position: relative; max-width: 32rem; margin-top: 12px; }
 .rw-info h2 { margin: 0; font: 800 clamp(22px, 3vw, 34px)/1.1 var(--font-display); color: #fff; text-shadow: 0 3px 10px #000; }
 .rw-info p { margin: 6px auto 0; font: 600 14px/1.45 var(--font-main); color: #d9ccaa; text-shadow: 0 1px 4px #000; }
@@ -111,7 +110,7 @@
 @media (max-width: 520px) {
   /* the arrows sit on the altar's edges, so they never push the page wider than the screen */
   .rw-stage { gap: 0; }
-  .rw-arrow { position: absolute; top: 28%; z-index: 2; width: 40px; height: 40px; font-size: 20px; }
+  .rw-arrow { position: absolute; top: 28%; z-index: 2; width: 36px; height: 44px; }
   .rw-arrow--prev { left: 2px; } .rw-arrow--next { right: 2px; }
   .rw-entry { gap: 10px; }
   .rw-text b { font-size: 18px; }
