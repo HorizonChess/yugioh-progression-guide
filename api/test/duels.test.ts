@@ -168,7 +168,9 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         const res = await app.inject({ method: 'POST', url: `/api/duels/${broken._id.toHexString()}/concede`, headers: { 'x-duel-token': token } });
         expect(res.statusCode).toBeLessThan(300);
         const stored = await app.db.collection('duels').findOne({ _id: broken._id });
-        expect(stored).toMatchObject({ status: 'finished', winner: 1, reason: 'Guest surrendered' });
+        // Seats are drawn at random: the bot's seat wins.
+        const botSeat = (original!.players as { bot: boolean }[]).findIndex((p) => p.bot);
+        expect(stored).toMatchObject({ status: 'finished', winner: botSeat, reason: 'Guest surrendered' });
         expect(stored!.openKey).toBeUndefined();
     });
 
