@@ -137,7 +137,9 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
 
     // ---- which cards glow, and what a tap on one does ------------------------------------
 
-    const boardPick = prompt?.kind === "cards" && prompt.cards.every((c) => c.uid && ON_BOARD.includes(c.where));
+    // Cards you can tap where they lie. Not the rival's hand: it's a row of backs you can't pick from,
+    // so a pick there (Confiscation) is a list: their faces if a card showed them to you, backs if not.
+    const boardPick = prompt?.kind === "cards" && prompt.cards.every((c) => c.uid && ON_BOARD.includes(c.where) && !(c.where === "hand" && c.side === "opp"));
     const pickById = useMemo(() => new Map(prompt?.kind === "cards" ? prompt.cards.map((c) => [c.uid ?? `#${c.id}`, c]) : []), [prompt]);
     const marks: CardMarks = useMemo(() => {
         const glow = new Set<string>();
@@ -306,7 +308,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             {list.map((c) => (
                 <button key={c.id} type="button" className={`df-listcard ${selected.includes(c.id) ? "is-picked" : ""}`} onClick={() => onTap(c.id)}>
                     <img src={c.code ? cardImage(c.code) : cardImage(0)} alt="" />
-                    <span>{c.code ? name(c.code) : "Face-down card"}</span>
+                    <span>{c.code ? name(c.code) : c.where === "hand" ? "A card in their hand" : "Face-down card"}</span>
                     <small>{c.side === "opp" ? `${view.opp.name}'s ` : ""}{c.where === "grave" ? "Graveyard" : c.where === "banished" ? "banished" : c.where === "deck" ? "Deck" : c.where === "extra" ? "Extra Deck" : c.where}</small>
                 </button>
             ))}

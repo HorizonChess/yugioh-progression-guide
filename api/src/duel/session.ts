@@ -154,6 +154,8 @@ const zoneOf = (location: number, sequence: number): Zone => {
 const phaseOf = (p: number): Phase =>
     p === OcgPhase.DRAW ? 'DP' : p === OcgPhase.STANDBY ? 'SP' : p === OcgPhase.MAIN1 ? 'M1' : p === OcgPhase.MAIN2 ? 'M2' : p === OcgPhase.END ? 'EP' : 'BP';
 const faceUp = (position: number) => (position & P.FACEUP) !== 0;
+/** Where a card lies on the field (its position says whether it is Set). */
+const FIELD_LOCATIONS: ReadonlySet<number> = new Set([L.MZONE, L.SZONE]);
 const POSITION_LABEL: Record<number, string> = {
     [P.FACEUP_ATTACK]: 'Attack Position',
     [P.FACEDOWN_ATTACK]: 'Face-down Attack Position',
@@ -382,6 +384,8 @@ export class DuelSession {
         }
     }
 
+    /** Cards of the rival's shown to a player (by uid) until the chain is over: they may see them in a question. */
+    private revealed: [Set<string>, Set<string>] = [new Set(), new Set()];
     /** A coin call being asked (who, and which option is Heads), then the call made, shown with the toss. */
     private calling: { team: Team; heads: number } | null = null;
     private call: { team: Team; heads: boolean } | null = null;
@@ -503,7 +507,11 @@ export class DuelSession {
                 case M.CHAIN_DISABLED:
                     out.push({ k: 'negated', link: m.chain_size });
                     break;
+                case M.CONFIRM_CARDS:
+                    for (const c of m.cards) this.revealed[m.player as Team]?.add(this.tracker.uidAt(c.controller, c.location, c.sequence));
+                    break;
                 case M.CHAIN_END:
+                    this.revealed = [new Set(), new Set()];
                     this.chain = [];
                     break;
                 case M.ATTACK: {
@@ -689,11 +697,21 @@ export class DuelSession {
 
     // ---- engine questions → prompts --------------------------------------------------------
 
+    /** A card's position on the field, from the engine (a question's card list doesn't carry it). */
+    private positionOf(c: OcgCardLoc): number {
+        const info = this.engine.core.duelQuery(this.handle!, { flags: Q.POSITION as OcgQueryFlags, controller: c.controller as Team, location: c.location as never, sequence: c.sequence, overlaySequence: 0 });
+        return info?.position ?? P.FACEDOWN_DEFENSE;
+    }
+
     private ref(c: OcgCardLoc, id: number, asker: Team): PromptCard {
+        const uid = c.location !== L.DECK ? this.tracker.uidAt(c.controller, c.location, c.sequence) : undefined;
+        // The rival's hidden cards (their Deck, their hand, their Set cards) stay hidden in a question,
+        // unless a card showed them to you (Confiscation: "look at your opponent's hand").
+        const hidden = c.controller !== asker && (c.location === L.DECK || c.location === L.HAND || (FIELD_LOCATIONS.has(c.location) && !faceUp(this.positionOf(c))));
         return {
-            id, code: c.location === L.DECK && c.controller !== asker ? 0 : this.show(c.code), side: c.controller === asker ? 'me' : 'opp',
+            id, code: hidden && !(uid && this.revealed[asker].has(uid)) ? 0 : this.show(c.code), side: c.controller === asker ? 'me' : 'opp',
             where: zoneOf(c.location, c.sequence),
-            ...(c.location !== L.DECK ? { uid: this.tracker.uidAt(c.controller, c.location, c.sequence) } : {}),
+            ...(uid ? { uid } : {}),
         };
     }
 
