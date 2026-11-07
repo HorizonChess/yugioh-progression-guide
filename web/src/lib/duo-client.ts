@@ -23,7 +23,11 @@ export type NotificationType =
     | "report-rejected"
     | "snatched"
     | "banlist"
-    | "rival-left";
+    | "rival-left"
+    | "duel-challenge"
+    | "duel-accepted"
+    | "duel-declined"
+    | "duel-result";
 
 export interface AppNotification {
     id: string;
@@ -118,5 +122,13 @@ export function describeNotification({ type, payload: p }: AppNotification): str
             return `${p.from} ${p.banned ? "banned" : "unbanned"} a card in ${series}.`;
         case "rival-left":
             return `${p.from} left ${series}. The series is paused.`;
+        case "duel-challenge":
+            return `${p.from} challenges you to a duel on ${p.setName}!`;
+        case "duel-accepted":
+            return `${p.from} accepted your challenge on ${p.setName}. Your duel is on!`;
+        case "duel-declined":
+            return `Your challenge on ${p.setName} was declined.`;
+        case "duel-result":
+            return `You ${p.youWon ? "beat" : "lost to"} ${p.from} on ${p.setName}. It's on the series.`;
     }
 }

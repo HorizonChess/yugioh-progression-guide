@@ -9,6 +9,7 @@
  */
 import notesJson from "@/data/guide/sets.json";
 import timelineJson from "@/data/guide/timeline.json";
+import type { DuelModeId, RuleEra } from "@ygo/shared";
 
 export type Mood = "neutral" | "happy" | "sad";
 export type Line = { key: string; text: string; mood: Mood; priority: number };
@@ -179,4 +180,31 @@ export function resultLine(won: boolean, o: { mode: "solo" | "duo"; rival?: stri
 export function waitingLine(rival: string, seed = 0): Line {
     const lines = ["Now we wait for {rival} to confirm. No peeking at their face!", "Sent! {rival} just has to confirm it."];
     return { key: `waiting:${seed}`, text: fill(pick(lines, seed), { rival }), mood: "neutral", priority: PRIORITY.result };
+}
+
+/**
+ * The rules of the duel, as the series reaches a set where they change (and on the first duel of
+ * all, the old rules it starts under). Facts from RULE_ERAS in @ygo/shared, which the server's
+ * engine plays by; nothing here is about a card.
+ */
+const RULE_LINES: Record<DuelModeId, string[]> = {
+    MR1: [
+        "We duel by the old rules here: whoever goes first still draws on turn one!",
+        "And only one Field Spell can be face-up on the whole field. Play a new one and the old one goes.",
+    ],
+    MR2: [
+        "The rules changed with this set! A monster's Ignition Effect can't jump in right after its Summon anymore.",
+        "So your opponent gets the first chance to answer a Summon. Watch for Trap Hole!",
+    ],
+    MR3: [
+        "New rules from this set on! Whoever goes first doesn't draw on turn one anymore.",
+        "And each of us can keep our own Field Spell now. Pendulum Zones join the field too!",
+    ],
+    MR4: [
+        "The Link rules start here: Extra Deck monsters go to an Extra Monster Zone, or a zone a Link Monster points to.",
+    ],
+};
+
+export function ruleLines(era: RuleEra): Line[] {
+    return RULE_LINES[era.id].map((text, i) => ({ key: `rules:${era.id}:${i}`, text, mood: "neutral" as const, priority: PRIORITY.pull }));
 }

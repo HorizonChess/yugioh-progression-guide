@@ -7,7 +7,8 @@ import type { Opening } from "@/lib/repo/types";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import GuideSprite from "@/components/layout/GuideSprite";
-import { pullLine } from "@/lib/guide/lines";
+import { pullLine, ruleLines } from "@/lib/guide/lines";
+import { ruleChangeAt } from "@ygo/shared";
 import { guide, seed } from "@/lib/guide/store";
 import StoreView from "@/components/packs/StoreView";
 import PackStageView from "@/components/packs/PackStageView";
@@ -86,6 +87,9 @@ function PacksPageContent() {
                 const set = sets[targetSetIndex];
                 if (set) {
                     setCurrentSet(set);
+                    // Reaching a set where the duel rules change: Yugi says what's different.
+                    const change = targetSetIndex === currentSetIndex ? ruleChangeAt(set.tcg_date, sets[targetSetIndex - 1]?.tcg_date) : null;
+                    if (change) setTimeout(() => guide.sayAll(ruleLines(change)), 1200);
                     setSetCards(await fetchCardsInSet(set.set_name));
                 }
                 const unsaved = await activeOpening("set");

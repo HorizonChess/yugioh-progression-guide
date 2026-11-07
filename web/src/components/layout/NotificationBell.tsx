@@ -1,5 +1,6 @@
 "use client";
 
+import { duelPath } from "@/lib/duel-client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
@@ -41,7 +42,8 @@ export default function NotificationBell() {
         } catch (error) {
             return alertRepoError(error);
         }
-        router.push(n.type === "report" ? "/record-match" : n.type === "report-confirmed" ? "/rewards" : "/timeline");
+        if ((n.type === "duel-challenge" || n.type === "duel-accepted") && typeof n.payload.duelId === "string") return router.push(duelPath(n.payload.duelId));
+        router.push(n.type === "report" ? "/record-match" : n.type === "report-confirmed" || n.type === "duel-result" ? "/rewards" : "/timeline");
     };
 
     return (

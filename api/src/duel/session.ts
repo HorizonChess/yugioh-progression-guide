@@ -167,6 +167,8 @@ export class DuelSession {
     private turnPlayer: Team = 0;
     private phase: Phase = 'DP';
     private chain: { code: number; team: Team; uid?: string }[] = [];
+    /** Cards whose chain link just resolved: a spell or trap going to the Graveyard after it isn't destroyed. */
+    private resolved = new Set<string>();
     /** For the bot: actions taken this turn, so it can't loop. */
     botActions = 0;
 
@@ -379,6 +381,7 @@ export class DuelSession {
                     out.push({ k: 'turn', team: m.player as Team, turn: this.turn });
                     break;
                 case M.NEW_PHASE:
+                    this.resolved.clear();
                     this.phase = phaseOf(m.phase);
                     out.push({ k: 'phase', phase: this.phase });
                     break;
@@ -400,10 +403,13 @@ export class DuelSession {
                     out.push({ k: 'activate', team: m.controller, code: m.code, uid, link: this.chain.length });
                     break;
                 }
-                case M.CHAIN_SOLVED:
+                case M.CHAIN_SOLVED: {
+                    const link = this.chain[m.chain_size - 1];
+                    if (link?.uid) this.resolved.add(link.uid);
                     this.chain.length = Math.max(0, m.chain_size - 1);
                     out.push({ k: 'resolved', link: m.chain_size });
                     break;
+                }
                 case M.CHAIN_NEGATED:
                 case M.CHAIN_DISABLED:
                     out.push({ k: 'negated', link: m.chain_size });
@@ -424,7 +430,7 @@ export class DuelSession {
                     const fromField = m.from.location === L.MZONE || m.from.location === L.SZONE;
                     const uidBefore = fromField ? this.tracker.uidAt(m.from.controller, m.from.location, m.from.sequence) : undefined;
                     // A monster leaving the field for the Graveyard breaks; a spell that just resolved doesn't.
-                    if (uidBefore && m.to.location === L.GRAVE && (m.from.location === L.MZONE || !this.chain.some((c) => c.uid === uidBefore)))
+                    if (uidBefore && m.to.location === L.GRAVE && (m.from.location === L.MZONE || !(this.chain.some((c) => c.uid === uidBefore) || this.resolved.has(uidBefore))))
                         out.push({ k: 'destroyed', uid: uidBefore, code: m.card });
                     const uid = this.tracker.move(m.from, m.to);
                     out.push({

@@ -17,6 +17,8 @@ import { useAuth } from "@/context/AuthContext";
 import { wheelPrizesFor } from "@ygo/shared";
 import { asset } from "@/lib/utils";
 import type { WheelPrize } from "@/lib/rewards";
+import DuelLauncher from "@/components/duel/DuelLauncher";
+import { openDuels } from "@/lib/duel-client";
 import "@/components/record-match/record-match.css";
 
 /** The board's art, handed to its CSS through asset() (which knows the base path). */
@@ -41,11 +43,13 @@ const ART = {
  * Reporting the result books the reward (a wheel spin or pity packs) and advances the set;
  * a spin left for later is resumed with ?spin=<rewardId>.
  */
-type Stage = "board" | "wheel" | "defeat";
+type Stage = "board" | "duel" | "wheel" | "defeat";
 
 export default function RecordMatchPage() {
-    const { matchHistory, reportMatch, confirmReport, rejectReport, spin, currentSetIndex, series } = useProgression();
+    const { matchHistory, reportMatch, confirmReport, rejectReport, spin, currentSetIndex, series, savedDecks } = useProgression();
     const userId = useAuth().user?.id;
+    // Duels on the server's engine need an account (guests record duels played elsewhere).
+    const canDuel = !!userId && !!series && !series.finished;
     const router = useRouter();
     const reduceMotion = useReducedMotion();
     const [sets, setSets] = useState<CardSet[]>([]);
@@ -70,6 +74,18 @@ export default function RecordMatchPage() {
             /* eslint-enable react-hooks/set-state-in-effect */
         }
     }, []);
+
+    // A duel waiting on this player (the rival's challenge, or one in progress) opens the duel act first.
+    useEffect(() => {
+        if (!canDuel || !series) return;
+        let live = true;
+        openDuels(series.id)
+            .then((duels) => live && duels.some((d) => d.kind === "rival") && setStage((s) => (s === "board" ? "duel" : s)))
+            .catch(() => undefined);
+        return () => {
+            live = false;
+        };
+    }, [canDuel, series]);
 
     // Win rate and current streak from match history
     const wins = matchHistory.filter((m) => m.winner === "player").length;
@@ -150,7 +166,7 @@ export default function RecordMatchPage() {
     const leave = reduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, scale: 0.97 };
     const motionProps = { initial: enter, animate: shown, exit: leave, transition: { duration: reduceMotion ? 0.2 : 0.35, ease: "easeOut" as const } };
 
-    const head = stage === "wheel" ? "Victory reward" : stage === "defeat" ? "Match result" : pending ? "Duo series" : "Record the duel";
+    const head = stage === "wheel" ? "Victory reward" : stage === "defeat" ? "Match result" : stage === "duel" ? "Duel" : pending ? "Duo series" : "Record the duel";
     const pack = currentSet?.set_image;
 
     return (
@@ -181,7 +197,13 @@ export default function RecordMatchPage() {
                             )}
                             {stage === "board" && !pending && currentSet && (
                                 <motion.div key="board" className="rm-act rm-act--choose" {...motionProps}>
+                                    {canDuel && <button type="button" className="dl-btn dl-btn--main rm-duel-open" onClick={() => setStage("duel")}>⚔ Duel in the app</button>}
                                     <RecordMatch onRecord={handleRecordMatch} />
+                                </motion.div>
+                            )}
+                            {stage === "duel" && !pending && series && (
+                                <motion.div key="duel" className="rm-act" {...motionProps}>
+                                    <DuelLauncher seriesId={series.id} duo={series.mode === "duo"} rival={rival} decks={savedDecks} setDate={currentSet?.tcg_date} onBack={() => setStage("board")} />
                                 </motion.div>
                             )}
                             {stage === "wheel" && (
