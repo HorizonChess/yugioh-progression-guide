@@ -328,7 +328,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
         // A question is keyed "sheet" (it stays up through the gap to the next one); something you
         // opened yourself (the duel menu, a list of cards) is "menu", and goes as soon as you close it.
         <motion.div key={opts.onSwipe ? "menu" : "sheet"} className={`df-sheet ${opts.compact ? "df-sheet--compact" : ""}`}
-            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: "spring", stiffness: 420, damping: 36 }}
+            initial={{ y: "70%", opacity: 1 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "70%", opacity: 0 }} transition={{ type: "spring", stiffness: 420, damping: 36 }}
             drag={isPhone ? "y" : false} dragDirectionLock dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.9 }}
             onDragEnd={(_, info) => {
                 if (info.offset.y > 70 || info.velocity.y > 500) (opts.onSwipe ?? (() => setTucked(promptKey)))();
@@ -372,7 +372,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: "spring", stiffness: 520, damping: 30 }}>
                 {heldActions.map((a) => (
                     <button key={a.id} type="button" className="df-pop__btn" onClick={() => choose(a)}>
-                        {actionLabel(a)}
+                        {a.verb === "reposition" && !held.card.faceUp ? "Flip Summon" : actionLabel(a)}
                         {a.verb === "activate" && a.text && heldActions.filter((x) => x.verb === "activate").length > 1 && <small>{a.text}</small>}
                     </button>
                 ))}

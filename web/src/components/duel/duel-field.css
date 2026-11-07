@@ -187,6 +187,8 @@
 /* The card you've picked up rises out of the hand (or off its zone). */
 .df-hand__card { transition: translate 0.18s ease-out, scale 0.18s ease-out; }
 .df-hand__card.is-raised { translate: 0 calc(var(--hw) * -0.32); scale: 1.12; z-index: 60 !important; }
+/* In a tight hand the raised card makes room, so it never hides the card next to it. */
+.df-hand__card.is-raised { margin-inline: calc(var(--hw) * 0.16) !important; transition: margin 0.15s ease; }
 .df-card.is-raised .df-card__turn { translate: 0 -5px; scale: 1.08; filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.7)); }
 .df-card__turn { transition: transform 0.35s cubic-bezier(0.3, 0.7, 0.3, 1), translate 0.18s ease-out, scale 0.18s ease-out; }
 @keyframes df-glow {

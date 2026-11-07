@@ -111,13 +111,19 @@ export function CardCloseUp({ card, onClose, action, mark = false, onPrev, onNex
         if (!tap || (e.target as Element).closest(".closeup__card, .closeup__side, .closeup__nav")) return;
         // This closes on finger-up, so the tap's own click would land on whatever is
         // underneath (another pocket would open): swallow that one click.
+        // (Only that one: a fresh press means the next click is a real tap, so it goes through.)
+        const stop = () => {
+            removeEventListener("click", eat, true);
+            removeEventListener("pointerdown", stop, true);
+        };
         const eat = (ev: MouseEvent) => {
             ev.stopPropagation();
             ev.preventDefault();
-            removeEventListener("click", eat, true);
+            stop();
         };
         addEventListener("click", eat, true);
-        setTimeout(() => removeEventListener("click", eat, true), 450);
+        addEventListener("pointerdown", stop, true);
+        setTimeout(stop, 450);
         onClose();
     };
     const lean = (e: React.PointerEvent) => {
