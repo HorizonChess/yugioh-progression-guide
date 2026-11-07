@@ -8,6 +8,8 @@ import { asset } from '@/lib/utils';
 import SaveSlotList from "@/components/layout/SaveSlotList";
 import { useAuth } from "@/context/AuthContext";
 import { useProgression } from "@/context/ProgressionContext";
+import GuideSprite from "@/components/layout/GuideSprite";
+import { useWelcome } from "@/lib/guide/welcome";
 import MenuItem, { MenuItemData } from "@/components/menu/MenuItem";
 import MenuSignIn from "@/components/menu/MenuSignIn";
 import MenuOptions from "@/components/menu/MenuOptions";
@@ -39,8 +41,8 @@ export default function Menu() {
     }, [loading, user, router]);
 
     const account: MenuItemData[] = !user
-        ? [{ label: "SIGN IN", action: () => setView("signin"), description: "Keep your progress in an account" }]
-        : [{ label: "SIGN OUT", action: () => void signOut(), description: `Signed in as ${user.duelistName}` }];
+        ? [{ label: "SIGN IN", action: () => setView("signin"), description: "Keep your progress in an account", guide: "account" }]
+        : [{ label: "SIGN OUT", action: () => void signOut(), description: `Signed in as ${user.duelistName}`, guide: "account" }];
     const menuItems: MenuItemData[] = loading
         ? []
         : [
@@ -51,10 +53,14 @@ export default function Menu() {
                   description: activeSeriesId ? "View your acquired cards" : "Pick a save in Campaign Mode first",
                   disabled: !activeSeriesId,
               },
-              { label: "OPTIONS", action: () => setView("options"), description: "Sound and the guide" },
+              { label: "OPTIONS", action: () => setView("options"), description: "Sound and the guide", guide: "options" },
               ...account,
               { label: "BACK TO TITLE", href: "/", description: user ? "Return to the title screen" : "Return to the title screen, to sign up or play as a guest" },
           ];
+
+    // Yugi's hello on the main menu, then a word on Campaign Mode's list the first time it opens.
+    useWelcome("menu", !loading && view === "menu", { account: user ? "member" : "guest" });
+    useWelcome("campaign", view === "saves", { account: user ? "member" : "guest" });
 
     return (
         <main className="menu-screen">
@@ -81,11 +87,11 @@ export default function Menu() {
                         <div className="menu-items animate-in slide-in-from-left-10 fade-in duration-300">
                             {menuItems.map((item, idx) =>
                                 item.href ? (
-                                    <Link key={idx} href={item.disabled ? "#" : item.href} className={`block group relative ${item.disabled ? "cursor-not-allowed" : ""}`} aria-disabled={item.disabled || undefined}>
+                                    <Link key={idx} data-guide={item.guide} href={item.disabled ? "#" : item.href} className={`block group relative ${item.disabled ? "cursor-not-allowed" : ""}`} aria-disabled={item.disabled || undefined}>
                                         <MenuItem item={item} main={idx === 0} />
                                     </Link>
                                 ) : (
-                                    <button key={idx} onClick={item.action} disabled={item.disabled} className={`block w-full text-left group relative ${item.disabled ? "cursor-not-allowed" : ""}`}>
+                                    <button key={idx} data-guide={item.guide} onClick={item.action} disabled={item.disabled} className={`block w-full text-left group relative ${item.disabled ? "cursor-not-allowed" : ""}`}>
                                         <MenuItem item={item} main={idx === 0} />
                                     </button>
                                 )
@@ -99,6 +105,8 @@ export default function Menu() {
                 <span>System · Online</span>
                 <span>Version 0.6 Alpha</span>
             </div>
+            {/* Just his tablet: he's already painted beside the menu. */}
+            <GuideSprite bare />
         </main>
     );
 }

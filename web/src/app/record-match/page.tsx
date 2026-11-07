@@ -1,5 +1,6 @@
 "use client";
 
+import { useWelcome } from "@/lib/guide/welcome";
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
 import { RepoError, type PendingReport } from "@/lib/repo/types";
 import { fetchAllSets, CardSet } from "@/lib/api";
@@ -131,6 +132,10 @@ export default function RecordMatchPage() {
 
     const toRewards = () => router.push("/rewards");
     const toTimeline = () => router.push("/timeline");
+
+    // The first time the "how did it go?" board is up.
+    const choosing = !loading && stage === "board" && !!sets[currentSetIndex] && !(series?.mode === "duo" && (series.pendingReport ?? answered));
+    useWelcome("record-match", choosing, { mode: series?.mode, rival: series?.members.find((m) => m.id !== userId)?.duelistName });
 
     if (loading) {
         return (

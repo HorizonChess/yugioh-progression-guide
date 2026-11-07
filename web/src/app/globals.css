@@ -1160,3 +1160,33 @@ body:has(.closeup) .guide, body:has(.ps-inspect) .guide { z-index: 310; }
   body:has(.guide--on) .closeup { padding-top: 148px; }
   body:has(.guide--on) .closeup .ps-close-hint { visibility: hidden; }
 }
+
+/* The welcome's spotlight (GuideSpotlight): a gold ring over what Yugi is talking about, the page
+   dimmed around it. Drawn next to him (just under him), so he stays bright and nothing clips it. */
+.guide-spot {
+  position: fixed; z-index: 115; pointer-events: none; border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(4, 3, 8, 0.68), 0 0 0 3px #ffd76a, 0 0 28px 6px rgba(255, 215, 106, 0.6);
+  animation: guide-spot-in 0.35s ease-out both, guide-spot-pulse 1.6s ease-in-out 0.35s infinite;
+}
+@keyframes guide-spot-in { from { opacity: 0; } }
+@keyframes guide-spot-pulse { 50% { box-shadow: 0 0 0 9999px rgba(4, 3, 8, 0.68), 0 0 0 3px #ffe7a0, 0 0 40px 10px rgba(255, 215, 106, 0.75); } }
+body:has(.closeup) .guide-spot { z-index: 305; }
+@media (prefers-reduced-motion: reduce) { .guide-spot { animation: none; } }
+
+/* Wider screens: the right-hand corner, when his own would cover what he's pointing at. He comes
+   in from the right, facing into the page. */
+@media (min-width: 768px) {
+  .guide--at-right { left: auto; right: 0; flex-direction: row-reverse; transform: translateX(calc(100% + 40px)); }
+  .guide--at-right.guide--on { transform: none; }
+  .guide--at-right .guide__yugi { margin: 0 26px 14px -6px; }
+  .guide--at-right .guide__yugi img { transform: scaleX(-1); }
+  /* Just the tablet (the main menu, where he's already painted): low on the right, beside him. */
+  .guide--bare { left: auto; right: 4vw; bottom: 5vh; transform: translateX(calc(100% + 4vw + 40px)); }
+  .guide--bare.guide--on { transform: none; }
+}
+/* Phones: from the top, when what he's pointing at is in the lower half. */
+@media (max-width: 767px) {
+  .guide--at-top { top: calc(6px + env(safe-area-inset-top)); bottom: auto; }
+  .guide--bare .guide__tablet { margin-left: 8px; }
+}
+.menu-option--action { cursor: default; }
