@@ -1,5 +1,6 @@
 "use client";
 
+import NavArrow from "@/components/ui/NavArrow";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useSwipeClose } from "@/lib/dismiss";
 import { createPortal } from "react-dom";
@@ -138,8 +139,8 @@ export function CardCloseUp({ card, onClose, action, mark = false, onPrev, onNex
     return createPortal(
         <div ref={rootEl} className="closeup" role="dialog" aria-label={card.card.name} onPointerDown={down} onPointerUp={up} onPointerCancel={() => (press.current = null)}>
             <span className="ps-close-hint">{position ? <><b>{position}</b> · swipe for the next card</> : "Tap anywhere to close"}</span>
-            {onPrev && <button type="button" className="closeup__nav closeup__nav--prev" aria-label="Previous card" onClick={(e) => (e.stopPropagation(), step(-1))}>‹</button>}
-            {onNext && <button type="button" className="closeup__nav closeup__nav--next" aria-label="Next card" onClick={(e) => (e.stopPropagation(), step(1))}>›</button>}
+            {onPrev && <NavArrow dir="prev" className="closeup__nav closeup__nav--prev" label="Previous card" onClick={(e) => (e.stopPropagation(), step(-1))} />}
+            {onNext && <NavArrow dir="next" className="closeup__nav closeup__nav--next" label="Next card" onClick={(e) => (e.stopPropagation(), step(1))} />}
             <div ref={bodyEl} key={`${card.card.id}-${card.code}`} className="closeup__body" data-dir={dir}>
                 <div className="closeup__card ps-card ps-card--flipped" data-tier={card.tier} onPointerMove={lean} onPointerLeave={settle} onClick={(e) => e.stopPropagation()}>
                     <div ref={tilt} className="ps-tilt">

@@ -1,5 +1,6 @@
 "use client";
 
+import NavArrow from "@/components/ui/NavArrow";
 import { useWelcome } from "@/lib/guide/welcome";
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
 import { useAuth } from "@/context/AuthContext";
@@ -301,7 +302,7 @@ export default function RewardsPage() {
                                     }}
                                 >
                                     <div className="rw-pool" aria-hidden="true" />
-                                    <button type="button" className="rw-arrow rw-arrow--prev" onClick={() => go(at - 1)} disabled={at === 0} aria-label="Previous reward">‹</button>
+                                    <NavArrow dir="prev" className="rw-arrow rw-arrow--prev" onClick={() => go(at - 1)} disabled={at === 0} label="Previous reward" />
                                     <div className="rw-altar">
                                         <div key={current.id} className={`rw-holder rw-holder--in ${canClaim(current) ? "" : "rw-holder--locked"} ${opening === current.id ? "rw-opening" : ""}`}>
                                             <Relic prizeId={current.prizeId} locked={!canClaim(current)} />
@@ -309,7 +310,7 @@ export default function RewardsPage() {
                                         </div>
                                         <div className="rw-slab" aria-hidden="true" />
                                     </div>
-                                    <button type="button" className="rw-arrow rw-arrow--next" onClick={() => go(at + 1)} disabled={at >= available.length - 1} aria-label="Next reward">›</button>
+                                    <NavArrow dir="next" className="rw-arrow rw-arrow--next" onClick={() => go(at + 1)} disabled={at >= available.length - 1} label="Next reward" />
                                 </div>
                                 <div className="rw-info">
                                     <h2>{getPrize(current.prizeId)?.label ?? current.prizeId}</h2>
