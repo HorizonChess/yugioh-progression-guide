@@ -25,15 +25,28 @@ export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = f
     switch (m.type) {
         case M.SELECT_IDLECMD: {
             if (duel.botActions++ < MAX_ACTIONS_PER_TURN) {
-                if (m.summons.length) {
-                    const best = m.summons.reduce((b, c, i, all) => (duel.stats(c).atk >= duel.stats(all[b]!).atk ? i : b), 0);
-                    return { type: R.SELECT_IDLECMD, action: I.SELECT_SUMMON, index: best };
+                // A Tribute Summon only for a monster stronger than what it gives up.
+                const mine = duel.monstersOf(team).map((x) => x.atk).sort((x, y) => x - y);
+                const worth = (code: number, atk: number) => {
+                    const level = duel.level(code);
+                    const need = level >= 7 ? 2 : level >= 5 ? 1 : 0;
+                    return need === 0 || (mine.length >= need && atk > Math.max(...mine.slice(0, need)));
+                };
+                const summons = m.summons.map((c, i) => ({ i, atk: duel.stats(c).atk, ok: worth(c.code, duel.stats(c).atk) })).filter((x) => x.ok);
+                if (summons.length) {
+                    const best = summons.reduce((b, x) => (x.atk >= b.atk ? x : b));
+                    return { type: R.SELECT_IDLECMD, action: I.SELECT_SUMMON, index: best.i };
                 }
                 if (m.special_summons.length) return { type: R.SELECT_IDLECMD, action: I.SELECT_SPECIAL_SUMMON, index: 0 };
-                const fromHand = m.activates.findIndex((a) => a.location === L.HAND);
-                if (fromHand >= 0) return { type: R.SELECT_IDLECMD, action: I.SELECT_ACTIVATE, index: fromHand };
+                const fromHand = m.activates.findIndex((a) => a.location === L.HAND && worthUsing(a.code, duel, team));
+                if (fromHand >= 0) {
+                    duel.botUsing = m.activates[fromHand]!.code;
+                    return { type: R.SELECT_IDLECMD, action: I.SELECT_ACTIVATE, index: fromHand };
+                }
                 if (m.spell_sets.length) return { type: R.SELECT_IDLECMD, action: I.SELECT_SPELL_SET, index: 0 };
-                if (m.monster_sets.length && !m.summons.length) return { type: R.SELECT_IDLECMD, action: I.SELECT_MONSTER_SET, index: 0 };
+                // Set a monster face-down only if it needs no Tribute (and it couldn't summon one).
+                const set = m.monster_sets.findIndex((c) => duel.level(c.code) < 5);
+                if (set >= 0 && !summons.length) return { type: R.SELECT_IDLECMD, action: I.SELECT_MONSTER_SET, index: set };
             }
             return { type: R.SELECT_IDLECMD, action: m.to_bp ? I.TO_BP : I.TO_EP, index: null };
         }
@@ -41,16 +54,41 @@ export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = f
             const theirs = duel.monstersOf((1 - team) as Team);
             const weakest = Math.min(...theirs.map((t) => ((t.position & P.ATTACK) && (t.position & P.FACEUP) ? t.atk : t.def)));
             const attacker = m.attacks.findIndex((a) => a.can_direct || duel.stats(a).atk > weakest);
-            if (attacker >= 0) return { type: R.SELECT_BATTLECMD, action: B.SELECT_BATTLE, index: attacker };
+            if (attacker >= 0) {
+                duel.botAttacker = duel.stats(m.attacks[attacker]!).atk;
+                return { type: R.SELECT_BATTLECMD, action: B.SELECT_BATTLE, index: attacker };
+            }
             return { type: R.SELECT_BATTLECMD, action: m.to_m2 ? B.TO_M2 : B.TO_EP, index: null };
         }
-        case M.SELECT_CHAIN:
-            return { type: R.SELECT_CHAIN, index: m.selects.length ? 0 : null };
+        case M.SELECT_CHAIN: {
+            // Only what helps: a boost while its monster is in a battle, a wipe when it's behind,
+            // anything else when the engine offers it (traps only come up when their moment is right).
+            const pick = m.selects.findIndex((c) => worthUsing(c.code, duel, team, true));
+            const index = pick >= 0 ? pick : m.forced && m.selects.length ? 0 : null;
+            if (index !== null) duel.botUsing = m.selects[index]!.code;
+            return { type: R.SELECT_CHAIN, index };
+        }
         case M.SELECT_CARD:
         case M.SELECT_TRIBUTE: {
+            // Choosing what to attack: the strongest monster it beats (never one that beats it).
+            const attackerAtk = duel.botAttacker;
+            duel.botAttacker = null;
+            if (m.type === M.SELECT_CARD && attackerAtk !== null && m.selects.every((c) => c.controller !== team && c.location === L.MZONE)) {
+                const value = (c: (typeof m.selects)[number]) => {
+                    const st = duel.stats(c);
+                    return st.position & P.ATTACK ? st.atk : st.def;
+                };
+                const order = range(m.selects.length).sort((a, b) => value(m.selects[a]!) - value(m.selects[b]!));
+                const beaten = order.filter((i) => value(m.selects[i]!) < attackerAtk);
+                return { type: R.SELECT_CARD, indicies: [beaten.length ? beaten[beaten.length - 1]! : order[0]!] };
+            }
             // Its own cards (tributes, costs): the weakest first. The rival's (targets): the strongest first.
+            // A boost goes the other way: onto its own strongest monster.
+            const boosting = m.type === M.SELECT_CARD && duel.botUsing !== null && duel.effectKind(duel.botUsing) === 'buff';
+            duel.botUsing = null;
             const score = (c: (typeof m.selects)[number]) => {
                 const s = c.location === L.MZONE ? duel.stats(c).atk : 0;
+                if (boosting) return c.controller === team ? -s - 100000 : s;
                 return c.controller === team ? s : -s;
             };
             const order = range(m.selects.length).sort((a, b) => score(m.selects[a]!) - score(m.selects[b]!));
@@ -96,4 +134,21 @@ export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = f
         default:
             throw new Error(`The practice bot can't answer engine message ${m.type}`);
     }
+}
+
+/**
+ * Whether the bot should use a card now: a boost only for a face-up monster of its own (and, as a
+ * response, only in a battle), a wipe of both sides only when the rival has more on the field.
+ */
+function worthUsing(code: number, duel: DuelSession, team: Team, responding = false): boolean {
+    const kind = duel.effectKind(code);
+    if (kind === 'buff') {
+        const own = duel.monstersOf(team).some((x) => x.position & P.FACEUP);
+        return own && (!responding || duel.currentPhase === 'BP');
+    }
+    if (kind === 'wipe') {
+        const total = (t: Team) => duel.monstersOf(t).reduce((n, x) => n + Math.max(x.atk, x.def, 1000), 0);
+        return total((1 - team) as Team) > total(team);
+    }
+    return true;
 }

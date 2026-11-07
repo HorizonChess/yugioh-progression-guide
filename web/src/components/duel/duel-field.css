@@ -400,7 +400,7 @@
 /* ---------------------------------------------------------------- questions */
 .df-sheet {
     position: absolute; z-index: 50; padding: 8px 14px 14px; border-radius: 16px 16px 0 0;
-    background: linear-gradient(180deg, rgba(42, 31, 18, 0.98), rgba(22, 15, 9, 0.98));
+    background: linear-gradient(180deg, #2a1f12, #160f09);
     border: 1px solid #8b7355; border-bottom: 0; box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.8);
 }
 .df-sheet__grip { width: 40px; height: 4px; margin: 0 auto 8px; border-radius: 2px; background: rgba(212, 175, 55, 0.4); }
@@ -456,8 +456,20 @@
 .df-arena.is-sent .df-pop { pointer-events: none; }
 /* The question on screen; a sheet lingering between questions (see useSteady) is inert. */
 .df-question { display: contents; }
-.df-question .df-sheet { transition: filter 0.2s ease; }
-.df-question.is-lingering .df-sheet { pointer-events: none; filter: brightness(0.82) saturate(0.75); }
+/* A sheet waiting between questions dims only after a real wait: the usual quick swap to the next
+   question shows no change at all (a dim-and-back right after a tap reads as a flicker). */
+.df-question .df-sheet { transition: filter 0.25s ease; }
+.df-question.is-lingering .df-sheet { pointer-events: none; filter: brightness(0.85) saturate(0.8); transition-delay: 0.9s; }
+
+/* A question swiped away: a tab at the bottom brings it back. */
+.df-tab {
+    position: absolute; z-index: 50; left: 50%; bottom: 0; translate: -50% 0; max-width: 90%; padding: 8px 16px 10px; border-radius: 12px 12px 0 0;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer;
+    font: 600 13px/1.2 var(--font-heading, inherit); color: #f5e9c8;
+    background: linear-gradient(180deg, #2a1f12, #160f09); border: 1px solid #8b7355; border-bottom: 0;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.7), 0 0 14px rgba(245, 197, 66, 0.35);
+}
+.df-tab span { color: #f5c542; margin-right: 4px; }
 
 /* ================================================================ PHONES: portrait, Master Duel style */
 .df--phone {

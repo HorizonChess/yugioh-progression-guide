@@ -41,6 +41,13 @@ export interface Engine {
      */
     learn(code: number, name: string): boolean;
     baseAttack(code: number): number;
+    /** A monster's Level (0 for anything else). */
+    level(code: number): number;
+    /**
+     * Roughly what a card's effect does, read from its script (for the practice bot): `buff` raises
+     * a monster's ATK/DEF or equips it, `wipe` destroys or removes monsters on both sides at once.
+     */
+    effectKind(code: number): 'buff' | 'wipe' | 'other';
 }
 
 const TYPE_MONSTER = 0x1;
@@ -149,6 +156,14 @@ async function build(): Promise<Engine> {
             return true;
         },
         baseAttack: (code) => row(code)?.atk ?? 0,
+        level: (code) => row(code)?.level ?? 0,
+        effectKind(code) {
+            const script = engine.readScript(`c${learned.get(code) ?? code}.lua`) ?? '';
+            const harms = /CATEGORY_(DESTROY|REMOVE|TOGRAVE|TOHAND|TODECK|DISABLE|NEGATE|CONTROL|DAMAGE)/.test(script);
+            if (harms && /GetMatchingGroup\([^)]*LOCATION_MZONE,LOCATION_MZONE/.test(script)) return 'wipe';
+            if (!harms && (/CATEGORY_(ATKCHANGE|DEFCHANGE)/.test(script) || /AddEquipProcedure/.test(script))) return 'buff';
+            return 'other';
+        },
     };
     return engine;
 }

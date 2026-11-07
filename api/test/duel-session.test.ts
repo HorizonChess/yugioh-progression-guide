@@ -186,4 +186,29 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
         // After a move, a fresh look gets the board as it is.
         expect(duel.framesOnConnect(0)).toEqual([]);
     });
+
+    it('the bot never attacks a monster that beats it', async () => {
+        const engine = await loadEngine();
+        let attacks = 0;
+        for (const seed of Array.from({ length: 24 }, (_, i) => 11 + i)) {
+            const duel = new DuelSession(engine, setup([false, true], seed));
+            duel.start();
+            for (let asked = 0; asked < 1500 && !duel.result; asked++) {
+                const { prompt, seq } = duel.state(0, 'd');
+                expect(duel.answer(0, seq, humanAnswer(prompt!))).toBe(true);
+                // From the bot's side of the table: each of its attacks on a face-up monster is one it wins or ties.
+                for (const f of duel.takeFrames(1)) {
+                    for (const e of f.events) {
+                        if (e.k !== 'attack' || e.side !== 'me' || !e.target) continue;
+                        const attacker = f.view.me.monsters.find((c) => c?.uid === e.attacker);
+                        const target = f.view.opp.monsters.find((c) => c?.uid === e.target);
+                        if (!attacker || !target || !target.faceUp || attacker.atk === undefined) continue;
+                        attacks++;
+                        expect(attacker.atk).toBeGreaterThanOrEqual(target.defense ? target.def! : target.atk!);
+                    }
+                }
+            }
+        }
+        expect(attacks).toBeGreaterThan(0);
+    });
 });

@@ -388,6 +388,8 @@ export class DuelSession {
     private revealed: [Set<string>, Set<string>] = [new Set(), new Set()];
     /** A coin call being asked (who, and which option is Heads), then the call made, shown with the toss. */
     private calling: { team: Team; heads: number } | null = null;
+    /** What the engine said the next pick of each player is for ("Select an attack target"): its title. */
+    private selectHint: [string, string] = ['', ''];
     private call: { team: Team; heads: boolean } | null = null;
     private noteCall(response: OcgResponse) {
         if (this.calling && response.type === R.SELECT_OPTION) this.call = { team: this.calling.team, heads: response.index === this.calling.heads };
@@ -467,6 +469,9 @@ export class DuelSession {
                     this.resolved.clear();
                     this.phase = phaseOf(m.phase);
                     out.push({ k: 'phase', phase: this.phase });
+                    break;
+                case M.HINT:
+                    if (m.hint_type === 3 && (m.player === 0 || m.player === 1)) this.selectHint[m.player] = this.engine.describe(m.hint);
                     break;
                 case M.TOSS_COIN:
                     out.push({ k: 'coin', team: m.player as Team, results: m.results, call: this.call });
@@ -792,7 +797,7 @@ export class DuelSession {
             case M.SELECT_TRIBUTE: {
                 const tribute = m.type === M.SELECT_TRIBUTE;
                 const cards = m.selects.map((c, i) => this.ref(c, i, team));
-                const title = tribute ? `Choose ${m.min === m.max ? m.min : `${m.min} to ${m.max}`} monster${m.max > 1 ? 's' : ''} to Tribute` : this.hintTitle(m.min, m.max);
+                const title = tribute ? `Choose ${m.min === m.max ? m.min : `${m.min} to ${m.max}`} monster${m.max > 1 ? 's' : ''} to Tribute` : this.hintTitle(m.min, m.max, team);
                 return q({ kind: 'cards', title, min: m.min, max: m.max, cancel: m.can_cancel, cards, ...(tribute ? { tribute } : {}) }, (a) => {
                     if (a.kind === 'cancel') return m.can_cancel ? (tribute ? { type: R.SELECT_TRIBUTE, indicies: null } : { type: R.SELECT_CARD, indicies: null }) : null;
                     // Tribute counts in "release" units; the engine checks the total and asks again if it's wrong.
@@ -804,7 +809,7 @@ export class DuelSession {
             case M.SELECT_UNSELECT_CARD: {
                 const cards = m.select_cards.map((c, i) => this.ref(c, i, team));
                 const chosen = m.unselect_cards.map((c, i) => this.ref(c, m.select_cards.length + i, team));
-                return q({ kind: 'cards', title: this.hintTitle(m.min, m.max), min: m.min, max: m.max, cancel: m.can_cancel, cards, step: { chosen, canFinish: m.can_finish } }, (a) => {
+                return q({ kind: 'cards', title: this.hintTitle(m.min, m.max, team), min: m.min, max: m.max, cancel: m.can_cancel, cards, step: { chosen, canFinish: m.can_finish } }, (a) => {
                     if (a.kind === 'done') return m.can_finish ? { type: R.SELECT_UNSELECT_CARD, index: null } : null;
                     if (a.kind === 'cancel') return m.can_cancel ? { type: R.SELECT_UNSELECT_CARD, index: null } : null;
                     const id = choice(a);
@@ -898,8 +903,18 @@ export class DuelSession {
         }
     }
 
-    private hintTitle(min: number, max: number) {
-        return `Choose ${min === max ? min : `${min} to ${max}`} card${max > 1 ? 's' : ''}`;
+    /**
+     * A pick's title: what the engine said it's for ("Choose the card to Special Summon"), else
+     * how many to choose. The engine's hint is used once, by the pick it came before.
+     */
+    private hintTitle(min: number, max: number, team: Team) {
+        const hint = this.selectHint[team];
+        this.selectHint[team] = '';
+        const count = min === max ? `${min}` : `${min} to ${max}`;
+        if (!hint || hint.includes('%')) return `Choose ${count} card${max > 1 ? 's' : ''}`;
+        const plural = max > 1;
+        const text = hint.replace(/^Select /, 'Choose ').replace(/\((s)\)/g, plural ? '$1' : '').replace(/\bits\b/g, plural ? 'their' : 'its');
+        return plural ? `${text} (${count})` : text;
     }
 
     // ---- for the bot -------------------------------------------------------------------------
@@ -921,6 +936,23 @@ export class DuelSession {
 
     baseAttack(code: number) {
         return this.engine.baseAttack(code);
+    }
+
+    level(code: number) {
+        return this.engine.level(code);
+    }
+
+    /** The bot's monster declaring an attack this moment (its ATK), so it picks a target it can beat. */
+    botAttacker: number | null = null;
+    /** The card the bot is activating (its targets are picked to suit what it does). */
+    botUsing: number | null = null;
+
+    get currentPhase(): Phase {
+        return this.phase;
+    }
+
+    effectKind(code: number) {
+        return this.engine.effectKind(code);
     }
 }
 

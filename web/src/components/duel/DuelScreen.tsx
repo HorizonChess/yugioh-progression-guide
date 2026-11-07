@@ -88,6 +88,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     };
 
     /** The card you've picked up: it rises, its actions are offered, and where it could go shows. */
+    const [queuedTap, setQueuedTap] = useState<{ card: DuelCardView; side: Side; zone: Zone } | null>(null);
     const [held, setHeld] = useState<{ card: DuelCardView; side: Side; zone: Zone; at: { x: number; y: number } } | null>(null);
     /** What you last chose to do with a card: a Set monster goes in sideways, so its zone's sideways frame lights. */
     const [placing, setPlacing] = useState<ActionVerb | null>(null);
@@ -98,6 +99,8 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     const [duelMenu, setDuelMenu] = useState<"closed" | "open" | "surrender">("closed");
     /** A short note about the card you tapped (why it can't attack), for a few seconds. */
     const [notice, setNotice] = useState<{ uid: string; text: string } | null>(null);
+    /** The question you swiped away to look at the board (by its key): it waits in a tab. */
+    const [tucked, setTucked] = useState<string | null>(null);
     useEffect(() => {
         if (!notice) return;
         const t = setTimeout(() => setNotice(null), 3500);
@@ -234,7 +237,15 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             if (!isPhone && card.code) setDetail(card.code);
             return;
         }
-        setHeld(null);
+        // Your own card tapped while your last answer is on its way, or while the reply is still
+        // playing out: its actions are a moment away, so the tap waits for them (then picks it up)
+        // rather than open the card.
+        if (side === "me" && (duel.answered || (duel.playing && !!state?.prompt))) {
+            setQueuedTap({ card, side, zone });
+            return;
+        }
+        // A card waiting for its zone or its Tributes stays up whatever else you tap.
+        if (!keepHeld) setHeld(null);
         // In the Battle Phase, a monster of yours with no attack offered says why, instead of nothing
         // happening (a second tap opens the card as usual).
         if (prompt?.kind === "actions" && prompt.phase === "battle" && side === "me" && zone === "monster" && card.faceUp && notice?.uid !== card.uid) {
@@ -246,6 +257,23 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
         }
         if (card.code && (card.faceUp || side === "me")) look(card.code);
     };
+
+    // A tap that waited for the board to catch up: once your actions are offered, it picks the card up.
+    useEffect(() => {
+        if (!queuedTap || duel.answered || duel.playing) return;
+        setQueuedTap(null);
+        if (prompt?.kind === "actions" && prompt.actions.some((a) => a.uid === queuedTap.card.uid)) onCard(queuedTap.card, queuedTap.side, queuedTap.zone);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- onCard is rebuilt every render
+    }, [queuedTap, duel.answered, duel.playing, prompt]);
+
+    // A phase tapped a moment early: taken once the reply offers it (and dropped if it doesn't).
+    const [queuedPhase, setQueuedPhase] = useState<Phase | null>(null);
+    useEffect(() => {
+        if (!queuedPhase || duel.answered || duel.playing) return;
+        setQueuedPhase(null);
+        const next = prompt?.kind === "actions" ? prompt.next.find((n) => n.to === queuedPhase) : undefined;
+        if (next) answer({ kind: "choice", id: next.id });
+    }, [queuedPhase, duel.answered, duel.playing, prompt, answer]);
 
     const onPile = (side: Side, zone: "grave" | "banished") => {
         if (!view) return;
@@ -259,7 +287,11 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
 
     // ---- the phase bar --------------------------------------------------------------------
 
-    const nextIds = new Map(prompt?.kind === "actions" ? prompt.next.map((n) => [n.to as Phase, n.id]) : []);
+    // While your last move is on its way (or its reply is playing out) the bar stays as it was, so
+    // it doesn't blink off and on with every tap; a phase tapped in that moment waits for the reply.
+    const live = prompt?.kind === "actions" ? prompt : null;
+    const barPrompt = live ?? (state.prompt?.kind === "actions" && (duel.answered || (duel.playing && view.turnPlayer === "me")) ? state.prompt : null);
+    const nextIds = new Map(barPrompt ? barPrompt.next.map((n) => [n.to as Phase, n.id]) : []);
     const phaseBar = (
         <div className="df-phases">
             <span className="df-turn">
@@ -272,7 +304,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                     return (
                         <button key={p} type="button" role="tab" aria-selected={view.phase === p} aria-label={PHASE_NAME[p]} disabled={id === undefined}
                             className={`df-phase ${view.phase === p ? "is-on" : ""} ${id !== undefined ? "is-next" : ""}`}
-                            onClick={() => id !== undefined && answer({ kind: "choice", id })}>
+                            onClick={() => (id === undefined ? undefined : live ? answer({ kind: "choice", id }) : setQueuedPhase(p))}>
                             {p}
                         </button>
                     );
@@ -284,9 +316,23 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
 
     // ---- the question, as a sheet (phones) or a panel (wide screens) ---------------------
 
-    const sheet = (title: string, body: ReactNode, opts: { text?: string; code?: number; compact?: boolean } = {}) => (
-        <motion.div key="sheet" className={`df-sheet ${opts.compact ? "df-sheet--compact" : ""}`}
-            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: "spring", stiffness: 420, damping: 36 }}>
+    // A sheet swiped down on a phone: a question tucks away into a tab (look at the board, tap the
+    // tab to answer); anything else (the duel menu, a list of cards) closes.
+    const sheet = (title: string, body: ReactNode, opts: { text?: string; code?: number; compact?: boolean; onSwipe?: () => void } = {}) => (
+        !opts.onSwipe && tucked === promptKey ? (
+            <motion.button key="tab" type="button" className="df-tab" onClick={() => setTucked(null)}
+                initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }}>
+                <span aria-hidden>▲</span> {title}
+            </motion.button>
+        ) : (
+        // A question is keyed "sheet" (it stays up through the gap to the next one); something you
+        // opened yourself (the duel menu, a list of cards) is "menu", and goes as soon as you close it.
+        <motion.div key={opts.onSwipe ? "menu" : "sheet"} className={`df-sheet ${opts.compact ? "df-sheet--compact" : ""}`}
+            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: "spring", stiffness: 420, damping: 36 }}
+            drag={isPhone ? "y" : false} dragDirectionLock dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.9 }}
+            onDragEnd={(_, info) => {
+                if (info.offset.y > 70 || info.velocity.y > 500) (opts.onSwipe ?? (() => setTucked(promptKey)))();
+            }}>
             <div className="df-sheet__grip" />
             <div className="df-sheet__head">
                 {opts.code ? <img className="df-sheet__thumb" src={cardImage(opts.code)} alt="" onClick={() => look(opts.code!)} /> : null}
@@ -297,6 +343,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             </div>
             {body}
         </motion.div>
+        )
     );
     const option = (label: string, run: () => void, extra: { note?: string; disabled?: boolean; quiet?: boolean } = {}) => (
         <button key={label + (extra.note ?? "")} type="button" className={`df-opt ${extra.quiet ? "df-opt--quiet" : ""}`} disabled={extra.disabled} onClick={run}>
@@ -318,7 +365,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     let question: ReactNode = null;
     // The card you've picked up: what you can do with it, in the bar above your hand.
     const heldActions = held && prompt?.kind === "actions" ? prompt.actions.filter((a) => a.uid === held.card.uid) : [];
-    if (held && (heldActions.length || duel.answered) && !browse && duelMenu === "closed") {
+    if (held && (heldActions.length || duel.answeredKind === "actions") && !browse && duelMenu === "closed") {
         question = (
             // The card's choices pop up over it, Master Duel style: no strip across the screen.
             <motion.div key={`held:${held.card.uid}`} className="df-pop" style={{ left: `clamp(70px, ${held.at.x}px, calc(100% - 70px))`, top: held.at.y }}
@@ -335,9 +382,9 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     } else if (browse) {
         question = sheet(browse.title, <><div className="df-sheet__list">{browse.cards.map((c) => (
             <button key={c.uid} type="button" className="df-listcard" onClick={() => look(c.code)}><img src={cardImage(c.code)} alt="" /><span>{name(c.code)}</span></button>
-        ))}</div>{option("Close", () => setBrowse(null), { quiet: true })}</>);
+        ))}</div>{option("Close", () => setBrowse(null), { quiet: true })}</>, { onSwipe: () => setBrowse(null) });
     } else if (duelMenu === "surrender") {
-        question = sheet("Surrender this duel?", <div className="df-sheet__options">{option("Surrender", () => (setDuelMenu("closed"), duel.concede()))}{option("Keep dueling", () => setDuelMenu("closed"), { quiet: true })}</div>, { text: state.rival.bot ? "It's only practice." : `${state.rival.name} wins the duel, and the result counts for the series.` });
+        question = sheet("Surrender this duel?", <div className="df-sheet__options">{option("Surrender", () => (setDuelMenu("closed"), duel.concede()))}{option("Keep dueling", () => setDuelMenu("closed"), { quiet: true })}</div>, { text: state.rival.bot ? "It's only practice." : `${state.rival.name} wins the duel, and the result counts for the series.`, onSwipe: () => setDuelMenu("closed") });
     } else if (duelMenu === "open") {
         question = sheet("Duel menu", <div className="df-sheet__options">
             {option(prefs.sound ? "Sound: on" : "Sound: off", () => setDuelPrefs({ sound: !prefs.sound }), { note: "The duel's sound effects" })}
@@ -346,7 +393,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             })}
             {option("Surrender", () => setDuelMenu("surrender"))}
             {option("Back to the duel", () => setDuelMenu("closed"), { quiet: true })}
-        </div>, { text: "Dueling in the app is experimental: if something looks wrong, tell us what happened." });
+        </div>, { text: "Dueling in the app is experimental: if something looks wrong, tell us what happened.", onSwipe: () => setDuelMenu("closed") });
     } else if (prompt) {
         switch (prompt.kind) {
             case "actions":
@@ -373,9 +420,12 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 const confirm = !prompt.step && !(prompt.max === 1 && prompt.min === 1) && option(`Confirm (${picked.length}/${prompt.max})`, () => answer({ kind: "many", ids: picked }), { disabled: !ready });
                 const finish = prompt.step?.canFinish && option("Done", () => answer({ kind: "done" }));
                 const cancel = prompt.cancel && option("Cancel", () => answer({ kind: "cancel" }), { quiet: true });
+                // The card that's asking, when one is: the chain link being activated or resolved.
+                const asking = !prompt.tribute ? view.chain[view.chain.length - 1] : undefined;
+                const about = asking ? { code: asking.code, text: `For ${name(asking.code)}` } : {};
                 question = boardPick
-                    ? sheet(prompt.title, <div className="df-sheet__bar"><span>Tap the glowing cards{prompt.sum ? ` (total ${prompt.sum})` : ""}</span>{confirm}{finish}{cancel}</div>, { compact: true })
-                    : sheet(prompt.title, <>{listPick(prompt.cards, prompt.step ? prompt.step.chosen.map((c) => c.id) : picked, (id) => togglePick(id, prompt.max, prompt.min))}<div className="df-sheet__options df-sheet__options--row">{confirm}{finish}{cancel}</div></>);
+                    ? sheet(prompt.title, <div className="df-sheet__bar"><span>{asking ? `For ${name(asking.code)}: tap` : "Tap"} the glowing cards{prompt.sum ? ` (total ${prompt.sum})` : ""}</span>{confirm}{finish}{cancel}</div>, { compact: true })
+                    : sheet(prompt.title, <>{listPick(prompt.cards, prompt.step ? prompt.step.chosen.map((c) => c.id) : picked, (id) => togglePick(id, prompt.max, prompt.min))}<div className="df-sheet__options df-sheet__options--row">{confirm}{finish}{cancel}</div></>, about);
                 break;
             }
             case "yesno":
@@ -524,7 +574,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             className={`df-arena ${duel.answered ? "is-sent" : ""}`}
             // A tap anywhere else puts a picked-up card back down.
             onClick={(e) => {
-                if (held && !duel.answered && !(e.target as Element).closest(".df-pop, [data-uid], .df-zone__pick")) {
+                if (held && !keepHeld && !duel.answered && !(e.target as Element).closest(".df-pop, [data-uid], .df-zone__pick")) {
                     sfx.putDown();
                     setHeld(null);
                 }

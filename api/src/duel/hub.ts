@@ -413,7 +413,18 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                         return;
                     }
                     await persistAndBroadcast(duel);
-                }).catch((error: unknown) => app.log.error({ err: error, duel: id }, 'duel step failed'));
+                }).catch(async (error: unknown) => {
+                    app.log.error({ err: error, duel: id }, 'duel step failed');
+                    // Never leave a player waiting on a reply that won't come: rebuild the duel from what's
+                    // stored (the failed step is dropped) and send everyone the truth.
+                    live.delete(id);
+                    try {
+                        const { session } = await sessionOf(duel);
+                        for (const s of sockets.get(id) ?? []) send(s.socket, { type: 'state', frames: [], state: session.state(s.team, id) });
+                    } catch (rebuild) {
+                        app.log.error({ err: rebuild, duel: id }, 'duel could not be rebuilt after a failed step');
+                    }
+                });
             });
             void serial(id, async () => {
                 const { session } = await sessionOf(duel);

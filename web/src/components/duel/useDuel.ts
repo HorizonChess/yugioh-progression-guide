@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { DuelAnswer, DuelEvent, DuelFrame, DuelServerMessage, DuelState, DuelView, Side } from "@ygo/shared";
-import { connectDuel, type DuelConnection } from "@/lib/duel-client";
+import { connectDuel, getDuel, type DuelConnection } from "@/lib/duel-client";
 import { duelPrefs } from "./duel-prefs";
 import { CARD_BACK } from "./parts";
 import { sfx, unlockSound } from "./sfx";
@@ -149,6 +149,8 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
     const [playing, setPlaying] = useState(false);
     /** The question was answered; waiting for the server (it stays on screen, inert). */
     const [answered, setAnswered] = useState(false);
+    /** What kind of question was answered last (a card's pop-over only stays up for its own answer). */
+    const [answeredKind, setAnsweredKind] = useState<string | null>(null);
     const [connected, setConnected] = useState(true);
     const [effects, setEffects] = useState<Effects>({ destroying: [], landing: [], flaring: [], banner: null, floats: [], hit: null, dealing: [] });
     const queue = useRef<DuelFrame[]>([]);
@@ -241,7 +243,8 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                 frame = { events: [...frame.events, ...next.events], view: next.view };
             }
             // Far behind (a reconnect, a long bot turn): play quickly, and quietly.
-            const pace = queue.current.length > 25 ? 0.25 : 1;
+            // (A rival's whole turn is a few dozen frames: that's watched at full speed.)
+            const pace = queue.current.length > 90 ? 0.25 : 1;
             const loud = pace === 1;
             let hold = 0;
             for (const e of frame.events) {
@@ -346,6 +349,8 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                 if (e.k === "recover") float({ side: e.side, text: `+${e.amount}`, tone: "up" });
                 hold = Math.max(hold, HOLD[e.k] ?? 120);
             }
+            // Each play of the rival's gets a beat of its own, so you can follow what it did.
+            if (frame.events.some((e) => "side" in e && e.side === "opp" && (e.k === "summon" || e.k === "set" || e.k === "activate" || e.k === "attack"))) hold += 450;
             await sleep(hold * pace);
             setEffects((x) => (x.banner && x.banner.kind !== "end" ? { ...x, banner: null } : x));
         }
@@ -357,9 +362,12 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         }
     }, [float, attack]);
 
+    const recv = useRef<((m: DuelServerMessage) => void) | null>(null);
+    const watchdog = useRef<ReturnType<typeof setTimeout>>(undefined);
     useEffect(() => {
         if (!duelId) return;
         const onMessage = (m: DuelServerMessage) => {
+            clearTimeout(watchdog.current);
             let next = m.state;
             const p = next.prompt;
             // A chain window that doesn't need you: pass it without asking.
@@ -378,7 +386,10 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
             void play();
         };
         conn.current = connectDuel(duelId, onMessage, setConnected);
+        recv.current = onMessage;
         return () => {
+            clearTimeout(watchdog.current);
+            recv.current = null;
             conn.current?.close();
             conn.current = null;
         };
@@ -391,8 +402,18 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         sfx.click();
         conn.current?.answer(s.seq, a);
         latest.current = { ...s, prompt: null };
+        setAnsweredKind(s.prompt.kind);
         setAnswered(true);
-    }, []);
+        // If no reply comes (a step that failed on the server), fetch the duel as it stands
+        // rather than leave the answered question up, inert, for good.
+        clearTimeout(watchdog.current);
+        watchdog.current = setTimeout(() => {
+            if (!duelId) return;
+            getDuel(duelId).then(({ state }) => {
+                if (state && latest.current?.seq === s.seq && !latest.current.prompt) recv.current?.({ type: "state", frames: [], state });
+            }).catch(() => {});
+        }, 8000);
+    }, [duelId]);
 
     const concede = useCallback(() => conn.current?.concede(), []);
 
@@ -403,6 +424,7 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         /** A question for you is waiting for the animations to finish. */
         pending: playing && !!state?.prompt && state.prompt.kind !== "actions",
         answered,
+        answeredKind: answered ? answeredKind : null,
         playing,
         connected,
         effects,

@@ -105,7 +105,7 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
                 <div className="dl-row">
                     <button type="button" className="dl-btn" onClick={() => go(practice)}>Back to your practice duel</button>
                     {/* A practice duel that went wrong (or that you're done with) shouldn't stand in the way of a new one. */}
-                    <button type="button" className="dl-btn dl-btn--quiet" disabled={busy} onClick={() => run(() => concedeDuel(practice.id))}>End it, start a new one</button>
+                    <button type="button" className="dl-btn" disabled={busy} onClick={() => run(() => concedeDuel(practice.id))}>End it, start a new one</button>
                 </div>
             )}
 
