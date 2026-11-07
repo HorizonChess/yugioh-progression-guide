@@ -168,6 +168,18 @@ export const sfx = {
         noise(0.05, { filter: "lowpass", freq: 900, gain: 0.25, delay: 0.5, room: 0.05 });
         snap(0.52, 0.12);
     },
+    /** A coin flicked up: a bright metallic ping, its spin ticking down, and the clink as it lands. */
+    coin: () => {
+        bell(2350, 0.5, { ratio: 2.76, index: 1.6, gain: 0.07, room: 0.35 });
+        for (let i = 0; i < 9; i++) bell(3100 - i * 60, 0.05, { ratio: 2.76, index: 0.7, gain: 0.025, delay: 0.12 + i * (0.06 + i * 0.012), room: 0.2 });
+        bell(1900, 0.35, { ratio: 2.76, index: 2, gain: 0.08, delay: 1.3, room: 0.3 });
+        bell(2600, 0.2, { ratio: 2.76, index: 1.2, gain: 0.04, delay: 1.38, room: 0.25 });
+    },
+    /** A die tumbling across the table, then settling. */
+    dice: () => {
+        for (let i = 0; i < 7; i++) snap(0.1 + i * (0.09 + i * 0.02), 0.09 - i * 0.008);
+        snap(1.05, 0.14);
+    },
     /** You pick a card up: a small rising holographic tick. */
     pickUp: () => {
         bell(1320, 0.12, { ratio: 2.01, index: 0.8, gain: 0.05, room: 0.2 });

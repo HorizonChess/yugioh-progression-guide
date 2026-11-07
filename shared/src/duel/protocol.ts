@@ -68,6 +68,10 @@ export type DuelEvent =
     | { k: 'draw'; side: Side; count: number }
     /** A deck shuffled (after a search, say). */
     | { k: 'shuffle'; side: Side }
+    /** A coin tossed (Fairy Box, Time Wizard…): each result, and who called it, if anyone did. */
+    | { k: 'coin'; side: Side; results: ('heads' | 'tails')[]; call?: { side: Side; heads: boolean } }
+    /** A die rolled (Dice Jar, Graceful Dice…). */
+    | { k: 'dice'; side: Side; results: number[] }
     | { k: 'summon'; side: Side; code: number; how: 'normal' | 'special' | 'flip' }
     | { k: 'set'; side: Side }
     | { k: 'activate'; side: Side; code: number; uid?: string; link: number }

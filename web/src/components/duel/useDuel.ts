@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { DuelAnswer, DuelEvent, DuelFrame, DuelServerMessage, DuelState, DuelView, Side } from "@ygo/shared";
 import { connectDuel, type DuelConnection } from "@/lib/duel-client";
 import { duelPrefs } from "./duel-prefs";
@@ -17,12 +18,19 @@ import { sfx, unlockSound } from "./sfx";
  * are passed straight away unless the player asked to be stopped at every one.
  */
 
-export type Banner = { key: number; kind: "activate"; code: number; side: Side; link: number } | { key: number; kind: "turn"; side: Side; turn: number } | { key: number; kind: "end"; text: string };
+export type Banner =
+    | { key: number; kind: "activate"; code: number; side: Side; link: number }
+    | { key: number; kind: "turn"; side: Side; turn: number }
+    | { key: number; kind: "end"; text: string }
+    | { key: number; kind: "coin"; side: Side; results: ("heads" | "tails")[]; call?: { side: Side; heads: boolean } }
+    | { key: number; kind: "dice"; side: Side; results: number[] };
 export type Float = { key: number; side?: Side; uid?: string; text: string; tone: "up" | "down" };
 export interface Effects {
     destroying: string[];
     /** Cards just put on the field: they drop into place. `heavy`: summoned monsters. */
     landing: { uid: string; heavy: boolean }[];
+    /** Cards on their way from the deck: hidden where they'll land until they get there. */
+    dealing: string[];
     /** A card whose effect was just activated: it flares. */
     flaring: string[];
     banner: Banner | null;
@@ -36,7 +44,7 @@ let key = 0;
 
 /** How long each kind of event holds the board, in ms. */
 const HOLD: Partial<Record<DuelEvent["k"], number>> = {
-    activate: 1050, turn: 900, destroyed: 120, damage: 700, pay: 500, recover: 500, summon: 520, move: 300, draw: 260, set: 300, reposition: 340, win: 500, resolved: 220, negated: 600,
+    activate: 1050, turn: 900, coin: 2400, dice: 2000, destroyed: 120, damage: 700, pay: 500, recover: 500, summon: 520, move: 300, draw: 260, set: 300, reposition: 340, win: 500, resolved: 220, negated: 600,
 };
 const FIELD = new Set(["monster", "spell", "field", "pendulum", "extra-monster"]);
 
@@ -70,7 +78,7 @@ const nextPaint = () => new Promise<void>((r) => requestAnimationFrame(() => req
  * A card dealt off a deck: a card back leaves the deck and flies to where the card now is (a hand,
  * the Graveyard, the field), and the card appears there. `reveal`: it turns face-up as it arrives.
  */
-async function deal(uid: string, side: Side, reveal: boolean, sound: boolean) {
+async function deal(uid: string, side: Side, reveal: boolean, sound: boolean, landed?: () => void) {
     const target = document.querySelector<HTMLElement>(`[data-uid="${uid}"]`);
     const deck = document.querySelector<HTMLElement>(`[data-pile="${side}:deck"]`);
     const arena = document.querySelector<HTMLElement>(".df-arena");
@@ -99,6 +107,7 @@ async function deal(uid: string, side: Side, reveal: boolean, sound: boolean) {
     ], { duration: rival ? 720 : 460, easing: "cubic-bezier(.45,.05,.35,1)", fill: "forwards" });
     ghost.remove();
     target.style.opacity = "";
+    landed?.();
     // The face comes round: the card opens out from edge-on.
     const face = reveal ? target.querySelector<HTMLElement>("img") : null;
     if (face) await anim(face, [{ transform: "scaleX(0.02)" }, { transform: "scaleX(1)" }], { duration: 150, easing: "ease-out" });
@@ -141,7 +150,7 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
     /** The question was answered; waiting for the server (it stays on screen, inert). */
     const [answered, setAnswered] = useState(false);
     const [connected, setConnected] = useState(true);
-    const [effects, setEffects] = useState<Effects>({ destroying: [], landing: [], flaring: [], banner: null, floats: [], hit: null });
+    const [effects, setEffects] = useState<Effects>({ destroying: [], landing: [], flaring: [], banner: null, floats: [], hit: null, dealing: [] });
     const queue = useRef<DuelFrame[]>([]);
     /** The field last put on screen: what's new in a frame is measured against it. */
     const shownRef = useRef<DuelView | null>(null);
@@ -244,6 +253,17 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                 }
             }
             const before = shownRef.current;
+            // Cards that left a deck (drawn, searched, milled, summoned straight from it) fly out of it.
+            const dealt: { uid: string; side: Side; reveal: boolean }[] = [];
+            for (const s of ["me", "opp"] as const) {
+                const had = new Set(before ? before[s].hand.map((c) => c.uid) : []);
+                const deckBefore = before ? before[s].deck : frame.view[s].deck + frame.view[s].hand.length;
+                if (deckBefore > frame.view[s].deck) for (const c of frame.view[s].hand) if (!had.has(c.uid)) dealt.push({ uid: c.uid, side: s, reveal: s === "me" });
+            }
+            for (const e of frame.events) if (e.k === "move" && e.from === "deck" && e.to !== "hand") dealt.push({ uid: e.uid, side: e.side, reveal: e.to === "grave" || e.to === "banished" });
+            // They're hidden from the moment the hand shows: it starts without them, and each appears as it lands.
+            const dealing = dealt.length && pace === 1 ? dealt.map((c) => c.uid) : [];
+            setEffects((x) => ({ ...x, dealing }));
             setShown(frame.view);
             shownRef.current = frame.view;
             // The very first look at a duel: both decks are shuffled before the hands are dealt.
@@ -254,19 +274,14 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                 sfx.shuffle();
                 await sleep(650);
             }
-            // Cards that left a deck (drawn, searched, milled, summoned straight from it) fly out of it.
-            const dealt: { uid: string; side: Side; reveal: boolean }[] = [];
-            for (const s of ["me", "opp"] as const) {
-                const had = new Set(before ? before[s].hand.map((c) => c.uid) : []);
-                const deckBefore = before ? before[s].deck : frame.view[s].deck + frame.view[s].hand.length;
-                if (deckBefore > frame.view[s].deck) for (const c of frame.view[s].hand) if (!had.has(c.uid)) dealt.push({ uid: c.uid, side: s, reveal: s === "me" });
-            }
-            for (const e of frame.events) if (e.k === "move" && e.from === "deck" && e.to !== "hand") dealt.push({ uid: e.uid, side: e.side, reveal: e.to === "grave" || e.to === "banished" });
             if (dealt.length && pace === 1) {
                 await nextPaint();
                 // Each side's cards come off its own deck one after another; both sides at once.
                 const nth = { me: 0, opp: 0 };
-                await Promise.all(dealt.map((c) => sleep(nth[c.side]++ * 150).then(() => deal(c.uid, c.side, c.reveal, loud && c.side === "me"))));
+                await Promise.all(dealt.map((c) =>
+                    sleep(nth[c.side]++ * 150)
+                        .then(() => deal(c.uid, c.side, c.reveal, loud && c.side === "me", () => flushSync(() => setEffects((x) => ({ ...x, dealing: x.dealing.filter((u) => u !== c.uid) }))))),
+                ));
             }
             for (const e of frame.events) if (e.k === "shuffle" && loud) {
                 riffle(e.side);
@@ -312,6 +327,15 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                 }
                 if (e.k === "activate") setEffects((x) => ({ ...x, banner: { key: ++key, kind: "activate", code: e.code, side: e.side, link: e.link } }));
                 if (e.k === "turn") setEffects((x) => ({ ...x, banner: { key: ++key, kind: "turn", side: e.side, turn: e.turn } }));
+                // A coin spins up and lands; a die tumbles. The result shows once it settles.
+                if (e.k === "coin") {
+                    setEffects((x) => ({ ...x, banner: { key: ++key, kind: "coin", side: e.side, results: e.results, ...(e.call ? { call: e.call } : {}) } }));
+                    if (loud) sfx.coin();
+                }
+                if (e.k === "dice") {
+                    setEffects((x) => ({ ...x, banner: { key: ++key, kind: "dice", side: e.side, results: e.results } }));
+                    if (loud) sfx.dice();
+                }
                 if (e.k === "damage" || e.k === "pay") {
                     float({ side: e.side, text: `−${e.amount}`, tone: "down" });
                     if (e.k === "damage") {

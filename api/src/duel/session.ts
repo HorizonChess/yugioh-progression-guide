@@ -321,6 +321,7 @@ export class DuelSession {
     // ---- the engine loop ------------------------------------------------------------------
 
     private respond(response: OcgResponse) {
+        this.noteCall(response);
         this.answers.push(response);
         this.seq++;
         this.retry = false;
@@ -381,7 +382,16 @@ export class DuelSession {
         }
     }
 
+    /** A coin call being asked (who, and which option is Heads), then the call made, shown with the toss. */
+    private calling: { team: Team; heads: number } | null = null;
+    private call: { team: Team; heads: boolean } | null = null;
+    private noteCall(response: OcgResponse) {
+        if (this.calling && response.type === R.SELECT_OPTION) this.call = { team: this.calling.team, heads: response.index === this.calling.heads };
+        this.calling = null;
+    }
+
     private feed(response: OcgResponse) {
+        this.noteCall(response);
         this.answers.push(response);
         this.engine.core.duelSetResponse(this.handle!, response);
     }
@@ -453,6 +463,13 @@ export class DuelSession {
                     this.resolved.clear();
                     this.phase = phaseOf(m.phase);
                     out.push({ k: 'phase', phase: this.phase });
+                    break;
+                case M.TOSS_COIN:
+                    out.push({ k: 'coin', team: m.player as Team, results: m.results, call: this.call });
+                    this.call = null;
+                    break;
+                case M.TOSS_DICE:
+                    out.push({ k: 'dice', team: m.player as Team, results: m.results });
                     break;
                 case M.SHUFFLE_DECK:
                     out.push({ k: 'shuffle', team: m.player as Team });
@@ -556,6 +573,8 @@ export class DuelSession {
                 case 'turn': return { k: 'turn', side: side(e.team), turn: e.turn };
                 case 'draw': return { k: 'draw', side: side(e.team), count: e.count };
                 case 'shuffle': return { k: 'shuffle', side: side(e.team) };
+                case 'coin': return { k: 'coin', side: side(e.team), results: e.results.map((h) => (h ? 'heads' : 'tails')), ...(e.call ? { call: { side: side(e.call.team), heads: e.call.heads } } : {}) };
+                case 'dice': return { k: 'dice', side: side(e.team), results: e.results };
                 case 'summon': return { k: 'summon', side: side(e.team), code: this.show(e.code), how: e.how };
                 case 'set': return { k: 'set', side: side(e.team) };
                 case 'activate': return { k: 'activate', side: side(e.team), code: this.show(e.code), uid: e.uid, link: e.link };
@@ -797,7 +816,11 @@ export class DuelSession {
             }
             case M.SELECT_OPTION: {
                 const options = m.options.map((d, i) => ({ id: i, text: describe(d) ?? `Option ${i + 1}` }));
-                return q({ kind: 'option', title: 'Choose an effect', options }, (a) => {
+                // Heads or Tails: a coin is about to be tossed and this player calls it.
+                const heads = options.findIndex((o) => o.text === 'Heads');
+                const coin = heads >= 0 && options.some((o) => o.text === 'Tails');
+                this.calling = coin ? { team: m.player as Team, heads } : null;
+                return q({ kind: 'option', title: coin ? 'Call the coin toss' : 'Choose an effect', options }, (a) => {
                     const id = choice(a);
                     return id !== null && id >= 0 && id < options.length ? { type: R.SELECT_OPTION, index: id } : null;
                 });
@@ -888,6 +911,8 @@ type TeamEvent =
     | { k: 'phase'; phase: Phase }
     | { k: 'draw'; team: Team; count: number }
     | { k: 'shuffle'; team: Team }
+    | { k: 'coin'; team: Team; results: boolean[]; call: { team: Team; heads: boolean } | null }
+    | { k: 'dice'; team: Team; results: number[] }
     | { k: 'summon'; team: Team; code: number; how: 'normal' | 'special' | 'flip' }
     | { k: 'set'; team: Team }
     | { k: 'activate'; team: Team; code: number; uid?: string; link: number }

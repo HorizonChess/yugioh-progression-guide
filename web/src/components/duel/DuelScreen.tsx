@@ -96,6 +96,13 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     const [nameGuess, setNameGuess] = useState("");
     /** The duel menu (⋯): closed, open, or asking to confirm a surrender. */
     const [duelMenu, setDuelMenu] = useState<"closed" | "open" | "surrender">("closed");
+    /** A short note about the card you tapped (why it can't attack), for a few seconds. */
+    const [notice, setNotice] = useState<{ uid: string; text: string } | null>(null);
+    useEffect(() => {
+        if (!notice) return;
+        const t = setTimeout(() => setNotice(null), 3500);
+        return () => clearTimeout(t);
+    }, [notice]);
     const prefs = useDuelPrefs();
     // A new question starts with nothing chosen. (A card you picked up stays up, inert, until the
     // next question takes its place, and through choosing its zone or its Tributes.)
@@ -226,6 +233,15 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             return;
         }
         setHeld(null);
+        // In the Battle Phase, a monster of yours with no attack offered says why, instead of nothing
+        // happening (a second tap opens the card as usual).
+        if (prompt?.kind === "actions" && prompt.phase === "battle" && side === "me" && zone === "monster" && card.faceUp && notice?.uid !== card.uid) {
+            setNotice({
+                uid: card.uid,
+                text: card.defense ? "It's in Defense Position, so it can't attack." : "It can't attack right now: it has attacked already, or an effect on the field stops it (Gravity Bind, Swords of Revealing Light…).",
+            });
+            return;
+        }
         if (card.code && (card.faceUp || side === "me")) look(card.code);
     };
 
@@ -426,10 +442,50 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                             <div><h3>{name(effects.banner.code)}</h3><p>Chain link {effects.banner.link} · {effects.banner.side === "me" ? "you" : view.opp.name}</p></div>
                         </>}
                         {effects.banner.kind === "turn" && <div><h3>{effects.banner.side === "me" ? "Your turn" : `${view.opp.name}'s turn`}</h3><p>Turn {effects.banner.turn}</p></div>}
+                        {effects.banner.kind === "coin" && (() => {
+                            const b = effects.banner;
+                            const who = (side: Side) => (side === "me" ? "You" : view.opp.name);
+                            const word = (r: "heads" | "tails") => (r === "heads" ? "Heads" : "Tails");
+                            return (
+                                <div className="df-toss">
+                                    <p>{b.call ? `${who(b.call.side)} call${b.call.side === "me" ? "" : "s"} ${b.call.heads ? "Heads" : "Tails"}` : `${who(b.side)} toss${b.side === "me" ? "" : "es"} a coin`}</p>
+                                    <div className="df-toss__coins">
+                                        {b.results.map((r, i) => (
+                                            <span key={i} className={`df-coin is-${r}`} style={{ animationDelay: `${i * 0.15}s` }}>
+                                                <i className="df-coin__face df-coin__face--heads">H</i>
+                                                <i className="df-coin__face df-coin__face--tails">T</i>
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <h3 className="df-toss__result">
+                                        {b.results.map(word).join(", ")}
+                                        {b.call && b.results.length === 1 ? ((b.results[0] === "heads") === b.call.heads ? " · called right" : " · called wrong") : ""}
+                                    </h3>
+                                </div>
+                            );
+                        })()}
+                        {effects.banner.kind === "dice" && (
+                            <div className="df-toss">
+                                <p>{effects.banner.side === "me" ? "You roll" : `${view.opp.name} rolls`}</p>
+                                <div className="df-toss__coins">
+                                    {effects.banner.results.map((r, i) => <span key={i} className="df-die" style={{ animationDelay: `${i * 0.15}s` }}>{"⚀⚁⚂⚃⚄⚅"[r - 1] ?? r}</span>)}
+                                </div>
+                                <h3 className="df-toss__result">{effects.banner.results.join(", ")}</h3>
+                            </div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
+            {/* Cards on their way from a deck stay hidden where they'll land until they arrive. */}
+            {effects.dealing.length > 0 && <style>{`${effects.dealing.map((u) => `[data-uid="${u}"]`).join(",")}{opacity:0 !important}`}</style>}
             <SteadyQuestion question={question} hold={duel.pending || duel.answered} />
+            <AnimatePresence>
+                {notice && (
+                    <motion.div key={notice.uid} className="df-notice" role="status" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} onClick={() => setNotice(null)}>
+                        {notice.text}
+                    </motion.div>
+                )}
+            </AnimatePresence>
             {!duel.connected && !result && <div className="df-offline">Reconnecting…</div>}
             {state.retry && prompt && <div className="df-retry">That isn&apos;t allowed right now. Try another choice.</div>}
             {result && (
