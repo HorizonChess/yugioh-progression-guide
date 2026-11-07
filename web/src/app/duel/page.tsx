@@ -8,7 +8,7 @@ import GuideSprite from "@/components/layout/GuideSprite";
 import { useAuth } from "@/context/AuthContext";
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets } from "@/lib/api";
-import { acceptDuel, declineDuel, getDuel, type DuelSummary } from "@/lib/duel-client";
+import { acceptDuel, declineDuel, getDuel, guestDuelToken, type DuelSummary } from "@/lib/duel-client";
 import { ruleLines } from "@/lib/guide/lines";
 import { guide } from "@/lib/guide/store";
 import "@/components/duel/duel-field.css";
@@ -26,9 +26,11 @@ function DuelPageContent() {
     const [duel, setDuel] = useState<DuelSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [deckId, setDeckId] = useState("");
+    // A guest's practice duel opens with the token this browser kept.
+    const allowed = !!user || (!!id && !!guestDuelToken(id));
 
     useEffect(() => {
-        if (!id || !user) return;
+        if (!id || !allowed) return;
         let live = true;
         const load = () => getDuel(id).then(({ duel: d }) => live && setDuel(d)).catch((e: Error) => live && setError(e.message));
         void load();
@@ -38,11 +40,11 @@ function DuelPageContent() {
             live = false;
             clearInterval(t);
         };
-    }, [id, user, duel?.status]);
+    }, [id, allowed, duel?.status]);
 
     // The duel belongs to a series: make it the active one, so decks and the result land there.
     useEffect(() => {
-        if (duel && activeSeriesId !== duel.seriesId) void loadSeries(duel.seriesId);
+        if (duel?.seriesId && activeSeriesId !== duel.seriesId) void loadSeries(duel.seriesId);
     }, [duel, activeSeriesId, loadSeries]);
 
     // Yugi on the rules: when this set changed them, or on the very first duel of the series.
@@ -63,11 +65,11 @@ function DuelPageContent() {
         // eslint-disable-next-line react-hooks/exhaustive-deps -- once per duel
     }, [active, duel?.id]);
 
-    if (!user) return <Message text="Sign in to duel." />;
+    if (!allowed) return <Message text="Sign in to duel." onBack={() => router.push("/record-match")} />;
     if (error) return <Message text={error} onBack={() => router.push("/record-match")} />;
     if (!id || !duel) return <Message text="Shuffling the decks…" />;
 
-    if (duel.status === "waiting") {
+    if (duel.status === "waiting" && user) {
         const mine = duel.challengerId === user.id;
         const legal = savedDecks.filter((d) => d.mainDeck.length >= 40 && d.mainDeck.length <= 60);
         const chosen = deckId || legal[0]?.id || "";
@@ -98,7 +100,7 @@ function DuelPageContent() {
             <DuelScreen
                 duelId={duel.id}
                 onLeave={async () => {
-                    await refresh(duel.seriesId);
+                    if (duel.seriesId) await refresh(duel.seriesId);
                     router.push(duel.kind === "practice" ? "/record-match" : "/rewards");
                 }}
             />

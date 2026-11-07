@@ -49,8 +49,8 @@ type Stage = "board" | "duel" | "wheel" | "defeat";
 export default function RecordMatchPage() {
     const { matchHistory, reportMatch, confirmReport, rejectReport, spin, currentSetIndex, series, savedDecks } = useProgression();
     const userId = useAuth().user?.id;
-    // Duels on the server's engine need an account (guests record duels played elsewhere).
-    const canDuel = !!userId && !!series && !series.finished;
+    // Anyone can duel here; a guest only practices (rival duels need accounts on both sides).
+    const canDuel = !!series && !series.finished;
     const router = useRouter();
     const reduceMotion = useReducedMotion();
     const [sets, setSets] = useState<CardSet[]>([]);
@@ -78,7 +78,7 @@ export default function RecordMatchPage() {
 
     // A duel waiting on this player (the rival's challenge, or one in progress) opens the duel act first.
     useEffect(() => {
-        if (!canDuel || !series) return;
+        if (!canDuel || !series || !userId) return;
         let live = true;
         openDuels(series.id)
             .then((duels) => live && duels.some((d) => d.kind === "rival") && setStage((s) => (s === "board" ? "duel" : s)))
@@ -86,7 +86,7 @@ export default function RecordMatchPage() {
         return () => {
             live = false;
         };
-    }, [canDuel, series]);
+    }, [canDuel, series, userId]);
 
     // Win rate and current streak from match history
     const wins = matchHistory.filter((m) => m.winner === "player").length;
@@ -208,7 +208,7 @@ export default function RecordMatchPage() {
                             )}
                             {stage === "duel" && !pending && series && (
                                 <motion.div key="duel" className="rm-act" {...motionProps}>
-                                    <DuelLauncher seriesId={series.id} duo={series.mode === "duo"} rival={rival} decks={savedDecks} setDate={currentSet?.tcg_date} onBack={() => setStage("board")} />
+                                    <DuelLauncher seriesId={series.id} guest={!userId} setName={currentSet?.set_name} duo={!!userId && series.mode === "duo"} rival={rival} decks={savedDecks} setDate={currentSet?.tcg_date} onBack={() => setStage("board")} />
                                 </motion.div>
                             )}
                             {stage === "wheel" && (

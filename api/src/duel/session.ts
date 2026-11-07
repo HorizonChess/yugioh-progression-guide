@@ -24,6 +24,8 @@ export interface DuelSetup {
     decks: [{ main: number[]; extra: number[] }, { main: number[]; extra: number[] }];
     names: [string, string];
     bots: [boolean, boolean];
+    /** Solo practice: the bot never plays, it only passes its turns (a goldfish to test your deck on). */
+    solo?: boolean;
     /** Older versions played in place of a deck card (engine code → the card's own code), shown as the card itself. */
     shown?: Record<string, number>;
 }
@@ -253,7 +255,7 @@ export class DuelSession {
             duelId,
             seq: this.seq,
             you: { name: this.setup.names[team] },
-            rival: { name: this.setup.names[rival], bot: this.setup.bots[rival] },
+            rival: { name: this.setup.names[rival], bot: this.setup.bots[rival], ...(this.setup.solo ? { solo: true } : {}) },
             view: this.view(team),
             prompt: mine && !this.result ? this.question!.prompt : null,
             ...(mine && this.retry ? { retry: true } : {}),
@@ -309,7 +311,7 @@ export class DuelSession {
             const question = this.ask(last);
             if (!question) throw new Error(`The duel server can't ask engine message ${last.type}`);
             if (this.setup.bots[question.team]) {
-                this.feed(this.replayQueue.shift() ?? botAnswer(last, this, question.team));
+                this.feed(this.replayQueue.shift() ?? botAnswer(last, this, question.team, this.setup.solo));
                 continue;
             }
             const replayed = this.replayQueue.shift();

@@ -141,7 +141,8 @@ export interface DuelState {
     /** Bumped by every answer; an answer names the question it's for. */
     seq: number;
     you: { name: string };
-    rival: { name: string; bot: boolean };
+    /** `solo`: the rival only passes its turns (solo practice). */
+    rival: { name: string; bot: boolean; solo?: boolean };
     view: DuelView;
     /** The question for this player, or null while the rival (or the engine) is acting. */
     prompt: DuelPrompt | null;

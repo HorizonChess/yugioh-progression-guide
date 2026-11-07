@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { MongoServerError, ObjectId, type Db } from 'mongodb';
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
@@ -13,7 +13,9 @@ import { DuelSession, type DuelSetup, type Team } from './session';
  * Duels: stored in Mongo as their setup and every answer (enough to rebuild one exactly),
  * held in memory while played, and streamed to each player over a WebSocket.
  *
- * A practice duel is against the bot (a mirror of your deck) and records nothing. A rival
+ * A practice duel is against the bot (a mirror of your deck) and records nothing; in solo
+ * practice the bot only passes its turns. Guests practice too: their duel belongs to no series
+ * and is opened with a secret token, and storage drops it after a day. A rival
  * duel is between the two members of a duo series: one challenges with a deck, the other
  * accepts with theirs, and the result goes through the series like a confirmed report.
  */
@@ -27,7 +29,8 @@ export interface DuelPlayer {
 
 export interface DuelDoc {
     _id: ObjectId;
-    seriesId: ObjectId;
+    /** Null for a guest's practice duel. */
+    seriesId: ObjectId | null;
     setIndex: number;
     setName: string;
     kind: 'practice' | 'rival';
@@ -36,7 +39,12 @@ export interface DuelDoc {
     openKey?: string;
     /** By team: team 0 goes first. While waiting, only the challenger (team 0 for now) is known. */
     players: DuelPlayer[];
-    challengerId: ObjectId;
+    /** Null for a guest's practice duel. */
+    challengerId: ObjectId | null;
+    /** A guest's duel: the hash of the token that opens it. */
+    guestTokenHash?: string;
+    /** A guest's duel is removed after this (a TTL index). */
+    expiresAt?: Date;
     mode: DuelModeId;
     /** While waiting: the challenger's deck, until the rival accepts and the setup is made. */
     challengerDeck?: { main: number[]; extra: number[] };
@@ -56,6 +64,7 @@ export const duelsCollection = (db: Db) => db.collection<DuelDoc>('duels');
 export async function ensureDuelIndexes(db: Db): Promise<void> {
     await duelsCollection(db).createIndex({ openKey: 1 }, { unique: true, partialFilterExpression: { openKey: { $exists: true } } });
     await duelsCollection(db).createIndex({ seriesId: 1, createdAt: -1 });
+    await duelsCollection(db).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 }
 
 const encode = (r: OcgResponse) => JSON.stringify(r, (_k, v) => (typeof v === 'bigint' ? { $b: v.toString() } : v));
@@ -66,15 +75,23 @@ const newSeed = (): DuelSetup['seed'] => {
     return [0, 8, 16, 24].map((o) => (b.readBigUInt64LE(o) | (o === 0 ? 1n : 0n)).toString()) as DuelSetup['seed'];
 };
 
-export type DuelProblem = 'no-deck' | 'deck-illegal' | 'unknown-card' | 'busy' | 'finished' | 'no-rival' | 'not-yours' | 'not-waiting';
+export const hashGuestToken = (token: string) => createHash('sha256').update(token).digest('hex');
+const GUEST_DUEL_MS = 24 * 60 * 60_000;
+
+export type Deck = { main: number[]; extra: number[] };
+export type Opponent = 'bot' | 'solo';
+
+export type DuelProblem = 'no-set' | 'no-deck' | 'deck-illegal' | 'unknown-card' | 'busy' | 'finished' | 'no-rival' | 'not-yours' | 'not-waiting';
 
 export interface DuelHub {
     /** Starts a practice duel or challenges the rival. */
-    create(input: { seriesId: ObjectId; userId: ObjectId; name: string; deck: { main: number[]; extra: number[] }; deckId: string; against: 'bot' | 'rival' }): Promise<DuelDoc | DuelProblem>;
+    create(input: { seriesId: ObjectId; userId: ObjectId; name: string; deck: Deck; deckId: string; against: Opponent | 'rival' }): Promise<DuelDoc | DuelProblem>;
+    /** A guest's practice duel at a set of the timeline, opened later with the returned token. */
+    createGuest(input: { deck: Deck; setName: string; against: Opponent }): Promise<{ duel: DuelDoc; token: string } | DuelProblem>;
     accept(input: { duel: DuelDoc; userId: ObjectId; name: string; deck: { main: number[]; extra: number[] }; deckId: string }): Promise<DuelDoc | DuelProblem>;
     decline(duel: DuelDoc, userId: ObjectId): Promise<boolean>;
     find(id: ObjectId): Promise<DuelDoc | null>;
-    teamOf(duel: DuelDoc, userId: ObjectId): Team | null;
+    teamOf(duel: DuelDoc, userId: ObjectId | null, guestToken?: string): Team | null;
     stateFor(duel: DuelDoc, team: Team): Promise<DuelServerMessage>;
     concede(duel: DuelDoc, team: Team): Promise<void>;
     connect(duel: DuelDoc, team: Team, socket: WebSocket): void;
@@ -166,15 +183,15 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
     async function recordResult(duel: DuelDoc, winner: Team | null) {
         if (winner === null) return;
         const winnerId = duel.players[winner]!.userId!, loserId = duel.players[1 - winner]!.userId!;
-        const at = await setOf(duel.seriesId);
+        const at = await setOf(duel.seriesId!);
         if (!at || at.setIndex !== duel.setIndex) return;
         const report = await reportDuoMatch(app.db, { series: at.series, userId: winnerId, won: true, timeline: at.timeline });
         if (typeof report === 'string') return app.log.warn({ duel: duel._id, problem: report }, 'duel result not recorded');
-        const fresh = await findSeries(app.db, duel.seriesId);
+        const fresh = await findSeries(app.db, duel.seriesId!);
         const confirmed = await confirmReport(app.mongo, app.db, { series: fresh!, userId: loserId, reportId: report._id, timeline: at.timeline });
         if (typeof confirmed === 'string') return app.log.warn({ duel: duel._id, problem: confirmed }, 'duel result not confirmed');
         for (const [userId, rival, won] of [[winnerId, duel.players[1 - winner]!.name, true], [loserId, duel.players[winner]!.name, false]] as const) {
-            app.notify(userId, 'duel-result', duel.seriesId, { seriesName: at.series.name, from: rival, setName: duel.setName, youWon: won });
+            app.notify(userId, 'duel-result', duel.seriesId!, { seriesName: at.series.name, from: rival, setName: duel.setName, youWon: won });
         }
     }
 
@@ -208,6 +225,19 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
     }
     const setDate = async (duel: Pick<DuelDoc, 'setName'>) => (await app.catalog.timeline()).find((s) => s.set_name === duel.setName)?.tcg_date;
 
+    /** A practice duel's players and setup: the bot plays a mirror of your deck; a coin decides who goes first. */
+    async function practice(me: DuelPlayer, deck: Deck, date: string | undefined, mode: DuelModeId, against: Opponent) {
+        const bot: DuelPlayer = { userId: null, name: against === 'solo' ? 'Solo Practice' : 'Practice Bot', deckId: null, bot: true };
+        const players = randomBytes(1)[0]! & 1 ? [me, bot] : [bot, me];
+        const shown: Record<string, number> = {};
+        const played = await playedAt(deck, date, shown);
+        const setup: DuelSetup = {
+            seed: newSeed(), mode, decks: [played, played], names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown,
+            ...(against === 'solo' ? { solo: true } : {}),
+        };
+        return { players, setup };
+    }
+
     async function start(duel: DuelDoc) {
         await sessionOf(duel);
         await persistAndBroadcast(duel);
@@ -225,14 +255,15 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             const mode = ruleEraFor(at.set.tcg_date).id;
             const now = new Date();
             const me: DuelPlayer = { userId, name, deckId, bot: false };
+            const solo = against !== 'rival';
             const doc: DuelDoc = {
                 _id: new ObjectId(),
                 seriesId,
                 setIndex: at.setIndex,
                 setName: at.set.set_name,
-                kind: against === 'bot' ? 'practice' : 'rival',
-                status: against === 'bot' ? 'active' : 'waiting',
-                openKey: against === 'bot' ? `${seriesId}:${userId}:practice` : `${seriesId}:rival`,
+                kind: solo ? 'practice' : 'rival',
+                status: solo ? 'active' : 'waiting',
+                openKey: solo ? `${seriesId}:${userId}:practice` : `${seriesId}:rival`,
                 players: [me],
                 challengerId: userId,
                 mode,
@@ -244,14 +275,8 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 createdAt: now,
                 updatedAt: now,
             };
-            if (against === 'bot') {
-                // The bot plays a mirror of your deck; a coin decides who goes first.
-                const bot: DuelPlayer = { userId: null, name: 'Practice Bot', deckId: null, bot: true };
-                const players = randomBytes(1)[0]! & 1 ? [me, bot] : [bot, me];
-                doc.players = players;
-                const shown: Record<string, number> = {};
-                const played = await playedAt(deck, at.set.tcg_date, shown);
-                doc.setup = { seed: newSeed(), mode, decks: [played, played], names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown };
+            if (solo) {
+                Object.assign(doc, await practice(me, deck, at.set.tcg_date, mode, against));
             } else {
                 doc.challengerDeck = deck;
             }
@@ -261,12 +286,46 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 if (error instanceof MongoServerError && error.code === 11000) return 'busy';
                 throw error;
             }
-            if (against === 'bot') await start(doc);
+            if (solo) await start(doc);
             return doc;
+        },
+        async createGuest({ deck, setName, against }) {
+            const timeline = await app.catalog.timeline();
+            const setIndex = timeline.findIndex((s) => s.set_name === setName);
+            const set = timeline[setIndex];
+            if (!set) return 'no-set';
+            if ((await unknownCards([...deck.main, ...deck.extra])).length) return 'unknown-card';
+            const engine = await loadEngine();
+            const mode = ruleEraFor(set.tcg_date).id;
+            const token = randomBytes(24).toString('base64url');
+            const me: DuelPlayer = { userId: null, name: 'Guest', deckId: null, bot: false };
+            const now = new Date();
+            const doc: DuelDoc = {
+                _id: new ObjectId(),
+                seriesId: null,
+                setIndex,
+                setName: set.set_name,
+                kind: 'practice',
+                status: 'active',
+                ...(await practice(me, deck, set.tcg_date, mode, against)),
+                challengerId: null,
+                guestTokenHash: hashGuestToken(token),
+                expiresAt: new Date(now.getTime() + GUEST_DUEL_MS),
+                mode,
+                engineVersion: engine.version,
+                answers: [],
+                winner: null,
+                reason: null,
+                createdAt: now,
+                updatedAt: now,
+            };
+            await duels().insertOne(doc);
+            await start(doc);
+            return { duel: doc, token };
         },
         async accept({ duel, userId, name, deck, deckId }) {
             if (duel.status !== 'waiting') return 'not-waiting';
-            if (duel.challengerId.equals(userId)) return 'not-yours';
+            if (duel.challengerId?.equals(userId)) return 'not-yours';
             if ((await unknownCards([...deck.main, ...deck.extra])).length) return 'unknown-card';
             const challengerDeck = duel.challengerDeck!;
             const challenger = duel.players[0]!;
@@ -285,19 +344,21 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             );
             if (!updated) return 'not-waiting';
             await start(updated);
-            app.notify(duel.challengerId, 'duel-accepted', duel.seriesId, { from: name, duelId: duel._id.toHexString(), setName: duel.setName });
+            app.notify(duel.challengerId!, 'duel-accepted', duel.seriesId!, { from: name, duelId: duel._id.toHexString(), setName: duel.setName });
             return updated;
         },
         async decline(duel, userId) {
             if (duel.status !== 'waiting') return false;
             const res = await duels().updateOne({ _id: duel._id, status: 'waiting' }, { $set: { status: 'declined', updatedAt: new Date() }, $unset: { openKey: '' } });
             if (!res.modifiedCount) return false;
-            if (!duel.challengerId.equals(userId)) app.notify(duel.challengerId, 'duel-declined', duel.seriesId, { duelId: duel._id.toHexString(), setName: duel.setName });
+            if (!duel.challengerId!.equals(userId)) app.notify(duel.challengerId!, 'duel-declined', duel.seriesId!, { duelId: duel._id.toHexString(), setName: duel.setName });
             return true;
         },
         find: (id) => duels().findOne({ _id: id }),
-        teamOf(duel, userId) {
-            const i = duel.players.findIndex((p) => p.userId?.equals(userId));
+        teamOf(duel, userId, guestToken) {
+            // A guest's duel: the human seat, for the right token.
+            if (duel.guestTokenHash) return guestToken && hashGuestToken(guestToken) === duel.guestTokenHash ? (duel.players.findIndex((p) => !p.bot) as Team) : null;
+            const i = userId ? duel.players.findIndex((p) => p.userId?.equals(userId)) : -1;
             return i === 0 || i === 1 ? i : null;
         },
         async stateFor(duel, team) {

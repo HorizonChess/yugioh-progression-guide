@@ -3,14 +3,30 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { deckProblem, ownedCountsById } from '@ygo/shared';
 import { z } from 'zod';
 import { duelsCollection, type DuelDoc, type DuelProblem } from '../duel/hub';
+import type { Team } from '../duel/session';
 import { findPlayer, findSeries } from '../game/series';
-import { requireAuth } from '../middleware/requireAuth';
+import { loadUser, requireAuth } from '../middleware/requireAuth';
 import { requireSeriesMember } from '../middleware/requireSeriesMember';
 
-const StartBodySchema = z.strictObject({ deckId: z.string().regex(/^[\w-]{1,64}$/), against: z.enum(['bot', 'rival']) });
+const StartBodySchema = z.strictObject({ deckId: z.string().regex(/^[\w-]{1,64}$/), against: z.enum(['bot', 'solo', 'rival']) });
+const Passcode = z.number().int().positive().max(2 ** 31);
+/** A guest's practice duel: the deck comes from the browser (guests keep their campaign there). */
+const GuestBodySchema = z.strictObject({
+    deck: z.strictObject({ main: z.array(Passcode).min(40).max(60), extra: z.array(Passcode).max(15) }),
+    setName: z.string().min(1).max(200),
+    against: z.enum(['bot', 'solo']),
+});
+/** A guest's duel is opened with its token: a header, or (WebSocket, which can't send headers) the query. */
+const guestToken = (request: FastifyRequest) => {
+    const header = request.headers['x-duel-token'];
+    const query = (request.query as { token?: unknown } | undefined)?.token;
+    const token = typeof header === 'string' ? header : typeof query === 'string' ? query : undefined;
+    return token && token.length <= 64 ? token : undefined;
+};
 const AcceptBodySchema = z.strictObject({ deckId: z.string().regex(/^[\w-]{1,64}$/) });
 
 const PROBLEMS: Record<DuelProblem, [number, string]> = {
+    'no-set': [404, 'No set by that name'],
     'no-deck': [404, 'No saved deck with that id'],
     'deck-illegal': [409, 'That deck is not legal right now'],
     'unknown-card': [409, 'That deck has a card the duel engine does not know yet'],
@@ -25,26 +41,29 @@ const fail = (reply: FastifyReply, problem: DuelProblem) => reply.code(PROBLEMS[
 /** A duel's public summary (no decks, no answers). */
 const summary = (d: DuelDoc) => ({
     id: d._id.toHexString(),
-    seriesId: d.seriesId.toHexString(),
+    seriesId: d.seriesId?.toHexString() ?? null,
+    guest: !!d.guestTokenHash,
     kind: d.kind,
     status: d.status,
     setName: d.setName,
     mode: d.mode,
-    challenger: d.players.find((p) => p.userId?.equals(d.challengerId))?.name ?? '',
-    challengerId: d.challengerId.toHexString(),
+    challenger: d.players.find((p) => !p.bot && (!d.challengerId || p.userId?.equals(d.challengerId)))?.name ?? '',
+    challengerId: d.challengerId?.toHexString() ?? null,
     players: d.players.map((p) => ({ name: p.name, bot: p.bot })),
     winner: d.winner,
 });
 
 /**
  * Duels, played on the server's rules engine:
- *   POST /series/:seriesId/duels         { deckId, against: bot | rival }: practice now, or challenge the rival
+ *   POST /series/:seriesId/duels         { deckId, against: bot | solo | rival }: practice now, or challenge the rival
+ *   POST /duels/practice                  { deck, setName, against: bot | solo }: a guest's practice duel; returns its token
  *   GET  /series/:seriesId/duels/open     the open duel you can play or answer, if any
  *   GET  /duels/:duelId                   its summary, and your state once it's on
  *   POST /duels/:duelId/accept            { deckId }: the rival takes the challenge
  *   POST /duels/:duelId/decline           the rival turns it down (or the challenger withdraws it)
  *   POST /duels/:duelId/concede
  *   GET  /duels/:duelId/live              WebSocket: the duel as it happens, and your answers
+ * A guest's duel is opened with its token (the `x-duel-token` header, or `?token=` on the WebSocket).
  */
 export async function duelRoutes(app: FastifyInstance): Promise<void> {
     const seriesGuard = { preHandler: [requireAuth, requireSeriesMember], config: { rateLimit: { max: 20, timeWindow: '1 minute' } } };
@@ -59,18 +78,23 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         return { main: deck.mainDeck, extra: deck.extraDeck };
     }
 
-    /** The duel named in the URL, if the signed-in player is in it (or is the one challenged). */
-    async function duelFor(request: FastifyRequest, reply: FastifyReply): Promise<DuelDoc | null> {
+    /** The duel named in the URL, if it's yours: you're in it (or the one challenged), or you hold a guest duel's token. */
+    async function visibleDuel(request: FastifyRequest): Promise<DuelDoc | null> {
         const { duelId } = request.params as { duelId: string };
         const duel = /^[0-9a-f]{24}$/.test(duelId) ? await app.duels.find(new ObjectId(duelId)) : null;
-        const userId = request.user!._id;
-        const series = duel && (await findSeries(app.db, duel.seriesId));
-        if (!duel || !series?.memberIds.some((m) => m.equals(userId)) || (duel.kind === 'practice' && !duel.challengerId.equals(userId))) {
-            reply.code(404).send({ error: 'No such duel' });
-            return null;
-        }
+        if (!duel) return null;
+        if (duel.guestTokenHash) return app.duels.teamOf(duel, null, guestToken(request)) === null ? null : duel;
+        const userId = request.user?._id;
+        const series = userId && duel.seriesId && (await findSeries(app.db, duel.seriesId));
+        if (!userId || !series || !series.memberIds.some((m) => m.equals(userId)) || (duel.kind === 'practice' && !duel.challengerId?.equals(userId))) return null;
         return duel;
     }
+    async function duelFor(request: FastifyRequest, reply: FastifyReply): Promise<DuelDoc | null> {
+        const duel = await visibleDuel(request);
+        if (!duel) reply.code(404).send({ error: 'No such duel' });
+        return duel;
+    }
+    const teamIn = (duel: DuelDoc, request: FastifyRequest): Team | null => app.duels.teamOf(duel, request.user?._id ?? null, guestToken(request));
 
     app.post('/series/:seriesId/duels', seriesGuard, async (request, reply) => {
         const body = StartBodySchema.safeParse(request.body);
@@ -87,6 +111,21 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(201).send({ duel: summary(duel) });
     });
 
+    app.post('/duels/practice', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
+        const body = GuestBodySchema.safeParse(request.body);
+        if (!body.success) return reply.code(400).send({ error: 'Invalid input' });
+        const { deck, setName, against } = body.data;
+        // Practice only, so no collection or banlist check: just real cards, at most 3 of each.
+        const ids = [...deck.main, ...deck.extra];
+        const counts = new Map<number, number>();
+        for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+        const known = await app.catalog.cardsByIds([...counts.keys()]);
+        if (known.length !== counts.size || [...counts.values()].some((n) => n > 3)) return reply.code(409).send({ error: 'That deck is not legal' });
+        const created = await app.duels.createGuest({ deck, setName, against });
+        if (typeof created === 'string') return fail(reply, created);
+        return reply.code(201).send({ duel: summary(created.duel), token: created.token });
+    });
+
     app.get('/series/:seriesId/duels/open', { preHandler: [requireAuth, requireSeriesMember] }, async (request) => {
         const userId = request.user!._id, seriesId = request.series!._id;
         const open = await duelsCollection(app.db)
@@ -96,10 +135,10 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         return { duels: open.map(summary) };
     });
 
-    app.get('/duels/:duelId', { preHandler: requireAuth }, async (request, reply) => {
+    app.get('/duels/:duelId', { preHandler: loadUser }, async (request, reply) => {
         const duel = await duelFor(request, reply);
         if (!duel) return;
-        const team = app.duels.teamOf(duel, request.user!._id);
+        const team = teamIn(duel, request);
         const state = duel.status === 'active' || (duel.status === 'finished' && duel.setup) ? (team === null ? null : (await app.duels.stateFor(duel, team)).state) : null;
         return { duel: summary(duel), state };
     });
@@ -109,6 +148,7 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         if (!body.success) return reply.code(400).send({ error: 'Invalid input' });
         const duel = await duelFor(request, reply);
         if (!duel) return;
+        if (!duel.seriesId) return fail(reply, 'not-waiting');
         const user = request.user!;
         const deck = await deckFor(duel.seriesId, user._id, body.data.deckId);
         if (typeof deck === 'string') return fail(reply, deck);
@@ -124,19 +164,18 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(204).send();
     });
 
-    app.post('/duels/:duelId/concede', { preHandler: requireAuth }, async (request, reply) => {
+    app.post('/duels/:duelId/concede', { preHandler: loadUser }, async (request, reply) => {
         const duel = await duelFor(request, reply);
         if (!duel) return;
-        const team = app.duels.teamOf(duel, request.user!._id);
+        const team = teamIn(duel, request);
         if (team === null || duel.status !== 'active') return reply.code(409).send({ error: 'That duel is not being played' });
         await app.duels.concede(duel, team);
         return reply.code(204).send();
     });
 
-    app.get('/duels/:duelId/live', { websocket: true, preHandler: requireAuth }, async (socket, request) => {
-        const { duelId } = request.params as { duelId: string };
-        const duel = /^[0-9a-f]{24}$/.test(duelId) ? await app.duels.find(new ObjectId(duelId)) : null;
-        const team = duel && duel.status === 'active' ? app.duels.teamOf(duel, request.user!._id) : null;
+    app.get('/duels/:duelId/live', { websocket: true, preHandler: loadUser }, async (socket, request) => {
+        const duel = await visibleDuel(request);
+        const team = duel && duel.status === 'active' ? teamIn(duel, request) : null;
         if (!duel || team === null) return socket.close(4404, 'No such duel');
         app.duels.connect(duel, team, socket);
     });

@@ -80,9 +80,10 @@ function humanAnswer(p: DuelPrompt): DuelAnswer {
 }
 
 /** Plays a duel over its socket, answering every question, until it's over. Resolves with the last state. */
-async function play(p: Player, duelId: string) {
+async function play(p: Pick<Player, 'name'> & { cookie?: string }, duelId: string, token?: string) {
     // The injected upgrade has no socket of its own; the rate limiter needs an address.
-    const socket = await app.injectWS(`/api/duels/${duelId}/live`, { headers: { cookie: p.cookie }, socket: { remoteAddress: '127.0.0.1' } } as never);
+    const url = `/api/duels/${duelId}/live${token ? `?token=${token}` : ''}`;
+    const socket = await app.injectWS(url, { headers: p.cookie ? { cookie: p.cookie } : {}, socket: { remoteAddress: '127.0.0.1' } } as never);
     return new Promise<DuelServerMessage['state'] & { frames: number }>((resolve, reject) => {
         let frames = 0;
         const timer = setTimeout(() => reject(new Error(`${p.name}: the duel never ended`)), 25_000);
@@ -132,6 +133,38 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(Object.values(stored!.setup.shown)).toContain(17814387);
         // Practice records nothing on the series.
         expect((await seriesCollection(app.db).findOne({ _id: new ObjectId(id) }))!.matchHistory).toEqual([]);
+    });
+
+    it('lets a guest practice solo: the duel opens only with its token, and the opponent never plays', async () => {
+        const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'solo' } });
+        expect(started.statusCode).toBe(201);
+        const { duel, token } = started.json();
+        expect(duel).toMatchObject({ kind: 'practice', status: 'active', mode: 'MR1', guest: true, seriesId: null });
+
+        // Without the token (or with another), it's no one's duel.
+        expect((await app.inject({ method: 'GET', url: `/api/duels/${duel.id}` })).statusCode).toBe(404);
+        expect((await app.inject({ method: 'GET', url: `/api/duels/${duel.id}`, headers: { 'x-duel-token': 'nope' } })).statusCode).toBe(404);
+        const { state } = (await app.inject({ method: 'GET', url: `/api/duels/${duel.id}`, headers: { 'x-duel-token': token } })).json();
+        expect(state.rival).toEqual({ name: 'Solo Practice', bot: true, solo: true });
+
+        const end = await play({ name: 'Guest' }, duel.id, token);
+        // The opponent only passes, so the guest's attacks win it.
+        expect(end.result).toMatchObject({ winner: 'me' });
+        expect(end.view.opp.monsters.every((m) => m === null)).toBe(true);
+        const stored = await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) });
+        expect(stored).toMatchObject({ status: 'finished', seriesId: null });
+        // Storage drops a guest's duel after a day; the token itself is never stored.
+        expect(stored!.expiresAt.getTime()).toBeGreaterThan(Date.now());
+        expect(JSON.stringify(stored)).not.toContain(token);
+    });
+
+    it('refuses a guest deck that is too small, has unknown cards, or is at a set that does not exist', async () => {
+        const post = (payload: object) => app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot', ...payload } });
+        expect((await post({ deck: { main: DECK.slice(0, 30), extra: [] } })).statusCode).toBe(400);
+        expect((await post({ deck: { main: [...DECK.slice(1), 12345678], extra: [] } })).statusCode).toBe(409);
+        expect((await post({ deck: { main: [...DECK.slice(4), 46986414, 46986414, 46986414, 46986414], extra: [] } })).statusCode).toBe(409);
+        expect((await post({ setName: 'Nope' })).statusCode).toBe(404);
+        expect((await post({})).statusCode).toBe(201);
     });
 
     it('lets the rival accept a challenge, plays it out, and records the result on the series', async () => {

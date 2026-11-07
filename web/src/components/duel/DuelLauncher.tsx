@@ -4,16 +4,21 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ruleEraFor } from "@ygo/shared";
 import type { SavedDeck } from "@/lib/storage";
-import { acceptDuel, declineDuel, duelPath, openDuels, startDuel, type DuelSummary } from "@/lib/duel-client";
+import { acceptDuel, declineDuel, duelPath, getDuel, lastGuestDuel, openDuels, startDuel, startGuestDuel, type DuelSummary, type PracticeOpponent } from "@/lib/duel-client";
 import { alertRepoError } from "@/context/ProgressionContext";
 import "./duel-launcher.css";
 
 /**
- * Playing the duel here, on the server's rules engine: practice against the bot, challenge the
- * rival (duo), answer the rival's challenge, or go back to a duel in progress.
+ * Playing the duel here, on the server's rules engine: practice against the bot or solo, challenge
+ * the rival (duo), answer the rival's challenge, or go back to a duel in progress. A guest only
+ * practices: their decks live in this browser, so the deck itself goes to the server.
  */
-export default function DuelLauncher({ seriesId, duo, rival, decks, setDate, onBack, onOpenChange }: {
+export default function DuelLauncher({ seriesId, guest, setName, duo, rival, decks, setDate, onBack, onOpenChange }: {
     seriesId: string;
+    /** Playing as a guest: practice only, with the deck sent along. */
+    guest?: boolean;
+    /** The current set: a guest's practice duel is played there. */
+    setName?: string;
     duo: boolean;
     rival: string;
     decks: SavedDeck[];
@@ -32,17 +37,25 @@ export default function DuelLauncher({ seriesId, duo, rival, decks, setDate, onB
 
     const load = useCallback(async () => {
         try {
-            setOpen(await openDuels(seriesId));
+            if (guest) {
+                // A guest's practice duel still going in this browser.
+                const last = lastGuestDuel();
+                const duel = last ? (await getDuel(last).catch(() => null))?.duel : null;
+                setOpen(duel?.status === "active" ? [duel] : []);
+            } else {
+                setOpen(await openDuels(seriesId));
+            }
         } catch {
             setOpen([]);
         }
-    }, [seriesId]);
+    }, [seriesId, guest]);
     useEffect(() => {
-        // The first load, then a slow poll for the rival.
+        // The first load, then (signed in) a slow poll for the rival.
         void load();
+        if (guest) return;
         const t = setInterval(load, 10_000);
         return () => clearInterval(t);
-    }, [load]);
+    }, [load, guest]);
 
     const challenge = open?.find((d) => d.kind === "rival");
     const practice = open?.find((d) => d.kind === "practice");
@@ -63,6 +76,11 @@ export default function DuelLauncher({ seriesId, duo, rival, decks, setDate, onB
         }
     };
     const go = (d: DuelSummary) => router.push(duelPath(d.id));
+    const practise = (against: PracticeOpponent) => run(async () => {
+        const deck = legal.find((d) => d.id === deckId);
+        if (!deck) return;
+        go(guest ? await startGuestDuel({ main: deck.mainDeck, extra: deck.extraDeck }, setName ?? "", against) : await startDuel(seriesId, deckId, against));
+    });
 
     const deckPicker = legal.length ? (
         <label className="dl-deck">
@@ -106,9 +124,13 @@ export default function DuelLauncher({ seriesId, duo, rival, decks, setDate, onB
                     {deckPicker}
                     <div className="dl-row">
                         {duo && <button type="button" className="dl-btn dl-btn--main" disabled={!deckId || busy} onClick={() => run(() => startDuel(seriesId, deckId, "rival"))}>Challenge {rival}</button>}
-                        {!practice && <button type="button" className="dl-btn" disabled={!deckId || busy} onClick={() => run(async () => go(await startDuel(seriesId, deckId, "bot")))}>Practice against the bot</button>}
+                        {!practice && <button type="button" className="dl-btn" disabled={!deckId || busy} onClick={() => practise("bot")}>Practice against the bot</button>}
+                        {!practice && <button type="button" className="dl-btn" disabled={!deckId || busy} onClick={() => practise("solo")}>Solo: test your deck</button>}
                     </div>
-                    <p className="dl-note">{duo ? "The rival duel counts for the series. Practice doesn't." : "Practice doesn't count: record your real duels below as before."}</p>
+                    <p className="dl-note">
+                        {duo ? "The rival duel counts for the series. Practice doesn't." : "Practice doesn't count: record your real duels below as before."}
+                        {" "}In solo the opponent only passes its turns, so you can draw and play out your own.
+                    </p>
                 </div>
             )}
             <button type="button" className="rm-back" onClick={onBack}>← Record a duel played elsewhere</button>

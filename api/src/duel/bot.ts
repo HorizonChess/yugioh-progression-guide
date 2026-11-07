@@ -13,7 +13,15 @@ import type { DuelSession, Team } from './session';
 const MAX_ACTIONS_PER_TURN = 12;
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
-export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team): OcgResponse {
+export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = false): OcgResponse {
+    // Solo practice: the opponent never acts. It ends its turns and never chains; anything it
+    // must answer (a hand-size discard) it answers like the bot.
+    if (solo) {
+        if (m.type === M.SELECT_IDLECMD) return { type: R.SELECT_IDLECMD, action: m.to_ep ? I.TO_EP : I.TO_BP, index: null };
+        if (m.type === M.SELECT_BATTLECMD) return { type: R.SELECT_BATTLECMD, action: m.to_ep ? B.TO_EP : B.TO_M2, index: null };
+        if (m.type === M.SELECT_CHAIN && !m.forced) return { type: R.SELECT_CHAIN, index: null };
+        if (m.type === M.SELECT_EFFECTYN) return { type: R.SELECT_EFFECTYN, yes: false };
+    }
     switch (m.type) {
         case M.SELECT_IDLECMD: {
             if (duel.botActions++ < MAX_ACTIONS_PER_TURN) {

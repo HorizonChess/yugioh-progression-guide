@@ -18,13 +18,14 @@ interface ServerPlayer extends Omit<PlayerView, "savedDecks"> {
 }
 
 /** Calls the API with the session cookie; a refusal becomes a RepoError with the server's message. */
-export async function apiRequest<T = void>(method: string, path: string, body?: unknown): Promise<T> {
+export async function apiRequest<T = void>(method: string, path: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
     let response: Response;
     try {
         response = await fetch(`${API_BASE}${path}`, {
             method,
             credentials: "include",
-            ...(body === undefined ? {} : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
+            headers: { ...headers, ...(body === undefined ? {} : { "content-type": "application/json" }) },
+            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         });
     } catch {
         throw new RepoError("Can't reach the server. Check your connection and try again.");
