@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, ReactNode } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { guide } from '@/lib/guide/store';
+import { gameAlert } from '@/components/ui/GameDialog';
 import { Collection } from '@/lib/collection';
 import { LocalRepo } from '@/lib/repo/local';
 import { RemoteRepo } from '@/lib/repo/remote';
@@ -268,6 +269,6 @@ export function useProgression() {
 
 /** Shows a refusal to the player; anything unexpected is rethrown. */
 export function alertRepoError(error: unknown) {
-    if (error instanceof RepoError) alert(error.message);
+    if (error instanceof RepoError) void gameAlert(error.message, { title: "Hold on" });
     else throw error;
 }

@@ -18,6 +18,8 @@ export type GuideState = { line: Spoken | null; more: number };
 const TIP_GAP_MS = 15_000;
 const SEEN_KEY = "ygo-guide-seen";
 const isTip = (l: Line) => l.priority <= PRIORITY.details;
+/** The words he's said (so two cards sharing a note don't get it twice); the welcome's are kept apart, so a replay can forget them. */
+const textKey = (l: Line) => (l.key.startsWith("welcome:") ? `text:welcome:${l.text}` : `text:${l.text}`);
 
 let state: GuideState = { line: null, more: 0 };
 let queue: Spoken[] = [];
@@ -64,7 +66,7 @@ export const guide = {
     /** Offer a line. Returns whether he'll say it (now, or later in the conversation). */
     say(line: Line | null): boolean {
         // Keyed by moment and by words: two cards that share a note don't get it twice.
-        if (!line || !enabled() || seen().has(line.key) || seen().has(`text:${line.text}`)) return false;
+        if (!line || !enabled() || seen().has(line.key) || seen().has(textKey(line))) return false;
         const now = Date.now();
         if (isTip(line) && now - lastTip < TIP_GAP_MS) return false;
         const spoken = { ...line, at: now };
@@ -80,7 +82,7 @@ export const guide = {
         } else return false;
         if (isTip(line)) lastTip = now;
         markSeen(line.key);
-        markSeen(`text:${line.text}`);
+        markSeen(textKey(line));
         return true;
     },
     /** Offer several lines as one conversation, in order. */
@@ -92,6 +94,15 @@ export const guide = {
         if (!state.line || (at !== undefined && state.line.at !== at)) return;
         const next = queue.shift();
         publish(next ? { ...next, at: Date.now() } : null);
+    },
+    /** Lets him say the lines keyed `prefix…` again this visit (Options: replay the welcome). */
+    forget(prefix: string) {
+        try {
+            const keep = [...seen()].filter((k) => !k.startsWith(prefix) && !k.startsWith(`text:${prefix}`));
+            sessionStorage.setItem(SEEN_KEY, JSON.stringify(keep));
+        } catch {
+            /* storage blocked: nothing remembered to forget */
+        }
     },
     /** Turned off in Options or the nav: he stops talking at once. */
     silence() {

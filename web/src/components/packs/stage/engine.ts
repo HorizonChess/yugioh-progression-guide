@@ -144,7 +144,7 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
             el.classList.add("ps-card--lift");
             peekTimer = setTimeout(() => {
                 if (!alive) return;
-                const b = el.getBoundingClientRect(), w = 330;
+                const b = el.getBoundingClientRect(), w = innerWidth >= 768 ? 390 : 330;
                 peekEl = toBody(plate(o.cards[el.idx]!, "ps-peek"));
                 const onLeft = b.left + b.width / 2 > innerWidth / 2;
                 peekEl.style.left = Math.max(8, Math.min(innerWidth - w - 8, onLeft ? b.left - w - 16 : b.right + 16)) + "px";

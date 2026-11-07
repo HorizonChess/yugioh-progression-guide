@@ -1,5 +1,6 @@
 "use client";
 
+import { useWelcome } from "@/lib/guide/welcome";
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
 import { useAuth } from "@/context/AuthContext";
 import { fetchAllSets, fetchCardsByIds, type Card, type CardSet } from "@/lib/api";
@@ -59,6 +60,7 @@ type Line = { key: string; prizeId: PrizeId; from: string; setIndex: number; on?
 
 export default function RewardsPage() {
     const { rewards, bannedCardIds, hasLoaded, claimReward, rivalBinder, rivalRewards, activeOpening, flip, saveOpening, series, collection } = useProgression();
+    useWelcome("rewards", hasLoaded);
     const me = useAuth().user;
     /** The reward whose rival-binder picker is open, if any. */
     const [snatchEntry, setSnatchEntry] = useState<RewardEntry | null>(null);

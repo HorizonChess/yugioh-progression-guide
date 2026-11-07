@@ -1,5 +1,6 @@
 "use client";
 
+import { useWelcome } from "@/lib/guide/welcome";
 import { useLayoutEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { CardSet } from "@/lib/api";
@@ -38,6 +39,7 @@ export default function StoreView({
     onBack: () => void;
 }) {
     const pack = useRef<HTMLButtonElement>(null);
+    useWelcome("packs", !isLocked);
 
     // Land the pack flying in from the timeline; otherwise rise into place.
     useLayoutEffect(() => {

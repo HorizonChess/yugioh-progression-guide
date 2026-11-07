@@ -1,5 +1,6 @@
 "use client";
 
+import { useWelcome } from "@/lib/guide/welcome";
 import { alertRepoError, useProgression, SavedDeck } from "@/context/ProgressionContext";
 import GuideSprite from "@/components/layout/GuideSprite";
 import ScaleWrapper from "@/components/deck-builder/ScaleWrapper";
@@ -28,11 +29,16 @@ import DeckControls from "@/components/deck-builder/DeckControls";
 import DeckPhone from "@/components/deck-builder/DeckPhone";
 import { ownedPrintings } from "@/components/deck-builder/stage";
 import { useIsPhone } from "@/lib/useIsPhone";
+import { gameAlert, gameConfirm } from "@/components/ui/GameDialog";
 import "@/components/deck-builder/deck-builder.css";
+
+/** Says why the deck rules refuse a move, in the game's own dialog. */
+const ruleAlert = (message: string, title = "Not allowed") => void gameAlert(message, { title });
 
 export default function DeckBuilder() {
     const { collection, saveDeck, savedDecks, deleteDeck, bannedCardIds } = useProgression();
     const isPhone = useIsPhone();
+    useWelcome("deck-builder", true);
     // Cosmetic ban list (Phase 5): banned cards are greyed in the search panel and
     // blocked from being added. Saved decks are never stripped.
     const bannedIds = useMemo(() => new Set(bannedCardIds), [bannedCardIds]);
@@ -126,9 +132,9 @@ export default function DeckBuilder() {
 
     // --- Actions ---
     const handleSaveDeck = async () => {
-        if (!deckName.trim()) return alert("Please enter a deck name.");
+        if (!deckName.trim()) return void gameAlert("Give your deck a name first.", { title: "Name your deck" });
         if (mainDeck.length < 40) {
-            if (!confirm("Main Deck is under 40 cards. Save anyway?")) return;
+            if (!(await gameConfirm(`The Main Deck has ${mainDeck.length} cards; a legal deck needs at least 40.`, { title: "Save anyway?", confirmLabel: "Save" }))) return;
         }
 
         const deckData: SavedDeck = {
@@ -142,13 +148,13 @@ export default function DeckBuilder() {
 
         const existing = savedDecks.find(d => d.name === deckName);
         if (existing) {
-            if (!confirm(`Overwrite existing deck "${deckName}"?`)) return;
+            if (!(await gameConfirm(`A deck named "${deckName}" already exists.`, { title: "Overwrite it?", confirmLabel: "Overwrite", danger: true }))) return;
             deckData.id = existing.id;
         }
 
         try {
             await saveDeck(deckData);
-            alert("Deck Saved!");
+            void gameAlert(`"${deckName}" is saved.`, { title: "Deck saved" });
         } catch (error) {
             alertRepoError(error);
         }
@@ -178,15 +184,18 @@ export default function DeckBuilder() {
         setExtraDeck(getCards(deck.extraDeck));
         setSideDeck(getCards(deck.sideDeck));
         setShowLoadModal(false);
-        alert(`Loaded "${deck.name}"`);
+        void gameAlert(`"${deck.name}" is loaded.`, { title: "Deck loaded" });
     };
 
-    const handleDeleteDeck = (id: string) => {
-        if (confirm("Delete this deck?")) deleteDeck(id).catch(alertRepoError);
+    const handleDeleteDeck = async (id: string) => {
+        const name = savedDecks.find(d => d.id === id)?.name;
+        if (await gameConfirm(name ? `"${name}" will be deleted.` : "This deck will be deleted.", { title: "Delete this deck?", confirmLabel: "Delete", danger: true })) {
+            deleteDeck(id).catch(alertRepoError);
+        }
     };
 
-    const handleClearDeck = () => {
-        if (confirm("Clear current deck?")) {
+    const handleClearDeck = async () => {
+        if (await gameConfirm("Every card will be taken out of the Main, Extra and Side Decks.", { title: "Clear this deck?", confirmLabel: "Clear", danger: true })) {
             setMainDeck([]);
             setExtraDeck([]);
             setSideDeck([]);
@@ -209,8 +218,9 @@ export default function DeckBuilder() {
         const file = e.target.files?.[0];
         if (!file) return;
         const { main, extra, side } = parseYDKWithSections(await file.text());
-        if (main.length === 0 && extra.length === 0 && side.length === 0) return alert("No valid card IDs found in YDK file.");
-        if ((mainDeck.length > 0 || extraDeck.length > 0 || sideDeck.length > 0) && !confirm("This will replace your current deck. Continue?")) return;
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (main.length === 0 && extra.length === 0 && side.length === 0) return void gameAlert("No valid card IDs were found in that YDK file.", { title: "Nothing to import" });
+        if ((mainDeck.length > 0 || extraDeck.length > 0 || sideDeck.length > 0) && !(await gameConfirm("The deck you're building will be replaced.", { title: "Import this deck?", confirmLabel: "Import" }))) return;
 
         const fetchedCards = await fetchCardsByIds([...new Set([...main, ...extra, ...side])]);
         const newAllCards = [...allCards];
@@ -224,13 +234,12 @@ export default function DeckBuilder() {
         setExtraDeck(getCards(extra));
         setSideDeck(getCards(side));
 
-        alert(`Imported deck: ${main.length} main, ${extra.length} extra, ${side.length} side`);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        void gameAlert(`${main.length} Main, ${extra.length} Extra and ${side.length} Side Deck cards.`, { title: "Deck imported" });
     };
 
     const handleExportClick = async () => {
         if (mainDeck.length === 0 && extraDeck.length === 0 && sideDeck.length === 0) {
-            alert("Deck is empty. Nothing to export.");
+            void gameAlert("Add some cards before exporting.", { title: "The deck is empty" });
             return;
         }
 
@@ -379,16 +388,16 @@ export default function DeckBuilder() {
         if (!card) return;
 
         const isExtra = isExtraDeckCard(card);
-        if (to === 'extra' && !isExtra) return alert("Only Extra Deck monsters can go in Extra Deck");
-        if (to === 'main' && isExtra && from !== 'main') return alert("Extra Deck monsters cannot go in Main Deck");
+        if (to === 'extra' && !isExtra) return ruleAlert("Only Extra Deck monsters go in the Extra Deck.");
+        if (to === 'main' && isExtra && from !== 'main') return ruleAlert("Extra Deck monsters can't go in the Main Deck.");
 
         const targetDeck = decks[to];
-        if (to === 'main' && targetDeck.length >= 60 && from !== 'main') return alert("Main Deck Full (Max 60)");
-        if ((to === 'extra' || to === 'side') && targetDeck.length >= 15 && from !== to) return alert("Extra/Side Deck Full (Max 15)");
+        if (to === 'main' && targetDeck.length >= 60 && from !== 'main') return ruleAlert("The Main Deck is full (60 cards max).", "Deck full");
+        if ((to === 'extra' || to === 'side') && targetDeck.length >= 15 && from !== to) return ruleAlert(`The ${to === "extra" ? "Extra" : "Side"} Deck is full (15 cards max).`, "Deck full");
 
         if (from === 'search') {
-            if (bannedIds.has(card.id)) return alert("This card is banned and cannot be added.");
-            if (getCopiesInAllDecks(card.id) >= 3) return alert("Max 3 copies allowed.");
+            if (bannedIds.has(card.id)) return ruleAlert("This card is banned and can't be added.", "Forbidden card");
+            if (getCopiesInAllDecks(card.id) >= 3) return ruleAlert("A deck can hold at most 3 copies of a card.", "Three copies max");
             const available = collectionCards.find(entry => entry.card.id === card.id)?.count ?? 0;
             if (available <= 0) return;
             setDeck(to, insertAt(targetDeck, index, card));
@@ -417,10 +426,10 @@ export default function DeckBuilder() {
         const isExtra = isExtraDeckCard(card);
         const deck = isExtra ? extraDeck : mainDeck;
 
-        if (bannedIds.has(card.id)) return alert("This card is banned and cannot be added.");
-        if (!isExtra && deck.length >= 60) return alert("Main Deck Full");
-        if (isExtra && deck.length >= 15) return alert("Extra Deck Full");
-        if (getCopiesInAllDecks(card.id) >= 3) return alert("Max 3 copies allowed.");
+        if (bannedIds.has(card.id)) return ruleAlert("This card is banned and can't be added.", "Forbidden card");
+        if (!isExtra && deck.length >= 60) return ruleAlert("The Main Deck is full (60 cards max).", "Deck full");
+        if (isExtra && deck.length >= 15) return ruleAlert("The Extra Deck is full (15 cards max).", "Deck full");
+        if (getCopiesInAllDecks(card.id) >= 3) return ruleAlert("A deck can hold at most 3 copies of a card.", "Three copies max");
         if ((collectionCards.find(entry => entry.card.id === card.id)?.count || 0) <= 0) return;
 
         if (isExtra) setExtraDeck([...extraDeck, card]);
@@ -474,6 +483,7 @@ export default function DeckBuilder() {
                     onExport={handleExportClick}
                 />
                 {shared}
+                <GuideSprite />
             </>
         );
     }
@@ -550,7 +560,7 @@ export default function DeckBuilder() {
             </div>
 
             {/* He stands on the Main Deck's mat, clear of the card panel and its buttons. */}
-            <GuideSprite at="17vw" />
+            <GuideSprite at="19vw" />
             {shared}
 
             </div>

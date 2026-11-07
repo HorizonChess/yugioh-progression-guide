@@ -1,5 +1,7 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
+import { useWelcome } from "@/lib/guide/welcome";
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets, CardSet } from "@/lib/api";
 import { useEffect, useState, useRef } from "react";
@@ -27,7 +29,8 @@ import StatsPanel from "@/components/timeline/StatsPanel";
  * scrolls horizontally.
  */
 export default function Timeline() {
-    const { currentSetIndex, matchHistory, hasLoaded } = useProgression();
+    const { currentSetIndex, matchHistory, hasLoaded, series } = useProgression();
+    const userId = useAuth().user?.id;
     const [sets, setSets] = useState<CardSet[]>([]);
     const [loading, setLoading] = useState(true);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -55,6 +58,23 @@ export default function Timeline() {
         }
     }, [loading, currentSetIndex, isPhone]);
 
+    // Drag the rail with the mouse (touch already pans natively). A drag past a few px
+    // swallows the click that would follow, so letting go over a pack doesn't open it.
+    const drag = useRef({ x: 0, left: 0, active: false, moved: false });
+    const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (e.pointerType !== "mouse" || e.button !== 0) return;
+        drag.current = { x: e.clientX, left: e.currentTarget.scrollLeft, active: true, moved: false };
+    };
+    const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+        const d = drag.current;
+        if (!d.active) return;
+        if (!d.moved && Math.abs(e.clientX - d.x) < 5) return;
+        if (!d.moved) e.currentTarget.setPointerCapture(e.pointerId);
+        d.moved = true;
+        e.currentTarget.scrollLeft = d.left - (e.clientX - d.x);
+    };
+    const endDrag = () => { drag.current.active = false; };
+
     const scroll = (direction: "left" | "right") => {
         if (scrollContainerRef.current) {
             const scrollAmount = 400;
@@ -64,6 +84,14 @@ export default function Timeline() {
             });
         }
     };
+
+    // Yugi's tour of the game, the first time a run's road is shown (a duo run has its own).
+    useWelcome("tour", hasLoaded && !loading && !!series && sets.length > 0, {
+        mode: series?.mode,
+        set: sets[currentSetIndex]?.set_name,
+        packs: series?.rules.packsPerSet,
+        rival: series?.members.find((m) => m.id !== userId)?.duelistName,
+    });
 
     if (!hasLoaded || loading) {
         return (
@@ -108,7 +136,18 @@ export default function Timeline() {
 
                     {/* Horizontal scroll rail (px-[50vw] centers any tile; bottom
                         padding reserves room for the absolute captions) */}
-                    <div ref={scrollContainerRef} className="timeline-carousel">
+                    <div
+                        ref={scrollContainerRef}
+                        className="timeline-carousel"
+                        onPointerDown={onPointerDown}
+                        onPointerMove={onPointerMove}
+                        onPointerUp={endDrag}
+                        onPointerCancel={endDrag}
+                        onDragStart={(e) => e.preventDefault()}
+                        onClickCapture={(e) => {
+                            if (drag.current.moved) { e.preventDefault(); e.stopPropagation(); drag.current.moved = false; }
+                        }}
+                    >
                         {sets.map((set, idx) => (
                             <TimelineNode
                                 key={`${set.set_code}-${idx}`}

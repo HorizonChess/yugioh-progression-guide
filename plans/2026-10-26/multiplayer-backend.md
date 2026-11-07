@@ -491,3 +491,19 @@ Tweaks done (2026-11-07):
 - `fix/ring-tap-flip`: on the phone ring a tap flips a face-down common where it is; rares and better still turn to the front for their reveal.
 - `feat/phone-swipe-nav`: a swipe across a tab's page goes to the neighbouring tab, sliding in from that side. Surfaces with their own gestures are left alone. The binder passes a swipe through only past its first or last page, since on phones the whole collection is the binder.
 - `feat/look-later`: marks to look at later. Stored per player and series as card ids (`marks` on the player doc, `PUT|DELETE /api/series/:id/marks/:cardId`, at most 500; guests keep them on the save, and the guest import carries them). Any real card can be marked, since marking happens before an opening is saved. A toggle sits in the opener's close-up, every card close-up, and the deck builder's details. A gold bookmark shows on marked cards in the binder and the deck builder's card lists. Opening the card's details in the collection or the phone deck builder clears the mark, as does resting on it for 1.2 s in the desktop deck builder; it can be switched back on there and stays.
+
+Yugi's welcome (user, 2026-11-07, branch `feat/guide-welcome`): a short tour plus first-visit lines, with a spotlight on what he's talking about, script reviewed first.
+- The main menu does the hello and points to Campaign Mode, then covers the account (guest or signed in) and Options. There he's only his tablet, beside the painted Yugi.
+- Campaign Mode points to New Game. The new-run form explains solo or duo (signed in only), the starting set, and packs per set.
+- A run's first timeline visit gets the tour: the road, the concept, open packs, build a deck, record the match, rewards, go. Duo runs get their own wording, with the rival's real duelist name.
+- Each screen explains itself on first visit: the pack store, the haul, the collection, the deck builder, Record Match, Rewards.
+- Each welcome is said once per device and isn't marked as said while the guide is off. Options can replay them all.
+- The spotlight is a gold ring with the page dimmed around it, drawn beside Yugi so clipping and the deck builder's scaling don't break it. On desktop Yugi always comes in from the left (user, 2026-11-07); when his tablet would cover the target, the tablet rises above it. On phones he goes to the top when the target is low.
+- The timeline's Bonus Matches buttons were removed until there's something behind them.
+
+Welcome fixes (user, 2026-11-07, `fix/guide-taps-bottom-campaign-ui`):
+- While Yugi has more to say, a tap elsewhere doesn't move him on: only his tablet does. On his last line a tap anywhere still sends him off.
+- On phones he stays at the bottom; jumping between top and bottom was distracting. His strip rises just above a target it would cover, unless the target is too tall to clear. (He still moves to the top over a card close-up, where the details sheet is at the bottom.)
+- The menu's hello lights nothing; Campaign Mode is lit when he tells you to pick it.
+- Campaign Mode's run list and new-run form restyled to match the menu: runs as menu tablets, dark gold-rimmed fields, a gold New Game and Create.
+- In the desktop deck builder Yugi stands a little further onto the mat (19vw), clear of the Export button.

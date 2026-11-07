@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
+import { gameConfirm } from "@/components/ui/GameDialog";
 import { fetchAllSets, fetchCardsByIds, fetchCardsInSet, Card, CardSet } from "@/lib/api";
 import type { Opening } from "@/lib/repo/types";
 import { useState, useEffect, useRef, Suspense } from "react";
@@ -133,7 +134,9 @@ function PacksPageContent() {
     };
 
     const handleReroll = async () => {
-        if (!openingId.current || !confirm("Spend a Redoer Ticket to reroll all of these packs? The cards you opened will be lost.")) return;
+        if (!openingId.current) return;
+        const yes = await gameConfirm("The cards you opened will be lost.", { title: "Spend a Redoer Ticket to reroll these packs?", confirmLabel: "Reroll" });
+        if (!yes || !openingId.current) return;
         try {
             startReveal(await reroll(openingId.current));
         } catch (error) {
@@ -141,11 +144,11 @@ function PacksPageContent() {
         }
     };
 
-    const handleDiscardAndExit = () => {
+    const handleDiscardAndExit = async () => {
         if (!repo.freePacks) {
             void flushFlips();
             router.push("/timeline");
-        } else if (confirm("Are you sure? All opened cards will be lost.")) {
+        } else if (await gameConfirm("All the cards you opened will be lost.", { title: "Leave these packs?", confirmLabel: "Discard", danger: true })) {
             router.push("/timeline");
         }
     };
