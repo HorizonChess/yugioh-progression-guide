@@ -16,7 +16,11 @@ export type NotificationType =
     | 'report-rejected'
     | 'snatched'
     | 'banlist'
-    | 'rival-left';
+    | 'rival-left'
+    | 'duel-challenge'
+    | 'duel-accepted'
+    | 'duel-declined'
+    | 'duel-result';
 
 /** Display-ready details: who did it, in which series, to which card. */
 export type NotificationPayload = Record<string, string | number | boolean>;

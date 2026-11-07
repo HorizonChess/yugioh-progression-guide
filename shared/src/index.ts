@@ -10,3 +10,5 @@ export * from './rules';
 export * from './decks';
 export * from './claims';
 export * from './schemas/series';
+export * from './duel/eras';
+export * from './duel/protocol';

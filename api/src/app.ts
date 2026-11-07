@@ -16,6 +16,7 @@ import { registerBackground } from './background';
 import { createCardCatalog, type CardCatalog } from './cards/catalog';
 import type { Config } from './config';
 import { connectDb } from './db';
+import { createDuelHub, ensureDuelIndexes, type DuelHub } from './duel/hub';
 import { ensureInviteIndexes } from './game/invites';
 import { ensureMatchIndexes } from './game/matches';
 import { createNotifier, ensureNotificationIndexes, type NotificationPayload, type NotificationType, type Notifier } from './game/notifications';
@@ -26,6 +27,7 @@ import { cors } from './middleware/cors';
 import { originCheck } from './middleware/originCheck';
 import { authRoutes } from './routes/auth';
 import { deckRoutes } from './routes/decks';
+import { duelRoutes } from './routes/duels';
 import { googleRoutes } from './routes/google';
 import { healthRoutes } from './routes/health';
 import { inviteRoutes } from './routes/invites';
@@ -66,6 +68,8 @@ declare module 'fastify' {
         /** The synced card data, read and cached for game rules. */
         catalog: CardCatalog;
         notifier: Notifier;
+        /** Duels on the rules engine: storage, live sessions and their sockets. */
+        duels: DuelHub;
         /** Stores a notification and pushes it live, without holding up the response. */
         notify(userId: ObjectId, type: NotificationType, seriesId: ObjectId, payload: NotificationPayload): void;
     }
@@ -116,6 +120,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
     await ensureNotificationIndexes(app.db);
     await ensureInviteIndexes(app.db);
     await ensureMatchIndexes(app.db);
+    await ensureDuelIndexes(app.db);
     app.decorate('catalog', createCardCatalog(app.db));
     registerBackground(app);
     app.decorate('notifier', createNotifier(app.db));
@@ -123,6 +128,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
         app.runInBackground(() => app.notifier.send(userId, type, seriesId, payload)),
     );
     await app.register(websocket, { options: { maxPayload: 1024 } });
+    app.decorate('duels', createDuelHub(app));
 
     const publicUrl = config.PUBLIC_URL ?? `http://localhost:${config.PORT}`;
     const emailFlows = createEmailFlows(app, mailer ?? createMailer(config, app.log), config.WEB_URL ?? publicUrl);
@@ -144,6 +150,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
         await api.register(packRoutes, { prefix: '/series/:seriesId/packs' });
         await api.register(matchRoutes, { prefix: '/series/:seriesId' });
         await api.register(deckRoutes, { prefix: '/series/:seriesId' });
+        await api.register(duelRoutes);
         await api.register(notificationRoutes, { prefix: '/notifications' });
         await api.register(inviteRoutes, { prefix: '/invites' });
         if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {

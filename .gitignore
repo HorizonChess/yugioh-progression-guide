@@ -24,3 +24,6 @@ node_modules
 dist/
 coverage/
 *.tsbuildinfo
+
+# Duel engine data, downloaded by npm run fetch-engine -w @ygo/api
+api/engine-data/

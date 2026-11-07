@@ -22,6 +22,12 @@ jobs:
           path: ~/.cache/mongodb-binaries
           key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npm ci
+      # The duel engine's card scripts and data, pinned to exact commits (tests play real duels).
+      - uses: actions/cache@v4
+        with:
+          path: api/engine-data
+          key: engine-data-${{ hashFiles('api/scripts/fetch-engine.ts') }}
+      - run: npm run fetch-engine -w @ygo/api
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

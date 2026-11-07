@@ -9,7 +9,7 @@ services:
     region: frankfurt
     branch: main
     # NODE_ENV=production would make npm skip devDependencies the build needs.
-    buildCommand: npm ci --include=dev && npm run build -w web && npm run build -w @ygo/api
+    buildCommand: npm ci --include=dev && npm run fetch-engine -w @ygo/api && npm run build -w web && npm run build -w @ygo/api
     startCommand: node api/dist/index.js
     healthCheckPath: /api/health
     envVars:
