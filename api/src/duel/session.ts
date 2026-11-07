@@ -207,6 +207,10 @@ export class DuelSession {
      */
     private damageStep = false;
     private damageOffered: [Set<string>, Set<string>] = [new Set(), new Set()];
+    /** The attack under way (for the question's words): its attacker and target, as uids. */
+    private attacking: { team: Team; attacker: string; target?: string } | null = null;
+    /** The last summon or Set (for the question's words), until the phase changes. */
+    private lastPlay: { team: Team; k: 'summon' | 'set'; code: number; how: 'normal' | 'special' | 'flip'; monster: boolean } | null = null;
     /** For the bot: actions taken this turn, so it can't loop. */
     botActions = 0;
 
@@ -303,6 +307,44 @@ export class DuelSession {
     destroy(): void {
         if (this.handle) this.engine.core.destroyDuel(this.handle);
         this.handle = null;
+    }
+
+    /**
+     * A chance to respond, in words for `team`: the moment it's at (the engine's own timing for the
+     * window: an attack declared, the damage step, damage calculation, a summon, a phase) and the
+     * cards involved, then the question. "Respond?" after the rival's play, "Activate a card?" otherwise.
+     */
+    private askFor(team: Team, timing: number): string {
+        const view = this.view(team);
+        const cards = new Map([view.me, view.opp].flatMap((s) => [...s.monsters, ...s.spells, s.field]).filter((c): c is DuelCardView => !!c).map((c) => [c.uid, c]));
+        const yours = (t: Team) => (t === team ? 'your' : `${this.setup.names[t]}'s`);
+        const who = (t: Team) => (t === team ? 'You' : this.setup.names[t]!);
+        const card = (uid: string | undefined, t: Team) => {
+            const c = uid ? cards.get(uid) : undefined;
+            if (!c) return `${yours(t)} monster`;
+            return c.code && c.faceUp ? `${yours(t)} ${this.engine.name(c.code)}` : c.code ? `${yours(t)} Set ${this.engine.name(c.code)}` : `${yours(t)} Set monster`;
+        };
+        const PHASE: Record<Phase, string> = { DP: 'Draw Phase', SP: 'Standby Phase', M1: 'Main Phase 1', BP: 'Battle Phase', M2: 'Main Phase 2', EP: 'End Phase' };
+        const T = { STANDBY: 0x2, MAIN_END: 0x4, BATTLE_START: 0x8, BATTLE_END: 0x10, END: 0x20, SUMMON: 0x40, SPSUMMON: 0x80, FLIPSUMMON: 0x100, MSET: 0x200, SSET: 0x400, ATTACK: 0x1000, DAMAGE_STEP: 0x2000, DAMAGE_CAL: 0x4000, CHAIN_END: 0x8000 };
+        const a = this.attacking, play = this.lastPlay, tp = this.turnPlayer;
+        const battle = a ? `${card(a.attacker, a.team)} ${a.target ? `battles ${card(a.target, (1 - a.team) as Team)}` : `attacks ${a.team === team ? `${this.setup.names[1 - team]}` : 'you'} directly`}` : '';
+        let moment: string, rivals = false;
+        if (a && timing & T.DAMAGE_CAL) moment = `Damage calculation: ${battle}`;
+        else if (a && (timing & T.DAMAGE_STEP || this.damageStep)) moment = `Damage step: ${battle}`;
+        else if (a && timing & T.ATTACK) {
+            const by = card(a.attacker, a.team), at = a.target ? `an attack on ${card(a.target, (1 - a.team) as Team)}` : 'a direct attack';
+            moment = `${by[0]!.toUpperCase()}${by.slice(1)} declared ${at}`;
+            rivals = a.team !== team;
+        } else if (play && timing & (T.SUMMON | T.SPSUMMON | T.FLIPSUMMON | T.MSET | T.SSET)) {
+            const how = play.how === 'normal' ? 'Normal Summoned' : play.how === 'flip' ? 'Flip Summoned' : 'Special Summoned';
+            moment = play.k === 'set' ? `${who(play.team)} Set a ${play.monster ? 'monster' : 'card'}` : `${who(play.team)} ${how} ${this.engine.name(this.show(play.code))}`;
+            rivals = play.team !== team;
+        } else if (timing & T.CHAIN_END) moment = 'The chain has resolved';
+        else if (timing & T.BATTLE_START) moment = `Start of ${yours(tp)} Battle Phase`;
+        else if (timing & T.BATTLE_END) moment = `End of ${yours(tp)} Battle Phase`;
+        else if (timing & T.MAIN_END) moment = `End of ${yours(tp)} ${PHASE[this.phase]}`;
+        else moment = `${yours(tp)[0]!.toUpperCase()}${yours(tp).slice(1)} ${PHASE[this.phase]}`;
+        return `${moment}. ${rivals ? 'Respond?' : 'Activate a card?'}`;
     }
 
     /** Whose answer the duel is waiting for. */
@@ -531,6 +573,8 @@ export class DuelSession {
                 case M.NEW_PHASE:
                     this.resolved.clear();
                     this.phase = phaseOf(m.phase);
+                    this.attacking = null;
+                    this.lastPlay = null;
                     out.push({ k: 'phase', phase: this.phase });
                     break;
                 case M.HINT:
@@ -554,9 +598,11 @@ export class DuelSession {
                 case M.SPSUMMONING:
                 case M.FLIPSUMMONING:
                     out.push({ k: 'summon', team: m.controller, code: m.code, how: m.type === M.SUMMONING ? 'normal' : m.type === M.FLIPSUMMONING ? 'flip' : 'special' });
+                    this.lastPlay = { team: m.controller as Team, k: 'summon', code: m.code, how: m.type === M.SUMMONING ? 'normal' : m.type === M.FLIPSUMMONING ? 'flip' : 'special', monster: true };
                     break;
                 case M.SET:
                     out.push({ k: 'set', team: m.controller });
+                    this.lastPlay = { team: m.controller as Team, k: 'set', code: m.code, how: 'normal', monster: m.location === L.MZONE };
                     break;
                 case M.CHAINING: {
                     const uid = m.location === L.DECK ? undefined : this.tracker.uidAt(m.controller, m.location, m.sequence);
@@ -591,6 +637,11 @@ export class DuelSession {
                     break;
                 case M.ATTACK: {
                     const a = m.card;
+                    this.attacking = {
+                        team: a.controller as Team,
+                        attacker: this.tracker.uidAt(a.controller, a.location, a.sequence),
+                        ...(m.target ? { target: this.tracker.uidAt(m.target.controller, m.target.location, m.target.sequence) } : {}),
+                    };
                     out.push({
                         k: 'attack', team: a.controller,
                         attacker: this.tracker.uidAt(a.controller, a.location, a.sequence),
@@ -867,7 +918,8 @@ export class DuelSession {
                 const fresh = this.damageStep && Number(m.hint_timing) !== 0 ? options.map((o) => `${o.uid}:${o.text ?? ''}`).filter((k) => !this.damageOffered[team].has(k)) : [];
                 fresh.forEach((k) => this.damageOffered[team].add(k));
                 const quiet = !m.forced && (!options.length || (!top && !fresh.length && (this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team)));
-                return q({ kind: 'chain', forced: m.forced, options, pass, ...(quiet ? { quiet } : {}) }, (a) => {
+                const ask = !top && !m.forced ? this.askFor(team, Number(m.hint_timing) | Number(m.hint_timing_other)) : null;
+                return q({ kind: 'chain', forced: m.forced, options, pass, ...(quiet ? { quiet } : {}), ...(ask ? { ask } : {}) }, (a) => {
                     const id = choice(a);
                     if (id === null) return null;
                     if (id === pass) return { type: R.SELECT_CHAIN, index: null };

@@ -441,7 +441,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 // on your own turn (its details a tap away). Forced effects (several that must happen at
                 // once) skip the yes or no: only their order is yours.
                 // On top of a card of your own (your rival let it be): another card of yours can join the chain.
-                const title = prompt.forced ? "These all happen: which goes on the chain first?" : !last ? "Activate a card?" : last.side === "me" ? "Chain another card?" : `Respond to ${name(last.code)}?`;
+                const title = prompt.forced ? "These all happen: which goes on the chain first?" : !last ? (prompt.ask ?? "Activate a card?") : last.side === "me" ? "Chain another card?" : `Respond to ${name(last.code)}?`;
                 const said = last ? `${last.side === "me" ? "You" : view.opp.name} activated it as chain link ${view.chain.length}.` : undefined;
                 if (!choosing && !prompt.forced) {
                     question = sheet(title, (

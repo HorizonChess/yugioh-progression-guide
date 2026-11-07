@@ -79,6 +79,11 @@ it.skipIf(!engineDataAvailable())('plays tricky cards through the prompts withou
                 JSON.stringify(s);
                 if (!s.prompt) { problems.push(`game ${game}: no prompt`); break; }
                 kinds.set(s.prompt.kind, (kinds.get(s.prompt.kind) ?? 0) + 1);
+                // A question in words names its moment and cards, and asks.
+                if (s.prompt.kind === 'chain' && s.prompt.ask) {
+                    if (!/[.] (Respond|Activate a card)[?]$/.test(s.prompt.ask) || /undefined|null|Card \d/.test(s.prompt.ask)) problems.push(`game ${game}: odd question "${s.prompt.ask}"`);
+                    if (process.env.SHOW && /declared|Damage/.test(s.prompt.ask)) console.log('ASK', s.prompt.ask);
+                }
                 // Every card on the board is a card the page can show.
                 for (const side of [s.view.me, s.view.opp]) for (const c of [...side.monsters, ...side.spells]) {
                     if (c && c.faceUp && !engine.cardData(c.code)) problems.push(`game ${game}: unknown face-up card ${c.code}`);

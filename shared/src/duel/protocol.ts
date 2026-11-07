@@ -125,6 +125,11 @@ export type DuelPrompt =
            * default chain setting aren't asked; the app passes for them.
            */
           quiet?: boolean;
+          /**
+           * The question in words, with the moment it's about ("Practice Bot's Gemini Elf declared an
+           * attack on your Celtic Guardian. Respond?"), when no chain is going.
+           */
+          ask?: string;
       }
     /** Choose cards. `step` mode: one at a time, with `done` to finish. */
     | { kind: 'cards'; title: string; min: number; max: number; cancel: boolean; cards: PromptCard[]; tribute?: boolean; sum?: number; step?: { chosen: PromptCard[]; canFinish: boolean }; back?: boolean }

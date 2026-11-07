@@ -42,6 +42,8 @@ describe.skipIf(!engineDataAvailable())('the damage step', () => it('asks about 
     }
     expect(offered).not.toBeNull();
     expect(offered!.kind === 'chain' && offered!.quiet).toBeFalsy();
+    // The question says what moment it is, and which cards are battling.
+    expect(offered!.kind === 'chain' && offered!.ask).toMatch(/^Damage calculation: your Injection Fairy Lily (battles B's .+|attacks B directly)\. Activate a card\?$/);
 }));
 
 // A page that lost its connection is shown what it missed: the frames after its cursor.

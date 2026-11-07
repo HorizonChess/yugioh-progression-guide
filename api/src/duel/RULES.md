@@ -43,8 +43,13 @@ respond: when it matters", as Master Duel's *Auto*) a moment is asked about:
 
 "Ask me to respond: at every chance" (Master Duel's *ON*) asks at every moment a card could be used.
 
-How it's asked (page, `DuelScreen`): first a plain **Yes / No** ("Activate a card?", "Respond to
-Mirror Force?", "Chain another card?"). Yes: the cards you can use now glow; tap one to pick it up
+How it's asked (page, `DuelScreen`): first a plain **Yes / No**, saying what's happening. With a chain
+going: "Respond to Mirror Force?", or "Chain another card?" on top of your own. Without one, the
+moment comes from the engine's own timing for the window, with the cards involved (`askFor` in
+session.ts): "Practice Bot's Gemini Elf declared an attack on your Celtic Guardian. Respond?",
+"Damage calculation: your Injection Fairy Lily battles Practice Bot's Gemini Elf. Activate a card?",
+"Practice Bot's End Phase. Activate a card?". "Respond?" after the rival's play, "Activate a card?"
+otherwise. Yes: the cards you can use now glow; tap one to pick it up
 and choose **Activate** (or **Details** to read it) over it, or Back to the Yes / No. Only a card that
 can't be tapped where it lies (in a Graveyard, banished) is offered as a button. Several mandatory
 effects at once skip the Yes / No (none can be skipped): their cards glow and you pick the order.
