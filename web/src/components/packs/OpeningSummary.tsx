@@ -1,5 +1,6 @@
 "use client";
 
+import { welcome } from "@/lib/guide/welcome";
 import Link from "next/link";
 import type { CardSet, PulledCard } from "@/lib/api";
 import CartoucheButton from "@/components/ui/CartoucheButton";
@@ -50,7 +51,10 @@ export default function OpeningSummary({
         const pulled = new Map<number, number>();
         for (const c of cards) pulled.set(c.id, (pulled.get(c.id) ?? 0) + 1);
         const haul = cards.map((c) => ({ id: c.id, name: c.name, rarity: c.pulled_rarity, isNew: ownedCount(c.id) === 0, copies: ownedCount(c.id) + (pulled.get(c.id) ?? 0) }));
-        const t = setTimeout(() => guide.sayAll(haulLines(haul, stage, seed(), alreadySaid)), 900);
+        const t = setTimeout(() => {
+            welcome("haul");
+            guide.sayAll(haulLines(haul, stage, seed(), alreadySaid));
+        }, 900);
         return () => clearTimeout(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps -- once per haul
     }, [cards.length, stage]);

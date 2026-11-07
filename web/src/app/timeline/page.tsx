@@ -1,5 +1,7 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
+import { useWelcome } from "@/lib/guide/welcome";
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets, CardSet } from "@/lib/api";
 import { useEffect, useState, useRef } from "react";
@@ -27,7 +29,8 @@ import StatsPanel from "@/components/timeline/StatsPanel";
  * scrolls horizontally.
  */
 export default function Timeline() {
-    const { currentSetIndex, matchHistory, hasLoaded } = useProgression();
+    const { currentSetIndex, matchHistory, hasLoaded, series } = useProgression();
+    const userId = useAuth().user?.id;
     const [sets, setSets] = useState<CardSet[]>([]);
     const [loading, setLoading] = useState(true);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -64,6 +67,14 @@ export default function Timeline() {
             });
         }
     };
+
+    // Yugi's tour of the game, the first time a run's road is shown (a duo run has its own).
+    useWelcome("tour", hasLoaded && !loading && !!series && sets.length > 0, {
+        mode: series?.mode,
+        set: sets[currentSetIndex]?.set_name,
+        packs: series?.rules.packsPerSet,
+        rival: series?.members.find((m) => m.id !== userId)?.duelistName,
+    });
 
     if (!hasLoaded || loading) {
         return (

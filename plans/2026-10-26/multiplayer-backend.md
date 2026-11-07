@@ -491,3 +491,13 @@ Tweaks done (2026-11-07):
 - `fix/ring-tap-flip`: on the phone ring a tap flips a face-down common where it is; rares and better still turn to the front for their reveal.
 - `feat/phone-swipe-nav`: a swipe across a tab's page goes to the neighbouring tab, sliding in from that side. Surfaces with their own gestures are left alone. The binder passes a swipe through only past its first or last page, since on phones the whole collection is the binder.
 - `feat/look-later`: marks to look at later. Stored per player and series as card ids (`marks` on the player doc, `PUT|DELETE /api/series/:id/marks/:cardId`, at most 500; guests keep them on the save, and the guest import carries them). Any real card can be marked, since marking happens before an opening is saved. A toggle sits in the opener's close-up, every card close-up, and the deck builder's details. A gold bookmark shows on marked cards in the binder and the deck builder's card lists. Opening the card's details in the collection or the phone deck builder clears the mark, as does resting on it for 1.2 s in the desktop deck builder; it can be switched back on there and stays.
+
+Yugi's welcome (user, 2026-11-07, branch `feat/guide-welcome`): a short tour plus first-visit lines, with a spotlight on what he's talking about, script reviewed first.
+- The main menu does the hello and points to Campaign Mode, then covers the account (guest or signed in) and Options. There he's only his tablet, beside the painted Yugi.
+- Campaign Mode points to New Game. The new-run form explains solo or duo (signed in only), the starting set, and packs per set.
+- A run's first timeline visit gets the tour: the road, the concept, open packs, build a deck, record the match, rewards, go. Duo runs get their own wording, with the rival's real duelist name.
+- Each screen explains itself on first visit: the pack store, the haul, the collection, the deck builder, Record Match, Rewards.
+- Each welcome is said once per device and isn't marked as said while the guide is off. Options can replay them all.
+- The spotlight is a gold ring with the page dimmed around it, drawn beside Yugi so clipping and the deck builder's scaling don't break it. Yugi takes the corner that covers least (the target, then buttons). On phones he goes to the top when the target is low.
+- The timeline's Bonus Matches buttons were removed until there's something behind them.
+- Known: on the desktop pack store both bottom corners hold a button, so he briefly covers one of them while he speaks.

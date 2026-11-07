@@ -6,6 +6,8 @@ export interface MenuItemData {
     action?: () => void;
     description: string;
     disabled?: boolean;
+    /** What Yugi's welcome calls this item (data-guide), to spotlight it. */
+    guide?: string;
 }
 
 /**

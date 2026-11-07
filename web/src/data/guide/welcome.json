@@ -1,12 +1,12 @@
 {
-  "_about": "Yugi's welcome. tour: said once, the first time you land on a run's timeline, as a tap-through conversation. screens: said once each, the first time you open that screen. Each line: key, mood, solo (and duo, if it differs) wordings, and target: a CSS selector for what to spotlight while it's up (comma-separated alternatives; the first one on screen wins). On phones, when the target is in the lower half of the screen, Yugi speaks from the top so he doesn't cover it. {set} is the run's current set, {packs} its packs per set, {rival} the rival's name. Lines stay under 140 characters.",
+  "_about": "Yugi's welcome. tour: said once, the first time you land on a run's timeline, as a tap-through conversation. screens: said once each, the first time you open that screen (menu: the main menu; campaign: the run list; new-run: the new run form). Each line: key, mood, target (a CSS selector for what to spotlight while it's up; comma-separated alternatives, the first on screen wins), and its wording: 'solo'/'duo' by the run's mode, or 'guest'/'member' by the account, else 'text'. 'only' keeps a line to one of those. On phones, when the target is in the lower half, Yugi speaks from the top; on wider screens he moves to the right-hand corner when his own would cover it. {set} is the run's current set, {packs} its packs per set, {rival} the rival's duelist name. Lines stay under 140 characters.",
   "tour": [
     {
-      "key": "hello",
+      "key": "road",
       "mood": "happy",
       "target": ".timeline-node--current .timeline-node__art, .road-stop--current .road-stop__art",
-      "solo": "Welcome, duelist! I'm Yugi. This is your road through the history of the game, one set at a time.",
-      "duo": "Welcome, duelist! I'm Yugi. You and {rival} will walk this road together, one set at a time."
+      "solo": "This is your road through the history of the game. Each pack is a set, in the order they came out.",
+      "duo": "This is the road you and {rival} will walk together. Each pack is a set, in the order they came out."
     },
     {
       "key": "concept",
@@ -54,10 +54,58 @@
   "screens": {
     "menu": [
       {
-        "key": "menu",
+        "key": "hello",
         "mood": "happy",
+        "target": ".menu-word",
+        "text": "Hi, I'm Yugi! Welcome to the Progression Series. We'll relive the whole history of the card game, one set at a time."
+      },
+      {
+        "key": "campaign",
+        "mood": "neutral",
         "target": ".menu-item:first-of-type",
-        "solo": "Hi, I'm Yugi! Start a run in Campaign Mode. Sign in if you want to take on a rival, or play as a guest on this device."
+        "text": "To begin, pick Campaign Mode. That's where your runs live, and where you start a new one."
+      },
+      {
+        "key": "account",
+        "mood": "neutral",
+        "target": "[data-guide='account']",
+        "guest": "You're playing as a guest, so everything stays on this device. Sign in to keep it in an account and to duel a rival!",
+        "member": "You're signed in, so your runs follow you to any device. And you can challenge a rival to a duo run!"
+      },
+      {
+        "key": "options",
+        "mood": "neutral",
+        "target": "[data-guide='options']",
+        "text": "Options has the sound, my typewriter and me. You can send me away there any time... but I hope you won't!"
+      }
+    ],
+    "campaign": [
+      {
+        "key": "list",
+        "mood": "neutral",
+        "target": "[data-guide='new-game']",
+        "text": "Your runs will wait here. Tap New Game to start one!"
+      }
+    ],
+    "new-run": [
+      {
+        "key": "mode",
+        "mood": "neutral",
+        "target": "#series-mode",
+        "only": "member",
+        "text": "Solo is you against the sets. Duo brings a rival: invite them by their duelist name, or send them a link."
+      },
+      {
+        "key": "start",
+        "mood": "neutral",
+        "target": "#start-set",
+        "text": "The starting set is where your road begins. Legend of Blue Eyes is the true start, but you can skip ahead."
+      },
+      {
+        "key": "packs",
+        "mood": "neutral",
+        "target": "#packs-per-set",
+        "text": "Packs per set is how many you open each time. 24 is a whole booster box, 12 is tighter, 30 is generous."
       }
     ],
     "packs": [
@@ -65,7 +113,7 @@
         "key": "store",
         "mood": "neutral",
         "target": ".store__pack",
-        "solo": "Here's this set's booster box! You can peek at the card list first, or open your packs right away."
+        "text": "Here's this set's booster box! You can peek at the card list first, or open your packs right away."
       }
     ],
     "haul": [
@@ -73,7 +121,7 @@
         "key": "haul",
         "mood": "neutral",
         "target": ".haul .cartouche-btn",
-        "solo": "That's your haul! Save it to add the cards to your collection. A set's packs only open once, so enjoy them."
+        "text": "That's your haul! Save it to add the cards to your collection. A set's packs only open once, so enjoy them."
       }
     ],
     "collection": [
@@ -81,7 +129,7 @@
         "key": "binder",
         "mood": "neutral",
         "target": ".binder-tabs",
-        "solo": "Your binder! Every set gets its own chapter. Tap a card to read it, or search for anything you own."
+        "text": "Your binder! Every set gets its own chapter. Tap a card to read it, or search for anything you own."
       }
     ],
     "deck-builder": [
@@ -89,13 +137,13 @@
         "key": "builder",
         "mood": "neutral",
         "target": ".db-results, .dp-handle",
-        "solo": "Build your deck from the cards you own: up to three of each. Aim for 40 cards in the main deck."
+        "text": "Build your deck from the cards you own: up to three of each. Aim for 40 cards in the main deck."
       },
       {
         "key": "export",
         "mood": "neutral",
         "target": "[data-guide='export'], .dp-menu",
-        "solo": "When it's ready, export it as a YDK file and load it wherever you duel. Good luck!"
+        "text": "When it's ready, export it as a YDK file and load it wherever you duel. Good luck!"
       }
     ],
     "record-match": [
@@ -112,13 +160,13 @@
         "key": "rewards",
         "mood": "happy",
         "target": ".rw-stage, .rw-tabs",
-        "solo": "Your prizes wait here. Wins earn wheel spins, losses earn pity packs. Open them whenever you like!"
+        "text": "Your prizes wait here. Wins earn wheel spins, losses earn pity packs. Open them whenever you like!"
       },
       {
         "key": "prizes",
         "mood": "neutral",
         "target": ".rw-tabs",
-        "solo": "A wildcard picks a card of its rarity or lower from the set you won it in. A Redoer Ticket rerolls a set's packs!"
+        "text": "A wildcard picks a card of its rarity or lower from the set you won it in. A Redoer Ticket rerolls a set's packs!"
       }
     ]
   }

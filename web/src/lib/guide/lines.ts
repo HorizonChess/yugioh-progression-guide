@@ -11,7 +11,8 @@ import notesJson from "@/data/guide/sets.json";
 import timelineJson from "@/data/guide/timeline.json";
 
 export type Mood = "neutral" | "happy" | "sad";
-export type Line = { key: string; text: string; mood: Mood; priority: number };
+/** `target`: a CSS selector for what he points at while the line is up (the welcome's spotlight). */
+export type Line = { key: string; text: string; mood: Mood; priority: number; target?: string };
 export type GuideCard = { id: number; name: string; rarity?: string };
 
 /** Lines on a card; with `until` (a set code) they're only said up to that set, as a card's worth depends on what's out by then. */

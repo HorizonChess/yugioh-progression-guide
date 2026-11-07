@@ -1,5 +1,6 @@
 "use client";
 
+import { useWelcome } from "@/lib/guide/welcome";
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
 import { useAuth } from "@/context/AuthContext";
 import { fetchAllSets, fetchCardsByIds, fetchCardsInSet, Card, CardSet } from "@/lib/api";
@@ -204,6 +205,8 @@ export default function Collection() {
             })
             .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
     }, [searching, filteredCards, chapter, strays, chapterCards, owned, resolveRarity]);
+
+    useWelcome("collection", !loading);
 
     if (loading && Object.keys(collection).length > 0) {
         return (

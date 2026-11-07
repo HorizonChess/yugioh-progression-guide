@@ -1,5 +1,6 @@
 "use client";
 
+import { useWelcome } from "@/lib/guide/welcome";
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifications } from "@/context/NotificationsContext";
@@ -34,6 +35,8 @@ export default function SaveSlotList({ onSaveSelect }: SaveSlotListProps) {
     const [shared, setShared] = useState<{ seriesId: string; link: string; note?: string } | null>(null);
     const [sets, setSets] = useState<CardSet[]>([]);
     const remote = repo.kind === "remote";
+    // The new run's choices, explained the first time the form opens.
+    useWelcome("new-run", isCreating, { account: remote ? "member" : "guest" });
 
     useEffect(() => {
         fetchAllSets().then(setSets);
@@ -106,6 +109,7 @@ export default function SaveSlotList({ onSaveSelect }: SaveSlotListProps) {
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold text-white uppercase tracking-widest">{remote ? "Your Series" : "Select Save File"}</h3>
                 <button
+                    data-guide="new-game"
                     onClick={() => setIsCreating(true)}
                     className="text-xs bg-[var(--primary)] text-black px-3 py-1 rounded font-bold hover:bg-yellow-400 transition-colors"
                 >

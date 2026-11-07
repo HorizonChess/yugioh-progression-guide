@@ -6,6 +6,7 @@ import { useProgression } from "@/context/ProgressionContext";
 import { Sfx } from "@/components/packs/stage/fx";
 import { guide, serverState, type Spoken } from "@/lib/guide/store";
 import type { Mood } from "@/lib/guide/lines";
+import { useSpotlight } from "@/components/layout/GuideSpotlight";
 
 /* Each mood is cropped to the same 338x700 frame with his feet on the bottom edge, so he
    stands in the same spot whatever his mood (the old sprites were 640 px squares with him
@@ -32,9 +33,13 @@ const readMs = (text: string) => 2600 + text.length * 30;
  * page moves him along as a tap on the tablet would.
  *
  * `at` (a viewport length, e.g. "17vw") stands him further in from the left edge on
- * desktop, clear of a page's own controls there.
+ * desktop, clear of a page's own controls there. `bare` shows only the tablet, for a
+ * screen that already shows him (the main menu's painting).
+ *
+ * A line with a `target` lights up what it's about (GuideSpotlight), and he stands where
+ * he won't cover it.
  */
-export default function GuideSprite({ at: standAt }: { at?: string }) {
+export default function GuideSprite({ at: standAt, bare = false }: { at?: string; bare?: boolean }) {
     const { isGuideVisible } = useProgression();
     const { line: current, more } = useSyncExternalStore(guide.subscribe, guide.state, serverState);
     // The last line stays on the tablet while he slides away.
@@ -79,6 +84,7 @@ export default function GuideSprite({ at: standAt }: { at?: string }) {
     // page moves him along too (and still does what it does there). Tap by tap he
     // finishes, moves on and leaves, and nothing stays covered.
     const root = useRef<HTMLDivElement>(null);
+    const { spot, placement } = useSpotlight(root, current?.target, onStage, current?.at);
     useEffect(() => {
         if (!onStage || !window.matchMedia("(max-width: 767px)").matches) return;
         const away = (e: PointerEvent) => {
@@ -89,15 +95,19 @@ export default function GuideSprite({ at: standAt }: { at?: string }) {
     }, [onStage, tap]);
 
     return (
+        <>
+        {spot && onStage && <div className="guide-spot" style={spot} aria-hidden="true" />}
         <div
             ref={root}
             aria-hidden={!onStage}
-            className={`guide ${onStage ? "guide--on" : ""}`}
+            className={`guide ${onStage ? "guide--on" : ""} ${bare ? "guide--bare" : ""} guide--at-${placement}`}
             style={{ "--guide-stone": `url('${STONE}')`, ...(standAt && { "--guide-at": standAt }) } as React.CSSProperties}
         >
-            <button type="button" className="guide__yugi" onClick={() => guide.silence()} tabIndex={onStage ? 0 : -1} aria-label="Send Yugi off">
-                <img src={SPRITE[shown?.mood ?? "neutral"]} alt="" />
-            </button>
+            {!bare && (
+                <button type="button" className="guide__yugi" onClick={() => guide.silence()} tabIndex={onStage ? 0 : -1} aria-label="Send Yugi off">
+                    <img src={SPRITE[shown?.mood ?? "neutral"]} alt="" />
+                </button>
+            )}
             <button type="button" className="guide__tablet" onClick={tap} tabIndex={onStage ? 0 : -1} aria-label={more ? "Next" : undefined}>
                 <span className="guide__plate">Yugi</span>
                 {onStage && current ? (
@@ -115,5 +125,6 @@ export default function GuideSprite({ at: standAt }: { at?: string }) {
                 )}
             </button>
         </div>
+        </>
     );
 }

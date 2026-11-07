@@ -1,5 +1,6 @@
 "use client";
 
+import { useWelcome } from "@/lib/guide/welcome";
 import { alertRepoError, useProgression, SavedDeck } from "@/context/ProgressionContext";
 import GuideSprite from "@/components/layout/GuideSprite";
 import ScaleWrapper from "@/components/deck-builder/ScaleWrapper";
@@ -33,6 +34,7 @@ import "@/components/deck-builder/deck-builder.css";
 export default function DeckBuilder() {
     const { collection, saveDeck, savedDecks, deleteDeck, bannedCardIds } = useProgression();
     const isPhone = useIsPhone();
+    useWelcome("deck-builder", true);
     // Cosmetic ban list (Phase 5): banned cards are greyed in the search panel and
     // blocked from being added. Saved decks are never stripped.
     const bannedIds = useMemo(() => new Set(bannedCardIds), [bannedCardIds]);
@@ -474,6 +476,7 @@ export default function DeckBuilder() {
                     onExport={handleExportClick}
                 />
                 {shared}
+                <GuideSprite />
             </>
         );
     }
