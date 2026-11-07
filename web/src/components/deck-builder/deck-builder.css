@@ -156,3 +156,18 @@
 .dp-sheet .db-fields input, .dp-sheet .db-fields select { height: 38px; font-size: 16px; }
 .dp-sheet__done { width: 100%; min-height: 44px; }
 .dp-toast { position: absolute; left: 50%; bottom: 104px; z-index: 60; transform: translateX(-50%); max-width: 90%; padding: 10px 14px; border-radius: 8px; text-align: center; font: 600 13px var(--font-main); background: #15100a; box-shadow: 0 0 0 1px #b04f4f, 0 10px 20px rgba(0, 0, 0, 0.5); animation: ps-fade-in 0.2s ease-out both; }
+
+/* the load-deck tablet: the game's dialog look, the decks as slabs (sits under a delete confirmation) */
+.ld { z-index: 390; }
+.ld__tablet { width: min(100%, 480px); text-align: left; }
+.ld__tablet .gd__title { text-align: center; }
+.ld__tablet .gd__buttons { margin-top: 18px; }
+.ld__list { display: flex; flex-direction: column; gap: 8px; max-height: min(52vh, 380px); overflow-y: auto; padding: 2px 4px 2px 2px; scrollbar-width: thin; scrollbar-color: #8a6420 transparent; }
+.ld__none { margin: 14px 0; text-align: center; font: 600 15px/1.4 var(--font-main); color: #b7a98a; font-style: italic; }
+.ld__row { display: flex; align-items: stretch; gap: 6px; border-radius: 4px; background: linear-gradient(100deg, rgba(48, 34, 16, 0.9), rgba(18, 12, 6, 0.9)); box-shadow: inset 3px 0 0 rgba(255, 224, 138, 0.55), 0 0 0 1px rgba(255, 224, 138, 0.28); transition: box-shadow 0.2s, filter 0.2s; }
+.ld__row:hover, .ld__row:focus-within { filter: brightness(1.18); box-shadow: inset 3px 0 0 #fff1bf, 0 0 0 1px rgba(255, 241, 191, 0.7), 0 0 14px rgba(212, 175, 55, 0.25); }
+.ld__pick { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 0; background: none; text-align: left; cursor: pointer; color: #b7a98a; font: 600 12px/1.2 var(--font-main); letter-spacing: 0.06em; outline: none; }
+.ld__name { font: 800 16px/1.15 var(--font-display); letter-spacing: 0.03em; color: #f1e7cc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ld__name--short { color: #ff9d8f; }
+.ld__del { flex: none; padding: 0 12px; border: 0; border-left: 1px solid rgba(255, 224, 138, 0.15); background: none; cursor: pointer; color: #b7857c; font: 800 11px/1 var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; }
+.ld__del:hover, .ld__del:focus-visible { color: #ff8a7a; background: rgba(211, 47, 47, 0.16); outline: none; }
