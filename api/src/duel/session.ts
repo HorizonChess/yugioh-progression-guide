@@ -847,7 +847,10 @@ export class DuelSession {
                 // The damage step is different: anything usable there (Injection Fairy Lily during damage
                 // calculation, on your own attack too) can only be used then, so it's always asked.
                 const top = this.chain[this.chain.length - 1];
-                const fresh = this.damageStep ? options.map((o) => `${o.uid}:${o.text ?? ''}`).filter((k) => !this.damageOffered[team].has(k)) : [];
+                // In the damage step you're asked once per card per attack, where it counts: not at its
+                // start (anything usable then still is right before damage calculation), and only for
+                // cards you haven't been offered yet in it (Lily only becomes usable during the calculation).
+                const fresh = this.damageStep && Number(m.hint_timing) !== 0 ? options.map((o) => `${o.uid}:${o.text ?? ''}`).filter((k) => !this.damageOffered[team].has(k)) : [];
                 fresh.forEach((k) => this.damageOffered[team].add(k));
                 const quiet = !m.forced && !fresh.length && (top ? top.team === team : this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team);
                 return q({ kind: 'chain', forced: m.forced, options, pass, ...(quiet ? { quiet } : {}) }, (a) => {

@@ -66,3 +66,37 @@ describe.skipIf(!engineDataAvailable())('reconnecting', () => it('replays the fr
     expect(duel.framesSince(0, 'elsewhere:0')).toBeNull();
     expect(duel.framesSince(0, `${cursor.split(':')[0]}:99999`)).toBeNull();
 }));
+
+// Each attack asks once per usable card: Reinforcements right before damage calculation, Lily
+// during it (the one moment she can be used), never the same card twice in one attack.
+describe.skipIf(!engineDataAvailable())('asking in the damage step', () => it('asks once per card per attack', async () => {
+    const engine = await loadEngine();
+    const REIN = 17814387;
+    const me = Array.from({ length: 40 }, (_, i) => (i % 2 ? LILY : i % 4 === 0 ? REIN : MON[i % MON.length]!));
+    const foe = [91152256, 76184692, 90357090, 15025844, 4206964, 74677422];
+    const duel = new DuelSession(engine, { seed: ['5', '11400714819323198485', '77', '2685821657736338717'], mode: 'MR1', decks: [{ main: me, extra: [] }, { main: foe.concat(foe, foe, foe, foe, foe, foe), extra: [] }], names: ['A', 'B'], bots: [false, false], rules: 2 });
+    duel.start();
+    const asks: string[] = [];
+    for (let i = 0; i < 600 && !duel.result; i++) {
+        const team = duel.waitingFor()!;
+        const s = duel.state(team, 'd'); const p = s.prompt!;
+        let a: DuelAnswer;
+        if (p.kind === 'chain' && !p.quiet && team === 0) asks.push(s.view.turn + s.view.phase + ':' + p.options.map((o) => (o.code === LILY ? 'lily' : 'rein')).join(','));
+        if (p.kind === 'actions') {
+            const x = team === 0
+                ? p.actions.find((x) => x.verb === 'set-spell') ?? p.actions.find((x) => (x.verb === 'summon' && x.code === LILY) || x.verb === 'attack' || x.verb === 'attack-direct')
+                : !s.view.me.monsters.some(Boolean) ? p.actions.find((x) => x.verb === 'summon') : undefined;
+            const bp = team === 0 && s.view.me.monsters.some(Boolean) ? p.next.find((n) => n.to === 'BP') : undefined;
+            a = { kind: 'choice', id: x ? x.id : (bp ?? p.next.find((n) => n.to === 'EP') ?? p.next[0])!.id };
+        } else if (p.kind === 'chain') a = { kind: 'choice', id: p.pass ?? p.options[0]!.id };
+        else a = generic(p);
+        expect(duel.answer(team, s.seq, a)).toBe(true);
+    }
+    expect(asks.length).toBeGreaterThan(2);
+    // Reinforcements (all copies on one question), then Lily, attack after attack: never the same
+    // question twice in a row within a turn's battle. (Late on, Lily can't pay her 2000 LP.)
+    for (let i = 1; i < asks.length; i++) expect(asks[i]).not.toBe(asks[i - 1]);
+    expect(asks[0]).toMatch(/^\d+BP:rein(,rein)*$/);
+    expect(asks[1]).toMatch(/^\d+BP:lily$/);
+    expect(asks.filter((x) => x.includes('lily')).length).toBeGreaterThan(0);
+}));
