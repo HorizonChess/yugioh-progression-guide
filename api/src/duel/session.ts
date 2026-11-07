@@ -171,6 +171,8 @@ export class DuelSession {
     private turnPlayer: Team = 0;
     private phase: Phase = 'DP';
     private chain: { code: number; team: Team; uid?: string }[] = [];
+    /** Who made the last play (a summon, Set, attack or activation): a chain window after your own play is quiet. */
+    private lastActor: Team | null = null;
     /** Cards whose chain link just resolved: a spell or trap going to the Graveyard after it isn't destroyed. */
     private resolved = new Set<string>();
     /** For the bot: actions taken this turn, so it can't loop. */
@@ -478,6 +480,10 @@ export class DuelSession {
                     break;
             }
         }
+        for (const e of out) {
+            if (e.k === 'turn') this.lastActor = null;
+            if ((e.k === 'summon' || e.k === 'set' || e.k === 'attack' || e.k === 'activate') && 'team' in e) this.lastActor = e.team;
+        }
         return out;
     }
 
@@ -641,7 +647,10 @@ export class DuelSession {
                     return { id: i, uid: r.uid, code: this.show(c.code), where: r.where, ...(text ? { text } : {}) };
                 });
                 const pass = m.forced ? null : 1 << 20;
-                return q({ kind: 'chain', forced: m.forced, options, pass }, (a) => {
+                // spe_count: the effects the engine flags for this moment (triggers, and cards whose hint
+                // timing fits). Without a chain to answer, the moment after your own play is quiet too.
+                const quiet = !m.forced && this.chain.length === 0 && (m.spe_count === 0 || this.lastActor === team);
+                return q({ kind: 'chain', forced: m.forced, options, pass, ...(quiet ? { quiet } : {}) }, (a) => {
                     const id = choice(a);
                     if (id === null) return null;
                     if (id === pass) return { type: R.SELECT_CHAIN, index: null };

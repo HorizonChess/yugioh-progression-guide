@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import type { DuelCardView, Side } from "@ygo/shared";
 import type { Float } from "./useDuel";
@@ -15,12 +15,32 @@ export interface CardMarks {
     /** Cards chosen so far in a pick. */
     picked: ReadonlySet<string>;
     destroying: readonly string[];
+    landing: readonly { uid: string; heavy: boolean }[];
+    flaring: readonly string[];
+    /** The side whose life points were just hit. */
+    hit: Side | null;
     floats: readonly Float[];
     /** Zones a `place` question offers (by zoneKey), and what a tap on one does. */
     zones: ReadonlySet<string>;
     chosenZones: ReadonlySet<string>;
     onZone: (key: string) => void;
 }
+
+/**
+ * How a card travels between places: it sets off slowly, then commits and arrives with a
+ * decisive stop (the landing effect gives it its weight), instead of drifting on a soft spring.
+ */
+export const FLIGHT = { type: "tween", duration: 0.46, ease: [0.55, 0, 0.2, 1] } as const;
+
+/** The pieces a destroyed card breaks into: where each flies, and how it turns. */
+const SHARDS = Array.from({ length: 9 }, (_, i) => {
+    const angle = (i / 9) * Math.PI * 2 + 0.4;
+    const reach = 34 + (i % 3) * 14;
+    return {
+        "--dx": `${Math.cos(angle) * reach}px`, "--dy": `${Math.sin(angle) * reach + 18}px`, "--rot": `${(i % 2 ? 1 : -1) * (90 + i * 37)}deg`,
+        "--clip": `polygon(50% 50%, ${50 + 70 * Math.cos(angle - 0.4)}% ${50 + 70 * Math.sin(angle - 0.4)}%, ${50 + 70 * Math.cos(angle + 0.35)}% ${50 + 70 * Math.sin(angle + 0.35)}%)`,
+    } as CSSProperties;
+});
 
 /** A card on the field: flies between zones by its uid, turns sideways in Defense Position, shows its ATK or DEF. */
 export function FieldCard({ card, marks, onTap, onHover, side }: {
@@ -33,7 +53,12 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
     const up = card.faceUp && card.code > 0;
     const stat = card.atk !== undefined ? (card.defense ? { value: card.def!, base: card.baseDef! } : { value: card.atk!, base: card.baseAtk! }) : null;
     const tone = stat ? (stat.value > stat.base ? "up" : stat.value < stat.base ? "down" : "") : "";
-    const cls = ["df-card", marks.glow.has(card.uid) ? "is-glow" : "", marks.picked.has(card.uid) ? "is-picked" : "", marks.destroying.includes(card.uid) ? "is-breaking" : ""].join(" ");
+    const landing = marks.landing.find((l) => l.uid === card.uid);
+    const breaking = marks.destroying.includes(card.uid);
+    const cls = [
+        "df-card", marks.glow.has(card.uid) ? "is-glow" : "", marks.picked.has(card.uid) ? "is-picked" : "", breaking ? "is-breaking" : "",
+        landing ? (landing.heavy ? "is-landing is-heavy" : "is-landing") : "", marks.flaring.includes(card.uid) ? "is-flaring" : "",
+    ].join(" ");
     return (
         <motion.button
             layoutId={card.uid}
@@ -43,7 +68,7 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
             onClick={() => onTap(card)}
             onPointerEnter={(e) => e.pointerType === "mouse" && card.code > 0 && onHover?.(card.code)}
             aria-label={card.code ? `${up ? "" : "Set: "}card ${card.code}` : side === "opp" ? "Set card" : "Card"}
-            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            transition={FLIGHT}
         >
             <span className="df-card__lunge">
                 <span className={`df-card__turn ${card.defense ? "is-def" : ""}`}>
@@ -56,6 +81,12 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
                     </span>
                 )}
             </span>
+            {breaking && (
+                <span className={`df-shards ${card.defense ? "is-def" : ""}`} aria-hidden style={{ "--img": `url(${up ? cardImage(card.code) : CARD_BACK})` } as CSSProperties}>
+                    {SHARDS.map((s, i) => <i key={i} style={s} />)}
+                </span>
+            )}
+            {landing && <span className="df-dust" aria-hidden />}
             {marks.floats.filter((f) => f.uid === card.uid).map((f) => <span key={f.key} className={`df-float df-float--${f.tone}`}>{f.text}</span>)}
         </motion.button>
     );
@@ -105,7 +136,7 @@ export function Pile({ label, count, top, back, onTap, onHover, small }: {
         >
             {back && count > 0 && <img className="df-pile__back" src={CARD_BACK} alt="" />}
             {top && (
-                <motion.span layoutId={top.uid} className="df-pile__top" data-uid={top.uid} transition={{ type: "spring", stiffness: 320, damping: 32 }}>
+                <motion.span layoutId={top.uid} className="df-pile__top" data-uid={top.uid} transition={FLIGHT}>
                     <img src={top.code ? cardImage(top.code) : CARD_BACK} alt="" />
                 </motion.span>
             )}
@@ -116,7 +147,7 @@ export function Pile({ label, count, top, back, onTap, onHover, small }: {
 }
 
 /** Life points that count to their new value, with the damage floating off them. */
-export function LifePoints({ value, side, name, floats, active }: { value: number; side: Side; name: string; floats: readonly Float[]; active: boolean }) {
+export function LifePoints({ value, side, name, floats, active, hit }: { value: number; side: Side; name: string; floats: readonly Float[]; active: boolean; hit?: boolean }) {
     const [shown, setShown] = useState(value);
     const from = useRef(value);
     useEffect(() => {
@@ -132,7 +163,7 @@ export function LifePoints({ value, side, name, floats, active }: { value: numbe
         return () => cancelAnimationFrame(raf);
     }, [value]);
     return (
-        <div className={`df-lp df-lp--${side} ${active ? "is-turn" : ""}`}>
+        <div className={`df-lp df-lp--${side} ${active ? "is-turn" : ""} ${hit ? "is-hit" : ""}`}>
             <span className="df-lp__name">{name}</span>
             <span className="df-lp__value">
                 <small>LP</small>
@@ -148,7 +179,7 @@ export function RivalHand({ cards }: { cards: DuelCardView[] }) {
     return (
         <div className="df-rival-hand" aria-label={`Your rival holds ${cards.length} cards`}>
             {cards.map((c) => (
-                <motion.img key={c.uid} layoutId={c.uid} src={CARD_BACK} alt="" className="df-rival-hand__card" />
+                <motion.img key={c.uid} layoutId={c.uid} src={CARD_BACK} alt="" className="df-rival-hand__card" transition={FLIGHT} />
             ))}
         </div>
     );
@@ -171,6 +202,7 @@ export function Hand({ cards, marks, onTap, onHover }: { cards: DuelCardView[]; 
                     onClick={() => onTap(c)}
                     onPointerEnter={(e) => e.pointerType === "mouse" && onHover?.(c.code)}
                     aria-label={`Card in hand ${c.code}`}
+                    transition={FLIGHT}
                 >
                     <img src={c.code ? cardImage(c.code) : CARD_BACK} alt="" draggable={false} />
                 </motion.button>

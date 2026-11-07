@@ -17,3 +17,10 @@
 .dl-btn--quiet { background: transparent; border-color: #6b543a; color: #c9bc9a; }
 .rm-duel-open { margin-bottom: 4px; }
 .df-waiting { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 2; }
+
+/* Dueling in the app is still experimental: said wherever you start one. */
+.dl-tag {
+    display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 8px; vertical-align: middle;
+    font: 9px/1.5 var(--font-techno); letter-spacing: 0.1em; text-transform: uppercase;
+    color: #f5c542; background: rgba(10, 7, 4, 0.65); border: 1px solid rgba(212, 175, 55, 0.5);
+}

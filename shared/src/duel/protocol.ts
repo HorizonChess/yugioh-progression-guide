@@ -100,7 +100,18 @@ export type DuelPrompt =
           next: { id: number; to: 'BP' | 'M2' | 'EP' }[];
       }
     /** Respond with a card or effect, or pass. */
-    | { kind: 'chain'; forced: boolean; options: { id: number; uid?: string; code: number; where: Zone; text?: string }[]; pass: number | null }
+    | {
+          kind: 'chain';
+          forced: boolean;
+          options: { id: number; uid?: string; code: number; where: Zone; text?: string }[];
+          pass: number | null;
+          /**
+           * Nothing calls for a response: no chain to answer, no trigger, and no card whose script
+           * marks this moment as one to use it at (EDOPro's own test). Players who keep the
+           * default chain setting aren't asked; the app passes for them.
+           */
+          quiet?: boolean;
+      }
     /** Choose cards. `step` mode: one at a time, with `done` to finish. */
     | { kind: 'cards'; title: string; min: number; max: number; cancel: boolean; cards: PromptCard[]; tribute?: boolean; sum?: number; step?: { chosen: PromptCard[]; canFinish: boolean } }
     | { kind: 'yesno'; title: string; code?: number }

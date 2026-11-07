@@ -95,7 +95,8 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
 
     return (
         <div className="dl">
-            <b className="rm-ask rm-carved">Duel here</b>
+            <b className="rm-ask rm-carved">Duel here <span className="dl-tag">Experimental</span></b>
+            <p className="dl-note">Dueling in the app is still being built: expect rough edges, and record your duel below if something goes wrong.</p>
             <p className="dl-rules">Played by {era.name}: {era.changes[0]?.toLowerCase()}.</p>
             {open === null && <p className="dl-note">Looking for open duels…</p>}
 

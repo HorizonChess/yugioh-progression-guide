@@ -54,7 +54,7 @@ export function PhoneBoard({ view, marks, onCard, onPile, phaseBar, overlay }: B
         const s = view[side];
         return (
             <div className={`df-bar df-bar--${side}`}>
-                <LifePoints value={s.lp} side={side} name={s.name} floats={marks.floats} active={view.turnPlayer === side} />
+                <LifePoints value={s.lp} side={side} name={s.name} floats={marks.floats} active={view.turnPlayer === side} hit={marks.hit === side} />
                 <div className="df-bar__zones">
                     <Zone card={s.field} label="Field" className="df-zone--mini" zone={zoneKey(side, "field", 0)} marks={marks} side={side} onTap={(c) => onCard(c, side, "field")} />
                     {view.mode === "MR3" && s.pendulum.map((p, i) => <Zone key={i} card={p} label="P" className="df-zone--mini" zone={zoneKey(side, "pendulum", i)} marks={marks} side={side} onTap={(c) => onCard(c, side, "pendulum")} />)}
@@ -111,7 +111,7 @@ export function DesktopBoard({ view, marks, onCard, onPile, onHover, phaseBar, o
     };
     const side = (s: Side) => (
         <div className={`df-side-block df-side-block--${s}`}>
-            <LifePoints value={view[s].lp} side={s} name={view[s].name} floats={marks.floats} active={view.turnPlayer === s} />
+            <LifePoints value={view[s].lp} side={s} name={view[s].name} floats={marks.floats} active={view.turnPlayer === s} hit={marks.hit === s} />
             <div className="df-side-block__piles">
                 {view.mode === "MR3" && view[s].pendulum.map((p, i) => <Zone key={i} card={p} label={i ? "Right P" : "Left P"} className="df-zone--mini" zone={zoneKey(s, "pendulum", i)} marks={marks} side={s} onHover={onHover} onTap={(c) => onCard(c, s, "pendulum")} />)}
                 <Pile small label="Banished" count={view[s].banished.length} top={top(view[s].banished)} onTap={() => onPile(s, "banished")} onHover={onHover} />

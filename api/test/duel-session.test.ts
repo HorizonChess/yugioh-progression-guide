@@ -21,7 +21,7 @@ const setup = (bots: [boolean, boolean], seed = 1): DuelSetup => ({
 function humanAnswer(p: DuelPrompt): DuelAnswer {
     switch (p.kind) {
         case 'actions': {
-            const act = p.actions.find((a) => a.verb === 'summon' || a.verb === 'attack' || a.verb === 'attack-direct');
+            const act = p.actions.find((a) => a.verb === 'summon' || a.verb === 'attack' || a.verb === 'attack-direct' || a.verb === 'set-spell');
             if (act) return { kind: 'choice', id: act.id };
             const next = p.next.find((n) => n.to === 'BP') ?? p.next.find((n) => n.to === 'EP') ?? p.next[0];
             return { kind: 'choice', id: next!.id };
@@ -58,7 +58,7 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
         const engine = await loadEngine();
         const duel = new DuelSession(engine, setup([false, true], 7));
         duel.start();
-        let asked = 0;
+        let asked = 0, quiet = 0;
         const kinds = new Set<string>();
         while (!duel.result && asked < 2000) {
             const state = duel.state(0, 'd');
@@ -68,6 +68,12 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
             for (const c of [...state.view.opp.monsters, ...state.view.opp.spells]) if (c && !c.faceUp) expect(c.code).toBe(0);
             expect(state.view.me.hand.every((c) => c.code > 0)).toBe(true);
             kinds.add(state.prompt!.kind);
+            // A quiet chain window is never forced and never has a chain to answer.
+            if (state.prompt!.kind === 'chain' && state.prompt!.quiet) {
+                quiet++;
+                expect(state.prompt!.forced).toBe(false);
+                expect(state.view.chain).toEqual([]);
+            }
             // A stale or out-of-range answer is refused without touching the duel.
             expect(duel.answer(0, state.seq + 1, { kind: 'choice', id: 0 })).toBe(false);
             expect(duel.answer(1, state.seq, { kind: 'choice', id: 0 })).toBe(false);
@@ -78,6 +84,8 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
         expect(kinds).toContain('actions');
         // Summoning or setting asks where, as on EDOPro.
         expect(kinds).toContain('place');
+        // Set Reinforcements and Trap Holes offer themselves at many moments that don't call for them.
+        expect(quiet).toBeGreaterThan(0);
         expect(duel.takeFrames(0).length).toBeGreaterThan(10);
 
         // The seed and the answers rebuild the same duel.

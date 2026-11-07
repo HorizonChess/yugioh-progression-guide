@@ -39,6 +39,13 @@
     filter: saturate(0.6) drop-shadow(0 0 40px rgba(212, 175, 55, 0.6));
     pointer-events: none;
 }
+/* An answer is on its way: the question stays as it was, but takes no more taps. */
+.df-arena.is-sent .df-sheet, .df-arena.is-sent .df-hint, .df-arena.is-sent .df-zone__pick, .df-arena.is-sent .df-phase { pointer-events: none; }
+.df-experimental {
+    position: absolute; left: 8px; top: 6px; z-index: 0; padding: 2px 8px; border-radius: 9px; pointer-events: auto;
+    font: 9px/1.4 var(--font-techno); letter-spacing: 0.1em; text-transform: uppercase; color: rgba(245, 197, 66, 0.75);
+    background: rgba(10, 7, 4, 0.7); border: 1px solid rgba(212, 175, 55, 0.35);
+}
 .df-loading { position: absolute; inset: 0; display: grid; place-items: center; font: 18px var(--font-techno); color: #d4af37; letter-spacing: 0.08em; }
 
 .df { position: relative; z-index: 1; height: 100%; }
@@ -158,13 +165,72 @@
     from { box-shadow: 0 0 0 2px rgba(245, 197, 66, 0.55), 0 0 6px rgba(212, 175, 55, 0.4); }
     to { box-shadow: 0 0 0 2px #f5c542, 0 0 18px #d4af37; }
 }
-.df-card.is-breaking .df-card__lunge { animation: df-break 0.48s ease-in forwards; }
+/* Destroyed: the card flashes, cracks and shatters into pieces that scatter and fall. */
+.df-card.is-breaking .df-card__lunge { animation: df-break 0.56s cubic-bezier(.5, 0, .9, .5) forwards; }
 @keyframes df-break {
-    0% { filter: none; }
-    25% { filter: brightness(2.4) saturate(0.2) drop-shadow(0 0 12px #ff5a3c); transform: translateX(-3px); }
-    50% { transform: translateX(3px) rotate(2deg); }
-    100% { filter: brightness(0.3) blur(1px); transform: scale(0.85) rotate(-4deg); opacity: 0.15; }
+    0% { filter: none; transform: none; }
+    18% { filter: brightness(2.6) saturate(0.2) drop-shadow(0 0 14px #ff5a3c); transform: translateX(-4px) scale(1.04); }
+    32% { transform: translateX(4px) rotate(1.5deg) scale(1.04); }
+    44% { filter: brightness(1.8) saturate(0.4); transform: translateX(-2px); opacity: 1; }
+    56%, 100% { opacity: 0; transform: scale(0.96); }
 }
+.df-shards { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 5; }
+.df-shards i {
+    grid-area: 1 / 1; width: var(--cw); height: var(--ch); background: var(--img) center / cover; border-radius: 4px;
+    clip-path: var(--clip); opacity: 0; animation: df-shard 0.6s cubic-bezier(.2, .6, .4, 1) 0.2s forwards;
+}
+.df-shards.is-def i { rotate: 90deg; }
+@keyframes df-shard {
+    0% { opacity: 1; transform: translate(0, 0) rotate(0); filter: brightness(1.8); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.5); filter: brightness(0.6); }
+}
+
+/* Put on the field: the card comes down from above its zone and lands with a thud (heavy: a summon). */
+.df-card.is-landing .df-card__lunge { animation: df-land 0.6s cubic-bezier(.6, 0, .4, 1) both; }
+.df-card.is-landing.is-heavy .df-card__lunge { animation-name: df-land-heavy; animation-duration: 0.7s; }
+@keyframes df-land {
+    0% { scale: 1.25; translate: 0 -10px; filter: drop-shadow(0 16px 12px rgba(0, 0, 0, 0.7)); }
+    62% { scale: 0.97; translate: 0 0; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8)); }
+    100% { scale: 1; translate: 0 0; filter: none; }
+}
+@keyframes df-land-heavy {
+    0% { scale: 1.45; translate: 0 -18px; filter: drop-shadow(0 22px 16px rgba(0, 0, 0, 0.75)) brightness(1.3); }
+    55% { scale: 0.94; translate: 0 0; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8)) brightness(1.2); }
+    75% { scale: 1.03; }
+    100% { scale: 1; translate: 0 0; filter: none; }
+}
+/* The dust a landing card throws up: a ring spreading over the zone. */
+.df-dust {
+    position: absolute; left: 50%; top: 50%; width: calc(var(--ch) * 1.05); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%;
+    pointer-events: none; z-index: 0; opacity: 0;
+    background: radial-gradient(circle, transparent 46%, rgba(245, 214, 140, 0.55) 56%, rgba(245, 197, 66, 0.15) 64%, transparent 70%);
+    animation: df-dust 0.6s ease-out 0.34s forwards;
+}
+.df-card.is-heavy .df-dust { animation-delay: 0.36s; }
+@keyframes df-dust {
+    0% { opacity: 0.9; scale: 0.45; }
+    100% { opacity: 0; scale: 1.5; }
+}
+
+/* An activated card flares with light. */
+.df-card.is-flaring .df-card__turn { animation: df-flare 1s ease-out; }
+@keyframes df-flare {
+    0% { filter: brightness(1); box-shadow: 0 0 0 0 rgba(120, 220, 255, 0); }
+    20% { filter: brightness(1.7); box-shadow: 0 0 0 3px rgba(150, 230, 255, 0.95), 0 0 28px 8px rgba(80, 190, 255, 0.75); }
+    100% { filter: brightness(1); box-shadow: 0 0 0 0 rgba(120, 220, 255, 0); }
+}
+
+/* Where a blow lands: a flash, a shock ring, and sparks flying off. */
+.df-impact { position: absolute; z-index: 45; width: 0; height: 0; pointer-events: none; }
+.df-impact::before, .df-impact::after { content: ""; position: absolute; left: 0; top: 0; translate: -50% -50%; border-radius: 50%; }
+.df-impact::before { width: 90px; height: 90px; background: radial-gradient(circle, #fff 0%, rgba(255, 228, 160, 0.9) 22%, rgba(255, 140, 60, 0.45) 45%, transparent 70%); animation: df-flash 0.36s ease-out forwards; }
+.df-impact::after { width: 40px; height: 40px; border: 3px solid rgba(255, 236, 190, 0.9); animation: df-ring 0.5s ease-out forwards; }
+.df-impact--heavy::before { width: 150px; height: 150px; }
+.df-impact--heavy::after { border-color: rgba(255, 130, 100, 0.95); }
+.df-impact i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #ffe7a8; box-shadow: 0 0 8px #ffb347; animation: df-spark 0.55s cubic-bezier(.15, .7, .4, 1) forwards; }
+@keyframes df-flash { 0% { opacity: 1; scale: 0.4; } 100% { opacity: 0; scale: 1.3; } }
+@keyframes df-ring { 0% { opacity: 1; scale: 0.3; } 100% { opacity: 0; scale: 3.4; border-width: 1px; } }
+@keyframes df-spark { 0% { opacity: 1; transform: translate(0, 0) scale(1); } 100% { opacity: 0; transform: translate(var(--sx), var(--sy)) scale(0.3); } }
 
 /* ---------------------------------------------------------------- piles, hands, life points */
 .df-pile { position: relative; width: min(var(--cw), 100%); height: min(var(--ch), 100%); justify-self: center; align-self: center; padding: 0; border-radius: 4px; border: 1px dashed rgba(212, 175, 55, 0.4); background: rgba(212, 175, 55, 0.05); color: inherit; cursor: pointer; }
@@ -190,8 +256,17 @@
 .df-lp__value small { color: #d4af37; font-size: 11px; margin-right: 3px; }
 .df-lp__value b { font-size: 22px; font-weight: 400; font-variant-numeric: tabular-nums; transition: color 0.2s; }
 .df-lp__value b.is-ticking { color: #ff8a7a; }
+/* Life points struck: they jolt and burn red for a moment. */
+.df-lp.is-hit .df-lp__value { animation: df-lp-hit 0.55s ease-out; }
+@keyframes df-lp-hit {
+    0% { transform: scale(1); text-shadow: none; }
+    15% { transform: scale(1.3) translateX(-4px); text-shadow: 0 0 14px #ff3b2a, 0 0 4px #ff3b2a; }
+    30% { transform: scale(1.18) translateX(4px); }
+    45% { transform: scale(1.1) translateX(-2px); }
+    100% { transform: none; text-shadow: none; }
+}
 
-.df-float { position: absolute; left: 50%; top: -4px; z-index: 40; translate: -50% 0; pointer-events: none; font: 20px/1 var(--font-techno); white-space: nowrap; text-shadow: 0 2px 4px #000, 0 0 10px #000; animation: df-float 1.4s ease-out forwards; }
+.df-float { position: absolute; left: 50%; top: -4px; z-index: 40; translate: -50% 0; pointer-events: none; font: 26px/1 var(--font-techno); white-space: nowrap; text-shadow: 0 2px 4px #000, 0 0 10px #000; animation: df-float 1.4s ease-out forwards; }
 .df-float--down { color: #ff7a66; }
 .df-float--up { color: #8dff8d; }
 @keyframes df-float {
