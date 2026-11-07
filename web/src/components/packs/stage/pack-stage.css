@@ -188,3 +188,14 @@
 @media (prefers-reduced-motion: reduce) {
   .ps-tear-line span, .ps-holo, .ps-card--glowing .ps-back, .ps-banner--Secret { animation: none; }
 }
+
+/* Desktop has the room: card details read larger (phones keep the compact sizes). */
+@media (min-width: 768px) {
+  .ps-plate__name h3 { font-size: 22px; }
+  .ps-plate__sub { font-size: 15px; }
+  .ps-lv { width: 20px; height: 20px; font-size: 13px; }
+  .ps-plate__box { font-size: 17px; line-height: 1.4; }
+  .ps-plate__foot { font-size: 13px; }
+  .ps-peek { width: 390px; }
+  .closeup__side { width: min(480px, 42vw); }
+}

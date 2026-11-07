@@ -34,12 +34,12 @@ export function useCardPeek() {
     const bind = (card: StageCard) => ({
         onPointerEnter: (e: React.PointerEvent<HTMLElement>) => {
             if (e.pointerType !== "mouse") return;
-            const b = e.currentTarget.getBoundingClientRect(), w = 330;
+            const b = e.currentTarget.getBoundingClientRect(), w = innerWidth >= 768 ? 390 : 330;
             clearTimeout(timer.current);
             timer.current = setTimeout(() => {
                 const onLeft = b.left + b.width / 2 > innerWidth / 2;
                 const left = Math.max(8, Math.min(innerWidth - w - 8, onLeft ? b.left - w - 14 : b.right + 14));
-                setPeek({ card, left, top: Math.max(8, Math.min(innerHeight - 360, b.top)) });
+                setPeek({ card, left, top: Math.max(8, Math.min(innerHeight - 440, b.top)) });
             }, 220);
         },
         onPointerLeave: hide,

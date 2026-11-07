@@ -297,7 +297,9 @@ html::-webkit-scrollbar-corner,
 .timeline-carousel {
   @apply w-full overflow-x-auto overflow-y-hidden hide-scrollbar flex items-center px-[50vw] relative z-10
     pt-[clamp(1rem,3vh,2.5rem)] pb-[clamp(4.5rem,12vh,8rem)];
+  user-select: none; -webkit-user-select: none;
 }
+@media (hover: hover) and (pointer: fine) { .timeline-carousel { cursor: grab; } .timeline-carousel:active { cursor: grabbing; } }
 
 /* A carousel entry: the chain connector + the pack tile, laid out in a row.
    items-center centers the connector on the TILE, and because the tile's
@@ -812,7 +814,8 @@ html::-webkit-scrollbar-corner,
 /* ---------- phone: the Road, packs climbing a vertical path ---------- */
 .road { position: relative; height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 44px 0 28px; scrollbar-width: none; }
 .road::-webkit-scrollbar { display: none; }
-.road-stop { position: relative; display: flex; align-items: center; gap: 14px; padding: 0 22px; text-decoration: none; color: inherit; }
+.road-stop {
+  user-select: none; -webkit-user-select: none; position: relative; display: flex; align-items: center; gap: 14px; padding: 0 22px; text-decoration: none; color: inherit; }
 .road-stop--alt { flex-direction: row-reverse; text-align: right; }
 .road-gap { height: 46px; }
 /* Every pack is the same size; the current one is marked by its gold ring. */
