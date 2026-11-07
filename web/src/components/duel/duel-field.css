@@ -88,7 +88,7 @@
     pointer-events: none;
 }
 /* The sideways (Defense Position) frame of a Monster Zone, fainter than the upright one. */
-.df-zone--monster::after { width: var(--ch); height: var(--cw); border-color: rgba(212, 175, 55, 0.2); background: none; box-shadow: none; }
+.df-zone--monster::after { width: var(--ch); height: var(--cw); border-color: rgba(212, 175, 55, 0.34); background: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4); }
 /* Spell & Trap Zones in the teal of a spell card's frame. */
 .df-zone--spell { --frame: rgba(70, 190, 175, 0.45); --frame-glow: rgba(70, 190, 175, 0.08); }
 .df-zone--mini::before { width: 100%; height: 100%; }
