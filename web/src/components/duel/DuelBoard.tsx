@@ -423,7 +423,7 @@ export default function DuelBoard() {
                         const mid = (all.length - 1) / 2;
                         return (
                             <motion.button key={c.uid} layoutId={c.uid} type="button" data-uid={c.uid} className="duel-hand__card"
-                                style={{ rotate: (i - mid) * 4, y: Math.abs(i - mid) * 5, marginInline: all.length > 4 ? "calc(var(--cw) * -0.22)" : "2px" }}
+                                style={{ rotate: (i - mid) * 4, y: Math.abs(i - mid) * 5, marginInline: all.length > 4 ? "calc(var(--cw) * -0.3)" : "2px" }}
                                 onClick={() => tapCard(c.uid)} aria-label={infoOf(c.id).name}>
                                 <img src={face(c.id)} alt="" draggable={false} />
                             </motion.button>
