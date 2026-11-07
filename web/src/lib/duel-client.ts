@@ -71,6 +71,8 @@ export const duelPath = (duelId: string) => `/duel/?id=${duelId}`;
 export interface DuelConnection {
     answer(seq: number, answer: DuelAnswer): void;
     concede(): void;
+    /** Take back the move being set up (when the question offers it). */
+    back(seq: number): void;
     close(): void;
 }
 
@@ -112,6 +114,7 @@ export function connectDuel(duelId: string, onMessage: (m: DuelServerMessage) =>
     return {
         answer: (seq, answer) => send({ type: "answer", seq, answer }),
         concede: () => send({ type: "concede" }),
+        back: (seq) => send({ type: "back", seq }),
         close() {
             stopped = true;
             clearTimeout(retry);

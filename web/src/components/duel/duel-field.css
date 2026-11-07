@@ -326,7 +326,7 @@
     background: #0b0805; border: 1px solid rgba(212, 175, 55, 0.7); font: 10px/1.35 var(--font-techno); color: #d4af37;
 }
 
-.df-hand { display: flex; justify-content: center; align-items: flex-end; }
+.df-hand { display: flex; justify-content: center; align-items: flex-end; container-type: inline-size; }
 .df-hand__card { position: relative; flex: none; width: var(--hw); aspect-ratio: 59 / 86; padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 50% 120%; }
 .df-hand__card:not(.is-raised):hover { translate: 0 -10px; }
 .df-rival-hand { display: flex; justify-content: center; overflow: hidden; }
@@ -352,6 +352,14 @@
 .df-float { position: absolute; left: 50%; top: -4px; z-index: 40; translate: -50% 0; pointer-events: none; font: 26px/1 var(--font-techno); white-space: nowrap; text-shadow: 0 2px 4px #000, 0 0 10px #000; animation: df-float 1.4s ease-out forwards; }
 .df-float--down { color: #ff7a66; }
 .df-float--up { color: #8dff8d; }
+/* The rival's LP sits under their hand: its numbers drift down, over the field, not up behind the cards. */
+.df-lp--opp { position: relative; z-index: 41; }
+.df-lp--opp .df-float { top: auto; bottom: -6px; animation-name: df-float-down; }
+@keyframes df-float-down {
+    0% { opacity: 0; transform: translateY(-6px) scale(0.7); }
+    15% { opacity: 1; transform: translateY(6px) scale(1.15); }
+    100% { opacity: 0; transform: translateY(38px) scale(1); }
+}
 @keyframes df-float {
     0% { opacity: 0; transform: translateY(6px) scale(0.7); }
     15% { opacity: 1; transform: translateY(-6px) scale(1.15); }
@@ -522,7 +530,7 @@
 .df--desk .df-mat { grid-template-columns: var(--cw) repeat(5, var(--ch)) var(--cw); grid-auto-rows: var(--ch); gap: 5px; padding: 8px; }
 .df--desk .df-rival-hand { height: calc(var(--cw) * 0.55); width: 100%; }
 .df--desk .df-mid { width: calc(var(--cw) * 2 + var(--ch) * 5 + 46px); margin: 2px 0; }
-.df--desk .df-hand { height: calc(var(--hw) * 1.46 + 8px); margin-top: auto; }
+.df--desk .df-hand { height: calc(var(--hw) * 1.46 + 8px); margin-top: auto; width: 100%; }
 .df--desk .df-panel { position: relative; display: flex; flex-direction: column; gap: 12px; min-height: 0; padding: 12px; border-radius: 12px; background: rgba(10, 8, 14, 0.72); border: 1px solid rgba(212, 175, 55, 0.25); }
 .df--desk .df-side-block { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.3); }
 .df--desk .df-side-block--me { border-left: 3px solid rgba(70, 120, 230, 0.7); }
@@ -537,6 +545,7 @@
 .df-log__list li { padding: 2px 0 2px 8px; border-left: 2px solid transparent; }
 .df-log__list li.is-me { border-left-color: rgba(70, 120, 230, 0.7); }
 .df-log__list li.is-opp { border-left-color: rgba(220, 70, 50, 0.7); }
+.df-log__list--sheet { max-height: 45vh; overflow-y: auto; margin-bottom: 10px; font-size: 13px; touch-action: pan-y; }
 .df-detail { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; }
 .df-detail > img { width: 100%; border-radius: 8px; box-shadow: 0 8px 24px #000; }
 .df-detail__plate { font-size: 13px; }

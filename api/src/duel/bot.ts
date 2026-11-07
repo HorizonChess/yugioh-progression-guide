@@ -138,9 +138,15 @@ export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = f
 
 /**
  * Whether the bot should use a card now: a boost only for a face-up monster of its own (and, as a
- * response, only in a battle), a wipe of both sides only when the rival has more on the field.
+ * response, only in a battle), a wipe of both sides only when the rival has more on the field, a
+ * Continuous Trap on the rival's turn.
  */
 function worthUsing(code: number, duel: DuelSession, team: Team, responding = false): boolean {
+    // A Continuous Trap waits for the rival's turn, when they have a monster for it to work on
+    // (flipped any earlier it only shows itself).
+    if (responding && duel.isContinuousTrap(code)) {
+        return duel.currentTurnPlayer !== team && duel.monstersOf((1 - team) as Team).some((x) => x.position & P.FACEUP);
+    }
     const kind = duel.effectKind(code);
     if (kind === 'buff') {
         const own = duel.monstersOf(team).some((x) => x.position & P.FACEUP);

@@ -16,6 +16,8 @@ describe.skipIf(!engineDataAvailable())('the practice bot', () => {
         expect(engine.effectKind(REINFORCEMENTS)).toBe('buff');
         expect(engine.effectKind(DARK_HOLE)).toBe('wipe');
         expect(engine.effectKind(RAIGEKI)).toBe('other');
+        expect(engine.isContinuousTrap(50045299)).toBe(true); // Dragon Capture Jar
+        expect(engine.isContinuousTrap(4206964)).toBe(false); // Trap Hole
     });
 
     // With no monster of its own, a boost could only go on the rival's: it keeps it.

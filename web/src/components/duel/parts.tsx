@@ -235,6 +235,10 @@ export function RivalHand({ cards }: { cards: DuelCardView[] }) {
 export function Hand({ cards, marks, onTap, onHover }: { cards: DuelCardView[]; marks: CardMarks; onTap: (c: DuelCardView) => void; onHover?: (code: number) => void }) {
     const mid = (cards.length - 1) / 2;
     const tight = cards.length > 4;
+    // Cards overlap only as much as the row needs to fit (at most about half a card): on a wide
+    // enough screen a big hand still spreads out, and every card is easy to hit.
+    const n = cards.length;
+    const spacing = `calc(max(var(--hw) * -0.4, min(3px, (100cqw - ${n} * var(--hw) - 16px) / ${2 * n})))`;
     return (
         <div className="df-hand">
             {cards.map((c, i) => (
@@ -246,7 +250,7 @@ export function Hand({ cards, marks, onTap, onHover }: { cards: DuelCardView[]; 
                     className={`df-hand__card ${marks.glow.has(c.uid) ? "is-glow" : ""} ${marks.picked.has(c.uid) ? "is-picked" : ""} ${marks.raised === c.uid ? "is-raised" : ""}`}
                     // Each card stacks over the one before it. (Explicitly: the middle card has no tilt, so no
                     // transform, and would otherwise sink under both its tilted neighbours.)
-                    style={{ rotate: (i - mid) * (tight ? 3 : 4), y: Math.abs(i - mid) * 4, marginInline: tight ? "calc(var(--cw) * -0.32)" : "3px", zIndex: i + 1 }}
+                    style={{ rotate: (i - mid) * (tight ? 3 : 4), y: Math.abs(i - mid) * 4, marginInline: spacing, zIndex: i + 1 }}
                     onClick={() => onTap(c)}
                     onPointerEnter={(e) => e.pointerType === "mouse" && onHover?.(c.code)}
                     aria-label={`Card in hand ${c.code}`}

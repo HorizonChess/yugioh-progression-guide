@@ -158,6 +158,46 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(JSON.stringify(stored)).not.toContain(token);
     });
 
+    it('takes back a summon while its zone is being chosen', async () => {
+        const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'solo' } });
+        const { duel, token } = started.json();
+        const socket = await app.injectWS(`/api/duels/${duel.id}/live?token=${token}`, { socket: { remoteAddress: '127.0.0.1' } } as never);
+        const steps: string[] = [];
+        const done = new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error(`no take-back: ${steps.join(', ')}`)), 15_000);
+            let stage: 'summon' | 'place' | 'back' = 'summon', before: string | undefined;
+            socket.on('message', (raw: Buffer) => {
+                void (async () => {
+                    const { state } = JSON.parse(raw.toString()) as DuelServerMessage;
+                    const p = state.prompt;
+                    if (!p) return;
+                    steps.push(p.kind);
+                    if (stage === 'back') {
+                        // Back where it was: the same monster can be summoned again, and nothing is on the field.
+                        expect(p.kind === 'actions' && p.actions.some((a) => a.verb === 'summon' && a.uid === before)).toBe(true);
+                        expect(state.view.me.monsters.every((m) => m === null)).toBe(true);
+                        clearTimeout(timer);
+                        socket.terminate();
+                        return resolve();
+                    }
+                    if (stage === 'place' && p.kind === 'place') {
+                        expect(p.back).toBe(true);
+                        stage = 'back';
+                        return socket.send(JSON.stringify({ type: 'back', seq: state.seq }));
+                    }
+                    const summon = p.kind === 'actions' ? p.actions.find((a) => a.verb === 'summon') : undefined;
+                    if (stage === 'summon' && summon) {
+                        before = summon.uid;
+                        stage = 'place';
+                        return socket.send(JSON.stringify({ type: 'answer', seq: state.seq, answer: { kind: 'choice', id: summon.id } }));
+                    }
+                    socket.send(JSON.stringify({ type: 'answer', seq: state.seq, answer: humanAnswer(p) }));
+                })().catch(reject);
+            });
+        });
+        await done;
+    });
+
     it('can always give up a duel, even one that can no longer be rebuilt', async () => {
         const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot' } });
         const { duel, token } = started.json();

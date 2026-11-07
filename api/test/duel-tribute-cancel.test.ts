@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DuelAnswer, DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DuelSession } from '../src/duel/session';
+import { DuelSession, type DuelSetup } from '../src/duel/session';
 const JINZO = 77585513;
 const MON = [91152256, 76184692, 90357090, 15025844, 4206964, 17814387, 74677422];
 const generic = (p: DuelPrompt): DuelAnswer => {
@@ -51,4 +51,41 @@ describe.skipIf(!engineDataAvailable())('tribute summons', () => it('can be canc
         expect(duel.answer(team, s.seq, a), JSON.stringify(p).slice(0, 300)).toBe(true);
     }
     expect(summoned).toBe(true);
+}));
+
+// "Back": a move still being set up (its zone, its Tributes) is taken back by rebuilding the duel
+// from the answers before it: the monster is back in hand and the turn goes on.
+describe.skipIf(!engineDataAvailable())('taking a move back', () => it('rebuilds the duel from before it', async () => {
+    const engine = await loadEngine();
+    const me = Array.from({ length: 40 }, (_, i) => MON[i % MON.length]!);
+    const setup: DuelSetup = { seed: ['5', '11400714819323198485', '77', '2685821657736338717'], mode: 'MR1', decks: [{ main: me, extra: [] }, { main: me, extra: [] }], names: ['A', 'B'], bots: [false, false], rules: 2 };
+    const duel = new DuelSession(engine, setup);
+    duel.start();
+    let back: ReturnType<DuelSession['backAnswers']> = null, summoned = 0;
+    for (let i = 0; i < 100 && !back; i++) {
+        const team = duel.waitingFor()!;
+        const s = duel.state(team, 'd'); const p = s.prompt!;
+        if (team === 0 && p.kind === 'place') {
+            expect(p.back).toBe(true);
+            back = duel.backAnswers(0);
+            break;
+        }
+        let a: DuelAnswer;
+        if (p.kind === 'actions') {
+            const x = team === 0 ? p.actions.find((x) => x.verb === 'summon') : undefined;
+            if (x) summoned = x.code;
+            a = { kind: 'choice', id: x ? x.id : (p.next.find((n) => n.to === 'EP') ?? p.next[0])!.id };
+        } else if (p.kind === 'chain') a = { kind: 'choice', id: p.pass ?? p.options[0]!.id };
+        else a = generic(p);
+        expect(duel.answer(team, s.seq, a)).toBe(true);
+    }
+    expect(back).not.toBeNull();
+    const rebuilt = new DuelSession(engine, setup);
+    rebuilt.start(back!);
+    const s = rebuilt.state(0, 'd');
+    expect(s.prompt?.kind).toBe('actions');
+    expect(s.view.me.hand.some((c) => c.code === summoned)).toBe(true);
+    expect(s.view.me.monsters.some(Boolean)).toBe(false);
+    // Once something shows on the board, there's no going back.
+    expect(rebuilt.backAnswers(0)).toBeNull();
 }));

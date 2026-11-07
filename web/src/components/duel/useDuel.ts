@@ -417,6 +417,17 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
 
     const concede = useCallback(() => conn.current?.concede(), []);
 
+    /** Takes back the move being set up: like an answer, the question stays (inert) until the reply. */
+    const back = useCallback(() => {
+        const s = latest.current;
+        if (!s?.prompt) return;
+        sfx.putDown();
+        conn.current?.back(s.seq);
+        latest.current = { ...s, prompt: null };
+        setAnsweredKind("back");
+        setAnswered(true);
+    }, []);
+
     return {
         state,
         view: shown,
@@ -430,5 +441,6 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         effects,
         answer,
         concede,
+        back,
     };
 }

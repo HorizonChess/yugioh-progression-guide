@@ -48,9 +48,13 @@ export interface Engine {
      * a monster's ATK/DEF or equips it, `wipe` destroys or removes monsters on both sides at once.
      */
     effectKind(code: number): 'buff' | 'wipe' | 'other';
+    /** A Continuous Trap (it stays on the field once flipped). */
+    isContinuousTrap(code: number): boolean;
 }
 
 const TYPE_MONSTER = 0x1;
+const TYPE_TRAP = 0x4;
+const TYPE_CONTINUOUS = 0x20000;
 const TYPE_LINK = 0x4000000;
 
 /** Where the engine data lives: next to the source in development, next to dist/ when built. */
@@ -148,6 +152,7 @@ async function build(): Promise<Engine> {
         victoryReason: (reason) => strings.victory[String(reason)] ?? 'The duel is over',
         codeByName: (name) => byName.get(name.trim().toLowerCase()) ?? null,
         isMonster: (code) => ((row(code)?.type ?? 0) & TYPE_MONSTER) !== 0,
+        isContinuousTrap: (code) => ((row(learned.get(code) ?? code)?.type ?? 0) & (TYPE_TRAP | TYPE_CONTINUOUS)) === (TYPE_TRAP | TYPE_CONTINUOUS),
         learn(code, name) {
             if (row(code) || learned.has(code)) return true;
             const base = byName.get(name.trim().toLowerCase());

@@ -96,7 +96,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     const [picked, setPicked] = useState<number[]>([]);
     const [nameGuess, setNameGuess] = useState("");
     /** The duel menu (⋯): closed, open, or asking to confirm a surrender. */
-    const [duelMenu, setDuelMenu] = useState<"closed" | "open" | "surrender">("closed");
+    const [duelMenu, setDuelMenu] = useState<"closed" | "open" | "surrender" | "log">("closed");
     /** A short note about the card you tapped (why it can't attack), for a few seconds. */
     const [notice, setNotice] = useState<{ uid: string; text: string } | null>(null);
     /** The question you swiped away to look at the board (by its key): it waits in a tab. */
@@ -350,6 +350,8 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             <span>{label}</span>{extra.note && <small>{extra.note}</small>}
         </button>
     );
+    // Taking back the move being set up (its zone, position or Tributes), when the question allows it.
+    const backOption = (p: { back?: boolean }) => p.back && option("Back", () => duel.back(), { quiet: true });
     const listPick = (list: PromptCard[], selected: number[], onTap: (id: number) => void) => (
         <div className="df-sheet__list">
             {list.map((c) => (
@@ -385,12 +387,19 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
         ))}</div>{option("Close", () => setBrowse(null), { quiet: true })}</>, { onSwipe: () => setBrowse(null) });
     } else if (duelMenu === "surrender") {
         question = sheet("Surrender this duel?", <div className="df-sheet__options">{option("Surrender", () => (setDuelMenu("closed"), duel.concede()))}{option("Keep dueling", () => setDuelMenu("closed"), { quiet: true })}</div>, { text: state.rival.bot ? "It's only practice." : `${state.rival.name} wins the duel, and the result counts for the series.`, onSwipe: () => setDuelMenu("closed") });
+    } else if (duelMenu === "log") {
+        // Phones have no room for the log beside the board: it's here, the latest first.
+        question = sheet("What happened", <>
+            <ol className="df-log__list df-log__list--sheet" onPointerDown={(e) => e.stopPropagation() /* scrolls; doesn't drag the sheet */}>{[...log].reverse().map((l) => <li key={l.key} className={l.side ? `is-${l.side}` : ""}>{l.text}</li>)}</ol>
+            <div className="df-sheet__options">{option("Back to the duel", () => setDuelMenu("closed"), { quiet: true })}</div>
+        </>, { onSwipe: () => setDuelMenu("closed") });
     } else if (duelMenu === "open") {
         question = sheet("Duel menu", <div className="df-sheet__options">
             {option(prefs.sound ? "Sound: on" : "Sound: off", () => setDuelPrefs({ sound: !prefs.sound }), { note: "The duel's sound effects" })}
             {option(prefs.chain === "auto" ? "Ask me to respond: when it matters" : "Ask me to respond: at every chance", () => setDuelPrefs({ chain: prefs.chain === "auto" ? "always" : "auto" }), {
                 note: prefs.chain === "auto" ? "Only when your rival plays something, or a card of yours is made for the moment" : "Stops at every point where a card of yours could be activated",
             })}
+            {isPhone && option("What happened", () => setDuelMenu("log"), { note: "The duel so far, move by move" })}
             {option("Surrender", () => setDuelMenu("surrender"))}
             {option("Back to the duel", () => setDuelMenu("closed"), { quiet: true })}
         </div>, { text: "Dueling in the app is experimental: if something looks wrong, tell us what happened.", onSwipe: () => setDuelMenu("closed") });
@@ -419,7 +428,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 const ready = picked.length >= prompt.min && picked.length <= prompt.max;
                 const confirm = !prompt.step && !(prompt.max === 1 && prompt.min === 1) && option(`Confirm (${picked.length}/${prompt.max})`, () => answer({ kind: "many", ids: picked }), { disabled: !ready });
                 const finish = prompt.step?.canFinish && option("Done", () => answer({ kind: "done" }));
-                const cancel = prompt.cancel && option("Cancel", () => answer({ kind: "cancel" }), { quiet: true });
+                const cancel = prompt.cancel ? option("Cancel", () => answer({ kind: "cancel" }), { quiet: true }) : backOption(prompt);
                 // The card that's asking, when one is: the chain link being activated or resolved.
                 const asking = !prompt.tribute ? view.chain[view.chain.length - 1] : undefined;
                 const about = asking ? { code: asking.code, text: `For ${name(asking.code)}` } : {};
@@ -436,7 +445,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 question = sheet(prompt.title, <div className="df-sheet__options">{prompt.options.map((o) => option("text" in o ? o.text : o.label, () => answer({ kind: "choice", id: o.id })))}</div>);
                 break;
             case "position":
-                question = sheet(`${name(prompt.code)}: which position?`, <div className="df-sheet__options">{prompt.options.map((o) => option(o.label, () => answer({ kind: "choice", id: o.id })))}</div>, { code: prompt.code });
+                question = sheet(`${name(prompt.code)}: which position?`, <div className="df-sheet__options">{prompt.options.map((o) => option(o.label, () => answer({ kind: "choice", id: o.id })))}{backOption(prompt)}</div>, { code: prompt.code });
                 break;
             case "declare":
                 question = sheet(prompt.title, <>
@@ -446,15 +455,20 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                     <div className="df-sheet__options">{option("Declare", () => answer({ kind: "many", ids: picked }), { disabled: picked.length !== prompt.count })}</div>
                 </>);
                 break;
-            case "place":
-                // No question to read: the zones glow, and a tap on one puts the card there.
-                question = prompt.count === 1 && !prompt.disable ? null : sheet(prompt.title, (
+            case "place": {
+                // The zones glow, and a tap on one puts the card there. The bar says which card it's
+                // for (the one you picked up, or the card whose effect is placing it), with a way back.
+                const forCard = held?.card.code || view.chain[view.chain.length - 1]?.code || 0;
+                const title = prompt.count === 1 && !prompt.disable && forCard ? `Where does ${name(forCard)} go?` : prompt.title;
+                question = prompt.count === 1 && !prompt.disable && !prompt.back && !forCard ? null : sheet(title, (
                     <div className="df-sheet__bar">
-                        <span>Tap the glowing zones</span>
+                        <span>Tap a glowing zone</span>
                         {prompt.count > 1 && option(`Confirm (${picked.length}/${prompt.count})`, () => answer({ kind: "many", ids: picked }), { disabled: picked.length !== prompt.count })}
+                        {backOption(prompt)}
                     </div>
                 ), { compact: true });
                 break;
+            }
             case "card-name":
                 question = sheet(prompt.title, <form className="df-sheet__form" onSubmit={(e) => (e.preventDefault(), answer({ kind: "name", name: nameGuess }))}>
                     <input className="df-input" value={nameGuess} onChange={(e) => setNameGuess(e.target.value)} placeholder="Exact card name, e.g. Dark Magician" autoFocus />

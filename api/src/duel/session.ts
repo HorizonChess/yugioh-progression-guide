@@ -285,8 +285,22 @@ export class DuelSession {
             this.moved[team] = true;
             this.opening[team] = [];
         }
+        // Choosing what to do on your turn can be taken back while it's still being set up (its
+        // zone, position or Tributes), until anything shows on the board.
+        if (q.prompt.kind === 'actions') this.backPoint = { team, answers: this.answers.length };
         this.respond(response);
         return true;
+    }
+
+    /** Where "Back" would rebuild the duel to: the answers before the move being set up. */
+    private backPoint: { team: Team; answers: number } | null = null;
+
+    /** The answers to rebuild the duel from to take back the move a player is setting up, if they can. */
+    backAnswers(team: Team): OcgResponse[] | null {
+        const q = this.question, b = this.backPoint;
+        if (!q || !b || b.team !== team || q.team !== team || this.result) return null;
+        if (q.prompt.kind !== 'place' && q.prompt.kind !== 'position' && q.prompt.kind !== 'cards') return null;
+        return this.answers.slice(0, b.answers);
     }
 
     concede(team: Team): void {
@@ -314,7 +328,7 @@ export class DuelSession {
             you: { name: this.setup.names[team] },
             rival: { name: this.setup.names[rival], bot: this.setup.bots[rival], ...(this.setup.solo ? { solo: true } : {}) },
             view: this.view(team),
-            prompt: mine && !this.result ? this.question!.prompt : null,
+            prompt: mine && !this.result ? (this.backAnswers(team) ? ({ ...this.question!.prompt, back: true } as DuelPrompt) : this.question!.prompt) : null,
             ...(mine && this.retry ? { retry: true } : {}),
             result: this.result ? { winner: this.result.winner === null ? null : this.result.winner === team ? 'me' : 'opp', reason: this.result.reason } : null,
         };
@@ -338,6 +352,7 @@ export class DuelSession {
             const status = core.duelProcess(this.handle);
             const messages = core.duelGetMessage(this.handle);
             const events = this.apply(messages);
+            if (events.length) this.backPoint = null;
             if (events.length && !this.replayQueue.length) for (const t of [0, 1] as const) this.pushFrame(this.eventsFor(events, t), t);
             if (this.result || status === OcgProcessResult.END) {
                 this.result ??= { winner: null, reason: 'The duel ended' };
@@ -953,6 +968,14 @@ export class DuelSession {
 
     effectKind(code: number) {
         return this.engine.effectKind(code);
+    }
+
+    isContinuousTrap(code: number) {
+        return this.engine.isContinuousTrap(code);
+    }
+
+    get currentTurnPlayer(): Team {
+        return this.turnPlayer;
     }
 }
 

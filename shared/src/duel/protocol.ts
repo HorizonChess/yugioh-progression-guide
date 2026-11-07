@@ -125,15 +125,15 @@ export type DuelPrompt =
           quiet?: boolean;
       }
     /** Choose cards. `step` mode: one at a time, with `done` to finish. */
-    | { kind: 'cards'; title: string; min: number; max: number; cancel: boolean; cards: PromptCard[]; tribute?: boolean; sum?: number; step?: { chosen: PromptCard[]; canFinish: boolean } }
+    | { kind: 'cards'; title: string; min: number; max: number; cancel: boolean; cards: PromptCard[]; tribute?: boolean; sum?: number; step?: { chosen: PromptCard[]; canFinish: boolean }; back?: boolean }
     | { kind: 'yesno'; title: string; code?: number }
     | { kind: 'option'; title: string; options: { id: number; text: string }[] }
-    | { kind: 'position'; code: number; options: { id: number; label: string }[] }
+    | { kind: 'position'; code: number; options: { id: number; label: string }[]; back?: boolean }
     | { kind: 'number'; title: string; options: { id: number; label: string }[] }
     | { kind: 'declare'; title: string; what: 'type' | 'attribute'; count: number; options: { id: number; label: string }[] }
     | { kind: 'card-name'; title: string }
     /** Choose zones on the field: where to put a card, or (`disable`) which zones an effect shuts. */
-    | { kind: 'place'; title: string; count: number; disable: boolean; zones: PlaceZone[] };
+    | { kind: 'place'; title: string; count: number; disable: boolean; zones: PlaceZone[]; back?: boolean };
 
 /** A zone a `place` question offers. `index` is the owner's left-to-right position (as in the side's arrays). */
 export interface PlaceZone {
@@ -178,6 +178,8 @@ export interface DuelState {
 export const DuelClientMessageSchema = z.discriminatedUnion('type', [
     z.strictObject({ type: z.literal('answer'), seq: z.number().int().min(0), answer: DuelAnswerSchema }),
     z.strictObject({ type: z.literal('concede') }),
+    /** Take back the move being set up (its zone, position or Tributes): the prompt says when you can. */
+    z.strictObject({ type: z.literal('back'), seq: z.number().int().min(0) }),
 ]);
 export type DuelClientMessage = z.infer<typeof DuelClientMessageSchema>;
 

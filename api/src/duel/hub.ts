@@ -179,6 +179,26 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         if (finished) live.delete(id);
     }
 
+    /**
+     * Takes back the move a player is still setting up (its zone, position or Tributes): the duel is
+     * rebuilt from the answers before it, and stored that way. Nothing of it had shown on the board.
+     */
+    async function takeBack(duel: DuelDoc, team: Team, seq: number) {
+        const id = duel._id.toHexString();
+        const { session } = await sessionOf(duel);
+        const answers = session.state(team, id).seq === seq ? session.backAnswers(team) : null;
+        const watchers = sockets.get(id) ?? [];
+        if (!answers) {
+            for (const s of watchers) if (s.team === team) send(s.socket, { type: 'state', frames: [], state: session.state(team, id) });
+            return;
+        }
+        const rebuilt = new DuelSession(await loadEngine(), duel.setup!);
+        rebuilt.start(answers);
+        live.set(id, { session: rebuilt, stored: answers.length, touched: Date.now() });
+        await duels().updateOne({ _id: duel._id }, { $set: { answers: answers.map(encode), updatedAt: new Date() } });
+        for (const s of watchers) send(s.socket, { type: 'state', frames: [], state: rebuilt.state(s.team, id) });
+    }
+
     /** A rival duel's result counts like a confirmed report: the set advances, rewards are booked. */
     async function recordResult(duel: DuelDoc, winner: Team | null) {
         if (winner === null) return;
@@ -406,6 +426,10 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 const message = parsed.data;
                 void serial(id, async () => {
                     const { session } = await sessionOf(duel);
+                    if (message.type === 'back') {
+                        await takeBack(duel, team, message.seq);
+                        return;
+                    }
                     if (message.type === 'concede') session.concede(team);
                     else if (!session.answer(team, message.seq, message.answer)) {
                         // Not this player's turn to answer, or an answer that doesn't fit: resend the truth.
