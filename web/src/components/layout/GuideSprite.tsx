@@ -84,7 +84,7 @@ export default function GuideSprite({ at: standAt, bare = false }: { at?: string
     // page moves him along too (and still does what it does there). Tap by tap he
     // finishes, moves on and leaves, and nothing stays covered.
     const root = useRef<HTMLDivElement>(null);
-    const { spot, placement } = useSpotlight(root, current?.target, onStage, current?.at);
+    const { spot, placement, rise } = useSpotlight(root, current?.target, onStage, current?.at);
     useEffect(() => {
         if (!onStage || !window.matchMedia("(max-width: 767px)").matches) return;
         const away = (e: PointerEvent) => {
@@ -101,7 +101,7 @@ export default function GuideSprite({ at: standAt, bare = false }: { at?: string
             ref={root}
             aria-hidden={!onStage}
             className={`guide ${onStage ? "guide--on" : ""} ${bare ? "guide--bare" : ""} guide--at-${placement}`}
-            style={{ "--guide-stone": `url('${STONE}')`, ...(standAt && { "--guide-at": standAt }) } as React.CSSProperties}
+            style={{ "--guide-stone": `url('${STONE}')`, "--guide-rise": `${rise}px`, ...(standAt && { "--guide-at": standAt }) } as React.CSSProperties}
         >
             {!bare && (
                 <button type="button" className="guide__yugi" onClick={() => guide.silence()} tabIndex={onStage ? 0 : -1} aria-label="Send Yugi off">

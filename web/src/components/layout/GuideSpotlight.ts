@@ -7,7 +7,8 @@ import { useLayoutEffect, useState, type RefObject } from "react";
  * selector, alternatives comma-separated), followed as it moves, and where he should stand
  * so he doesn't cover it.
  *  - Phones: from the top when the target is in the lower half (his strip is at the bottom).
- *  - Wider screens: in the right-hand corner when his left-hand corner would cover it.
+ *  - Wider screens: always his left-hand corner. When his tablet would cover the target,
+ *    it rises above it, like a speech bubble, while he stays standing in his corner.
  *    Nothing on the page moves for him either way.
  *
  * The ring is drawn next to Yugi (in his own container) rather than on the target, so a
@@ -15,7 +16,7 @@ import { useLayoutEffect, useState, type RefObject } from "react";
  * builder) it's placed in that page's own coordinates.
  */
 export type Spot = { left: number; top: number; width: number; height: number };
-export type Placement = "left" | "right" | "top";
+export type Placement = "left" | "top";
 
 const PAD = 6;
 
@@ -48,49 +49,54 @@ type Box = { left: number; top: number; right: number; bottom: number };
 const overlap = (a: Box, b: Box) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
 
 /**
- * Wider screens: the corner that covers least, of the target above all (ten times over), then
- * of the page's buttons and links. His left-hand corner wins a tie.
+ * Wider screens: how far his tablet rises (in the page's own pixels) so it sits above the
+ * target instead of on it. 0 when it doesn't cover it; at most half the page's height.
  */
-function pickCorner(guideEl: HTMLElement | null, target: DOMRect): Placement {
-    if (!guideEl) return "left";
-    // His size on screen, and his two corners of the page he stands in (on screen).
-    const g = guideEl.getBoundingClientRect(), cb = containingBlock(guideEl);
+function tabletRise(guideEl: HTMLElement | null, target: DOMRect): number {
+    const tablet = guideEl?.querySelector(".guide__tablet");
+    if (!guideEl || !tablet) return 0;
+    const cb = containingBlock(guideEl);
+    // Where the tablet is once he's in: he may still be off to the left, sliding in.
     const at = (parseFloat(getComputedStyle(guideEl).left) || 0) * cb.scale;
-    const w = g.width, bottom = cb.y + cb.h, top = bottom - g.height;
-    const corners: Record<"left" | "right", Box> = {
-        left: { left: cb.x + at, right: cb.x + at + w, top, bottom },
-        right: { left: cb.x + cb.w - w, right: cb.x + cb.w, top, bottom },
-    };
-    const controls = [...document.querySelectorAll("a, button, input, select")]
-        .filter((el) => !guideEl.contains(el))
-        .map((el) => el.getBoundingClientRect())
-        .filter((b) => b.width > 0 && b.height > 0);
-    const cost = (c: Box) => overlap(c, target) * 10 + controls.reduce((sum, b) => sum + overlap(c, b), 0);
-    return cost(corners.right) < cost(corners.left) ? "right" : "left";
+    const dx = cb.x + at - guideEl.getBoundingClientRect().left;
+    const t = tablet.getBoundingClientRect();
+    const rise = parseFloat(getComputedStyle(guideEl).getPropertyValue("--guide-rise")) || 0;
+    const resting = { left: t.left + dx, right: t.right + dx, top: t.top + rise * cb.scale, bottom: t.bottom + rise * cb.scale };
+    if (!overlap(resting, target)) return 0;
+    const up = (resting.bottom - (target.top - 12)) / cb.scale;
+    return Math.max(0, Math.min(up, cb.h / cb.scale / 2));
 }
 
 /** Follows `target` while `active`; returns the ring (in `root`'s coordinates) and where Yugi should stand. */
 export function useSpotlight(root: RefObject<HTMLElement | null>, target: string | undefined, active: boolean, lineAt: number | undefined) {
     const [spot, setSpot] = useState<Spot | null>(null);
     const [placement, setPlacement] = useState<Placement>("left");
+    const [rise, setRise] = useState(0);
 
     useLayoutEffect(() => {
         if (!active || !target) {
             setSpot(null);
             setPlacement("left");
+            setRise(0);
             return;
         }
         const el = findTarget(target);
         if (!el) {
             setSpot(null);
             setPlacement("left");
+            setRise(0);
             return;
         }
         el.scrollIntoView({ block: "nearest", inline: "nearest" });
         // Where he stands, decided once per line from where the target is as he starts.
         const r = el.getBoundingClientRect();
-        if (window.matchMedia("(max-width: 767px)").matches) setPlacement(r.top + r.height / 2 > innerHeight / 2 ? "top" : "left");
-        else setPlacement(pickCorner(root.current, r));
+        if (window.matchMedia("(max-width: 767px)").matches) {
+            setPlacement(r.top + r.height / 2 > innerHeight / 2 ? "top" : "left");
+            setRise(0);
+        } else {
+            setPlacement("left");
+            setRise(tabletRise(root.current, r));
+        }
         let frame = 0;
         let last = "";
         const follow = () => {
@@ -109,5 +115,5 @@ export function useSpotlight(root: RefObject<HTMLElement | null>, target: string
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [active, target, lineAt]);
 
-    return { spot, placement };
+    return { spot, placement, rise };
 }
