@@ -19,7 +19,7 @@ export default function DeckControls({ deckName, onDeckNameChange, onSave, onLoa
             <button onClick={onClear} className="db-btn">Clear Deck</button>
             <button onClick={onSort} className="db-btn">Sort</button>
             <button onClick={onImport} className="db-btn">Import</button>
-            <button onClick={onExport} className="db-btn">Export</button>
+            <button onClick={onExport} className="db-btn" data-guide="export">Export</button>
         </div>
     );
 }

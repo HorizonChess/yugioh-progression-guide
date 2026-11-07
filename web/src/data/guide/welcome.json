@@ -1,0 +1,125 @@
+{
+  "_about": "Yugi's welcome. tour: said once, the first time you land on a run's timeline, as a tap-through conversation. screens: said once each, the first time you open that screen. Each line: key, mood, solo (and duo, if it differs) wordings, and target: a CSS selector for what to spotlight while it's up (comma-separated alternatives; the first one on screen wins). On phones, when the target is in the lower half of the screen, Yugi speaks from the top so he doesn't cover it. {set} is the run's current set, {packs} its packs per set, {rival} the rival's name. Lines stay under 140 characters.",
+  "tour": [
+    {
+      "key": "hello",
+      "mood": "happy",
+      "target": ".timeline-node--current .timeline-node__art, .road-stop--current .road-stop__art",
+      "solo": "Welcome, duelist! I'm Yugi. This is your road through the history of the game, one set at a time.",
+      "duo": "Welcome, duelist! I'm Yugi. You and {rival} will walk this road together, one set at a time."
+    },
+    {
+      "key": "concept",
+      "mood": "neutral",
+      "target": ".timeline-node--current .timeline-node__art, .road-stop--current .road-stop__art",
+      "solo": "We start at {set}, just like duelists did back then. Your deck can only use the cards you pull!",
+      "duo": "You both start at {set}, just like duelists did back then. Your decks can only use the cards you pull!"
+    },
+    {
+      "key": "packs",
+      "mood": "neutral",
+      "target": "a.cartouche-btn[href^='/packs']",
+      "solo": "Each set, you open its {packs} packs once. Tap Open Packs when you're ready. The heart of the cards decides the rest!",
+      "duo": "Each set, you each open its {packs} packs once. You can't duel until {rival} has opened theirs too!"
+    },
+    {
+      "key": "deck",
+      "mood": "neutral",
+      "target": "a.cartouche-btn[href^='/deck-builder'], .road-dock__small a[href^='/deck-builder']",
+      "solo": "Then build a deck from what you pulled, and duel wherever you like to play. The Deck Builder can export it for you.",
+      "duo": "Then build a deck from what you pulled and duel {rival} wherever you two like to play. The Deck Builder can export it."
+    },
+    {
+      "key": "record",
+      "mood": "neutral",
+      "target": "a.cartouche-btn[href^='/record-match']",
+      "solo": "After the duel, come back and tap Record Match. Win or lose, the road moves on to the next set.",
+      "duo": "After the duel, one of you records it and the other confirms. Then the road moves on to the next set for you both."
+    },
+    {
+      "key": "rewards",
+      "mood": "happy",
+      "target": ".app-bar a[href^='/rewards'], .phone-tabs a[href^='/rewards']",
+      "solo": "A win spins the reward wheel, and a loss still gets you three pity packs. Every duel makes your collection stronger!",
+      "duo": "The winner spins the reward wheel, the loser gets three pity packs. Every duel makes you both stronger!"
+    },
+    {
+      "key": "go",
+      "mood": "happy",
+      "target": "a.cartouche-btn[href^='/packs']",
+      "solo": "That's all there is to it! Let's open some packs.",
+      "duo": "That's all there is to it! Let's open some packs before {rival} beats us to it."
+    }
+  ],
+  "screens": {
+    "menu": [
+      {
+        "key": "menu",
+        "mood": "happy",
+        "target": ".menu-item:first-of-type",
+        "solo": "Hi, I'm Yugi! Start a run in Campaign Mode. Sign in if you want to take on a rival, or play as a guest on this device."
+      }
+    ],
+    "packs": [
+      {
+        "key": "store",
+        "mood": "neutral",
+        "target": ".store__pack",
+        "solo": "Here's this set's booster box! You can peek at the card list first, or open your packs right away."
+      }
+    ],
+    "haul": [
+      {
+        "key": "haul",
+        "mood": "neutral",
+        "target": ".haul .cartouche-btn",
+        "solo": "That's your haul! Save it to add the cards to your collection. A set's packs only open once, so enjoy them."
+      }
+    ],
+    "collection": [
+      {
+        "key": "binder",
+        "mood": "neutral",
+        "target": ".binder-tabs",
+        "solo": "Your binder! Every set gets its own chapter. Tap a card to read it, or search for anything you own."
+      }
+    ],
+    "deck-builder": [
+      {
+        "key": "builder",
+        "mood": "neutral",
+        "target": ".db-results, .dp-handle",
+        "solo": "Build your deck from the cards you own: up to three of each. Aim for 40 cards in the main deck."
+      },
+      {
+        "key": "export",
+        "mood": "neutral",
+        "target": "[data-guide='export'], .dp-menu",
+        "solo": "When it's ready, export it as a YDK file and load it wherever you duel. Good luck!"
+      }
+    ],
+    "record-match": [
+      {
+        "key": "record",
+        "mood": "neutral",
+        "target": ".rm-act--choose",
+        "solo": "Tell me how the duel went! Win or lose, we move on to the next set together.",
+        "duo": "Tell me how it went against {rival}! They'll confirm it, and then we both move on."
+      }
+    ],
+    "rewards": [
+      {
+        "key": "rewards",
+        "mood": "happy",
+        "target": ".rw-stage, .rw-tabs",
+        "solo": "Your prizes wait here. Wins earn wheel spins, losses earn pity packs. Open them whenever you like!"
+      },
+      {
+        "key": "prizes",
+        "mood": "neutral",
+        "target": ".rw-tabs",
+        "solo": "A wildcard picks a card of its rarity or lower from the set you won it in. A Redoer Ticket rerolls a set's packs!"
+      }
+    ]
+  }
+}
