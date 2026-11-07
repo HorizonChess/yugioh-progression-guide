@@ -364,10 +364,14 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
 
     const recv = useRef<((m: DuelServerMessage) => void) | null>(null);
     const watchdog = useRef<ReturnType<typeof setTimeout>>(undefined);
+    /** Where this page is in the duel's frames (the server's cursor): a reconnect is shown what it missed. */
+    const cursor = useRef<string | null>(null);
     useEffect(() => {
         if (!duelId) return;
         const onMessage = (m: DuelServerMessage) => {
             clearTimeout(watchdog.current);
+            // A state fetched without one (the watchdog's) jumps past frames: where the page is isn't known.
+            cursor.current = m.cursor ?? null;
             let next = m.state;
             const p = next.prompt;
             // A chain window that doesn't need you: pass it without asking.
@@ -385,7 +389,7 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
             }
             void play();
         };
-        conn.current = connectDuel(duelId, onMessage, setConnected);
+        conn.current = connectDuel(duelId, onMessage, setConnected, () => cursor.current);
         recv.current = onMessage;
         return () => {
             clearTimeout(watchdog.current);

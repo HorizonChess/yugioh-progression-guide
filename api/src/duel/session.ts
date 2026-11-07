@@ -182,6 +182,14 @@ export class DuelSession {
     private retry = false;
     private replayQueue: OcgResponse[] = [];
     private frames: [DuelFrame[], DuelFrame[]] = [[], []];
+    /**
+     * Every frame a player was sent lately, numbered, so a page that lost its connection (a phone
+     * put away mid-turn) can be shown what it missed. `epoch` tells this session's numbering from a
+     * rebuilt one's.
+     */
+    private history: [DuelFrame[], DuelFrame[]] = [[], []];
+    private pushed: [number, number] = [0, 0];
+    private readonly epoch = Math.random().toString(36).slice(2, 10);
     private lp: [number, number] = [START_LP, START_LP];
     private turn = 0;
     private turnPlayer: Team = 0;
@@ -191,6 +199,12 @@ export class DuelSession {
     private lastActor: Team | null = null;
     /** Cards whose chain link just resolved: a spell or trap going to the Graveyard after it isn't destroyed. */
     private resolved = new Set<string>();
+    /**
+     * In the damage step: the few cards usable there (Injection Fairy Lily, Reinforcements) are made
+     * for that moment. What a player was already offered in it, so each comes up once, not at every window.
+     */
+    private damageStep = false;
+    private damageOffered: [Set<string>, Set<string>] = [new Set(), new Set()];
     /** For the bot: actions taken this turn, so it can't loop. */
     botActions = 0;
 
@@ -235,6 +249,8 @@ export class DuelSession {
         // now. A new duel keeps them, so the first look at it shows the decks dealt out.
         if (answers.length) {
             this.frames = [[], []];
+            this.history = [[], []];
+            this.pushed = [0, 0];
             this.delivered = [true, true];
             this.moved = [true, true];
             this.opening = [[], []];
@@ -262,6 +278,24 @@ export class DuelSession {
         const fresh = !this.delivered[team];
         const frames = this.takeFrames(team);
         return fresh ? frames : [];
+    }
+
+    /** Where a player's page is in the duel's frames, once it has everything sent so far. */
+    cursor(team: Team): string {
+        return `${this.epoch}:${this.pushed[team]}`;
+    }
+
+    /**
+     * The frames since `cursor` (a page reconnecting after it lost touch), or null if that's not
+     * known any more (another session's numbering, or longer ago than is kept).
+     */
+    framesSince(team: Team, cursor: string): DuelFrame[] | null {
+        const [epoch, at] = cursor.split(':');
+        const n = Number(at);
+        const first = this.pushed[team] - this.history[team].length;
+        if (epoch !== this.epoch || !Number.isInteger(n) || n < first || n > this.pushed[team]) return null;
+        this.takeFrames(team);
+        return this.history[team].slice(n - first);
     }
 
     destroy(): void {
@@ -424,6 +458,10 @@ export class DuelSession {
         const frame = { events, view: this.view(team) };
         list.push(frame);
         if (list.length > FRAME_CAP) list.splice(0, list.length - FRAME_CAP);
+        const kept = this.history[team];
+        kept.push(frame);
+        this.pushed[team]++;
+        if (kept.length > FRAME_CAP) kept.splice(0, kept.length - FRAME_CAP);
         if (!this.moved[team] && this.opening[team].length < FRAME_CAP) this.opening[team].push(frame);
     }
 
@@ -533,6 +571,13 @@ export class DuelSession {
                 case M.CHAIN_END:
                     this.revealed = [new Set(), new Set()];
                     this.chain = [];
+                    break;
+                case M.DAMAGE_STEP_START:
+                    this.damageStep = true;
+                    this.damageOffered = [new Set(), new Set()];
+                    break;
+                case M.DAMAGE_STEP_END:
+                    this.damageStep = false;
                     break;
                 case M.ATTACK: {
                     const a = m.card;
@@ -799,8 +844,12 @@ export class DuelSession {
                 // turn are offered as actions, like an attack), and on theirs only after their play, when
                 // the engine flags a card of yours as made for the moment (spe_count: Trap Hole on a summon).
                 // Optional triggers ("you can...") are asked separately, so none is lost by passing here.
+                // The damage step is different: anything usable there (Injection Fairy Lily during damage
+                // calculation, on your own attack too) can only be used then, so it's always asked.
                 const top = this.chain[this.chain.length - 1];
-                const quiet = !m.forced && (top ? top.team === team : this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team);
+                const fresh = this.damageStep ? options.map((o) => `${o.uid}:${o.text ?? ''}`).filter((k) => !this.damageOffered[team].has(k)) : [];
+                fresh.forEach((k) => this.damageOffered[team].add(k));
+                const quiet = !m.forced && !fresh.length && (top ? top.team === team : this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team);
                 return q({ kind: 'chain', forced: m.forced, options, pass, ...(quiet ? { quiet } : {}) }, (a) => {
                     const id = choice(a);
                     if (id === null) return null;

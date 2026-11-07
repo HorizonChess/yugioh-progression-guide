@@ -94,7 +94,8 @@ export interface DuelHub {
     teamOf(duel: DuelDoc, userId: ObjectId | null, guestToken?: string): Team | null;
     stateFor(duel: DuelDoc, team: Team): Promise<DuelServerMessage>;
     concede(duel: DuelDoc, team: Team): Promise<void>;
-    connect(duel: DuelDoc, team: Team, socket: WebSocket): void;
+    /** `after`: where the page was (its last cursor), so a reconnect is shown what it missed. */
+    connect(duel: DuelDoc, team: Team, socket: WebSocket, after?: string): void;
     /** Rule check before a duel: are these all cards the engine knows? */
     unknownCards(codes: number[]): Promise<number[]>;
 }
@@ -175,7 +176,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         );
         // A finished rival duel is booked on the series before anyone is told, so their next screen shows it.
         if (finished && duel.kind === 'rival') await recordResult(duel, session.result!.winner);
-        for (const s of sockets.get(id) ?? []) send(s.socket, { type: 'state', frames: session.takeFrames(s.team), state: session.state(s.team, id) });
+        for (const s of sockets.get(id) ?? []) send(s.socket, { type: 'state', frames: session.takeFrames(s.team), state: session.state(s.team, id), cursor: session.cursor(s.team) });
         if (finished) live.delete(id);
     }
 
@@ -189,14 +190,14 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const answers = session.state(team, id).seq === seq ? session.backAnswers(team) : null;
         const watchers = sockets.get(id) ?? [];
         if (!answers) {
-            for (const s of watchers) if (s.team === team) send(s.socket, { type: 'state', frames: [], state: session.state(team, id) });
+            for (const s of watchers) if (s.team === team) send(s.socket, { type: 'state', frames: [], state: session.state(team, id), cursor: session.cursor(team) });
             return;
         }
         const rebuilt = new DuelSession(await loadEngine(), duel.setup!);
         rebuilt.start(answers);
         live.set(id, { session: rebuilt, stored: answers.length, touched: Date.now() });
         await duels().updateOne({ _id: duel._id }, { $set: { answers: answers.map(encode), updatedAt: new Date() } });
-        for (const s of watchers) send(s.socket, { type: 'state', frames: [], state: rebuilt.state(s.team, id) });
+        for (const s of watchers) send(s.socket, { type: 'state', frames: [], state: rebuilt.state(s.team, id), cursor: rebuilt.cursor(s.team) });
     }
 
     /** A rival duel's result counts like a confirmed report: the set advances, rewards are booked. */
@@ -404,7 +405,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 if (duel.kind === 'rival') await recordResult(duel, winner);
             });
         },
-        connect(duel, team, socket) {
+        connect(duel, team, socket, after) {
             const id = duel._id.toHexString();
             const entry = { socket, team };
             const set = sockets.get(id) ?? new Set();
@@ -433,7 +434,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                     if (message.type === 'concede') session.concede(team);
                     else if (!session.answer(team, message.seq, message.answer)) {
                         // Not this player's turn to answer, or an answer that doesn't fit: resend the truth.
-                        send(socket, { type: 'state', frames: [], state: session.state(team, id) });
+                        send(socket, { type: 'state', frames: [], state: session.state(team, id), cursor: session.cursor(team) });
                         return;
                     }
                     await persistAndBroadcast(duel);
@@ -444,7 +445,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                     live.delete(id);
                     try {
                         const { session } = await sessionOf(duel);
-                        for (const s of sockets.get(id) ?? []) send(s.socket, { type: 'state', frames: [], state: session.state(s.team, id) });
+                        for (const s of sockets.get(id) ?? []) send(s.socket, { type: 'state', frames: [], state: session.state(s.team, id), cursor: session.cursor(s.team) });
                     } catch (rebuild) {
                         app.log.error({ err: rebuild, duel: id }, 'duel could not be rebuilt after a failed step');
                     }
@@ -452,9 +453,10 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             });
             void serial(id, async () => {
                 const { session } = await sessionOf(duel);
-                // The first look at a new duel plays it from the deal; a reconnecting player gets the
-                // state now, and animations they missed are skipped.
-                send(socket, { type: 'state', frames: session.framesOnConnect(team), state: session.state(team, id) });
+                // The first look at a new duel plays it from the deal. A page reconnecting (a phone put
+                // away mid-turn) is shown what it missed, when that's known; otherwise the board as it is.
+                const missed = after ? session.framesSince(team, after) : null;
+                send(socket, { type: 'state', frames: missed ?? session.framesOnConnect(team), state: session.state(team, id), cursor: session.cursor(team) });
             }).catch((error: unknown) => app.log.error({ err: error, duel: id }, 'duel connect failed'));
         },
     };

@@ -61,6 +61,13 @@ type Action = Extract<DuelPrompt, { kind: "actions" }>["actions"][number];
 /** Verbs that put a card from the hand onto the field. */
 const PLACES: ReadonlySet<ActionVerb> = new Set(["summon", "special", "set", "set-spell", "activate"]);
 
+/**
+ * Fades are run frame by frame, not handed to the browser: a browser-run opacity animation (framer's
+ * "accelerated" path) drops its end value for one frame as it finishes, so a menu fading in blinks
+ * out and one fading out blinks back. An `onUpdate` handler keeps framer on its own frame loop.
+ */
+const STEADY = { onUpdate: () => {} };
+
 export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeave: (result: "win" | "loss" | "draw" | null) => void }) {
     const isPhone = useIsPhone();
     const [log, setLog] = useState<{ key: number; text: string; side?: Side }[]>([]);
@@ -320,14 +327,14 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     // tab to answer); anything else (the duel menu, a list of cards) closes.
     const sheet = (title: string, body: ReactNode, opts: { text?: string; code?: number; compact?: boolean; onSwipe?: () => void } = {}) => (
         !opts.onSwipe && tucked === promptKey ? (
-            <motion.button key="tab" type="button" className="df-tab" onClick={() => setTucked(null)}
+            <motion.button key="tab" type="button" className="df-tab" {...STEADY} onClick={() => setTucked(null)}
                 initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }}>
                 <span aria-hidden>▲</span> {title}
             </motion.button>
         ) : (
         // A question is keyed "sheet" (it stays up through the gap to the next one); something you
         // opened yourself (the duel menu, a list of cards) is "menu", and goes as soon as you close it.
-        <motion.div key={opts.onSwipe ? "menu" : "sheet"} className={`df-sheet ${opts.compact ? "df-sheet--compact" : ""}`}
+        <motion.div key={opts.onSwipe ? "menu" : "sheet"} {...STEADY} className={`df-sheet ${opts.compact ? "df-sheet--compact" : ""}`}
             initial={{ y: "70%", opacity: 1 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "70%", opacity: 0 }} transition={{ type: "spring", stiffness: 420, damping: 36 }}
             drag={isPhone ? "y" : false} dragDirectionLock dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.9 }}
             onDragEnd={(_, info) => {
@@ -370,7 +377,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     if (held && (heldActions.length || duel.answeredKind === "actions") && !browse && duelMenu === "closed") {
         question = (
             // The card's choices pop up over it, Master Duel style: no strip across the screen.
-            <motion.div key={`held:${held.card.uid}`} className="df-pop" style={{ left: `clamp(70px, ${held.at.x}px, calc(100% - 70px))`, top: held.at.y }}
+            <motion.div key={`held:${held.card.uid}`} {...STEADY} className="df-pop" style={{ left: `clamp(70px, ${held.at.x}px, calc(100% - 70px))`, top: held.at.y }}
                 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: "spring", stiffness: 520, damping: 30 }}>
                 {heldActions.map((a) => (
                     <button key={a.id} type="button" className="df-pop__btn" onClick={() => choose(a)}>
@@ -478,7 +485,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
         }
     } else if (waiting && slow) {
         question = (
-            <motion.div key="wait" className="df-hint df-hint--wait" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div key="wait" {...STEADY} className="df-hint df-hint--wait" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 {state.rival.solo ? "Passing…" : state.rival.bot ? "The bot is thinking…" : `${state.rival.name} is thinking…`}
             </motion.div>
         );
@@ -501,7 +508,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             )}
             <AnimatePresence>
                 {effects.banner && (
-                    <motion.div key={effects.banner.key} className={`df-banner df-banner--${"side" in effects.banner ? effects.banner.side : "me"} df-banner--${effects.banner.kind}`}
+                    <motion.div key={effects.banner.key} {...STEADY} className={`df-banner df-banner--${"side" in effects.banner ? effects.banner.side : "me"} df-banner--${effects.banner.kind}`}
                         initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.08 }} transition={{ type: "spring", stiffness: 380, damping: 26 }}>
                         {effects.banner.kind === "activate" && <>
                             <img src={cardImage(effects.banner.code)} alt="" />
@@ -547,7 +554,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             <SteadyQuestion question={question} hold={duel.pending || duel.answered} />
             <AnimatePresence>
                 {notice && (
-                    <motion.div key={notice.uid} className="df-notice" role="status" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} onClick={() => setNotice(null)}>
+                    <motion.div key={notice.uid} {...STEADY} className="df-notice" role="status" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} onClick={() => setNotice(null)}>
                         {notice.text}
                     </motion.div>
                 )}
@@ -555,7 +562,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             {!duel.connected && !result && <div className="df-offline">Reconnecting…</div>}
             {state.retry && prompt && <div className="df-retry">That isn&apos;t allowed right now. Try another choice.</div>}
             {result && (
-                <motion.div className="df-result" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <motion.div className="df-result" {...STEADY} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <div className={`df-result__card df-result__card--${result.winner ?? "draw"}`}>
                         <h2>{result.winner === "me" ? "You win!" : result.winner === "opp" ? `${view.opp.name} wins` : "A draw"}</h2>
                         <p>{result.reason}</p>

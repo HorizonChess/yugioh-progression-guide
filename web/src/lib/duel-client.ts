@@ -76,8 +76,11 @@ export interface DuelConnection {
     close(): void;
 }
 
-/** A live socket to the duel: every message the server sends goes to `onMessage`. Reconnects with growing pauses. */
-export function connectDuel(duelId: string, onMessage: (m: DuelServerMessage) => void, onStatus?: (connected: boolean) => void): DuelConnection {
+/**
+ * A live socket to the duel: every message the server sends goes to `onMessage`. Reconnects with
+ * growing pauses, saying where the page was (`after`) so it's shown what it missed.
+ */
+export function connectDuel(duelId: string, onMessage: (m: DuelServerMessage) => void, onStatus?: (connected: boolean) => void, after?: () => string | null): DuelConnection {
     const base = API_BASE || window.location.origin;
     const token = guestDuelToken(duelId);
     const url = `${base.replace(/^http/, "ws")}/api/duels/${duelId}/live${token ? `?token=${encodeURIComponent(token)}` : ""}`;
@@ -87,7 +90,8 @@ export function connectDuel(duelId: string, onMessage: (m: DuelServerMessage) =>
     let stopped = false;
 
     const connect = () => {
-        socket = new WebSocket(url);
+        const cursor = after?.();
+        socket = new WebSocket(cursor ? `${url}${url.includes("?") ? "&" : "?"}after=${encodeURIComponent(cursor)}` : url);
         socket.onopen = () => {
             delay = 1000;
             onStatus?.(true);

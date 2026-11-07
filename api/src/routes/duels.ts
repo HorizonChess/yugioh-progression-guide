@@ -177,6 +177,7 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         const duel = await visibleDuel(request);
         const team = duel && duel.status === 'active' ? teamIn(duel, request) : null;
         if (!duel || team === null) return socket.close(4404, 'No such duel');
-        app.duels.connect(duel, team, socket);
+        const after = (request.query as { after?: unknown }).after;
+        app.duels.connect(duel, team, socket, typeof after === 'string' ? after : undefined);
     });
 }

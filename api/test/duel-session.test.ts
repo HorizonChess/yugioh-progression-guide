@@ -76,8 +76,9 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
                 expect(state.view.chain.at(-1)?.side ?? "me").toBe("me");
             }
             if (state.prompt!.kind === 'chain') {
-                // Your own turn, nothing to answer: you're never asked (cards are offered as actions).
-                if (!state.prompt!.forced && state.view.chain.length === 0 && state.view.turnPlayer === 'me') expect(state.prompt!.quiet).toBe(true);
+                // Your own turn, nothing to answer: you're never asked (cards are offered as actions),
+                // except in a battle's damage step, the only time a card like Reinforcements can be used there.
+                if (!state.prompt!.forced && state.view.chain.length === 0 && state.view.turnPlayer === 'me' && state.view.phase !== 'BP') expect(state.prompt!.quiet).toBe(true);
                 // One mandatory effect is no choice: it just happens.
                 if (state.prompt!.forced) expect(state.prompt!.options.length).toBeGreaterThan(1);
             }

@@ -188,4 +188,6 @@ export interface DuelServerMessage {
     type: 'state';
     frames: DuelFrame[];
     state: DuelState;
+    /** Where this page now is in the duel's frames: sent back on a reconnect to be shown what it missed. */
+    cursor?: string;
 }

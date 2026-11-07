@@ -986,7 +986,9 @@ html::-webkit-scrollbar-corner,
   background: linear-gradient(rgba(8, 5, 2, 0), rgba(8, 5, 2, 0.55) 34%, rgba(8, 5, 2, 0.86) 70%, rgba(8, 5, 2, 0.92));
 }
 .haul > :last-child:not(.haul__dock) { margin-bottom: 40px; }
-.haul__btn { width: clamp(132px, 10vw + 60px, 200px); }
+.haul__btn { width: clamp(190px, 10vw + 120px, 230px); }
+/* A long label ("Add to Collection") takes two lines rather than run off the cartouche on a phone. */
+.haul__btn .cartouche-btn__label { white-space: normal; max-width: 100%; }
 .haul__back { flex-basis: 100%; text-align: center; color: #e9d9ad; font: 700 12px/1 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233, 217, 173, 0.4); }
 
 [data-tier="Secret"] { --tc: #ff6ad5; }
