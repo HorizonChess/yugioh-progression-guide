@@ -500,4 +500,10 @@ Yugi's welcome (user, 2026-11-07, branch `feat/guide-welcome`): a short tour plu
 - Each welcome is said once per device and isn't marked as said while the guide is off. Options can replay them all.
 - The spotlight is a gold ring with the page dimmed around it, drawn beside Yugi so clipping and the deck builder's scaling don't break it. On desktop Yugi always comes in from the left (user, 2026-11-07); when his tablet would cover the target, the tablet rises above it. On phones he goes to the top when the target is low.
 - The timeline's Bonus Matches buttons were removed until there's something behind them.
-- Known: in the desktop deck builder, Yugi's feet touch the edge of the Export button while he points at it; the button stays visible.
+
+Welcome fixes (user, 2026-11-07, `fix/guide-taps-bottom-campaign-ui`):
+- While Yugi has more to say, a tap elsewhere doesn't move him on: only his tablet does. On his last line a tap anywhere still sends him off.
+- On phones he stays at the bottom; jumping between top and bottom was distracting. His strip rises just above a target it would cover, unless the target is too tall to clear. (He still moves to the top over a card close-up, where the details sheet is at the bottom.)
+- The menu's hello lights nothing; Campaign Mode is lit when he tells you to pick it.
+- Campaign Mode's run list and new-run form restyled to match the menu: runs as menu tablets, dark gold-rimmed fields, a gold New Game and Create.
+- In the desktop deck builder Yugi stands a little further onto the mat (19vw), clear of the Export button.
