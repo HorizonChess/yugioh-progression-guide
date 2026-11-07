@@ -1173,16 +1173,12 @@ body:has(.closeup) .guide, body:has(.ps-inspect) .guide { z-index: 310; }
 body:has(.closeup) .guide-spot { z-index: 305; }
 @media (prefers-reduced-motion: reduce) { .guide-spot { animation: none; } }
 
-/* Wider screens: the right-hand corner, when his own would cover what he's pointing at. He comes
-   in from the right, facing into the page. */
+/* Wider screens: always his left-hand corner. When his tablet would cover what he's pointing
+   at, it rises above it (--guide-rise) while he stays standing in his corner. */
 @media (min-width: 768px) {
-  .guide--at-right { left: auto; right: 0; flex-direction: row-reverse; transform: translateX(calc(100% + 40px)); }
-  .guide--at-right.guide--on { transform: none; }
-  .guide--at-right .guide__yugi { margin: 0 26px 14px -6px; }
-  .guide--at-right .guide__yugi img { transform: scaleX(-1); }
-  /* Just the tablet (the main menu, where he's already painted): low on the right, beside him. */
-  .guide--bare { left: auto; right: 4vw; bottom: 5vh; transform: translateX(calc(100% + 4vw + 40px)); }
-  .guide--bare.guide--on { transform: none; }
+  .guide__tablet { margin-bottom: calc(30px + var(--guide-rise, 0px)); transition: margin-bottom 0.35s ease; }
+  /* Just the tablet (the main menu, where he's already painted): in his corner all the same. */
+  .guide--bare .guide__tablet { margin-left: 26px; }
 }
 /* Phones: from the top, when what he's pointing at is in the lower half. */
 @media (max-width: 767px) {

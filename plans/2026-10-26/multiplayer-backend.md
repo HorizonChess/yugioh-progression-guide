@@ -498,6 +498,6 @@ Yugi's welcome (user, 2026-11-07, branch `feat/guide-welcome`): a short tour plu
 - A run's first timeline visit gets the tour: the road, the concept, open packs, build a deck, record the match, rewards, go. Duo runs get their own wording, with the rival's real duelist name.
 - Each screen explains itself on first visit: the pack store, the haul, the collection, the deck builder, Record Match, Rewards.
 - Each welcome is said once per device and isn't marked as said while the guide is off. Options can replay them all.
-- The spotlight is a gold ring with the page dimmed around it, drawn beside Yugi so clipping and the deck builder's scaling don't break it. Yugi takes the corner that covers least (the target, then buttons). On phones he goes to the top when the target is low.
+- The spotlight is a gold ring with the page dimmed around it, drawn beside Yugi so clipping and the deck builder's scaling don't break it. On desktop Yugi always comes in from the left (user, 2026-11-07); when his tablet would cover the target, the tablet rises above it. On phones he goes to the top when the target is low.
 - The timeline's Bonus Matches buttons were removed until there's something behind them.
-- Known: on the desktop pack store both bottom corners hold a button, so he briefly covers one of them while he speaks.
+- Known: in the desktop deck builder, Yugi's feet touch the edge of the Export button while he points at it; the button stays visible.
