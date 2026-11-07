@@ -105,6 +105,8 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     const [placing, setPlacing] = useState<ActionVerb | null>(null);
     const [browse, setBrowse] = useState<{ title: string; cards: DuelCardView[] } | null>(null);
     const [picked, setPicked] = useState<number[]>([]);
+    /** "Yes" to "Activate a card?": the cards you can use now glow; tap one to use it. */
+    const [choosing, setChoosing] = useState(false);
     const [nameGuess, setNameGuess] = useState("");
     /** The duel menu (⋯): closed, open, or asking to confirm a surrender. */
     const [duelMenu, setDuelMenu] = useState<"closed" | "open" | "surrender" | "log">("closed");
@@ -125,6 +127,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     useEffect(() => {
         /* eslint-disable react-hooks/set-state-in-effect -- reset per question */
         setPicked([]);
+        setChoosing(false);
         if (!keepHeld) setHeld(null);
         /* eslint-enable react-hooks/set-state-in-effect */
     }, [promptKey, keepHeld]);
@@ -159,7 +162,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
         const glow = new Set<string>();
         const chosen = new Set<string>();
         if (prompt?.kind === "actions") prompt.actions.forEach((a) => a.uid && glow.add(a.uid));
-        if (prompt?.kind === "chain") prompt.options.forEach((o) => o.uid && glow.add(o.uid));
+        if (prompt?.kind === "chain" && (choosing || prompt.forced)) prompt.options.forEach((o) => o.uid && glow.add(o.uid));
         if (prompt?.kind === "cards" && boardPick) {
             prompt.cards.forEach((c) => c.uid && glow.add(c.uid));
             prompt.cards.filter((c) => picked.includes(c.id)).forEach((c) => chosen.add(c.uid!));
@@ -200,7 +203,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             glow, picked: chosen, destroying: effects.destroying, landing: effects.landing, flaring: effects.flaring, hit: effects.hit, floats: effects.floats,
             zones, chosenZones, onZone, preview, raised: held?.card.uid ?? null,
         };
-    }, [prompt, boardPick, picked, effects, answer, placing, held, view, cards]);
+    }, [prompt, boardPick, picked, effects, answer, placing, held, view, cards, choosing]);
 
     /** An action's name, as the game calls it: a Level 5 or higher monster is Tribute Summoned (or Set). */
     const actionLabel = (a: Action) => {
@@ -229,11 +232,10 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             const back = prompt.step?.chosen.find((x) => x.uid === card.uid);
             if (back) return answer({ kind: "choice", id: back.id });
         }
-        if (prompt?.kind === "chain") {
-            const options = prompt.options.filter((o) => o.uid === card.uid);
-            if (options.length === 1) return answer({ kind: "choice", id: options[0]!.id });
-        }
-        if (prompt?.kind === "actions" && prompt.actions.some((a) => a.uid === card.uid)) {
+        // A card you can use now (after "Yes" to "Activate a card?") is picked up like one on your turn:
+        // its choices pop up over it, with its details.
+        const usable = prompt?.kind === "chain" && (choosing || prompt.forced) && prompt.options.some((o) => o.uid === card.uid);
+        if (usable || (prompt?.kind === "actions" && prompt.actions.some((a) => a.uid === card.uid))) {
             // Pick the card up (or put it back down with a second tap). On wide screens it also shows in the detail panel.
             if (held?.card.uid === card.uid) {
                 sfx.putDown();
@@ -378,7 +380,21 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     let question: ReactNode = null;
     // The card you've picked up: what you can do with it, in the bar above your hand.
     const heldActions = held && prompt?.kind === "actions" ? prompt.actions.filter((a) => a.uid === held.card.uid) : [];
-    if (held && (heldActions.length || duel.answeredKind === "actions") && !browse && duelMenu === "closed") {
+    const heldChain = held && prompt?.kind === "chain" ? prompt.options.filter((o) => o.uid === held.card.uid) : [];
+    if (held && heldChain.length && !browse && duelMenu === "closed") {
+        question = (
+            <motion.div key={`held:${held.card.uid}`} {...STEADY} className="df-pop" style={{ left: `clamp(70px, ${held.at.x}px, calc(100% - 70px))`, top: held.at.y }}
+                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: "spring", stiffness: 520, damping: 30 }}>
+                {heldChain.map((o) => (
+                    <button key={o.id} type="button" className="df-pop__btn" onClick={() => answer({ kind: "choice", id: o.id })}>
+                        Activate
+                        {o.text && heldChain.length > 1 && <small>{o.text}</small>}
+                    </button>
+                ))}
+                {isPhone && held.card.code > 0 && <button type="button" className="df-pop__btn df-pop__btn--quiet" onClick={() => look(held.card.code)}>Details</button>}
+            </motion.div>
+        );
+    } else if (held && (heldActions.length || duel.answeredKind === "actions") && !browse && duelMenu === "closed") {
         question = (
             // The card's choices pop up over it, Master Duel style: no strip across the screen.
             <motion.div key={`held:${held.card.uid}`} {...STEADY} className="df-pop" style={{ left: `clamp(70px, ${held.at.x}px, calc(100% - 70px))`, top: held.at.y }}
@@ -421,26 +437,35 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 break;
             case "chain": {
                 const last = view.chain[view.chain.length - 1];
-                // Two copies of a card offer the same thing: one button each.
-                const seen = new Set<string>();
-                const distinct = prompt.options.filter((o) => {
+                // First a plain yes or no. "Yes": the cards you can use now glow, and you pick one up like
+                // on your own turn (its details a tap away). Forced effects (several that must happen at
+                // once) skip the yes or no: only their order is yours.
+                // On top of a card of your own (your rival let it be): another card of yours can join the chain.
+                const title = prompt.forced ? "These all happen: which goes on the chain first?" : !last ? "Activate a card?" : last.side === "me" ? "Chain another card?" : `Respond to ${name(last.code)}?`;
+                const said = last ? `${last.side === "me" ? "You" : view.opp.name} activated it as chain link ${view.chain.length}.` : undefined;
+                if (!choosing && !prompt.forced) {
+                    question = sheet(title, (
+                        <div className="df-sheet__options df-sheet__options--row">
+                            {option("Yes", () => setChoosing(true))}
+                            {prompt.pass !== null && option("No", () => answer({ kind: "choice", id: prompt.pass! }), { quiet: true })}
+                        </div>
+                    ), { text: said, code: last?.code });
+                    break;
+                }
+                // Cards that can't be tapped where they lie (in a Graveyard, banished, in a Deck): buttons.
+                const seen = new Set<string>(), shown = byUid(view);
+                const offBoard = prompt.options.filter((o) => {
+                    if (o.uid && ON_BOARD.includes(o.where) && shown.has(o.uid)) return false;
                     const k = `${o.code}:${o.text ?? ""}:${o.where}`;
                     return seen.has(k) ? false : (seen.add(k), true);
                 });
-                // On top of a card of your own (your rival let it be): another card of yours can join the chain.
-                // Forced: effects that must happen, more than one at once (a lone one, or copies of one, need no
-                // question). They all happen; the player only picks the order they go on the chain.
-                const title = prompt.forced ? "These all happen: which goes on the chain first?" : !last ? "Activate a card?" : last.side === "me" ? "Chain another card?" : `Respond to ${name(last.code)}?`;
                 question = sheet(title, (
-                    <div className="df-sheet__options">
-                        {distinct.map((o) => option(name(o.code), () => answer({ kind: "choice", id: o.id }), { note: o.text }))}
-                        {prompt.pass !== null && option(last && last.side === "opp" ? "Don't respond" : last ? "No, resolve it" : "Pass", () => answer({ kind: "choice", id: prompt.pass! }), { quiet: true })}
+                    <div className="df-sheet__bar">
+                        <span>{prompt.forced ? "None can be skipped; the one you pick first resolves last. Tap a glowing card" : "Tap a glowing card to use it"}</span>
+                        {offBoard.map((o) => option(name(o.code), () => answer({ kind: "choice", id: o.id }), { note: o.text }))}
+                        {!prompt.forced && option("Back", () => (setHeld(null), setChoosing(false)), { quiet: true })}
                     </div>
-                ), {
-                    text: prompt.forced ? "None of them can be skipped. Chain links resolve last first: the one you pick first resolves last."
-                        : last ? `${last.side === "me" ? "You" : view.opp.name} activated it as chain link ${view.chain.length}.` : undefined,
-                    code: last?.code,
-                });
+                ), { compact: true });
                 break;
             }
             case "cards": {
@@ -563,7 +588,9 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             </AnimatePresence>
             {/* Cards on their way from a deck stay hidden where they'll land until they arrive. */}
             {effects.dealing.length > 0 && <style>{`${effects.dealing.map((u) => `[data-uid="${u}"]`).join(",")}{opacity:0 !important}`}</style>}
-            <SteadyQuestion question={question} hold={duel.pending || duel.answered} />
+            {/* Held only while your answer is on its way (a moment): a question waiting behind the reply's
+                animations doesn't keep the old one up, stale, all that time. */}
+            <SteadyQuestion question={question} hold={duel.answered} />
             <AnimatePresence>
                 {notice && (
                     <motion.div key={notice.uid} {...STEADY} className="df-notice" role="status" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} onClick={() => setNotice(null)}>

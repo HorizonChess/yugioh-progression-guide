@@ -43,6 +43,14 @@ respond: when it matters", as Master Duel's *Auto*) a moment is asked about:
 
 "Ask me to respond: at every chance" (Master Duel's *ON*) asks at every moment a card could be used.
 
+How it's asked (page, `DuelScreen`): first a plain **Yes / No** ("Activate a card?", "Respond to
+Mirror Force?", "Chain another card?"). Yes: the cards you can use now glow; tap one to pick it up
+and choose **Activate** (or **Details** to read it) over it, or Back to the Yes / No. Only a card that
+can't be tapped where it lies (in a Graveyard, banished) is offered as a button. Several mandatory
+effects at once skip the Yes / No (none can be skipped): their cards glow and you pick the order.
+A question you've answered stays up only until the reply arrives, never through the animations
+before the next one.
+
 ## Taking a move back (server, `backAnswers`; page, "Back")
 
 A move still being set up (its zone, its position, its Tributes) can be taken back until anything of
