@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect } from "react";
 import { SavedDeck } from "@/context/ProgressionContext";
+import "@/components/ui/game-dialog.css";
 
 interface LoadDeckModalProps {
     savedDecks: SavedDeck[];
@@ -7,39 +11,48 @@ interface LoadDeckModalProps {
     onClose: () => void;
 }
 
+/** Pick a saved deck: the game's lacquer tablet (see GameDialog) with the decks as slabs inside it. */
 export default function LoadDeckModal({ savedDecks, onLoad, onDelete, onClose }: LoadDeckModalProps) {
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== "Escape") return;
+            e.stopImmediatePropagation();
+            onClose();
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [onClose]);
+
+    const decks = [...savedDecks].sort((a, b) => b.createdAt - a.createdAt);
     return (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-800 border-2 border-slate-500 rounded-xl p-6 w-full max-w-md shadow-2xl">
-                <h2 className="text-2xl font-bold mb-4 text-amber-400 font-russo">Load Deck</h2>
-                <div className="flex flex-col gap-2 max-h-96 overflow-y-auto custom-scrollbar p-1">
-                    {savedDecks.length === 0 && <p className="text-gray-400 italic text-center">No saved decks found.</p>}
-                    {savedDecks.map(deck => {
-                        const isInvalid = deck.mainDeck.length < 40;
+        <div className="gd ld" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
+            <div className="gd__tablet ld__tablet" role="dialog" aria-modal="true" aria-labelledby="ld-title">
+                <span className="gd__eye" aria-hidden="true" />
+                <h2 id="ld-title" className="gd__title">Load a deck</h2>
+                <div className="ld__list">
+                    {decks.length === 0 && <p className="ld__none">No saved decks yet. Build one and save it.</p>}
+                    {decks.map((deck) => {
+                        const short = deck.mainDeck.length < 40;
                         return (
-                            <div key={deck.id} className="flex justify-between items-center bg-slate-900 border border-slate-700 p-2 rounded hover:bg-slate-700 transition-colors group">
-                                <button
-                                    className="flex-1 text-left"
-                                    onClick={() => onLoad(deck)}
-                                >
-                                    <div className={`font-bold ${isInvalid ? 'text-red-500' : 'text-white'}`}>
-                                        {deck.name}
-                                    </div>
-                                    <span className="text-xs text-gray-400">
-                                        {new Date(deck.createdAt).toLocaleDateString()} | {deck.mainDeck.length} Cards
+                            <div key={deck.id} className="ld__row">
+                                <button type="button" className="ld__pick" onClick={() => onLoad(deck)}>
+                                    <b className={short ? "ld__name ld__name--short" : "ld__name"}>{deck.name}</b>
+                                    <span>
+                                        {new Date(deck.createdAt).toLocaleDateString()} · {deck.mainDeck.length} cards{short ? " · under 40" : ""}
                                     </span>
                                 </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); onDelete(deck.id); }}
-                                    className="bg-red-900/50 hover:bg-red-600 text-red-200 p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
-                                >
-                                    DELETE
+                                <button type="button" className="ld__del" onClick={() => onDelete(deck.id)} aria-label={`Delete ${deck.name}`}>
+                                    Delete
                                 </button>
                             </div>
-                        )
+                        );
                     })}
                 </div>
-                <button onClick={onClose} className="mt-4 w-full bg-slate-700 hover:bg-slate-600 py-2 rounded font-bold border border-slate-500">CANCEL</button>
+                <div className="gd__buttons">
+                    <button type="button" className="gd__btn gd__btn--quiet" onClick={onClose}>
+                        <span className="gd__btn-words">Cancel</span>
+                    </button>
+                </div>
             </div>
         </div>
     );
