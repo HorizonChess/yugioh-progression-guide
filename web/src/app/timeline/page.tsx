@@ -84,7 +84,6 @@ export default function Timeline() {
                     <CartoucheButton href="/record-match">Record Match</CartoucheButton>
                     <div className="road-dock__small">
                         <Link href="/deck-builder">Prepare deck</Link>
-                        <button type="button">Bonus matches</button>
                     </div>
                 </nav>
                 <GuideSprite />
@@ -125,7 +124,7 @@ export default function Timeline() {
                 </div>
             </section>
 
-            {/* Row 2: Bottom HUD — actions, scoreboard, bonus. All vh-driven so it
+            {/* Row 2: Bottom HUD — actions and scoreboard. All vh-driven so it
                 compresses on short screens. */}
             <footer className="relative flex flex-col items-center gap-[clamp(0.5rem,2vh,1.5rem)] px-6 pb-[clamp(0.5rem,2vh,1.5rem)]">
                 <div className="flex flex-wrap justify-center gap-[clamp(1rem,2vw,1.5rem)]">
@@ -140,11 +139,6 @@ export default function Timeline() {
                 <div className="w-full flex flex-col lg:flex-row items-center lg:justify-center gap-[clamp(0.5rem,2vh,1.5rem)] relative">
                     <StatsPanel wins={wins} losses={losses} />
 
-                    <div className="lg:absolute lg:right-12 lg:top-1/2 lg:-translate-y-1/2 animate-in slide-in-from-right-10 duration-700">
-                        <CartoucheButton className="w-[clamp(10rem,min(14vw,21vh),13rem)]">
-                            Bonus Matches
-                        </CartoucheButton>
-                    </div>
                 </div>
             </footer>
 
