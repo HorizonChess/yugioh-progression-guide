@@ -1,0 +1,12 @@
+{
+  "name": "duel-spike",
+  "private": true,
+  "type": "module",
+  "description": "Prototype: EDOPro's rules engine (ocgcore, AGPL-3.0) as WASM in Node, playing a headless duel.",
+  "scripts": {
+    "duel": "node src/duel.mjs"
+  },
+  "dependencies": {
+    "ocgcore-wasm": "^0.1.6"
+  }
+}
