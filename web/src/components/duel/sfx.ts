@@ -162,6 +162,12 @@ export const sfx = {
         noise(0.16, { freq: 1800, to: 4200, q: 0.7, gain: 0.12, attack: 0.05 });
         snap(0.14, 0.12);
     },
+    /** A deck riffled and squared: a run of card ticks, then a tap. */
+    shuffle: () => {
+        for (let i = 0; i < 22; i++) noise(0.012, { filter: "bandpass", freq: 2600 + Math.random() * 1600, q: 2, gain: 0.07 + Math.random() * 0.05, delay: i * 0.021 + Math.random() * 0.006, room: 0.05 });
+        noise(0.05, { filter: "lowpass", freq: 900, gain: 0.25, delay: 0.5, room: 0.05 });
+        snap(0.52, 0.12);
+    },
     /** You pick a card up: a small rising holographic tick. */
     pickUp: () => {
         bell(1320, 0.12, { ratio: 2.01, index: 0.8, gain: 0.05, room: 0.2 });

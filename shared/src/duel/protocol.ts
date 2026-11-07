@@ -60,6 +60,8 @@ export type DuelEvent =
     | { k: 'turn'; side: Side; turn: number }
     | { k: 'phase'; phase: Phase }
     | { k: 'draw'; side: Side; count: number }
+    /** A deck shuffled (after a search, say). */
+    | { k: 'shuffle'; side: Side }
     | { k: 'summon'; side: Side; code: number; how: 'normal' | 'special' | 'flip' }
     | { k: 'set'; side: Side }
     | { k: 'activate'; side: Side; code: number; uid?: string; link: number }

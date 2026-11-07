@@ -101,7 +101,21 @@
 .rm-board .wheel-prize__name { margin-top: .6cqi; min-height: 0; font: 900 2.4cqi/1.1 var(--font-display); color: transparent; background: linear-gradient(#fff1bf, #d4af37 55%, #8a6420); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .8)); }
 
 .rm-foot { display: flex; justify-content: center; align-items: center; min-height: 4cqi; }
-.rm-back { border: 0; background: none; cursor: pointer; padding: 6px; font: 700 1.15cqi/1 var(--font-display); letter-spacing: .16em; text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255, 244, 220, .35); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(58, 50, 38, .4); }
+.rm-back { border: 0; background: none; cursor: pointer; padding: 6px; font: 800 1.3cqi/1 var(--font-display); letter-spacing: .16em; text-transform: uppercase; color: #000; text-shadow: 0 1px 0 rgba(255, 244, 220, .45); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(0, 0, 0, .55); }
+.rm-back:hover { text-decoration-color: #000; }
+
+/* A slab of the board's own stone, raised off it, with its words carved in: the way into a duel
+   played here (the tablets below are for duels played elsewhere). */
+.rm-slab {
+  position: relative; display: inline-flex; flex-direction: column; align-items: center; gap: .3cqi; padding: 1cqi 3.2cqi .8cqi; border: 0; border-radius: 6px; cursor: pointer;
+  background: linear-gradient(rgba(255, 245, 225, .14), rgba(0, 0, 0, .12)), var(--rm-stone) 37% 61% / 1024px, #7a766c;
+  box-shadow: inset 0 .15cqi 0 rgba(255, 246, 228, .5), inset 0 -.25cqi .3cqi rgba(0, 0, 0, .45), 0 0 0 .2cqi #6b4c18, 0 0 0 .32cqi #e0b54f, 0 0 0 .44cqi #3b2a10, 0 .7cqi 1.1cqi rgba(0, 0, 0, .55);
+  transition: transform .15s cubic-bezier(.2, .9, .3, 1.3), box-shadow .15s;
+}
+.rm-slab .rm-carved { font: 900 1.6cqi/1.1 var(--font-display); letter-spacing: .14em; }
+.rm-slab__tag { font: 800 .75cqi/1 var(--font-display); letter-spacing: .32em; text-transform: uppercase; color: #5c1a10; text-shadow: 0 1px 0 rgba(255, 244, 220, .35); }
+.rm-slab:hover { transform: translateY(-.15cqi); }
+.rm-slab:active { transform: translateY(.2cqi); box-shadow: inset 0 .3cqi .5cqi rgba(0, 0, 0, .5), 0 0 0 .2cqi #6b4c18, 0 0 0 .32cqi #e0b54f, 0 0 0 .44cqi #3b2a10, 0 .2cqi .4cqi rgba(0, 0, 0, .5); }
 
 /* (a container can't restyle itself, so the screen's own padding follows the viewport) */
 @media (max-width: 760px) { .rm-screen { padding: 8px; align-items: stretch; } }
@@ -135,7 +149,8 @@
   .rm-wheel__dial { width: min(86%, 330px, 46cqh); margin-left: 5%; }
   .rm-board .wheel-prize__kicker { font-size: 9px; } .rm-board .wheel-prize__name { font-size: 19px; margin-top: 4px; }
   .rm-foe--wheel { display: none; }
-  .rm-foot { flex: none; min-height: 28px; } .rm-back { font-size: 10px; }
+  .rm-foot { flex: none; min-height: 28px; } .rm-back { font-size: 11px; }
+  .rm-slab { padding: 7px 18px 6px; gap: 3px; } .rm-slab .rm-carved { font-size: 13px; } .rm-slab__tag { font-size: 7.5px; }
 }
 /* short phones: the result acts tighten so the buttons and the way back always fit */
 @container rm (max-width: 760px) and (max-height: 640px) {

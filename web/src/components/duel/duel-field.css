@@ -280,6 +280,9 @@
     100% { filter: brightness(1); box-shadow: 0 0 0 0 rgba(120, 220, 255, 0); }
 }
 
+/* A card back in flight from a deck (see deal() in useDuel). */
+.df-ghost { position: absolute; z-index: 44; border-radius: 4px; pointer-events: none; object-fit: cover; transform-origin: 50% 50%; }
+
 /* Where a blow lands: a flash, a shock ring, and sparks flying off. */
 .df-impact { position: absolute; z-index: 45; width: 0; height: 0; pointer-events: none; }
 .df-impact::before, .df-impact::after { content: ""; position: absolute; left: 0; top: 0; translate: -50% -50%; border-radius: 50%; }

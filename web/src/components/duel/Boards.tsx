@@ -61,7 +61,7 @@ export function PhoneBoard({ view, marks, onCard, onPile, phaseBar, overlay }: B
                     <Pile small label="GY" count={s.grave.length} top={top(s.grave)} onTap={() => onPile(side, "grave")} />
                     {s.banished.length > 0 && <Pile small label="Banished" count={s.banished.length} top={top(s.banished)} onTap={() => onPile(side, "banished")} />}
                     <Pile small label="Extra" count={s.extra} back />
-                    <Pile small label="Deck" count={s.deck} back />
+                    <Pile small label="Deck" count={s.deck} back pile={`${side}:deck`} />
                 </div>
             </div>
         );
@@ -103,7 +103,7 @@ export function DesktopBoard({ view, marks, onCard, onPile, onHover, phaseBar, o
         );
         const field = <Zone key="field" card={s.field} label="Field" className="df-zone--side" zone={zoneKey(side, "field", 0)} marks={marks} side={side} onHover={onHover} onTap={(c) => onCard(c, side, "field")} />;
         const gy = <Pile key="gy" label="GY" count={s.grave.length} top={top(s.grave)} onTap={() => onPile(side, "grave")} onHover={onHover} />;
-        const deck = <Pile key="deck" label="Deck" count={s.deck} back />;
+        const deck = <Pile key="deck" label="Deck" count={s.deck} back pile={`${side}:deck`} />;
         const extra = <Pile key="extra" label="Extra" count={s.extra} back />;
         const monsterRow = side === "opp" ? [gy, ...r.monsters.map((c, i) => zone(c, i, "m")), field] : [field, ...r.monsters.map((c, i) => zone(c, i, "m")), gy];
         const spellRow = side === "opp" ? [deck, ...r.spells.map((c, i) => zone(c, i, "s")), extra] : [extra, ...r.spells.map((c, i) => zone(c, i, "s")), deck];

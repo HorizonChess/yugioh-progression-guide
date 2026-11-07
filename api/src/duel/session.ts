@@ -211,8 +211,25 @@ export class DuelSession {
         this.replayQueue = [...answers];
         this.run();
         this.replayQueue = [];
-        // Frames from before a restart are history; the board starts from the state now.
-        this.frames = [[], []];
+        // A rebuilt duel's frames (from before a restart) are history: the board starts from the state
+        // now. A new duel keeps them, so the first look at it shows the decks dealt out.
+        if (answers.length) {
+            this.frames = [[], []];
+            this.delivered = [true, true];
+        }
+    }
+
+    /** Whether a player has been sent this duel's frames yet: the first connection gets them from the start. */
+    private delivered: [boolean, boolean] = [false, false];
+
+    /**
+     * What a player connecting now should watch: the duel from its start if they're the first to
+     * look (the opening hands drawn, the bot's first turn), otherwise nothing (they get the board as it is).
+     */
+    framesOnConnect(team: Team): DuelFrame[] {
+        const fresh = !this.delivered[team];
+        const frames = this.takeFrames(team);
+        return fresh ? frames : [];
     }
 
     destroy(): void {
@@ -245,6 +262,7 @@ export class DuelSession {
 
     /** The frames a player hasn't been sent yet (cleared). */
     takeFrames(team: Team): DuelFrame[] {
+        this.delivered[team] = true;
         const out = this.frames[team];
         this.frames[team] = [];
         return out;
@@ -396,6 +414,9 @@ export class DuelSession {
                     this.phase = phaseOf(m.phase);
                     out.push({ k: 'phase', phase: this.phase });
                     break;
+                case M.SHUFFLE_DECK:
+                    out.push({ k: 'shuffle', team: m.player as Team });
+                    break;
                 case M.DRAW:
                     this.tracker.draw(m.player, m.drawn.length);
                     out.push({ k: 'draw', team: m.player as Team, count: m.drawn.length });
@@ -494,6 +515,7 @@ export class DuelSession {
             switch (e.k) {
                 case 'turn': return { k: 'turn', side: side(e.team), turn: e.turn };
                 case 'draw': return { k: 'draw', side: side(e.team), count: e.count };
+                case 'shuffle': return { k: 'shuffle', side: side(e.team) };
                 case 'summon': return { k: 'summon', side: side(e.team), code: this.show(e.code), how: e.how };
                 case 'set': return { k: 'set', side: side(e.team) };
                 case 'activate': return { k: 'activate', side: side(e.team), code: this.show(e.code), uid: e.uid, link: e.link };
@@ -790,6 +812,7 @@ type TeamEvent =
     | { k: 'turn'; team: Team; turn: number }
     | { k: 'phase'; phase: Phase }
     | { k: 'draw'; team: Team; count: number }
+    | { k: 'shuffle'; team: Team }
     | { k: 'summon'; team: Team; code: number; how: 'normal' | 'special' | 'flip' }
     | { k: 'set'; team: Team }
     | { k: 'activate'; team: Team; code: number; uid?: string; link: number }

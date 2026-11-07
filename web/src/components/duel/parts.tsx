@@ -145,8 +145,10 @@ export function Zone({ card, label, marks, onTap, onHover, side, className = "",
 }
 
 /** Deck, Extra Deck, Graveyard or banished cards: the top card (or a back) and how many. */
-export function Pile({ label, count, top, back, onTap, onHover, small }: {
+export function Pile({ label, count, top, back, onTap, onHover, small, pile }: {
     label: string;
+    /** Which pile this is ("me:deck"), for cards dealt from it to fly out of. */
+    pile?: string;
     count: number;
     top?: DuelCardView;
     back?: boolean;
@@ -159,6 +161,7 @@ export function Pile({ label, count, top, back, onTap, onHover, small }: {
             type="button"
             className={`df-pile ${small ? "df-pile--small" : ""}`}
             data-label={label}
+            data-pile={pile}
             onClick={onTap}
             disabled={!onTap || !count}
             onPointerEnter={(e) => e.pointerType === "mouse" && top?.code && onHover?.(top.code)}
@@ -209,7 +212,7 @@ export function RivalHand({ cards }: { cards: DuelCardView[] }) {
     return (
         <div className="df-rival-hand" aria-label={`Your rival holds ${cards.length} cards`}>
             {cards.map((c) => (
-                <motion.img key={c.uid} layoutId={c.uid} src={CARD_BACK} alt="" className="df-rival-hand__card" transition={FLIGHT} />
+                <motion.img key={c.uid} layoutId={c.uid} data-uid={c.uid} src={CARD_BACK} alt="" className="df-rival-hand__card" transition={FLIGHT} />
             ))}
         </div>
     );

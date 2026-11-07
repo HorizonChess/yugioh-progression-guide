@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { DuelAnswer, DuelEvent, DuelFrame, DuelServerMessage, DuelState, DuelView, Side } from "@ygo/shared";
 import { connectDuel, type DuelConnection } from "@/lib/duel-client";
 import { duelPrefs } from "./duel-prefs";
+import { CARD_BACK } from "./parts";
 import { sfx, unlockSound } from "./sfx";
 
 /*
@@ -63,6 +64,55 @@ function burst(x: number, y: number, heavy: boolean) {
     setTimeout(() => el.remove(), 700);
 }
 
+const nextPaint = () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
+/**
+ * A card dealt off a deck: a card back leaves the deck and flies to where the card now is (a hand,
+ * the Graveyard, the field), and the card appears there. `reveal`: it turns face-up as it arrives.
+ */
+async function deal(uid: string, side: Side, reveal: boolean, sound: boolean) {
+    const target = document.querySelector<HTMLElement>(`[data-uid="${uid}"]`);
+    const deck = document.querySelector<HTMLElement>(`[data-pile="${side}:deck"]`);
+    const arena = document.querySelector<HTMLElement>(".df-arena");
+    if (!target || !deck || !arena) return;
+    const t = target.getBoundingClientRect(), d = deck.getBoundingClientRect(), a = arena.getBoundingClientRect();
+    const ghost = document.createElement("img");
+    ghost.src = CARD_BACK;
+    ghost.className = "df-ghost";
+    Object.assign(ghost.style, { left: `${d.left - a.left}px`, top: `${d.top - a.top}px`, width: `${d.width}px`, height: `${d.height}px` });
+    arena.appendChild(ghost);
+    target.style.opacity = "0";
+    if (sound) sfx.draw();
+    const dx = t.left + t.width / 2 - (d.left + d.width / 2), dy = t.top + t.height / 2 - (d.top + d.height / 2);
+    const sx = t.width / d.width, sy = t.height / d.height;
+    // Up off the deck, across, and down where it belongs; turning edge-on at the end if it's revealed.
+    await anim(ghost, [
+        { transform: "translate(0,0) scale(1)", filter: "drop-shadow(0 2px 3px rgba(0,0,0,.6))" },
+        { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 30}px) scale(${(1 + sx) / 2 * 1.12}, ${(1 + sy) / 2 * 1.12}) rotate(${side === "me" ? -6 : 6}deg)`, filter: "drop-shadow(0 16px 12px rgba(0,0,0,.6))", offset: 0.5 },
+        { transform: `translate(${dx}px, ${dy}px) scale(${reveal ? 0.02 : 1} , 1) scale(${sx}, ${sy})`, filter: "drop-shadow(0 2px 3px rgba(0,0,0,.6))" },
+    ], { duration: 430, easing: "cubic-bezier(.45,.05,.35,1)", fill: "forwards" });
+    ghost.remove();
+    target.style.opacity = "";
+    // The face comes round: the card opens out from edge-on.
+    const face = reveal ? target.querySelector<HTMLElement>("img") : null;
+    if (face) await anim(face, [{ transform: "scaleX(0.02)" }, { transform: "scaleX(1)" }], { duration: 150, easing: "ease-out" });
+}
+
+/** A deck is shuffled: it riffles. */
+function riffle(side: Side) {
+    const deck = document.querySelector<HTMLElement>(`[data-pile="${side}:deck"] .df-pile__back`);
+    if (!deck) return;
+    void anim(deck, [
+        { transform: "none" },
+        { transform: "translate(-7px, -2px) rotate(-7deg)" },
+        { transform: "translate(6px, -3px) rotate(6deg)" },
+        { transform: "translate(-5px, -1px) rotate(-4deg)" },
+        { transform: "translate(4px, -2px) rotate(3deg)" },
+        { transform: "translate(0, -4px)" },
+        { transform: "none" },
+    ], { duration: 640, easing: "ease-in-out" });
+}
+
 /** The whole table jolts. */
 function quake(strength: number) {
     const board = document.querySelector<HTMLElement>(".df-arena > .df");
@@ -87,6 +137,8 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
     const [connected, setConnected] = useState(true);
     const [effects, setEffects] = useState<Effects>({ destroying: [], landing: [], flaring: [], banner: null, floats: [], hit: null });
     const queue = useRef<DuelFrame[]>([]);
+    /** The field last put on screen: what's new in a frame is measured against it. */
+    const shownRef = useRef<DuelView | null>(null);
     const busy = useRef(false);
     const latest = useRef<DuelState | null>(null);
     const conn = useRef<DuelConnection | null>(null);
@@ -165,7 +217,14 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         busy.current = true;
         setPlaying(true);
         while (queue.current.length) {
-            const frame = queue.current.shift()!;
+            let frame = queue.current.shift()!;
+            // The opening hands: both duelists draw their five at the same time, each from their own
+            // deck, so the two opening draws play as one.
+            const next = queue.current[0];
+            if (!shownRef.current && frame.events.every((e) => e.k === "draw") && next?.events.every((e) => e.k === "draw")) {
+                queue.current.shift();
+                frame = { events: [...frame.events, ...next.events], view: next.view };
+            }
             // Far behind (a reconnect, a long bot turn): play quickly, and quietly.
             const pace = queue.current.length > 25 ? 0.25 : 1;
             const loud = pace === 1;
@@ -178,7 +237,35 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                     await sleep(760 * pace);
                 }
             }
+            const before = shownRef.current;
             setShown(frame.view);
+            shownRef.current = frame.view;
+            // The very first look at a duel: both decks are shuffled before the hands are dealt.
+            if (!before && loud) {
+                await nextPaint();
+                riffle("me");
+                riffle("opp");
+                sfx.shuffle();
+                await sleep(650);
+            }
+            // Cards that left a deck (drawn, searched, milled, summoned straight from it) fly out of it.
+            const dealt: { uid: string; side: Side; reveal: boolean }[] = [];
+            for (const s of ["me", "opp"] as const) {
+                const had = new Set(before ? before[s].hand.map((c) => c.uid) : []);
+                const deckBefore = before ? before[s].deck : frame.view[s].deck + frame.view[s].hand.length;
+                if (deckBefore > frame.view[s].deck) for (const c of frame.view[s].hand) if (!had.has(c.uid)) dealt.push({ uid: c.uid, side: s, reveal: s === "me" });
+            }
+            for (const e of frame.events) if (e.k === "move" && e.from === "deck" && e.to !== "hand") dealt.push({ uid: e.uid, side: e.side, reveal: e.to === "grave" || e.to === "banished" });
+            if (dealt.length && pace === 1) {
+                await nextPaint();
+                // Each side's cards come off its own deck one after another; both sides at once.
+                const nth = { me: 0, opp: 0 };
+                await Promise.all(dealt.map((c) => sleep(nth[c.side]++ * 150).then(() => deal(c.uid, c.side, c.reveal, loud && c.side === "me"))));
+            }
+            for (const e of frame.events) if (e.k === "shuffle" && loud) {
+                riffle(e.side);
+                sfx.shuffle();
+            }
             const summoned = frame.events.some((e) => e.k === "summon");
             const landing = frame.events.flatMap((e) => (e.k === "move" && FIELD.has(e.to) && !FIELD.has(e.from) ? [{ uid: e.uid, heavy: summoned && e.to !== "spell" }] : []));
             const flaring = frame.events.flatMap((e) => (e.k === "activate" && e.uid ? [e.uid] : []));
@@ -194,7 +281,6 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
             for (const e of frame.events) {
                 onEventRef.current?.(e, frame.view);
                 if (loud) {
-                    if (e.k === "draw") sfx.draw();
                     if (e.k === "summon") setTimeout(e.how === "flip" ? sfx.flip : sfx.summon, e.how === "flip" ? 0 : 200);
                     if (e.k === "set") setTimeout(sfx.set, 200);
                     if (e.k === "activate") {
@@ -235,7 +321,10 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         }
         busy.current = false;
         setPlaying(false);
-        if (latest.current) setShown(latest.current.view);
+        if (latest.current) {
+            setShown(latest.current.view);
+            shownRef.current = latest.current.view;
+        }
     }, [float, attack]);
 
     useEffect(() => {
@@ -252,7 +341,10 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
             setState(next);
             setAnswered(false);
             queue.current.push(...m.frames);
-            if (!queue.current.length && !busy.current) setShown(next.view);
+            if (!queue.current.length && !busy.current) {
+                setShown(next.view);
+                shownRef.current = next.view;
+            }
             void play();
         };
         conn.current = connectDuel(duelId, onMessage, setConnected);

@@ -405,9 +405,9 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             });
             void serial(id, async () => {
                 const { session } = await sessionOf(duel);
-                // A (re)connecting player gets the state now; animations they missed are skipped.
-                session.takeFrames(team);
-                send(socket, { type: 'state', frames: [], state: session.state(team, id) });
+                // The first look at a new duel plays it from the deal; a reconnecting player gets the
+                // state now, and animations they missed are skipped.
+                send(socket, { type: 'state', frames: session.framesOnConnect(team), state: session.state(team, id) });
             }).catch((error: unknown) => app.log.error({ err: error, duel: id }, 'duel connect failed'));
         },
     };

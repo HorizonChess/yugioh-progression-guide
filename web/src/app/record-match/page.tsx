@@ -202,7 +202,7 @@ export default function RecordMatchPage() {
                             )}
                             {stage === "board" && !pending && currentSet && (
                                 <motion.div key="board" className="rm-act rm-act--choose" {...motionProps}>
-                                    {canDuel && <button type="button" className="dl-btn dl-btn--main rm-duel-open" onClick={() => setStage("duel")}>⚔ Duel in the app <span className="dl-tag">Experimental</span></button>}
+                                    {canDuel && <button type="button" className="rm-slab rm-duel-open" onClick={() => setStage("duel")}><span className="rm-carved">⚔ Duel in the app</span><small className="rm-slab__tag">Experimental</small></button>}
                                     <RecordMatch onRecord={handleRecordMatch} />
                                 </motion.div>
                             )}
