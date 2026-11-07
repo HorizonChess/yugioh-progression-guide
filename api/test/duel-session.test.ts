@@ -117,4 +117,48 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
         expect(b.prompt).toEqual(a.prompt);
         expect(JSON.stringify(b.view)).toBe(JSON.stringify(a.view));
     });
+
+    // Ekibyo Drakmord: equip it to a rival monster; two turns later it destroys that monster and
+    // returns to the hand, both mandatory: no choice, so (rules 2) never asked.
+    const EKIBYO = 69954399;
+    const ekibyo = (rules: number | undefined, seed: number): DuelSetup => ({
+        ...setup([false, true], seed),
+        decks: [{ main: [...Array<number>(20).fill(EKIBYO), ...LOB.slice(0, 20)], extra: [] }, { main: LOB, extra: [] }],
+        ...(rules ? { rules } : {}),
+    });
+    const playEkibyo = (duel: DuelSession) => {
+        let forcedSingles = 0, equipped = 0;
+        for (let asked = 0; asked < 600 && !duel.result; asked++) {
+            const { prompt, seq } = duel.state(0, 'd');
+            if (prompt!.kind === 'chain' && prompt!.forced && prompt!.options.length === 1) forcedSingles++;
+            let a = humanAnswer(prompt!);
+            if (prompt!.kind === 'actions') {
+                const eq = prompt!.actions.find((x) => x.verb === 'activate' && x.code === EKIBYO);
+                if (eq) (a = { kind: 'choice', id: eq.id }), equipped++;
+            }
+            duel.answer(0, seq, a);
+        }
+        return { forcedSingles, equipped };
+    };
+
+    it('a lone mandatory effect just happens, and older duels still replay', async () => {
+        const engine = await loadEngine();
+        let oldForced = 0;
+        for (const seed of [1, 2, 3]) {
+            // Started before rules 2: the mandatory effect was asked, and that answer is in its history.
+            const old = new DuelSession(engine, ekibyo(undefined, seed));
+            old.start();
+            const { forcedSingles, equipped } = playEkibyo(old);
+            oldForced += forcedSingles;
+            expect(equipped).toBeGreaterThan(0);
+            const again = new DuelSession(engine, ekibyo(undefined, seed));
+            again.start(old.answers);
+            expect(again.state(0, 'd').view).toEqual(old.state(0, 'd').view);
+
+            const now = new DuelSession(engine, ekibyo(2, seed));
+            now.start();
+            expect(playEkibyo(now).forcedSingles).toBe(0);
+        }
+        expect(oldForced).toBeGreaterThan(0);
+    });
 });

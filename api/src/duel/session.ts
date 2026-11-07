@@ -28,7 +28,17 @@ export interface DuelSetup {
     solo?: boolean;
     /** Older versions played in place of a deck card (engine code → the card's own code), shown as the card itself. */
     shown?: Record<string, number>;
+    /**
+     * The rules the duel was started under. A duel is rebuilt by replaying its answers, so a change
+     * to what the server answers by itself must not apply to duels already underway: their stored
+     * answers would land on the wrong questions. Missing means 1.
+     *   2: a lone mandatory effect resolves without asking.
+     */
+    rules?: number;
 }
+
+/** The rules new duels start under (see DuelSetup.rules). */
+export const DUEL_RULES = 2;
 
 export const MODE_FLAGS: Record<DuelModeId, bigint> = {
     MR1: OcgDuelMode.MODE_MR1,
@@ -210,7 +220,11 @@ export class DuelSession {
         core.startDuel(handle);
         this.replayQueue = [...answers];
         this.run();
+        // Every stored answer must land where it was given. One left over, or one the engine refused,
+        // means the replay went another way (the rules changed under the duel): say so, don't stall.
+        const left = this.replayQueue.length;
         this.replayQueue = [];
+        if (answers.length && (left || this.retry)) throw new Error(`The duel could not be rebuilt from its answers (${left} left over${this.retry ? ', one refused' : ''})`);
         // A rebuilt duel's frames (from before a restart) are history: the board starts from the state
         // now. A new duel keeps them, so the first look at it shows the decks dealt out.
         if (answers.length) {
@@ -382,7 +396,7 @@ export class DuelSession {
                 // Nothing to activate: pass. One mandatory effect (Ekibyo Drakmord destroying its monster):
                 // there's no choice to make, so it just happens.
                 if (!m.selects.length && !m.forced) return { type: R.SELECT_CHAIN, index: null };
-                return m.forced && m.selects.length === 1 ? { type: R.SELECT_CHAIN, index: 0 } : null;
+                return m.forced && m.selects.length === 1 && (this.setup.rules ?? 1) >= 2 ? { type: R.SELECT_CHAIN, index: 0 } : null;
             case M.SELECT_COUNTER: {
                 let left = m.count;
                 const counters = m.cards.map((c) => {

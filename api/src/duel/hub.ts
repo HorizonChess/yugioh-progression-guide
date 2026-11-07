@@ -7,7 +7,7 @@ import { DuelClientMessageSchema, cardVersionAt, ruleEraFor, resolveSetIndex, ty
 import { confirmReport, reportDuoMatch } from '../game/matches';
 import { findSeries } from '../game/series';
 import { loadEngine } from './engine';
-import { DuelSession, type DuelSetup, type Team } from './session';
+import { DUEL_RULES, DuelSession, type DuelSetup, type Team } from './session';
 
 /*
  * Duels: stored in Mongo as their setup and every answer (enough to rebuild one exactly),
@@ -232,7 +232,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const shown: Record<string, number> = {};
         const played = await playedAt(deck, date, shown);
         const setup: DuelSetup = {
-            seed: newSeed(), mode, decks: [played, played], names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown,
+            seed: newSeed(), mode, decks: [played, played], names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown, rules: DUEL_RULES,
             ...(against === 'solo' ? { solo: true } : {}),
         };
         return { players, setup };
@@ -336,7 +336,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             const date = await setDate(duel);
             const [mine, theirs] = [await playedAt(challengerDeck, date, shown), await playedAt(deck, date, shown)];
             const decks = (flip ? [mine, theirs] : [theirs, mine]) as DuelSetup['decks'];
-            const setup: DuelSetup = { seed: newSeed(), mode: duel.mode, decks, names: [players[0]!.name, players[1]!.name], bots: [false, false], shown };
+            const setup: DuelSetup = { seed: newSeed(), mode: duel.mode, decks, names: [players[0]!.name, players[1]!.name], bots: [false, false], shown, rules: DUEL_RULES };
             const updated = await duels().findOneAndUpdate(
                 { _id: duel._id, status: 'waiting' },
                 { $set: { status: 'active', players, setup, updatedAt: new Date() }, $unset: { challengerDeck: '' } },
