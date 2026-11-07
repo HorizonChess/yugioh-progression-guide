@@ -195,12 +195,26 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                 onEventRef.current?.(e, frame.view);
                 if (loud) {
                     if (e.k === "draw") sfx.draw();
-                    if (e.k === "summon") setTimeout(sfx.summon, 280);
-                    if (e.k === "set") setTimeout(sfx.set, 250);
-                    if (e.k === "activate") sfx.activate();
-                    if (e.k === "damage") sfx.damage();
-                    if (e.k === "recover") sfx.heal();
-                    if (e.k === "pay") sfx.pay();
+                    if (e.k === "summon") setTimeout(e.how === "flip" ? sfx.flip : sfx.summon, e.how === "flip" ? 0 : 200);
+                    if (e.k === "set") setTimeout(sfx.set, 200);
+                    if (e.k === "activate") {
+                        sfx.activate();
+                        if (e.link > 1) setTimeout(() => sfx.chainLink(e.link), 120);
+                    }
+                    if (e.k === "phase") sfx.phase();
+                    // Life points tick as their counter runs (it runs 0.7 s).
+                    if (e.k === "damage") {
+                        sfx.damage();
+                        sfx.lpCount(700, true);
+                    }
+                    if (e.k === "recover") {
+                        sfx.heal();
+                        sfx.lpCount(700, false);
+                    }
+                    if (e.k === "pay") {
+                        sfx.pay();
+                        sfx.lpCount(700, true);
+                    }
                     if (e.k === "turn") sfx.turn(e.side === "me");
                     if (e.k === "win") (e.side === "me" ? sfx.win : e.side === "opp" ? sfx.lose : sfx.phase)();
                 }

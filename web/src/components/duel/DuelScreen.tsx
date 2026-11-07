@@ -87,7 +87,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     };
 
     /** The card you've picked up: it rises, its actions are offered, and where it could go shows. */
-    const [held, setHeld] = useState<{ card: DuelCardView; side: Side; zone: Zone } | null>(null);
+    const [held, setHeld] = useState<{ card: DuelCardView; side: Side; zone: Zone; at: { x: number; y: number } } | null>(null);
     /** What you last chose to do with a card: a Set monster goes in sideways, so its zone's sideways frame lights. */
     const [placing, setPlacing] = useState<ActionVerb | null>(null);
     const [browse, setBrowse] = useState<{ title: string; cards: DuelCardView[] } | null>(null);
@@ -211,8 +211,16 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
         }
         if (prompt?.kind === "actions" && prompt.actions.some((a) => a.uid === card.uid)) {
             // Pick the card up (or put it back down with a second tap). On wide screens it also shows in the detail panel.
-            if (held?.card.uid === card.uid) return setHeld(null);
-            setHeld({ card, side, zone });
+            if (held?.card.uid === card.uid) {
+                sfx.putDown();
+                return setHeld(null);
+            }
+            // Where its choices pop up: just above the card (a hand card rises first).
+            const el = document.querySelector(`[data-uid="${card.uid}"]`), arena = document.querySelector(".df-arena");
+            const r = el?.getBoundingClientRect(), a = arena?.getBoundingClientRect();
+            const at = r && a ? { x: r.left + r.width / 2 - a.left, y: r.top - a.top - (zone === "hand" ? r.height * 0.42 : 4) } : { x: 0, y: 0 };
+            sfx.pickUp();
+            setHeld({ card, side, zone, at });
             if (!isPhone && card.code) setDetail(card.code);
             return;
         }
@@ -293,16 +301,16 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     const heldActions = held && prompt?.kind === "actions" ? prompt.actions.filter((a) => a.uid === held.card.uid) : [];
     if (held && (heldActions.length || duel.answered) && !browse && duelMenu === "closed") {
         question = (
-            <motion.div key="hint" className="df-hint df-actions" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}>
-                <span className="df-actions__name">{held.card.code ? name(held.card.code) : "Set card"}</span>
+            // The card's choices pop up over it, Master Duel style: no strip across the screen.
+            <motion.div key={`held:${held.card.uid}`} className="df-pop" style={{ left: `clamp(70px, ${held.at.x}px, calc(100% - 70px))`, top: held.at.y }}
+                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: "spring", stiffness: 520, damping: 30 }}>
                 {heldActions.map((a) => (
-                    <button key={a.id} type="button" className="df-hint__btn df-act" onClick={() => choose(a)}>
+                    <button key={a.id} type="button" className="df-pop__btn" onClick={() => choose(a)}>
                         {actionLabel(a)}
                         {a.verb === "activate" && a.text && heldActions.filter((x) => x.verb === "activate").length > 1 && <small>{a.text}</small>}
                     </button>
                 ))}
-                {isPhone && held.card.code > 0 && <button type="button" className="df-hint__btn df-act df-act--quiet" onClick={() => look(held.card.code)}>Details</button>}
-                <button type="button" className="df-act df-act--close" aria-label="Put the card back" onClick={() => setHeld(null)}>✕</button>
+                {isPhone && held.card.code > 0 && <button type="button" className="df-pop__btn df-pop__btn--quiet" onClick={() => look(held.card.code)}>Details</button>}
             </motion.div>
         );
     } else if (browse) {
@@ -323,12 +331,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     } else if (prompt) {
         switch (prompt.kind) {
             case "actions":
-                question = (
-                    <motion.div key="hint" className="df-hint" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-                        {prompt.actions.length ? "Tap a glowing card to use it" : "Nothing to do here"}
-                        {prompt.next.map((n) => <button key={n.id} type="button" className="df-hint__btn" onClick={() => answer({ kind: "choice", id: n.id })}>{n.to === "BP" ? "Battle" : n.to === "M2" ? "Main 2" : "End turn"}</button>)}
-                    </motion.div>
-                );
+                // Nothing on screen: glowing cards can be used, and the phase bar moves the turn on.
                 break;
             case "chain": {
                 const last = view.chain[view.chain.length - 1];
@@ -376,11 +379,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 break;
             case "place":
                 // No question to read: the zones glow, and a tap on one puts the card there.
-                question = prompt.count === 1 && !prompt.disable ? (
-                    <motion.div key="hint" className="df-hint" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}>
-                        Tap a glowing zone
-                    </motion.div>
-                ) : sheet(prompt.title, (
+                question = prompt.count === 1 && !prompt.disable ? null : sheet(prompt.title, (
                     <div className="df-sheet__bar">
                         <span>Tap the glowing zones</span>
                         {prompt.count > 1 && option(`Confirm (${picked.length}/${prompt.count})`, () => answer({ kind: "many", ids: picked }), { disabled: picked.length !== prompt.count })}
@@ -462,7 +461,16 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
 
     const props = { view, marks, onCard, onPile, onHover: setDetail, phaseBar, overlay };
     return (
-        <div className={`df-arena ${duel.answered ? "is-sent" : ""}`}>
+        <div
+            className={`df-arena ${duel.answered ? "is-sent" : ""}`}
+            // A tap anywhere else puts a picked-up card back down.
+            onClick={(e) => {
+                if (held && !duel.answered && !(e.target as Element).closest(".df-pop, [data-uid], .df-zone__pick")) {
+                    sfx.putDown();
+                    setHeld(null);
+                }
+            }}
+        >
             <span className="df-experimental" title="Dueling in the app is still being built">Experimental</span>
             <LayoutGroup>
                 {isPhone ? <PhoneBoard {...props} /> : <DesktopBoard {...props} detail={detailPanel} log={logPanel} />}

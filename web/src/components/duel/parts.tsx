@@ -64,6 +64,16 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
     const tone = stat ? (stat.value > stat.base ? "up" : stat.value < stat.base ? "down" : "") : "";
     const landing = marks.landing.find((l) => l.uid === card.uid);
     const breaking = marks.destroying.includes(card.uid);
+    // Turning over: a card that changes face flips (face-up: a Flip Summon, a Set card activated;
+    // face-down: turned back over). One you Set from your hand was face-up there, so it spins over
+    // on its way down.
+    const [seenUp, setSeenUp] = useState(up);
+    const [flip, setFlip] = useState<"up" | "down" | null>(null);
+    if (seenUp !== up) {
+        setSeenUp(up);
+        setFlip(up ? "up" : "down");
+    }
+    const turning = flip ?? (landing && !up && side === "me" && card.code > 0 ? "set" : null);
     const cls = [
         "df-card", marks.glow.has(card.uid) ? "is-glow" : "", marks.raised === card.uid ? "is-raised" : "", marks.picked.has(card.uid) ? "is-picked" : "", breaking ? "is-breaking" : "",
         landing ? (landing.heavy ? "is-landing is-heavy" : "is-landing") : "", marks.flaring.includes(card.uid) ? "is-flaring" : "",
@@ -81,7 +91,14 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
         >
             <span className="df-card__lunge">
                 <span className={`df-card__turn ${card.defense ? "is-def" : ""}`}>
-                    <img src={up ? cardImage(card.code) : CARD_BACK} alt="" draggable={false} />
+                    {turning ? (
+                        <span className={`df-flip df-flip--${turning}`} onAnimationEnd={(e) => e.target === e.currentTarget && setFlip(null)}>
+                            <img className="df-flip__front" src={card.code ? cardImage(card.code) : CARD_BACK} alt="" draggable={false} />
+                            <img className="df-flip__back" src={CARD_BACK} alt="" draggable={false} />
+                        </span>
+                    ) : (
+                        <img src={up ? cardImage(card.code) : CARD_BACK} alt="" draggable={false} />
+                    )}
                     {!up && card.code > 0 && <i className="df-card__peek">Set</i>}
                 </span>
                 {stat && (
@@ -96,6 +113,7 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
                 </span>
             )}
             {landing && <span className="df-dust" aria-hidden />}
+            {landing && <span className={`df-holo ${card.defense ? "is-def" : ""}`} aria-hidden />}
             {marks.floats.filter((f) => f.uid === card.uid).map((f) => <span key={f.key} className={`df-float df-float--${f.tone}`}>{f.text}</span>)}
         </motion.button>
     );
