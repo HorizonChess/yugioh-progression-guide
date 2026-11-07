@@ -29,8 +29,8 @@ const readMs = (text: string) => 2600 + text.length * 30;
  * words typed into a stone tablet. When there's more to say (▼) he waits: tap the tablet
  * to finish the line, tap again for the next. After the last line he leaves by himself.
  * Tapping Yugi sends him off. He overlays the page and nothing moves for him. On phones
- * he and the tablet sit along the bottom, above the tab bar, and a tap anywhere on the
- * page moves him along as a tap on the tablet would.
+ * he and the tablet sit along the bottom, above the tab bar; on his last line a tap anywhere
+ * on the page moves him along as a tap on the tablet would.
  *
  * `at` (a viewport length, e.g. "17vw") stands him further in from the left edge on
  * desktop, clear of a page's own controls there. `bare` shows only the tablet, for a
@@ -80,19 +80,20 @@ export default function GuideSprite({ at: standAt, bare = false }: { at?: string
     // A tap finishes the line, then moves on.
     const tap = useCallback(() => (typedOut ? next() : setTyped(text.length)), [typedOut, next, text.length]);
 
-    // Phones: his strip covers the bottom of the screen, so a tap anywhere else on the
-    // page moves him along too (and still does what it does there). Tap by tap he
-    // finishes, moves on and leaves, and nothing stays covered.
+    // Phones: his strip covers the bottom of the screen, so once he's on his last line a tap
+    // anywhere else on the page sends him off too (and still does what it does there).
+    // While he has more to say (▼) he stays until his tablet is tapped, so a stray tap
+    // doesn't cut a conversation short.
     const root = useRef<HTMLDivElement>(null);
-    const { spot, placement, rise } = useSpotlight(root, current?.target, onStage, current?.at);
+    const { spot, rise } = useSpotlight(root, current?.target, onStage, current?.at);
     useEffect(() => {
         if (!onStage || !window.matchMedia("(max-width: 767px)").matches) return;
         const away = (e: PointerEvent) => {
-            if (!root.current?.contains(e.target as Node)) tap();
+            if (!more && !root.current?.contains(e.target as Node)) tap();
         };
         document.addEventListener("pointerdown", away, true);
         return () => document.removeEventListener("pointerdown", away, true);
-    }, [onStage, tap]);
+    }, [onStage, tap, more]);
 
     return (
         <>
@@ -100,7 +101,7 @@ export default function GuideSprite({ at: standAt, bare = false }: { at?: string
         <div
             ref={root}
             aria-hidden={!onStage}
-            className={`guide ${onStage ? "guide--on" : ""} ${bare ? "guide--bare" : ""} guide--at-${placement}`}
+            className={`guide ${onStage ? "guide--on" : ""} ${bare ? "guide--bare" : ""}`}
             style={{ "--guide-stone": `url('${STONE}')`, "--guide-rise": `${rise}px`, ...(standAt && { "--guide-at": standAt }) } as React.CSSProperties}
         >
             {!bare && (

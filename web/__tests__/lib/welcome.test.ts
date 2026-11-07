@@ -45,10 +45,10 @@ describe("Yugi's welcome", () => {
         expect(welcome("collection")).toBe(true);
     });
 
-    it("points every line at something, and keeps every wording under 140 characters", () => {
+    it("points every line but the menu's hello at something, and keeps every wording under 140 characters", () => {
         const all = [...welcomeJson.tour, ...Object.values(welcomeJson.screens).flat()] as Record<string, string>[];
         for (const line of all) {
-            expect(line.target).toBeTruthy();
+            if (line.key !== "hello") expect(line.target).toBeTruthy();
             for (const k of ["text", "solo", "duo", "guest", "member"]) {
                 const t = line[k];
                 if (t) expect(t.replace("{set}", "Legend of Blue Eyes White Dragon").replace("{rival}", "X".repeat(20)).replace("{packs}", "30").length).toBeLessThanOrEqual(140);

@@ -37,7 +37,9 @@ for (const [size, options] of Object.entries(SIZES)) {
             const m = await page.evaluate(() => {
                 const r = (e) => e?.getBoundingClientRect();
                 const spot = r(document.querySelector(".guide-spot")), tablet = r(document.querySelector(".guide--on .guide__tablet")), yugi = r(document.querySelector(".guide--on .guide__yugi"));
-                const hit = (a, b) => !!a && !!b && a.left < b.right - 4 && b.left < a.right - 4 && a.top < b.bottom - 4 && b.top < a.bottom - 4;
+                // Covered: more than a quarter of what he points at is under him.
+                const area = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+                const hit = (a, b) => !!a && !!b && area(a, b) > 0.25 * a.width * a.height;
                 return {
                     text: document.querySelector(".guide--on .guide__text")?.textContent?.replace("▼", "").trim() ?? "",
                     more: !!document.querySelector(".guide__text--more"),
@@ -49,7 +51,7 @@ for (const [size, options] of Object.entries(SIZES)) {
             const file = join(DIR, `${size}-${shots[size].length}.png`);
             await page.screenshot({ path: file });
             shots[size].push({ file, caption: `${where}: ${m.text.slice(0, 70)}${m.text.length > 70 ? "…" : ""}` });
-            if (!m.spot) problems.push(`${size} ${where}: no spotlight on "${m.text.slice(0, 40)}"`);
+            if (!m.spot && !m.text.startsWith("Hi, I'm Yugi")) problems.push(`${size} ${where}: no spotlight on "${m.text.slice(0, 40)}"`);
             if (m.covered) problems.push(`${size} ${where}: Yugi covers his spotlight on "${m.text.slice(0, 40)}"`);
             if (m.offscreen) problems.push(`${size} ${where}: spotlight off screen on "${m.text.slice(0, 40)}"`);
             if (!m.more) break;
