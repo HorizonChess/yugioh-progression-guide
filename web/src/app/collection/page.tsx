@@ -2,6 +2,7 @@
 
 import { useWelcome } from "@/lib/guide/welcome";
 import { alertRepoError, useProgression } from "@/context/ProgressionContext";
+import { gameAlert, gameAsk, gameConfirm } from "@/components/ui/GameDialog";
 import { useAuth } from "@/context/AuthContext";
 import { fetchAllSets, fetchCardsByIds, fetchCardsInSet, Card, CardSet } from "@/lib/api";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -75,25 +76,33 @@ export default function Collection() {
         const text = await file.text();
         const ids = parseYDK(text);
 
+        // Free the picker now, so the same file can be picked again after a Cancel.
+        if (fileInputRef.current) fileInputRef.current.value = "";
+
         if (ids.length === 0) {
-            alert("No valid card IDs found in YDK file.");
+            void gameAlert("No valid card IDs were found in that YDK file.", { title: "Nothing to import" });
             return;
         }
 
-        const mode = confirm("Click OK to ADD cards to your collection.\nClick Cancel to REPLACE your collection with these cards.")
-            ? "add"
-            : "replace";
+        const mode = await gameAsk<"add" | "replace" | null>({
+            title: `Import ${ids.length} cards`,
+            message: "Add them to your collection, or replace your collection with them?",
+            buttons: [
+                { label: "Cancel", value: null, kind: "quiet" },
+                { label: "Replace", value: "replace", kind: "quiet" },
+                { label: "Add", value: "add" },
+            ],
+            dismissValue: null,
+        });
+        if (!mode) return;
 
-        if (mode === "replace") {
-            if (!confirm("WARNING: This will DELETE your current collection and replace it with the YDK contents. Are you sure?")) {
-                return;
-            }
+        if (mode === "replace" && !(await gameConfirm("Your current collection will be deleted and replaced with the YDK contents.", { title: "Replace your collection?", confirmLabel: "Replace", danger: true }))) {
+            return;
         }
 
-        if (fileInputRef.current) fileInputRef.current.value = "";
         try {
             await importCollection(ids, mode);
-            alert(`Successfully imported ${ids.length} cards!`);
+            void gameAlert(`${ids.length} cards were imported.`, { title: "Import complete" });
         } catch (error) {
             alertRepoError(error);
         }
@@ -104,8 +113,8 @@ export default function Collection() {
         await downloadYDK("collection.ydk", content);
     };
 
-    const handleDelete = () => {
-        if (confirm("WARNING: This will PERMANENTLY DELETE your entire collection. This action cannot be undone. Are you sure?")) {
+    const handleDelete = async () => {
+        if (await gameConfirm("Your entire collection will be deleted for good. This can't be undone.", { title: "Delete your collection?", confirmLabel: "Delete", danger: true })) {
             importCollection([], "replace").catch(alertRepoError);
         }
     };

@@ -1,0 +1,99 @@
+/* ---------- the game's alert / confirm: a lacquer tablet with a gold edge ---------- */
+.gd {
+  position: fixed; inset: 0 0 auto; height: var(--app-h, 100dvh); z-index: 400;
+  display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+  background: radial-gradient(ellipse 70% 55% at 50% 45%, rgba(60, 40, 14, 0.45), rgba(4, 3, 2, 0.88) 75%), rgba(6, 4, 2, 0.55);
+  backdrop-filter: blur(3px); animation: gd-fade 0.2s ease-out both;
+}
+@keyframes gd-fade { from { opacity: 0; } }
+
+.gd__tablet {
+  --gd-edge: #ffe08a; --gd-glow: rgba(212, 175, 55, 0.28);
+  position: relative; width: min(100%, 440px); padding: 46px 28px 24px; border-radius: 4px; text-align: center; color: #f1e7cc;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(120, 80, 20, 0.42), transparent 62%),
+    linear-gradient(170deg, rgba(40, 28, 14, 0.98), rgba(14, 10, 6, 0.97));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 224, 138, 0.55), inset 0 0 0 5px rgba(14, 10, 6, 0.9), inset 0 0 0 6px rgba(255, 224, 138, 0.22),
+    inset 0 1px 0 rgba(255, 230, 170, 0.25), 0 0 34px var(--gd-glow), 0 22px 50px rgba(0, 0, 0, 0.7);
+  animation: gd-in 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+/* the gold rule across the top, behind the eye */
+.gd__tablet::before {
+  content: ""; position: absolute; left: 18px; right: 18px; top: 0; height: 3px; border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, transparent, var(--gd-edge) 20%, #fff1bf 50%, var(--gd-edge) 80%, transparent);
+  box-shadow: 0 0 12px var(--gd-glow);
+}
+@keyframes gd-in { from { opacity: 0; transform: translateY(14px) scale(0.94); } }
+
+.gd__tablet--danger {
+  --gd-edge: #ff8a7a; --gd-glow: rgba(211, 47, 47, 0.32);
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(130, 28, 20, 0.45), transparent 62%),
+    linear-gradient(170deg, rgba(42, 16, 12, 0.98), rgba(14, 7, 6, 0.97));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 138, 122, 0.55), inset 0 0 0 5px rgba(14, 7, 6, 0.9), inset 0 0 0 6px rgba(255, 138, 122, 0.2),
+    inset 0 1px 0 rgba(255, 200, 180, 0.2), 0 0 34px var(--gd-glow), 0 22px 50px rgba(0, 0, 0, 0.7);
+}
+
+/* the Millennium Eye, set into the top edge */
+.gd__eye {
+  position: absolute; left: 50%; top: 0; width: 62px; height: 58px; transform: translate(-50%, -52%);
+  background: url('../../../public/ui/millennium-eye.webp') center / contain no-repeat;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 10px var(--gd-glow));
+}
+.gd__eye::after {
+  content: ""; position: absolute; inset: -40%; z-index: -1; border-radius: 50%;
+  background: radial-gradient(circle, var(--gd-glow), transparent 62%); animation: gd-breathe 3.6s ease-in-out infinite;
+}
+@keyframes gd-breathe { 50% { opacity: 0.45; } }
+
+.gd__title {
+  margin: 0 0 10px; font: 800 clamp(19px, 1.2vw + 14px, 25px)/1.15 var(--font-display); letter-spacing: 0.04em;
+  color: var(--gd-edge); text-shadow: 0 2px 8px #000;
+}
+.gd__message {
+  font: 600 15px/1.5 var(--font-main); color: #e6d9b8; text-shadow: 0 1px 4px #000;
+  white-space: pre-line; overflow-wrap: anywhere; max-height: min(50vh, 340px); overflow-y: auto;
+}
+.gd__message b { color: #ffe08a; }
+
+.gd__buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 18px; margin-top: 22px; }
+
+/* the buttons: small slanted tablets, as on the main menu */
+@property --gd-lean { syntax: "<angle>"; inherits: true; initial-value: -10deg; }
+@property --gd-slide { syntax: "<length>"; inherits: true; initial-value: 0px; }
+.gd__btn {
+  --gd-lean: -10deg; --gd-slide: 0px;
+  position: relative; overflow: hidden; min-width: 132px; padding: 11px 26px; border: 0; border-radius: 3px; cursor: pointer; color: var(--gd-edge);
+  transform: translateX(var(--gd-slide)) skewX(var(--gd-lean));
+  transition: --gd-lean 0.3s cubic-bezier(0.4, 0, 0.2, 1), --gd-slide 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s, filter 0.3s;
+  background: radial-gradient(120% 160% at 0% 0%, rgba(120, 80, 20, 0.5), transparent 60%), linear-gradient(100deg, rgba(48, 34, 16, 0.98), rgba(18, 12, 6, 0.96));
+  box-shadow: inset 4px 0 0 var(--gd-edge), inset 0 1px 0 rgba(255, 230, 170, 0.2), 0 0 0 1px var(--gd-edge), 0 0 18px var(--gd-glow), 0 8px 18px rgba(0, 0, 0, 0.55);
+  -webkit-tap-highlight-color: transparent;
+}
+.gd__btn::before { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255, 240, 200, 0.16) 50%, transparent 65%) -200% 0 / 200% 100% no-repeat; transition: background-position 0.8s; }
+.gd__btn-words { position: relative; display: block; transform: skewX(calc(-1 * var(--gd-lean))); font: 800 14px/1 var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; text-shadow: 0 2px 6px #000; }
+.gd__btn:hover, .gd__btn:focus-visible, .gd__btn:active {
+  --gd-lean: -16deg; --gd-slide: 6px; filter: brightness(1.15); outline: none;
+  box-shadow: inset 4px 0 0 #fff1bf, inset 0 1px 0 rgba(255, 230, 170, 0.25), 0 0 0 1px #fff1bf, 0 0 24px var(--gd-glow), 0 10px 22px rgba(0, 0, 0, 0.6);
+}
+.gd__btn:hover::before, .gd__btn:focus-visible::before { background-position: 200% 0; }
+.gd__btn--quiet {
+  color: #d9ccaa; background: linear-gradient(100deg, rgba(30, 24, 18, 0.92), rgba(12, 10, 8, 0.9));
+  box-shadow: inset 4px 0 0 rgba(217, 204, 170, 0.45), 0 0 0 1px rgba(217, 204, 170, 0.35), 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+.gd__btn--quiet:hover, .gd__btn--quiet:focus-visible, .gd__btn--quiet:active {
+  color: #f1e7cc; box-shadow: inset 4px 0 0 #f1e7cc, 0 0 0 1px rgba(241, 231, 204, 0.7), 0 10px 22px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 420px) {
+  .gd__tablet { padding: 42px 18px 20px; }
+  .gd__buttons { flex-direction: column-reverse; align-items: stretch; }
+  .gd__btn { --gd-lean: -6deg; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gd, .gd__tablet { animation: none; }
+  .gd__eye::after { animation: none; }
+  .gd__btn { transition: box-shadow 0.3s, filter 0.3s; }
+}
