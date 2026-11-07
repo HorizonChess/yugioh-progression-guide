@@ -379,7 +379,10 @@ export class DuelSession {
             case M.SORT_CHAIN:
                 return { type: R.SORT_CARD, order: null };
             case M.SELECT_CHAIN:
-                return !m.selects.length && !m.forced ? { type: R.SELECT_CHAIN, index: null } : null;
+                // Nothing to activate: pass. One mandatory effect (Ekibyo Drakmord destroying its monster):
+                // there's no choice to make, so it just happens.
+                if (!m.selects.length && !m.forced) return { type: R.SELECT_CHAIN, index: null };
+                return m.forced && m.selects.length === 1 ? { type: R.SELECT_CHAIN, index: 0 } : null;
             case M.SELECT_COUNTER: {
                 let left = m.count;
                 const counters = m.cards.map((c) => {
@@ -669,9 +672,13 @@ export class DuelSession {
                     return { id: i, uid: r.uid, code: this.show(c.code), where: r.where, ...(text ? { text } : {}) };
                 });
                 const pass = m.forced ? null : 1 << 20;
-                // spe_count: the effects the engine flags for this moment (triggers, and cards whose hint
-                // timing fits). Without a chain to answer, the moment after your own play is quiet too.
-                const quiet = !m.forced && this.chain.length === 0 && (m.spe_count === 0 || this.lastActor === team);
+                // A window is worth asking about only to answer your rival. With a chain, that's when its
+                // newest link is theirs. Without one: never on your own turn (cards you can use on your own
+                // turn are offered as actions, like an attack), and on theirs only after their play, when
+                // the engine flags a card of yours as made for the moment (spe_count: Trap Hole on a summon).
+                // Optional triggers ("you can...") are asked separately, so none is lost by passing here.
+                const top = this.chain[this.chain.length - 1];
+                const quiet = !m.forced && (top ? top.team === team : this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team);
                 return q({ kind: 'chain', forced: m.forced, options, pass, ...(quiet ? { quiet } : {}) }, (a) => {
                     const id = choice(a);
                     if (id === null) return null;
@@ -713,8 +720,11 @@ export class DuelSession {
             case M.SELECT_EFFECTYN:
             case M.SELECT_YESNO: {
                 const code = m.type === M.SELECT_EFFECTYN ? m.code : undefined;
-                const text = describe(m.description) ?? (code ? `Use the effect of ${this.engine.name(code)}?` : 'Yes or no?');
-                return q({ kind: 'yesno', title: text.replace('[%ls]', code ? this.engine.name(code) : ''), ...(code ? { code: this.show(code) } : {}) }, (a) => {
+                // The engine's own question templates ("Activate the Trigger Effect of "%ls" from [%ls]?")
+                // read better in plain words; a card's own question text is kept as written.
+                const own = describe(m.description);
+                const text = own && !own.includes('%ls') ? own : code ? `Activate the effect of ${this.engine.name(code)}?` : own ? own.replace(/\[?%ls\]?/g, '') : 'Yes or no?';
+                return q({ kind: 'yesno', title: text, ...(code ? { code: this.show(code) } : {}) }, (a) => {
                     const id = choice(a);
                     if (id !== 0 && id !== 1) return null;
                     return m.type === M.SELECT_EFFECTYN ? { type: R.SELECT_EFFECTYN, yes: id === 1 } : { type: R.SELECT_YESNO, yes: id === 1 };

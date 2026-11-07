@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ruleChangeAt, ruleEraFor } from "@ygo/shared";
 import DuelScreen from "@/components/duel/DuelScreen";
@@ -18,6 +18,8 @@ import "@/components/duel/duel-launcher.css";
  * A duel on the server's rules engine (route: /duel/?id=<duelId>). Before it starts, the
  * challenger waits and the rival picks a deck to accept with; then the board takes the screen.
  */
+const noSubscribe = () => () => {};
+
 function DuelPageContent() {
     const id = useSearchParams().get("id");
     const router = useRouter();
@@ -26,8 +28,10 @@ function DuelPageContent() {
     const [duel, setDuel] = useState<DuelSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [deckId, setDeckId] = useState("");
-    // A guest's practice duel opens with the token this browser kept.
-    const allowed = !!user || (!!id && !!guestDuelToken(id));
+    // A guest's practice duel opens with the token this browser kept. The server can't see it, so
+    // the page renders as loading until the browser has looked (no mismatch, no "Sign in" flash).
+    const hasToken = useSyncExternalStore(noSubscribe, () => !!id && !!guestDuelToken(id), () => null);
+    const allowed = !!user || !!hasToken;
 
     useEffect(() => {
         if (!id || !allowed) return;
@@ -65,6 +69,7 @@ function DuelPageContent() {
         // eslint-disable-next-line react-hooks/exhaustive-deps -- once per duel
     }, [active, duel?.id]);
 
+    if (hasToken === null && !user) return <Message text="Shuffling the decks…" />;
     if (!allowed) return <Message text="Sign in to duel." onBack={() => router.push("/record-match")} />;
     if (error) return <Message text={error} onBack={() => router.push("/record-match")} />;
     if (!id || !duel) return <Message text="Shuffling the decks…" />;

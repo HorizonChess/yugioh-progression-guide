@@ -68,11 +68,18 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
             for (const c of [...state.view.opp.monsters, ...state.view.opp.spells]) if (c && !c.faceUp) expect(c.code).toBe(0);
             expect(state.view.me.hand.every((c) => c.code > 0)).toBe(true);
             kinds.add(state.prompt!.kind);
-            // A quiet chain window is never forced and never has a chain to answer.
+            // A quiet chain window is never forced...
             if (state.prompt!.kind === 'chain' && state.prompt!.quiet) {
                 quiet++;
                 expect(state.prompt!.forced).toBe(false);
-                expect(state.view.chain).toEqual([]);
+                // ...and has no rival link to answer.
+                expect(state.view.chain.at(-1)?.side ?? "me").toBe("me");
+            }
+            if (state.prompt!.kind === 'chain') {
+                // Your own turn, nothing to answer: you're never asked (cards are offered as actions).
+                if (!state.prompt!.forced && state.view.chain.length === 0 && state.view.turnPlayer === 'me') expect(state.prompt!.quiet).toBe(true);
+                // One mandatory effect is no choice: it just happens.
+                if (state.prompt!.forced) expect(state.prompt!.options.length).toBeGreaterThan(1);
             }
             // A stale or out-of-range answer is refused without touching the duel.
             expect(duel.answer(0, state.seq + 1, { kind: 'choice', id: 0 })).toBe(false);

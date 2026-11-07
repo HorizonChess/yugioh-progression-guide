@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { isValidElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import { zoneKey, type ActionVerb, type DuelCardView, type DuelEvent, type DuelPrompt, type DuelView, type Phase, type PlaceZone, type PromptCard, type Side, type Zone } from "@ygo/shared";
 import { CardCloseUp, CardPlate } from "@/components/card/CardPlate";
@@ -12,6 +12,7 @@ import { cardImage, type CardMarks, type Pose } from "./parts";
 import { setDuelPrefs, useDuelPrefs } from "./duel-prefs";
 import { sfx } from "./sfx";
 import { useDuel } from "./useDuel";
+import { useSteady } from "./useSteady";
 import "./duel-field.css";
 
 const PHASES: Phase[] = ["DP", "SP", "M1", "BP", "M2", "EP"];
@@ -428,7 +429,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                     </motion.div>
                 )}
             </AnimatePresence>
-            <AnimatePresence>{question}</AnimatePresence>
+            <SteadyQuestion question={question} hold={duel.pending || duel.answered} />
             {!duel.connected && !result && <div className="df-offline">Reconnecting…</div>}
             {state.retry && prompt && <div className="df-retry">That isn&apos;t allowed right now. Try another choice.</div>}
             {result && (
@@ -481,6 +482,20 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
 }
 
 /** One line of the duel log, from the player's side of the table. */
+/**
+ * The question on screen. A sheet stays up, inert, through the moment between one question and
+ * the next (see useSteady): the next one takes its place where it stands, so menus never blink.
+ */
+function SteadyQuestion({ question, hold }: { question: ReactNode; hold: boolean }) {
+    const sheet = isValidElement(question) && question.key === "sheet";
+    const { value, lingering } = useSteady(question ? { node: question, linger: sheet } : null, 450, hold);
+    return (
+        <div className={`df-question ${lingering ? "is-lingering" : ""}`}>
+            <AnimatePresence>{value?.node}</AnimatePresence>
+        </div>
+    );
+}
+
 function describe(e: DuelEvent, view: DuelView, name: (code: number) => string): string | null {
     const who = (s: Side | null) => (s === "me" ? "You" : view.opp.name);
     const cards = byUid(view);

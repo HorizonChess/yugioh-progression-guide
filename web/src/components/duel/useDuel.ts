@@ -370,6 +370,8 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         state,
         view: shown,
         prompt: playing ? null : (state?.prompt ?? null),
+        /** A question for you is waiting for the animations to finish. */
+        pending: playing && !!state?.prompt && state.prompt.kind !== "actions",
         answered,
         playing,
         connected,

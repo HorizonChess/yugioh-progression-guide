@@ -436,6 +436,10 @@
 .df-pop__btn small { font-size: 9px; color: #c9bc9a; max-width: 14em; white-space: normal; text-align: center; }
 .df-pop__btn--quiet { border-color: #5a4630; background: transparent; color: #c9bc9a; }
 .df-arena.is-sent .df-pop { pointer-events: none; }
+/* The question on screen; a sheet lingering between questions (see useSteady) is inert. */
+.df-question { display: contents; }
+.df-question .df-sheet { transition: filter 0.2s ease; }
+.df-question.is-lingering .df-sheet { pointer-events: none; filter: brightness(0.82) saturate(0.75); }
 
 /* ================================================================ PHONES: portrait, Master Duel style */
 .df--phone {
