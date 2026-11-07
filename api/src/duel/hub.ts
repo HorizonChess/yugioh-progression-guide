@@ -367,9 +367,21 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         },
         concede(duel, team) {
             return serial(duel._id.toHexString(), async () => {
-                const { session } = await sessionOf(duel);
-                session.concede(team);
-                await persistAndBroadcast(duel);
+                const entry = await sessionOf(duel).catch((error: unknown) => {
+                    app.log.error({ err: error, duel: duel._id }, 'duel could not be rebuilt; closing it as conceded');
+                    return null;
+                });
+                if (entry) {
+                    entry.session.concede(team);
+                    return persistAndBroadcast(duel);
+                }
+                // A duel that can't be rebuilt can still be given up: close it where it's stored.
+                const winner = (1 - team) as Team;
+                await duels().updateOne(
+                    { _id: duel._id, status: 'active' },
+                    { $set: { status: 'finished', winner, reason: `${duel.players[team]!.name} surrendered`, updatedAt: new Date() }, $unset: { openKey: '' } },
+                );
+                if (duel.kind === 'rival') await recordResult(duel, winner);
             });
         },
         connect(duel, team, socket) {

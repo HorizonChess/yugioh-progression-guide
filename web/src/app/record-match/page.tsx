@@ -207,7 +207,7 @@ export default function RecordMatchPage() {
                                 </motion.div>
                             )}
                             {stage === "duel" && !pending && series && (
-                                <motion.div key="duel" className="rm-act" {...motionProps}>
+                                <motion.div key="duel" className="rm-act rm-act--scroll" {...motionProps}>
                                     <DuelLauncher seriesId={series.id} guest={!userId} setName={currentSet?.set_name} duo={!!userId && series.mode === "duo"} rival={rival} decks={savedDecks} setDate={currentSet?.tcg_date} onBack={() => setStage("board")} />
                                 </motion.div>
                             )}

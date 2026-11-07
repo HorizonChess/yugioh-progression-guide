@@ -158,6 +158,20 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(JSON.stringify(stored)).not.toContain(token);
     });
 
+    it('can always give up a duel, even one that can no longer be rebuilt', async () => {
+        const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot' } });
+        const { duel, token } = started.json();
+        // A stored copy whose answers no longer fit the duel (as when the rules changed under it).
+        const original = await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) });
+        const broken = { ...original!, _id: new ObjectId(), openKey: `broken:${duel.id}`, answers: Array(30).fill({ t: 'bogus' }) };
+        await app.db.collection('duels').insertOne(broken);
+        const res = await app.inject({ method: 'POST', url: `/api/duels/${broken._id.toHexString()}/concede`, headers: { 'x-duel-token': token } });
+        expect(res.statusCode).toBeLessThan(300);
+        const stored = await app.db.collection('duels').findOne({ _id: broken._id });
+        expect(stored).toMatchObject({ status: 'finished', winner: 1, reason: 'Guest surrendered' });
+        expect(stored!.openKey).toBeUndefined();
+    });
+
     it('refuses a guest deck that is too small, has unknown cards, or is at a set that does not exist', async () => {
         const post = (payload: object) => app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot', ...payload } });
         expect((await post({ deck: { main: DECK.slice(0, 30), extra: [] } })).statusCode).toBe(400);

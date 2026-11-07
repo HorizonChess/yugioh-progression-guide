@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ruleEraFor } from "@ygo/shared";
 import type { SavedDeck } from "@/lib/storage";
-import { acceptDuel, declineDuel, duelPath, getDuel, lastGuestDuel, openDuels, startDuel, startGuestDuel, type DuelSummary, type PracticeOpponent } from "@/lib/duel-client";
+import { acceptDuel, concedeDuel, declineDuel, duelPath, getDuel, lastGuestDuel, openDuels, startDuel, startGuestDuel, type DuelSummary, type PracticeOpponent } from "@/lib/duel-client";
 import { alertRepoError } from "@/context/ProgressionContext";
 import "./duel-launcher.css";
 
@@ -101,7 +101,13 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
             {open === null && <p className="dl-note">Looking for open duels…</p>}
 
             {challenge?.status === "active" && <button type="button" className="dl-btn dl-btn--main" onClick={() => go(challenge)}>Back to your duel with {rival}</button>}
-            {practice && <button type="button" className="dl-btn" onClick={() => go(practice)}>Back to your practice duel</button>}
+            {practice && (
+                <div className="dl-row">
+                    <button type="button" className="dl-btn" onClick={() => go(practice)}>Back to your practice duel</button>
+                    {/* A practice duel that went wrong (or that you're done with) shouldn't stand in the way of a new one. */}
+                    <button type="button" className="dl-btn dl-btn--quiet" disabled={busy} onClick={() => run(() => concedeDuel(practice.id))}>End it, start a new one</button>
+                </div>
+            )}
 
             {theirs && (
                 <div className="dl-card">
