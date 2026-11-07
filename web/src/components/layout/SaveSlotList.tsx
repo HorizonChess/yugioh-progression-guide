@@ -12,6 +12,7 @@ import { fetchAllSets, CardSet } from "@/lib/api";
 import { inviteLink, inviteRival } from "@/lib/duo-client";
 import type { SeriesMode, SeriesSummary } from "@/lib/repo/types";
 import GuestSavesImport from "./GuestSavesImport";
+import { gameConfirm } from "@/components/ui/GameDialog";
 
 interface SaveSlotListProps {
     onSaveSelect?: (saveId: string) => void;
@@ -87,11 +88,12 @@ export default function SaveSlotList({ onSaveSelect }: SaveSlotListProps) {
 
     const handleDelete = (e: React.MouseEvent, save: SeriesSummary) => {
         e.stopPropagation();
-        const question =
-            save.mode === "duo" && save.members.length > 1
-                ? "Leave this duo series? Your cards in it are lost, and the series pauses for your rival."
-                : "Are you sure you want to delete this save file?";
-        if (confirm(question)) deleteSeries(save.id).catch(alertRepoError);
+        const duo = save.mode === "duo" && save.members.length > 1;
+        const question = duo
+            ? "Your cards in it are lost, and the series pauses for your rival."
+            : `"${save.name}" and every card in it will be gone for good.`;
+        void gameConfirm(question, { title: duo ? "Leave this duo series?" : "Delete this save?", confirmLabel: duo ? "Leave" : "Delete", danger: true })
+            .then((yes) => { if (yes) deleteSeries(save.id).catch(alertRepoError); });
     };
 
     /** How a duo series stands, from this player's side. */
