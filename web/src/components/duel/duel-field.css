@@ -112,9 +112,12 @@
     pointer-events: none;
 }
 
-/* A zone a placement question offers: it glows, and the whole zone is the button. */
-.df-zone.is-offered::before { border-color: #f5c542; animation: df-glow 1s ease-in-out infinite alternate; }
-.df-zone.is-chosen::before { border-color: #8dff8d; box-shadow: 0 0 0 2px #8dff8d, 0 0 16px #8dff8d; }
+/* A zone a placement question offers: the frame the card will fill glows (upright, or sideways for a
+   card going to Defense Position), and the whole zone is the button. Before you choose what to do with
+   a card, the zones it could go to show the same frame, faintly. */
+.df-zone.is-offered:not(.is-side)::before, .df-zone.is-offered.is-side::after { border-color: #f5c542; animation: df-glow 1s ease-in-out infinite alternate; z-index: 1; }
+.df-zone.is-preview:not(.is-side)::before, .df-zone.is-preview.is-side::after { border-color: rgba(245, 197, 66, 0.8); box-shadow: 0 0 0 1px rgba(245, 197, 66, 0.45), 0 0 10px rgba(212, 175, 55, 0.35); z-index: 1; }
+.df-zone.is-chosen:not(.is-side)::before, .df-zone.is-chosen.is-side::after { border-color: #8dff8d; box-shadow: 0 0 0 2px #8dff8d, 0 0 16px #8dff8d; }
 .df-zone__pick { position: absolute; inset: 0; z-index: 4; padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 6px; }
 .df-zone__pick:hover { background: rgba(245, 197, 66, 0.12); }
 
@@ -159,8 +162,15 @@
 .df-stat .is-up { color: #8dff8d; }
 .df-stat .is-down { color: #ff8a7a; }
 
-.df-card.is-glow, .df-hand__card.is-glow { animation: df-glow 1s ease-in-out infinite alternate; border-radius: 5px; z-index: 3; }
-.df-card.is-picked, .df-hand__card.is-picked, .df-listcard.is-picked img { box-shadow: 0 0 0 3px #8dff8d, 0 0 16px #8dff8d; border-radius: 5px; }
+/* The glow traces the card itself: upright, or sideways in Defense Position (the card's frame turns with it). */
+.df-card.is-glow .df-card__turn, .df-hand__card.is-glow { animation: df-glow 1s ease-in-out infinite alternate; border-radius: 4px; }
+.df-card.is-glow { z-index: 3; }
+.df-card.is-picked .df-card__turn, .df-hand__card.is-picked, .df-listcard.is-picked img { box-shadow: 0 0 0 3px #8dff8d, 0 0 16px #8dff8d; border-radius: 4px; }
+/* The card you've picked up rises out of the hand (or off its zone). */
+.df-hand__card { transition: translate 0.18s ease-out, scale 0.18s ease-out; }
+.df-hand__card.is-raised { translate: 0 calc(var(--hw) * -0.32); scale: 1.12; z-index: 5; }
+.df-card.is-raised .df-card__turn { translate: 0 -5px; scale: 1.08; filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.7)); }
+.df-card__turn { transition: transform 0.35s cubic-bezier(0.3, 0.7, 0.3, 1), translate 0.18s ease-out, scale 0.18s ease-out; }
 @keyframes df-glow {
     from { box-shadow: 0 0 0 2px rgba(245, 197, 66, 0.55), 0 0 6px rgba(212, 175, 55, 0.4); }
     to { box-shadow: 0 0 0 2px #f5c542, 0 0 18px #d4af37; }
@@ -245,7 +255,7 @@
 
 .df-hand { display: flex; justify-content: center; align-items: flex-end; }
 .df-hand__card { flex: none; width: var(--hw); aspect-ratio: 59 / 86; padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 50% 120%; }
-.df-hand__card:hover { translate: 0 -10px; }
+.df-hand__card:not(.is-raised):hover { translate: 0 -10px; }
 .df-rival-hand { display: flex; justify-content: center; overflow: hidden; }
 .df-rival-hand__card { width: calc(var(--cw) * 0.8); height: auto; aspect-ratio: 59 / 86; margin: 0 calc(var(--cw) * -0.1); transform: translateY(-40%); }
 
@@ -357,6 +367,15 @@
 }
 .df-hint--wait { padding: 8px 14px; }
 .df-hint__btn { padding: 6px 12px; border-radius: 14px; border: 1px solid #b8860b; background: #2d2414; color: #f0e6d2; font: 12px var(--font-techno); cursor: pointer; }
+/* A picked-up card's actions: the card's name, then a button for each thing it can do. It sits higher
+   than the plain hint, clear of the raised card. */
+.df-actions { flex-wrap: wrap; justify-content: center; max-width: min(96vw, 560px); }
+.df-actions__name { font: 12px var(--font-techno); color: #d4af37; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.df-act { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.df-act:hover { background: #3a2c17; border-color: #f5c542; }
+.df-act small { font-size: 10px; color: #c9bc9a; max-width: 16em; white-space: normal; text-align: center; }
+.df-act--quiet { border-color: #5a4630; color: #c9bc9a; background: transparent; }
+.df-act--close { width: 28px; height: 28px; padding: 0; border-radius: 50%; border: 1px solid #5a4630; background: transparent; color: #c9bc9a; font-size: 12px; cursor: pointer; }
 
 /* ================================================================ PHONES: portrait, Master Duel style */
 .df--phone {
@@ -388,6 +407,7 @@
 .df--phone .df-hand { height: calc(var(--hw) * 1.46 + 6px); margin-top: auto; }
 .df--phone .df-sheet { left: 0; right: 0; bottom: 0; padding-bottom: calc(env(safe-area-inset-bottom) + 14px); }
 .df--phone .df-hint { left: 50%; translate: -50% 0; bottom: calc(var(--hw) * 1.46 + 14px); }
+.df--phone .df-actions { bottom: calc(var(--hw) * 1.95 + 14px); }
 
 /* ================================================================ WIDE SCREENS: the playmat, with side panels */
 .df--desk {
@@ -431,4 +451,5 @@
 .df--desk .df-sheet--compact { bottom: calc(var(--hw) * 1.46 + 20px); }
 .df--desk .df-sheet__grip { display: none; }
 .df--desk .df-hint { left: 50%; translate: -50% 0; bottom: calc(var(--hw) * 1.46 + 18px); }
+.df--desk .df-actions { bottom: calc(var(--hw) * 1.95 + 18px); }
 .df--desk .df-chain { left: calc(var(--left) + 28px); }

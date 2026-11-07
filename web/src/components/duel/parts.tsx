@@ -9,6 +9,8 @@ const IMG = process.env.NEXT_PUBLIC_IMAGE_HOST ?? "";
 export const cardImage = (code: number) => `${IMG}/cards/${code}_md.jpg`;
 export const CARD_BACK = `${IMG}/cards/back_high.jpg`;
 
+export type Pose = "up" | "side";
+
 export interface CardMarks {
     /** Cards the question is about (or that have actions): they glow. */
     glow: ReadonlySet<string>;
@@ -20,10 +22,17 @@ export interface CardMarks {
     /** The side whose life points were just hit. */
     hit: Side | null;
     floats: readonly Float[];
-    /** Zones a `place` question offers (by zoneKey), and what a tap on one does. */
-    zones: ReadonlySet<string>;
+    /**
+     * Zones a `place` question offers (by zoneKey), and what a tap on one does. Each says which of the
+     * zone's frames lights up: `up` the upright card frame, `side` the sideways (Defense Position) one.
+     */
+    zones: ReadonlyMap<string, Pose>;
     chosenZones: ReadonlySet<string>;
     onZone: (key: string) => void;
+    /** Where the card you're holding up could go: these zones show it, faintly, before you choose. */
+    preview: ReadonlyMap<string, Pose>;
+    /** The card you've picked up (its actions are on offer): it rises. */
+    raised: string | null;
 }
 
 /**
@@ -56,7 +65,7 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
     const landing = marks.landing.find((l) => l.uid === card.uid);
     const breaking = marks.destroying.includes(card.uid);
     const cls = [
-        "df-card", marks.glow.has(card.uid) ? "is-glow" : "", marks.picked.has(card.uid) ? "is-picked" : "", breaking ? "is-breaking" : "",
+        "df-card", marks.glow.has(card.uid) ? "is-glow" : "", marks.raised === card.uid ? "is-raised" : "", marks.picked.has(card.uid) ? "is-picked" : "", breaking ? "is-breaking" : "",
         landing ? (landing.heavy ? "is-landing is-heavy" : "is-landing") : "", marks.flaring.includes(card.uid) ? "is-flaring" : "",
     ].join(" ");
     return (
@@ -104,10 +113,13 @@ export function Zone({ card, label, marks, onTap, onHover, side, className = "",
     /** This zone's key, so a `place` question can offer it. */
     zone?: string;
 }) {
-    const offered = zone !== undefined && marks.zones.has(zone);
+    const offered = zone === undefined ? undefined : marks.zones.get(zone);
+    const preview = zone === undefined || offered ? undefined : marks.preview.get(zone);
     const chosen = zone !== undefined && marks.chosenZones.has(zone);
+    const pose = offered ?? preview;
+    const cls = ["df-zone", label ? "df-zone--labelled" : "", offered ? "is-offered" : "", preview ? "is-preview" : "", pose === "side" ? "is-side" : "", chosen ? "is-chosen" : "", className];
     return (
-        <div className={`df-zone ${label ? "df-zone--labelled" : ""} ${offered ? "is-offered" : ""} ${chosen ? "is-chosen" : ""} ${className}`} data-label={label} data-zone={zone}>
+        <div className={cls.join(" ")} data-label={label} data-zone={zone}>
             {card && <FieldCard card={card} marks={marks} onTap={onTap} onHover={onHover} side={side} />}
             {offered && <button type="button" className="df-zone__pick" aria-label="Put the card here" onClick={() => marks.onZone(zone!)} />}
         </div>
@@ -197,7 +209,7 @@ export function Hand({ cards, marks, onTap, onHover }: { cards: DuelCardView[]; 
                     layoutId={c.uid}
                     type="button"
                     data-uid={c.uid}
-                    className={`df-hand__card ${marks.glow.has(c.uid) ? "is-glow" : ""} ${marks.picked.has(c.uid) ? "is-picked" : ""}`}
+                    className={`df-hand__card ${marks.glow.has(c.uid) ? "is-glow" : ""} ${marks.picked.has(c.uid) ? "is-picked" : ""} ${marks.raised === c.uid ? "is-raised" : ""}`}
                     style={{ rotate: (i - mid) * (tight ? 3 : 4), y: Math.abs(i - mid) * 4, marginInline: tight ? "calc(var(--cw) * -0.32)" : "3px" }}
                     onClick={() => onTap(c)}
                     onPointerEnter={(e) => e.pointerType === "mouse" && onHover?.(c.code)}

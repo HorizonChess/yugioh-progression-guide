@@ -8,7 +8,7 @@ import { printedIn, type StageCard } from "@/components/packs/stage/plate";
 import { fetchCardsByIds, type Card } from "@/lib/api";
 import { useIsPhone } from "@/lib/useIsPhone";
 import { DesktopBoard, PhoneBoard } from "./Boards";
-import { cardImage, type CardMarks } from "./parts";
+import { cardImage, type CardMarks, type Pose } from "./parts";
 import { setDuelPrefs, useDuelPrefs } from "./duel-prefs";
 import { sfx } from "./sfx";
 import { useDuel } from "./useDuel";
@@ -56,7 +56,9 @@ const byUid = (view: DuelView) => {
     return map;
 };
 
-type Menu = { title: string; code?: number; text?: string; options: { label: string; note?: string; run: () => void }[] };
+type Action = Extract<DuelPrompt, { kind: "actions" }>["actions"][number];
+/** Verbs that put a card from the hand onto the field. */
+const PLACES: ReadonlySet<ActionVerb> = new Set(["summon", "special", "set", "set-spell", "activate"]);
 
 export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeave: (result: "win" | "loss" | "draw" | null) => void }) {
     const isPhone = useIsPhone();
@@ -84,22 +86,26 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
         else setDetail(code);
     };
 
-    const [menu, setMenu] = useState<Menu | null>(null);
+    /** The card you've picked up: it rises, its actions are offered, and where it could go shows. */
+    const [held, setHeld] = useState<{ card: DuelCardView; side: Side; zone: Zone } | null>(null);
+    /** What you last chose to do with a card: a Set monster goes in sideways, so its zone's sideways frame lights. */
+    const [placing, setPlacing] = useState<ActionVerb | null>(null);
     const [browse, setBrowse] = useState<{ title: string; cards: DuelCardView[] } | null>(null);
     const [picked, setPicked] = useState<number[]>([]);
     const [nameGuess, setNameGuess] = useState("");
     /** The duel menu (⋯): closed, open, or asking to confirm a surrender. */
     const [duelMenu, setDuelMenu] = useState<"closed" | "open" | "surrender">("closed");
     const prefs = useDuelPrefs();
-    // A new question starts with nothing chosen. (A card's menu stays up after a choice, inert,
-    // until the next question takes its place: closing it first would flash the board's hint.)
+    // A new question starts with nothing chosen. (A card you picked up stays up, inert, until the
+    // next question takes its place, and through choosing its zone or its Tributes.)
     const promptKey = state ? `${state.seq}:${prompt?.kind ?? ""}` : "";
+    const keepHeld = prompt?.kind === "place" || (prompt?.kind === "cards" && !!prompt.tribute);
     useEffect(() => {
         /* eslint-disable react-hooks/set-state-in-effect -- reset per question */
         setPicked([]);
-        setMenu(null);
+        if (!keepHeld) setHeld(null);
         /* eslint-enable react-hooks/set-state-in-effect */
-    }, [promptKey]);
+    }, [promptKey, keepHeld]);
 
     const answer = duel.answer;
 
@@ -136,11 +142,28 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             prompt.step?.chosen.forEach((c) => c.uid && chosen.add(c.uid));
         }
         // Zones a placement question offers. The Extra Monster Zones are one shared row, keyed as you see it.
+        // A monster being Set goes in face-down Defense Position: its zone's sideways frame lights.
         const keyOf = (z: PlaceZone) => zoneKey(z.zone === "extra-monster" ? "me" : z.side, z.zone, z.index);
-        const zones = new Set<string>(), chosenZones = new Set<string>();
+        const poseOf = (z: PlaceZone): Pose => ((z.zone === "monster" || z.zone === "extra-monster") && placing === "set" ? "side" : "up");
+        const zones = new Map<string, Pose>(), chosenZones = new Set<string>();
         if (prompt?.kind === "place") {
-            prompt.zones.forEach((z) => zones.add(keyOf(z)));
+            prompt.zones.forEach((z) => zones.set(keyOf(z), poseOf(z)));
             prompt.zones.filter((z) => picked.includes(z.id)).forEach((z) => chosenZones.add(keyOf(z)));
+        }
+        // A card held up from the hand: the free zones it could go to show, before anything is chosen.
+        const preview = new Map<string, Pose>();
+        if (held && held.zone === "hand" && view && prompt?.kind === "actions") {
+            const data = cards.get(held.card.code);
+            const monster = !!data?.type.includes("Monster");
+            const verbs = new Set(prompt.actions.filter((a) => a.uid === held.card.uid).map((a) => a.verb));
+            const free = (row: (DuelCardView | null)[], zone: "monster" | "spell") => row.flatMap((c, i) => (c ? [] : [zoneKey("me", zone, i)]));
+            if (monster && (verbs.has("summon") || verbs.has("special"))) free(view.me.monsters, "monster").forEach((k) => preview.set(k, "up"));
+            else if (monster && verbs.has("set")) free(view.me.monsters, "monster").forEach((k) => preview.set(k, "side"));
+            if (!monster && (verbs.has("set-spell") || verbs.has("activate"))) {
+                if (data?.race === "Field") {
+                    if (!view.me.field) preview.set(zoneKey("me", "field", 0), "up");
+                } else free(view.me.spells, "spell").forEach((k) => preview.set(k, "up"));
+            }
         }
         const onZone = (key: string) => {
             if (prompt?.kind !== "place") return;
@@ -149,8 +172,24 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             if (prompt.count === 1) return answer({ kind: "choice", id: z.id });
             setPicked((p) => (p.includes(z.id) ? p.filter((x) => x !== z.id) : p.length < prompt.count ? [...p, z.id] : p));
         };
-        return { glow, picked: chosen, destroying: effects.destroying, landing: effects.landing, flaring: effects.flaring, hit: effects.hit, floats: effects.floats, zones, chosenZones, onZone };
-    }, [prompt, boardPick, picked, effects, answer]);
+        return {
+            glow, picked: chosen, destroying: effects.destroying, landing: effects.landing, flaring: effects.flaring, hit: effects.hit, floats: effects.floats,
+            zones, chosenZones, onZone, preview, raised: held?.card.uid ?? null,
+        };
+    }, [prompt, boardPick, picked, effects, answer, placing, held, view, cards]);
+
+    /** An action's name, as the game calls it: a Level 5 or higher monster is Tribute Summoned (or Set). */
+    const actionLabel = (a: Action) => {
+        const level = cards.get(a.code)?.level ?? 0;
+        if (a.verb === "summon") return level >= 5 ? "Tribute Summon" : "Normal Summon";
+        if (a.verb === "set") return level >= 5 ? "Tribute Set" : "Set";
+        if (a.verb === "attack-direct") return "Attack directly";
+        return VERB[a.verb];
+    };
+    const choose = (a: Action) => {
+        setPlacing(PLACES.has(a.verb) ? a.verb : null);
+        answer({ kind: "choice", id: a.id });
+    };
 
     const togglePick = (id: number, max: number, min: number) => {
         if (prompt?.kind !== "cards") return;
@@ -170,21 +209,15 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             const options = prompt.options.filter((o) => o.uid === card.uid);
             if (options.length === 1) return answer({ kind: "choice", id: options[0]!.id });
         }
-        if (prompt?.kind === "actions") {
-            const actions = prompt.actions.filter((a) => a.uid === card.uid);
-            if (actions.length) {
-                return setMenu({
-                    title: name(card.code),
-                    code: card.code,
-                    options: [
-                        ...actions.map((a) => ({ label: a.verb === "attack-direct" ? "Attack" : VERB[a.verb], note: a.text && a.verb === "activate" ? a.text : undefined, run: () => answer({ kind: "choice", id: a.id }) })),
-                        ...(card.code ? [{ label: "Look at the card", run: () => (setMenu(null), look(card.code)) }] : []),
-                    ],
-                });
-            }
+        if (prompt?.kind === "actions" && prompt.actions.some((a) => a.uid === card.uid)) {
+            // Pick the card up (or put it back down with a second tap). On wide screens it also shows in the detail panel.
+            if (held?.card.uid === card.uid) return setHeld(null);
+            setHeld({ card, side, zone });
+            if (!isPhone && card.code) setDetail(card.code);
+            return;
         }
+        setHeld(null);
         if (card.code && (card.faceUp || side === "me")) look(card.code);
-        void zone;
     };
 
     const onPile = (side: Side, zone: "grave" | "banished") => {
@@ -256,8 +289,22 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     );
 
     let question: ReactNode = null;
-    if (menu) {
-        question = sheet(menu.title, <div className="df-sheet__options">{menu.options.map((o) => option(o.label, o.run, { note: o.note }))}{option("Cancel", () => setMenu(null), { quiet: true })}</div>, { code: menu.code });
+    // The card you've picked up: what you can do with it, in the bar above your hand.
+    const heldActions = held && prompt?.kind === "actions" ? prompt.actions.filter((a) => a.uid === held.card.uid) : [];
+    if (held && (heldActions.length || duel.answered) && !browse && duelMenu === "closed") {
+        question = (
+            <motion.div key="hint" className="df-hint df-actions" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}>
+                <span className="df-actions__name">{held.card.code ? name(held.card.code) : "Set card"}</span>
+                {heldActions.map((a) => (
+                    <button key={a.id} type="button" className="df-hint__btn df-act" onClick={() => choose(a)}>
+                        {actionLabel(a)}
+                        {a.verb === "activate" && a.text && heldActions.filter((x) => x.verb === "activate").length > 1 && <small>{a.text}</small>}
+                    </button>
+                ))}
+                {isPhone && held.card.code > 0 && <button type="button" className="df-hint__btn df-act df-act--quiet" onClick={() => look(held.card.code)}>Details</button>}
+                <button type="button" className="df-act df-act--close" aria-label="Put the card back" onClick={() => setHeld(null)}>✕</button>
+            </motion.div>
+        );
     } else if (browse) {
         question = sheet(browse.title, <><div className="df-sheet__list">{browse.cards.map((c) => (
             <button key={c.uid} type="button" className="df-listcard" onClick={() => look(c.code)}><img src={cardImage(c.code)} alt="" /><span>{name(c.code)}</span></button>
@@ -328,9 +375,14 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 </>);
                 break;
             case "place":
-                question = sheet(prompt.title, (
+                // No question to read: the zones glow, and a tap on one puts the card there.
+                question = prompt.count === 1 && !prompt.disable ? (
+                    <motion.div key="hint" className="df-hint" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.16 }}>
+                        Tap a glowing zone
+                    </motion.div>
+                ) : sheet(prompt.title, (
                     <div className="df-sheet__bar">
-                        <span>{prompt.disable ? "Tap the glowing zones" : "Tap a glowing zone"}</span>
+                        <span>Tap the glowing zones</span>
                         {prompt.count > 1 && option(`Confirm (${picked.length}/${prompt.count})`, () => answer({ kind: "many", ids: picked }), { disabled: picked.length !== prompt.count })}
                     </div>
                 ), { compact: true });
