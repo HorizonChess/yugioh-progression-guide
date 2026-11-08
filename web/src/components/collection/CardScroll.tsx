@@ -100,8 +100,10 @@ export default function CardScroll({ slots, chapters, activeChapter, onChapter, 
                         <figure key={s.key} data-key={s.key} className="cvault" data-tier={s.tier} style={{ "--i": i % BATCH } as React.CSSProperties}>
                             <button type="button" className="cvault__card" onClick={() => onOpen(s)} aria-label={s.count > 1 ? `${s.card.name}, ${s.count} copies` : s.card.name}
                                 onPointerMove={tilt} onPointerLeave={untilt} {...bind(s)}>
-                                {/* the spare copies, fanned out behind */}
-                                {s.count > 1 && <span className="cvault__stack" data-n={Math.min(s.count, 3)} aria-hidden="true" />}
+                                {/* the spare copies: the edges of up to two more cards under it, the deepest drawn first */}
+                                {[2, 1].filter((k) => k < Math.min(s.count, 3)).map((k) => (
+                                    <span key={k} className="cvault__stack" style={{ "--k": k } as React.CSSProperties} aria-hidden="true" />
+                                ))}
                                 <img src={art} alt="" loading="lazy" decoding="async" />
                                 {s.tier !== "Common" && <span className="cvault__foil" aria-hidden="true" />}
                                 <span className="cvault__glare" aria-hidden="true" />
