@@ -133,6 +133,15 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     }, [promptKey, keepHeld]);
 
     const answer = duel.answer;
+    // One zone to pick for a card: the zones glow and that's the question, with no bar. A tap off
+    // the zones (or on the card again) puts the card back down, where the engine allows it.
+    const quietPlace = prompt?.kind === "place" && prompt.count === 1 && !prompt.disable;
+    const unplace = () => {
+        if (!quietPlace || !prompt.back || duel.answered) return false;
+        sfx.putDown();
+        duel.back();
+        return true;
+    };
 
     // A question for you gets a soft chime (the steady "your move" hint doesn't).
     const asking = prompt && prompt.kind !== "actions" ? promptKey : "";
@@ -226,6 +235,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     };
 
     const onCard = (card: DuelCardView, side: Side, zone: Zone) => {
+        if (held?.card.uid === card.uid && unplace()) return;
         if (prompt?.kind === "cards" && boardPick) {
             const c = pickById.get(card.uid);
             if (c) return togglePick(c.id, prompt.max, prompt.min);
@@ -500,11 +510,10 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 </>);
                 break;
             case "place": {
-                // The zones glow, and a tap on one puts the card there. The bar says which card it's
-                // for (the one you picked up, or the card whose effect is placing it), with a way back.
-                const forCard = held?.card.code || view.chain[view.chain.length - 1]?.code || 0;
-                const title = prompt.count === 1 && !prompt.disable && forCard ? `Where does ${name(forCard)} go?` : prompt.title;
-                question = prompt.count === 1 && !prompt.disable && !prompt.back && !forCard ? null : sheet(title, (
+                // The zones glow, and a tap on one puts the card there. For one zone that's all
+                // (see quietPlace); several zones, or zones to disable, keep a bar with the count.
+                if (quietPlace) break;
+                question = sheet(prompt.title, (
                     <div className="df-sheet__bar">
                         <span>Tap a glowing zone</span>
                         {prompt.count > 1 && option(`Confirm (${picked.length}/${prompt.count})`, () => answer({ kind: "many", ids: picked }), { disabled: picked.length !== prompt.count })}
@@ -634,7 +643,9 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             className={`df-arena ${duel.answered ? "is-sent" : ""}`}
             // A tap anywhere else puts a picked-up card back down.
             onClick={(e) => {
-                if (held && !keepHeld && !duel.answered && !(e.target as Element).closest(".df-pop, [data-uid], .df-zone__pick")) {
+                if ((e.target as Element).closest(".df-pop, [data-uid], .df-zone__pick")) return;
+                if (unplace()) return;
+                if (held && !keepHeld && !duel.answered) {
                     sfx.putDown();
                     setHeld(null);
                 }
