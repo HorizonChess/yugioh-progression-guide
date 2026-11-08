@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { PrintingSchema, toRivalReward } from '@ygo/shared';
+import { CardIdSchema, PrintingSchema, toRivalReward } from '@ygo/shared';
 import { z } from 'zod';
 import { ClaimError, claimReward } from '../game/claims';
 import { confirmReport, publicReport, rejectReport, reportDuoMatch, reportSoloMatch, spinReward } from '../game/matches';
@@ -11,7 +11,7 @@ import { requireSeriesMember } from '../middleware/requireSeriesMember';
 
 const ReportBodySchema = z.strictObject({ result: z.enum(['win', 'loss']) });
 const ClaimBodySchema = z.strictObject({
-    cardId: z.number().int().positive().optional(),
+    cardId: CardIdSchema.optional(),
     /** Snatch Steal: the collection key (`id_setCode_rarity`) of the rival's card to copy. */
     printing: PrintingSchema.optional(),
 });

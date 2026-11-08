@@ -1,5 +1,7 @@
 import boosterImagesData from '@/data/booster_images.json';
 import {
+    canonicalCardIds,
+    canonicalCards,
     existedByCutoff,
     setDateMap,
     timelineSets,
@@ -44,7 +46,8 @@ async function fetchCardInfo(query: string): Promise<Card[]> {
     if (!response.ok) return [];
     const body = await readJson(response);
     if (typeof body !== 'object' || body === null || !('data' in body) || !Array.isArray(body.data)) return [];
-    return (body.data as Card[]).map(transformCardImages);
+    // Each card under its one id (shared/src/card-ids.ts), whatever id this query listed it under.
+    return canonicalCards(body.data as Card[]).map(transformCardImages);
 }
 
 export async function fetchRawSets(): Promise<CardSet[]> {
@@ -169,7 +172,7 @@ export async function fetchCardsByIds(ids: number[]): Promise<Card[]> {
     if (ids.length === 0) return [];
 
     // Deduplicate IDs
-    const uniqueIds = Array.from(new Set(ids));
+    const uniqueIds = Array.from(new Set(canonicalCardIds(ids)));
 
     // Identify missing IDs
     const missingIds = uniqueIds.filter(id => !cardCache.has(id));

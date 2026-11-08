@@ -77,6 +77,27 @@ NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web      # then open ht
 The Playwright drivers in [web/scripts/drivers/](web/scripts/drivers/README.md)
 drive these flows end to end against that setup.
 
+## One id per card
+
+A card can reach the app under several ids: YGOPRODeck answers the same card under
+different ids depending on the query, gives alternate artworks ids of their own, and
+its main id isn't always the official passcode. Everything the app keeps or compares
+(collections, decks, bans, marks, rewards, pack pulls, duels) uses **one id per card:
+the duel engine's passcode, the official Konami one**. `shared/src/card-ids.json` maps
+every other id onto it, and `canonicalCardId` and friends in
+[shared/src/card-ids.ts](shared/src/card-ids.ts) apply it where ids enter the app:
+YGOPRODeck responses (`web/src/lib/api.ts`, `api/src/cards/sync.ts`), request bodies
+(`CardIdSchema`), YDK files and browser saves. The server moves stored data onto the
+one ids at startup whenever the table changes. A card the rules treat as another
+(Harpie Lady 1 is "always treated as Harpie Lady") is still its own card and id.
+
+Rebuild the table after updating the engine data or when YGOPRODeck adds cards:
+
+```bash
+npm run fetch-engine -w @ygo/api
+npx tsx api/scripts/build-card-ids.ts
+```
+
 More detail on the architecture, pack logic and design system is in
 [web/README.md](web/README.md) and
 [web/src/data/pack_opening_rules.md](web/src/data/pack_opening_rules.md).

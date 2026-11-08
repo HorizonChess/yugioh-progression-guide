@@ -1,3 +1,5 @@
+import { canonicalCardIds } from "@ygo/shared";
+
 /**
  * The deck you're building, kept in this browser per save slot, so a reload or a
  * trip to another page brings it back as you left it. Card ids only; the deck
@@ -13,7 +15,8 @@ export interface DeckDraft {
 
 const key = (seriesId: string) => `deckDraft:${seriesId}`;
 
-const ids = (v: unknown): number[] => (Array.isArray(v) ? v.filter((n): n is number => typeof n === "number" && Number.isInteger(n) && n > 0) : []);
+// Each under its one id: a draft from before one id per card may hold another.
+const ids = (v: unknown): number[] => (Array.isArray(v) ? canonicalCardIds(v.filter((n): n is number => typeof n === "number" && Number.isInteger(n) && n > 0)) : []);
 
 export function readDeckDraft(seriesId: string): DeckDraft | null {
     try {

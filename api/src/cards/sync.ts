@@ -3,6 +3,7 @@ import {
     CardInfoResponseSchema,
     CardSchema,
     CardSetSchema,
+    canonicalCards,
     existedByCutoff,
     setDateMap,
     type Card,
@@ -80,7 +81,8 @@ export async function syncCardData(db: Db, source: CardDataSource, options: Sync
     const cardResults = parseAll(CardInfoResponseSchema.parse(rawCards).data, CardSchema, 'cards');
 
     const setDates = setDateMap(sets.valid);
-    const cards = cardResults.valid.filter((card) => existedByCutoff(card, setDates));
+    // Each card under its one id (shared/src/card-ids.ts), whatever id YGOPRODeck lists it under.
+    const cards = canonicalCards(cardResults.valid.filter((card) => existedByCutoff(card, setDates)));
 
     await guardAgainstShrink(db, sets.valid.length, cards.length, options);
 

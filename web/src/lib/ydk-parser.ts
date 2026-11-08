@@ -1,5 +1,6 @@
 import { Collection, ownedCountsById } from '@/lib/collection';
 import { DeckZone } from '@/lib/deck-utils';
+import { canonicalCardId } from '@ygo/shared';
 
 /**
  * Parses a YDK file content and returns an array of card IDs.
@@ -20,7 +21,7 @@ export function parseYDK(content: string): number[] {
         // Try to parse as number
         const id = parseInt(trimmed, 10);
         if (!isNaN(id)) {
-            ids.push(id);
+            ids.push(canonicalCardId(id));
         }
     }
 
@@ -44,7 +45,7 @@ export function parseYDKWithSections(content: string): { main: number[], extra: 
         if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('!')) continue;
 
         const id = parseInt(trimmed, 10);
-        if (!isNaN(id)) result[currentSection].push(id);
+        if (!isNaN(id)) result[currentSection].push(canonicalCardId(id));
     }
     return result;
 }

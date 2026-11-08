@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { collectionKey, deckProblem, DECK_LIMITS, ownedCountsById } from '@ygo/shared';
+import { canonicalCardId, CardIdSchema, collectionKey, deckProblem, DECK_LIMITS, ownedCountsById } from '@ygo/shared';
 import { z } from 'zod';
 import { findPlayer, seriesPlayersCollection } from '../game/series';
 import { requireAuth } from '../middleware/requireAuth';
@@ -7,7 +7,7 @@ import { requireSeriesMember } from '../middleware/requireSeriesMember';
 
 const MAX_DECKS = 50;
 const MAX_IMPORT = 3000;
-const cardIds = (max: number) => z.array(z.number().int().positive()).max(max);
+const cardIds = (max: number) => z.array(CardIdSchema).max(max);
 
 const DeckBodySchema = z.strictObject({
     name: z.string().trim().min(1).max(40),
@@ -59,7 +59,7 @@ export async function deckRoutes(app: FastifyInstance): Promise<void> {
     const markGuard = { ...guard, config: { rateLimit: { max: 240, timeWindow: '1 minute' } } };
     const markId = (request: { params: unknown }) => {
         const n = Number((request.params as { cardId: string }).cardId);
-        return Number.isInteger(n) && n > 0 ? n : null;
+        return Number.isInteger(n) && n > 0 && n <= 2 ** 31 ? canonicalCardId(n) : null;
     };
     app.put('/marks/:cardId', markGuard, async (request, reply) => {
         const cardId = markId(request);

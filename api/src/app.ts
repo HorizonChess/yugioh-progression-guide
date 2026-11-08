@@ -22,6 +22,7 @@ import { ensureMatchIndexes } from './game/matches';
 import { createNotifier, ensureNotificationIndexes, type NotificationPayload, type NotificationType, type Notifier } from './game/notifications';
 import { ensurePackIndexes } from './game/packs';
 import { ensureSeriesIndexes } from './game/series';
+import { migrateCardIds } from './cards/card-ids-migration';
 import { createMailer, type Mailer } from './mail/mailer';
 import { cors } from './middleware/cors';
 import { originCheck } from './middleware/originCheck';
@@ -121,6 +122,9 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
     await ensureInviteIndexes(app.db);
     await ensureMatchIndexes(app.db);
     await ensureDuelIndexes(app.db);
+    // One id per card (shared/src/card-ids.ts): move anything stored under another id onto it.
+    const moved = await migrateCardIds(app.db);
+    if (!moved.skipped) app.log.info({ moved }, 'card ids migrated');
     app.decorate('catalog', createCardCatalog(app.db));
     registerBackground(app);
     app.decorate('notifier', createNotifier(app.db));

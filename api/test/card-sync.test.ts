@@ -111,4 +111,12 @@ describe('syncCardData', () => {
         const report = await syncCardData(db, source(SETS, many.slice(0, 10)), { allowShrink: true });
         expect(report.removedCards).toBe(30);
     });
+
+    it("stores a card under its one id, not YGOPRODeck's", async () => {
+        // Monster Reborn: YGOPRODeck lists 83764719, the passcode is 83764718 (shared/src/card-ids.ts).
+        await syncCardData(db, source(SETS, [...CARDS, card(83764719, ['Legend of Blue Eyes White Dragon'])]));
+        const stored = await cardsCollection(db).findOne({ name: 'Card 83764719' });
+        expect(stored).toMatchObject({ _id: 83764718, id: 83764718 });
+        expect(stored!.card_images[0]!.id).toBe(83764719);
+    });
 });

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { DECK_LIMITS } from '../decks';
 import { isPrizeId, type PrizeId } from '../rewards';
+import { CardIdSchema, canonicalCollection } from '../card-ids';
 import { PACKS_PER_SET_OPTIONS } from '../rules';
 import { DuelistNameSchema } from './auth';
 
@@ -25,7 +26,6 @@ export type CreateSeriesBody = z.infer<typeof CreateSeriesBodySchema>;
 /** Invite a rival by duelist name, or (no name) get a shareable link. */
 export const InviteBodySchema = z.strictObject({ duelistName: DuelistNameSchema.optional() });
 
-const CardIdSchema = z.number().int().positive();
 const SetNameSchema = z.string().min(1).max(200);
 const WhenSchema = z.string().max(40);
 const cards = (max: number) => z.array(CardIdSchema).max(max);
@@ -46,7 +46,9 @@ export const GuestSaveBodySchema = z.strictObject({
     packsPerSet: PacksPerSetSchema,
     collection: z
         .record(PrintingSchema, z.number().int().min(1).max(9999))
-        .refine((c) => Object.keys(c).length <= MAX_GUEST_PRINTINGS, 'Too many cards'),
+        .refine((c) => Object.keys(c).length <= MAX_GUEST_PRINTINGS, 'Too many cards')
+        // Saves from before one id per card: copies under another id of the card join its one id.
+        .transform(canonicalCollection),
     matchHistory: z.array(z.strictObject({ won: z.boolean(), setName: SetNameSchema, at: WhenSchema })).max(2000),
     rewards: z
         .array(

@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { deckProblem, ownedCountsById } from '@ygo/shared';
+import { CardIdSchema, deckProblem, ownedCountsById } from '@ygo/shared';
 import { z } from 'zod';
 import { duelsCollection, type DuelDoc, type DuelProblem } from '../duel/hub';
 import type { Team } from '../duel/session';
@@ -9,10 +9,9 @@ import { loadUser, requireAuth } from '../middleware/requireAuth';
 import { requireSeriesMember } from '../middleware/requireSeriesMember';
 
 const StartBodySchema = z.strictObject({ deckId: z.string().regex(/^[\w-]{1,64}$/), against: z.enum(['bot', 'solo', 'rival']) });
-const Passcode = z.number().int().positive().max(2 ** 31);
 /** A guest's practice duel: the deck comes from the browser (guests keep their campaign there). */
 const GuestBodySchema = z.strictObject({
-    deck: z.strictObject({ main: z.array(Passcode).min(40).max(60), extra: z.array(Passcode).max(15) }),
+    deck: z.strictObject({ main: z.array(CardIdSchema).min(40).max(60), extra: z.array(CardIdSchema).max(15) }),
     setName: z.string().min(1).max(200),
     against: z.enum(['bot', 'solo']),
 });

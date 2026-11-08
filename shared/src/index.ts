@@ -1,6 +1,7 @@
 export * from './types';
 export * from './sets';
 export * from './collection';
+export * from './card-ids';
 export * from './rewards';
 export * from './pack-logic';
 export * from './rng';

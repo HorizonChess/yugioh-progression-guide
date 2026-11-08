@@ -1,5 +1,6 @@
 import { Collection, collectionKey } from '@/lib/collection';
 import { RewardEntry, isPrizeId } from '@/lib/rewards';
+import { canonicalCardId, canonicalCardIds, canonicalCollection, canonicalRewardIds } from '@ygo/shared';
 
 /**
  * The persisted save model and its localStorage I/O. Everything read back from
@@ -75,6 +76,10 @@ const num = (v: unknown, fallback: number) => (isNumber(v) ? v : fallback);
 const str = (v: unknown, fallback: string) => (isString(v) ? v : fallback);
 const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const numbers = (v: unknown): number[] => list(v).filter(isNumber);
+/** Card ids, each under its one id (saves from before one id per card may hold another). */
+const cardIds = (v: unknown): number[] => canonicalCardIds(numbers(v));
+/** Distinct cards (bans, marks): one entry per card. */
+const distinctCards = (v: unknown): number[] => [...new Set(cardIds(v))];
 
 function toCollection(v: unknown): Collection {
     const out: Collection = {};
@@ -82,7 +87,7 @@ function toCollection(v: unknown): Collection {
     for (const [key, count] of Object.entries(v)) {
         if (isNumber(count) && count > 0) out[key] = count;
     }
-    return out;
+    return canonicalCollection(out);
 }
 
 function isMatchResult(v: unknown): v is MatchResult {
@@ -106,9 +111,9 @@ function toSavedDeck(v: unknown): SavedDeck | null {
     return {
         id: v.id,
         name: str(v.name, 'Untitled Deck'),
-        mainDeck: numbers(v.mainDeck),
-        extraDeck: numbers(v.extraDeck),
-        sideDeck: numbers(v.sideDeck),
+        mainDeck: cardIds(v.mainDeck),
+        extraDeck: cardIds(v.extraDeck),
+        sideDeck: cardIds(v.sideDeck),
         createdAt: num(v.createdAt, Date.now()),
     };
 }
@@ -127,9 +132,9 @@ function toSaveSlot(v: unknown): SaveSlot | null {
         ...(v.setOrder === 2 ? { setOrder: 2 as const } : {}),
         collection: toCollection(v.collection),
         matchHistory: list(v.matchHistory).filter(isMatchResult),
-        rewards: list(v.rewards).filter(isRewardEntry),
-        bannedCardIds: numbers(v.bannedCardIds),
-        marks: numbers(v.marks),
+        rewards: list(v.rewards).filter(isRewardEntry).map(canonicalRewardIds),
+        bannedCardIds: distinctCards(v.bannedCardIds),
+        marks: distinctCards(v.marks),
         settings: {
             startSetIndex: num(settings.startSetIndex, 0),
             packsPerRound: num(settings.packsPerRound, DEFAULT_PACKS_PER_ROUND),
@@ -146,7 +151,10 @@ function migrateLegacy(v: unknown): PersistedState {
     const collection: Collection = {};
     for (const [id, count] of Object.entries(toCollection(v.collection))) {
         const cardId = parseInt(id, 10);
-        if (!Number.isNaN(cardId)) collection[collectionKey(cardId)] = count;
+        if (!Number.isNaN(cardId)) {
+            const k = collectionKey(canonicalCardId(cardId));
+            collection[k] = (collection[k] ?? 0) + count;
+        }
     }
     const now = Date.now();
     const save: SaveSlot = {
