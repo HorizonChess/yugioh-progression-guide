@@ -18,6 +18,7 @@ import {
     DragPayload,
 } from "@/lib/deck-utils";
 import { ownedCardIds, ownedCountsById } from "@/lib/collection";
+import { readDeckDraft, writeDeckDraft } from "@/lib/deck-draft";
 import { isDefined } from "@/lib/utils";
 import CardInfoPanel from "@/components/deck-builder/CardInfoPanel";
 import MainDeckGrid from "@/components/deck-builder/MainDeckGrid";
@@ -43,7 +44,7 @@ function mergeCards(base: Card[], extra: Card[]): Card[] {
 }
 
 export default function DeckBuilder() {
-    const { collection, saveDeck, savedDecks, deleteDeck, bannedCardIds } = useProgression();
+    const { activeSeriesId, collection, saveDeck, savedDecks, deleteDeck, bannedCardIds } = useProgression();
     const isPhone = useIsPhone();
     useWelcome("deck-builder", true);
     // Cosmetic ban list (Phase 5): banned cards are greyed in the search panel and
@@ -198,17 +199,37 @@ export default function DeckBuilder() {
         if (announce) void gameAlert(`"${deck.name}" is loaded.`, { title: "Deck loaded" });
     };
 
-    // Open on the deck you last saved (saving stamps it, so the newest stamp is the last one),
-    // unless you've already started building. Once per visit.
-    const autoLoaded = useRef(false);
+    // Open on the deck as you left it: a reload or another page brings back the draft.
+    // Kept only once it's restored, so the empty start can't overwrite it while its cards load.
+    const [draftReadyFor, setDraftReadyFor] = useState<string | null>(null);
+    const restoring = useRef<string | null>(null);
     useEffect(() => {
-        if (autoLoaded.current || savedDecks.length === 0) return;
-        autoLoaded.current = true;
-        if (mainDeck.length + extraDeck.length + sideDeck.length > 0) return;
-        const last = savedDecks.reduce((a, b) => (b.createdAt > a.createdAt ? b : a));
-        void handleLoadDeck(last, false);
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the saved decks first arrive
-    }, [savedDecks]);
+        if (!activeSeriesId || restoring.current === activeSeriesId) return;
+        restoring.current = activeSeriesId;
+        const id = activeSeriesId;
+        const draft = readDeckDraft(id);
+        const empty = !draft || draft.mainDeck.length + draft.extraDeck.length + draft.sideDeck.length === 0;
+        setDeckName(draft?.name ?? "New Deck");
+        if (empty) {
+            setMainDeck([]);
+            setExtraDeck([]);
+            setSideDeck([]);
+        }
+        void (async () => {
+            if (draft && !empty) await handleLoadDeck({ id: "draft", createdAt: 0, ...draft }, false);
+            setDraftReadyFor(id);
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- once per save slot
+    }, [activeSeriesId]);
+    useEffect(() => {
+        if (!activeSeriesId || draftReadyFor !== activeSeriesId) return;
+        writeDeckDraft(activeSeriesId, {
+            name: deckName,
+            mainDeck: mainDeck.map((c) => c.id),
+            extraDeck: extraDeck.map((c) => c.id),
+            sideDeck: sideDeck.map((c) => c.id),
+        });
+    }, [activeSeriesId, draftReadyFor, deckName, mainDeck, extraDeck, sideDeck]);
 
     const handleDeleteDeck = async (id: string) => {
         const name = savedDecks.find(d => d.id === id)?.name;
