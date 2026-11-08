@@ -16,6 +16,14 @@ import { GameDialogHost } from "@/components/ui/GameDialog";
 // page and its tab bar stay put while you type instead of jumping up above the keys.
 const VISIBLE_HEIGHT = `(function(){var d=document.documentElement,v=window.visualViewport;function typing(){var a=document.activeElement;return!!a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))}function f(){var h=innerHeight;if(v)h=Math.min(h,v.height*v.scale);if(typing()&&innerHeight-h>140)return;d.style.setProperty("--app-h",h+"px")}f();addEventListener("resize",f);if(v)v.addEventListener("resize",f);addEventListener("focusout",function(){setTimeout(f,350)})})()`;
 
+/**
+ * Marks every image once it has loaded (or failed), so globals.css can show a
+ * shimmer where a picture is still on its way. Inline and first in <body>, so it
+ * hears images in the first HTML as well as every one added later (load and error
+ * don't bubble, but they can be caught on the way down).
+ */
+const IMAGE_READY = `(function(){function m(e){var t=e.target;if(t&&t.tagName==="IMG")t.setAttribute("data-loaded","")}document.addEventListener("load",m,true);document.addEventListener("error",m,true)})()`;
+
 export const metadata: Metadata = {
   title: "Yu-Gi-Oh! Progression Series",
   description: "Track your progression series journey",
@@ -39,6 +47,7 @@ export default function RootLayout({
             than what is visible, which hides the tab bar and the pack opener's
             buttons behind the toolbar. Size the app from what is actually visible. */}
         <script dangerouslySetInnerHTML={{ __html: VISIBLE_HEIGHT }} />
+        <script dangerouslySetInnerHTML={{ __html: IMAGE_READY }} />
         <AuthProvider>
         <ProgressionProvider>
         <NotificationsProvider>

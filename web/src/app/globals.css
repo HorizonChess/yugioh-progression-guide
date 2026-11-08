@@ -1269,3 +1269,19 @@ select.slots__field option { background: #120d18; color: #f1e7cc; }
 .slots__note .slots__field { margin-bottom: 6px; }
 .slots__note--invite b { color: #ffe08a; }
 .slots__note--invite span { margin-left: 6px; color: #ffe08a; }
+
+/* ---------- images still loading ----------
+   A light sweeps across where the picture will be, until it arrives. The script at
+   the top of <body> (app/layout.tsx) marks each image loaded; real pixels cover the
+   sweep the moment they paint, and it stops once the image is marked. */
+img:not([data-loaded]) {
+  color: transparent; /* no alt text or broken-image icon while it loads */
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 236, 190, 0.14) 50%, transparent 70%) 0 0 / 250% 100% no-repeat, rgba(38, 30, 22, 0.9);
+  animation: img-shimmer 1.3s linear infinite;
+}
+@keyframes img-shimmer { from { background-position: 125% 0, 0 0; } to { background-position: -125% 0, 0 0; } }
+@media (prefers-reduced-motion: reduce) { img:not([data-loaded]) { animation: none; } }
+/* The close-up: the small picture already on screen stands in while the full-size one loads over it. */
+.closeup__face .closeup__lo { position: absolute; inset: 0; }
+.closeup__face .closeup__hi { position: relative; transition: opacity 0.2s; }
+.closeup__face .closeup__hi:not([data-loaded]) { opacity: 0; animation: none; }

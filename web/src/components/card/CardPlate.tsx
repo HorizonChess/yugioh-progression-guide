@@ -203,6 +203,8 @@ export function CardCloseUp({ card, onClose, action, mark = false, onPrev, onNex
         tilt.current?.style.removeProperty("--rx");
         tilt.current?.style.removeProperty("--ry");
     };
+    const pics = card.card.card_images;
+    const small = (pics.find((i) => i.image_url === card.image) ?? pics[0])?.image_url_small;
     if (typeof document === "undefined") return null;
     return createPortal(
         <div ref={rootEl} className="closeup" role="dialog" aria-label={card.card.name} onPointerDown={down} onPointerUp={up} onPointerCancel={() => (press.current = null)}>
@@ -213,7 +215,9 @@ export function CardCloseUp({ card, onClose, action, mark = false, onPrev, onNex
                 <div className="closeup__card ps-card ps-card--flipped" data-tier={card.tier} onPointerMove={lean} onPointerLeave={settle} onClick={(e) => e.stopPropagation()}>
                     <div ref={tilt} className="ps-tilt">
                         <div className="ps-face closeup__face">
-                            <img src={card.image} alt={card.card.name} />
+                            {/* The small picture (already loaded wherever the card was tapped) until the full one arrives over it. */}
+                            {small && small !== card.image && <img className="closeup__lo" src={small} alt="" aria-hidden="true" />}
+                            <img className="closeup__hi" src={card.image} alt={card.card.name} />
                             {card.tier !== "Common" && <div className="ps-holo closeup__holo" />}
                             <div className="ps-glare closeup__glare" />
                         </div>
