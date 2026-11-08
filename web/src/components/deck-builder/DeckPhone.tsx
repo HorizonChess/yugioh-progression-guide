@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDismiss, useSwipeClose } from "@/lib/dismiss";
 import { Card } from "@/lib/api";
 import { DeckZone, isExtraDeckCard } from "@/lib/deck-utils";
-import { CardPlate } from "@/components/card/CardPlate";
+import { CardCloseUp } from "@/components/card/CardPlate";
 import { useProgression } from "@/context/ProgressionContext";
-import { MarkBadge, MarkToggle, useLookedAt } from "@/components/card/LookLater";
+import { MarkBadge, useLookedAt } from "@/components/card/LookLater";
 import { stageOf, type Printing } from "./stage";
 import CartoucheButton from "@/components/ui/CartoucheButton";
 import { CARD_KINDS, CardFilterFields, useCardFilters } from "./useCardFilters";
@@ -60,10 +60,8 @@ export default function DeckPhone({
     const [menu, setMenu] = useState(false);
     const menuEl = useRef<HTMLDivElement>(null);
     useDismiss(menuEl, menu, () => setMenu(false));
-    const cardSheet = useRef<HTMLDivElement>(null);
     const filterSheet = useRef<HTMLDivElement>(null);
     const [filters, setFilters] = useState(false);
-    useSwipeClose(cardSheet, () => setOpen(null), { enabled: !!open });
     useSwipeClose(filterSheet, () => setFilters(false), { enabled: filters });
     const [note, setNote] = useState<{ text: string; key: number } | null>(null);
     /** The card just added, so it lands with a flash. */
@@ -247,28 +245,28 @@ export default function DeckPhone({
             </section>
 
             {/* A card's sheet: its details, and its copies in each deck */}
+            {/* A card's close-up, as in the pack opener: the card large, its details, and its copies in each deck */}
             {open && (
-                <>
-                    <div className="dp-scrim" onClick={() => setOpen(null)} />
-                    <div className="dp-sheet" role="dialog" aria-label={open.name} ref={cardSheet}>
-                        <div className="dp-sheet__top">
-                            <img className="dp-sheet__art" src={open.card_images[0]?.image_url} alt="" />
-                            <CardPlate card={stageOf(open, printings.get(open.id), ownedCounts.get(open.id) ?? 0)} className="dp-sheet__plate" />
+                <CardCloseUp
+                    card={stageOf(open, printings.get(open.id), ownedCounts.get(open.id) ?? 0)}
+                    mark
+                    onClose={() => setOpen(null)}
+                    action={
+                        <div className="dp-act">
+                            <div className="dp-act__zones">
+                                {([homeOf(open), "side"] as DeckZone[]).map((z) => (
+                                    <div key={z} className="dp-act__zone">
+                                        <span><b>{ZONE_LABEL[z].replace(" Deck", "")}</b><small>{decks[z].length}/{LIMIT[z]}</small></span>
+                                        {stepper(open, z)}
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="dp-act__note">
+                                {bannedIds.has(open.id) ? "Banned: it can't go in a deck." : `${copies(open.id)} of yours in decks · max ${Math.min(3, ownedCounts.get(open.id) ?? 0)}`}
+                            </p>
                         </div>
-                        <MarkToggle cardId={open.id} className="dp-sheet__mark" />
-                        <div className="dp-zones">
-                            {([homeOf(open), "side"] as DeckZone[]).map((z) => (
-                                <div key={z} className="dp-zone">
-                                    <span><b>{ZONE_LABEL[z]}</b><small>{decks[z].length} / {LIMIT[z]}</small></span>
-                                    {stepper(open, z)}
-                                </div>
-                            ))}
-                        </div>
-                        <p className="dp-sheet__note">
-                            {bannedIds.has(open.id) ? "Banned: it can't go in a deck." : `${copies(open.id)} of yours in decks · max ${Math.min(3, ownedCounts.get(open.id) ?? 0)}`}
-                        </p>
-                    </div>
-                </>
+                    }
+                />
             )}
 
             {/* Every filter the desktop search has */}
