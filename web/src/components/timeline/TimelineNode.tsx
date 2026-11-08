@@ -11,7 +11,8 @@ type Match = { winner: "player" | "opponent" } | undefined;
 /**
  * One booster-pack tile in the timeline carousel: chain connector (except
  * first), pack art with an optional WON/LOST stamp, and the set name/date.
- * Every tile is the same size: the `current` set is gold-ringed; others are dimmed + greyed.
+ * Every tile is the same slot; inside, a gilt frame hugs the pack art: bronze, or a breathing gold
+ * bevel on the `current` set. Others are dimmed + greyed.
  */
 export default function TimelineNode({
     set,
@@ -43,10 +44,11 @@ export default function TimelineNode({
                 <Link
                     href={`/packs?set=${index}`}
                     onClick={() => launchFlight(index)}
-                    className={`timeline-node__art ${current ? "timeline-node__art--current" : "timeline-node__art--other"}`}
+                    className="timeline-node__art art-loading"
                 >
-                    {set.set_image ? (
-                        <div className="timeline-node__art-inner art-loading">
+                    {/* A fixed slot (the chains line up on it); the gilt frame inside hugs the pack art, as on phones. */}
+                    <div className="timeline-node__frame">
+                        {set.set_image ? (
                             <img
                                 ref={markLoaded}
                                 onLoad={markLoaded}
@@ -55,20 +57,19 @@ export default function TimelineNode({
                                 className="timeline-node__img"
                                 loading={current ? "eager" : "lazy"}
                                 fetchPriority={current ? "high" : "auto"}
-                                style={{ imageRendering: "auto" }}
                             />
-                        </div>
-                    ) : (
-                        <div className="timeline-node__art-fallback">No Image</div>
-                    )}
+                        ) : (
+                            <div className="timeline-node__art-fallback">No Image</div>
+                        )}
 
-                    {match && (
-                        <div className="timeline-node__stamp-overlay">
-                            <span className={`timeline-stamp timeline-stamp--inked ${match.winner === "player" ? "timeline-stamp--won" : "timeline-stamp--lost"}`}>
-                                {match.winner === "player" ? "WON" : "LOST"}
-                            </span>
-                        </div>
-                    )}
+                        {match && (
+                            <div className="timeline-node__stamp-overlay">
+                                <span className={`timeline-stamp timeline-stamp--inked ${match.winner === "player" ? "timeline-stamp--won" : "timeline-stamp--lost"}`}>
+                                    {match.winner === "player" ? "WON" : "LOST"}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                 </Link>
 
                 <div className="timeline-node__caption">

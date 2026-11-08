@@ -338,12 +338,14 @@ html::-webkit-scrollbar-corner,
   @apply opacity-60 grayscale hover:opacity-100 hover:grayscale-0;
 }
 
-/* Pack art frame — height-driven (--art-h), aspect derives the width */
+/* The pack's slot — height-driven (--art-h), aspect derives the width. The gilt frame inside
+   (.timeline-node__frame, shared with the phone road's) hugs the pack art itself. */
 .timeline-node__art {
-  @apply relative block aspect-[2/3] rounded-xl overflow-hidden
-    shadow-2xl transition-all duration-300 bg-black;
+  @apply relative flex items-center justify-center aspect-[2/3] rounded-xl transition-all duration-300;
   height: var(--art-h);
 }
+.timeline-node__art.is-loaded { background: none; }
+.timeline-node__art:not(.is-loaded) .timeline-node__frame:has(img) { visibility: hidden; }
 
 /* While pack art downloads, its frame shimmers in warm gold instead of sitting
    empty; markLoaded() stops it once the image is in. */
@@ -360,24 +362,16 @@ html::-webkit-scrollbar-corner,
   .art-loading:not(.is-loaded) { animation: none; }
 }
 
-.timeline-node__art--current {
-  @apply ring-4 ring-primary;
-  box-shadow: 0 0 50px rgba(212, 175, 55, 0.5);
-}
-
-.timeline-node__art--other {
-  @apply hover:ring-2 hover:ring-gray-500;
-}
-
-/* Fills the art frame, letterboxing the pack image */
-.timeline-node__art-inner {
-  @apply w-full h-full flex items-center justify-center overflow-hidden;
-}
-
+.timeline-node__frame { --edge: 3px; }
+.timeline-node--current .timeline-node__frame { --edge: 4px; }
+/* The pack art at its own shape, as large as the slot allows inside the frame's edge. */
 .timeline-node__img {
-  @apply w-full h-full object-contain transform hover:scale-110 transition-transform duration-700;
+  display: block; width: auto; height: auto; border-radius: 4px;
+  max-height: calc(var(--art-h) - 2 * var(--edge)); max-width: calc(var(--art-h) * 2 / 3 - 2 * var(--edge));
+  @apply transform hover:scale-110 transition-transform duration-700;
 }
 
+.timeline-node__frame:not(:has(img)) { width: 100%; height: 100%; }
 .timeline-node__art-fallback {
   @apply w-full h-full bg-gray-800 flex items-center justify-center text-xs text-gray-500;
 }
@@ -828,16 +822,17 @@ html::-webkit-scrollbar-corner,
    bronze on the road, bright gold (and breathing) on the current one. */
 .road-stop__art { position: relative; z-index: 2; flex: none; width: 104px; aspect-ratio: 2 / 3; display: flex; align-items: center; justify-content: center; border-radius: 7px; }
 .road-stop__art.is-loaded { background: none; }
-.road-stop__frame {
-  --edge: 2px; position: relative; border-radius: 6px; overflow: hidden; border: var(--edge) solid transparent;
+.road-stop__frame { --edge: 2px; }
+.road-stop__frame, .timeline-node__frame {
+  position: relative; border-radius: 6px; overflow: hidden; border: var(--edge) solid transparent;
   background: linear-gradient(#000, #000) padding-box, linear-gradient(160deg, #8a6a34, #3d2c12 45%, #6e5326) border-box;
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.7);
 }
 .road-stop__art:not(.is-loaded) .road-stop__frame { visibility: hidden; }
 .road-stop__frame:not(:has(img)) { width: 100%; height: 100%; visibility: visible !important; }
 .road-stop__frame img { display: block; width: auto; height: auto; max-width: calc(104px - 2 * var(--edge)); max-height: calc(156px - 2 * var(--edge)); border-radius: 3px; }
-.road-stop--current .road-stop__frame {
-  --edge: 3px;
+.road-stop--current .road-stop__frame { --edge: 3px; }
+.road-stop--current .road-stop__frame, .timeline-node--current .timeline-node__frame {
   background: linear-gradient(#000, #000) padding-box, linear-gradient(155deg, #fff2c2, #e0b54f 22%, #7a5414 50%, #f2cf74 74%, #8a5f18) border-box;
   box-shadow: 0 0 0 1px rgba(40, 26, 6, 0.9), 0 10px 18px rgba(0, 0, 0, 0.7), 0 0 26px rgba(224, 181, 79, 0.45);
   animation: road-breathe 3.6s ease-in-out infinite;
@@ -870,7 +865,7 @@ html::-webkit-scrollbar-corner,
   background-size: 250% 100%; animation: road-glint 5s 1.5s ease-in-out infinite;
 }
 @keyframes road-glint { 0%, 70% { background-position: 150% 0; } 100% { background-position: -50% 0; } }
-@media (prefers-reduced-motion: reduce) { .road-stop--current .road-stop__frame, .road-stop__now > i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .road-stop--current .road-stop__frame, .timeline-node--current .timeline-node__frame, .road-stop__now > i { animation: none; } }
 .road-stop--future .road-stop__info { opacity: 0.55; }
 .road-chain { position: absolute; z-index: 1; touch-action: pan-y; }
 
