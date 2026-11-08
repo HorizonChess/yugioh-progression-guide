@@ -93,30 +93,33 @@ export default function TimelineRoad({
                             id={`set-${idx}`}
                             className={`road-stop road-stop--${state} ${idx % 2 ? "road-stop--alt" : ""}`}
                         >
+                            {/* A fixed slot (the chains hang from it); the gilt frame inside hugs the pack art. */}
                             <div className="road-stop__art art-loading">
-                                {set.set_image && (
-                                    <img
-                                        ref={markLoaded}
-                                        onLoad={markLoaded}
-                                        src={set.set_image}
-                                        alt={set.set_name}
-                                        loading={Math.abs(idx - currentSetIndex) < 3 ? "eager" : "lazy"}
-                                        fetchPriority={idx === currentSetIndex ? "high" : "auto"}
-                                    />
-                                )}
-                                {match && (
-                                    <div className="road-stop__stamp">
-                                        <span className={`timeline-stamp timeline-stamp--inked ${match.winner === "player" ? "timeline-stamp--won" : "timeline-stamp--lost"}`}>
-                                            {match.winner === "player" ? "WON" : "LOST"}
-                                        </span>
-                                    </div>
-                                )}
-                                {state === "future" && LOCK}
+                                <div className="road-stop__frame">
+                                    {set.set_image && (
+                                        <img
+                                            ref={markLoaded}
+                                            onLoad={markLoaded}
+                                            src={set.set_image}
+                                            alt={set.set_name}
+                                            loading={Math.abs(idx - currentSetIndex) < 3 ? "eager" : "lazy"}
+                                            fetchPriority={idx === currentSetIndex ? "high" : "auto"}
+                                        />
+                                    )}
+                                    {match && (
+                                        <div className="road-stop__stamp">
+                                            <span className={`timeline-stamp timeline-stamp--inked ${match.winner === "player" ? "timeline-stamp--won" : "timeline-stamp--lost"}`}>
+                                                {match.winner === "player" ? "WON" : "LOST"}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {state === "future" && LOCK}
+                                </div>
                             </div>
                             <div className="road-stop__info">
                                 <h3>{set.set_name}</h3>
                                 <span>{set.tcg_date}</span>
-                                {state === "current" && <span className="road-stop__now">NOW PLAYING</span>}
+                                {state === "current" && <span className="road-stop__now">Now Playing<i aria-hidden="true" /></span>}
                             </div>
                         </Link>
                     </div>
