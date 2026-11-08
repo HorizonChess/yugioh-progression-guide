@@ -1018,6 +1018,12 @@ html::-webkit-scrollbar-corner,
 /* A long label ("Add to Collection") takes two lines rather than run off the cartouche on a phone. */
 .haul__btn .cartouche-btn__label { white-space: normal; max-width: 100%; }
 .haul__back { flex-basis: 100%; text-align: center; color: #e9d9ad; font: 700 12px/1 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233, 217, 173, 0.4); }
+/* Phone: the campaign dock's size, side by side, so the haul stays in view. */
+@media (max-width: 767px) {
+  .haul__dock { gap: 6px 14px; padding-top: 28px; }
+  /* % padding would be of the whole dock here (not the button, as in the campaign's grid): give it in px. */
+  .haul__btn { width: min(142px, calc(50% - 7px)); padding: 0 14px; }
+}
 
 [data-tier="Secret"] { --tc: #ff6ad5; }
 [data-tier="Ultra"] { --tc: #ffcc33; }
