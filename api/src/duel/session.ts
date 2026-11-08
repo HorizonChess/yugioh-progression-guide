@@ -155,6 +155,8 @@ const zoneOf = (location: number, sequence: number): Zone => {
 };
 const phaseOf = (p: number): Phase =>
     p === OcgPhase.DRAW ? 'DP' : p === OcgPhase.STANDBY ? 'SP' : p === OcgPhase.MAIN1 ? 'M1' : p === OcgPhase.MAIN2 ? 'M2' : p === OcgPhase.END ? 'EP' : 'BP';
+/** The engine's select hint for "Select the attack target" (HINTMSG_ATTACKTARGET in constant.lua). */
+const HINT_ATTACK_TARGET = 549;
 const faceUp = (position: number) => (position & P.FACEUP) !== 0;
 /** Where a card lies on the field (its position says whether it is Set). */
 const FIELD_LOCATIONS: ReadonlySet<number> = new Set([L.MZONE, L.SZONE]);
@@ -483,6 +485,8 @@ export class DuelSession {
     private calling: { team: Team; heads: number } | null = null;
     /** What the engine said the next pick of each player is for ("Select an attack target"): its title. */
     private selectHint: [string, string] = ['', ''];
+    /** The engine's code for that hint: 549 (HINTMSG_ATTACKTARGET) marks the pick of what to attack. */
+    private selectHintCode: [number, number] = [0, 0];
     private call: { team: Team; heads: boolean } | null = null;
     private noteCall(response: OcgResponse) {
         if (this.calling && response.type === R.SELECT_OPTION) this.call = { team: this.calling.team, heads: response.index === this.calling.heads };
@@ -578,7 +582,10 @@ export class DuelSession {
                     out.push({ k: 'phase', phase: this.phase });
                     break;
                 case M.HINT:
-                    if (m.hint_type === 3 && (m.player === 0 || m.player === 1)) this.selectHint[m.player] = this.engine.describe(m.hint);
+                    if (m.hint_type === 3 && (m.player === 0 || m.player === 1)) {
+                        this.selectHint[m.player] = this.engine.describe(m.hint);
+                        this.selectHintCode[m.player] = Number(m.hint);
+                    }
                     break;
                 case M.TOSS_COIN:
                     out.push({ k: 'coin', team: m.player as Team, results: m.results, call: this.call });
@@ -929,9 +936,11 @@ export class DuelSession {
             case M.SELECT_CARD:
             case M.SELECT_TRIBUTE: {
                 const tribute = m.type === M.SELECT_TRIBUTE;
+                const attack = !tribute && this.selectHintCode[team] === HINT_ATTACK_TARGET;
+                this.selectHintCode[team] = 0;
                 const cards = m.selects.map((c, i) => this.ref(c, i, team));
                 const title = tribute ? `Choose ${m.min === m.max ? m.min : `${m.min} to ${m.max}`} monster${m.max > 1 ? 's' : ''} to Tribute` : this.hintTitle(m.min, m.max, team);
-                return q({ kind: 'cards', title, min: m.min, max: m.max, cancel: m.can_cancel, cards, ...(tribute ? { tribute } : {}) }, (a) => {
+                return q({ kind: 'cards', title, min: m.min, max: m.max, cancel: m.can_cancel, cards, ...(tribute ? { tribute } : {}), ...(attack ? { attack } : {}) }, (a) => {
                     if (a.kind === 'cancel') return m.can_cancel ? (tribute ? { type: R.SELECT_TRIBUTE, indicies: null } : { type: R.SELECT_CARD, indicies: null }) : null;
                     // Tribute counts in "release" units; the engine checks the total and asks again if it's wrong.
                     const ids = inRange(many(a), cards.length, tribute ? 1 : m.min, m.max);

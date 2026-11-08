@@ -136,10 +136,14 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     // One zone to pick for a card: the zones glow and that's the question, with no bar. A tap off
     // the zones (or on the card again) puts the card back down, where the engine allows it.
     const quietPlace = prompt?.kind === "place" && prompt.count === 1 && !prompt.disable;
+    // Choosing what to attack is as plain: the targets glow, and a tap off them calls the attack off.
+    const quietAttack = prompt?.kind === "cards" && !!prompt.attack;
     const unplace = () => {
-        if (!quietPlace || !prompt.back || duel.answered) return false;
+        if (duel.answered) return false;
+        if (quietPlace && prompt.back) duel.back();
+        else if (quietAttack && prompt.cancel) answer({ kind: "cancel" });
+        else return false;
         sfx.putDown();
-        duel.back();
         return true;
     };
 
@@ -486,7 +490,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 // The card that's asking, when one is: the chain link being activated or resolved.
                 const asking = !prompt.tribute ? view.chain[view.chain.length - 1] : undefined;
                 const about = asking ? { code: asking.code, text: `For ${name(asking.code)}` } : {};
-                question = boardPick
+                question = boardPick && prompt.attack ? null : boardPick
                     ? sheet(prompt.title, <div className="df-sheet__bar"><span>{asking ? `For ${name(asking.code)}: tap` : "Tap"} the glowing cards{prompt.sum ? ` (total ${prompt.sum})` : ""}</span>{confirm}{finish}{cancel}</div>, { compact: true })
                     : sheet(prompt.title, <>{listPick(prompt.cards, prompt.step ? prompt.step.chosen.map((c) => c.id) : picked, (id) => togglePick(id, prompt.max, prompt.min))}<div className="df-sheet__options df-sheet__options--row">{confirm}{finish}{cancel}</div></>, about);
                 break;
