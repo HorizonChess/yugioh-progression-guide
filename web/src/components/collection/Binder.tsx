@@ -10,7 +10,7 @@ import "@/components/collection/binder.css";
 import "@/components/packs/stage/pack-stage.css";
 
 /** One pocket: a card you own (with how many), or the printed outline of one you don't. */
-export type BinderSlot = { key: string; card: Card; count: number; rarity: string; code: string; tier: Tier };
+export type BinderSlot = { key: string; card: Card; count: number; rarity: string; code: string; tier: Tier; /** The chapter it's shown under, in the scroll view's one long wall. */ chapter?: string };
 export type BinderChapter = { key: string; label: string; owned: number; total: number | null };
 
 const TAB_COLOURS = ["#c9a04a", "#8fa3b8", "#b7604a", "#6f9a5a", "#9a6fc4", "#c98a4a", "#4f8fb0", "#b04f7a"];

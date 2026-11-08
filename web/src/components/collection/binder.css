@@ -244,7 +244,8 @@ button.binder-pocket { cursor: pointer; }
 .coll__view-btn--on:hover { color: #2a1c05; }
 
 .cscroll {
-  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 4px 12px 0; padding: 0 22px 28px; border-radius: 14px 14px 0 0;
+  /* Up and down only: the spare copies peeking out of the last column never make it slide sideways. */
+  flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y pinch-zoom; margin: 4px 12px 0; padding: 0 22px 28px; border-radius: 14px 14px 0 0;
   /* quilted black velvet, a warm light falling from above */
   background:
     radial-gradient(ellipse 90% 60% at 50% 0%, rgba(150, 70, 40, 0.22), transparent 70%),
@@ -320,7 +321,6 @@ button.binder-pocket { cursor: pointer; }
 @media (max-width: 767px) { .cvault__rarity { display: none; } .cvault__rarity--short { display: inline; } }
 .cscroll__more { padding: 22px 0; text-align: center; font: 600 12px/1 var(--font-main); letter-spacing: 0.12em; text-transform: uppercase; color: rgba(199, 185, 154, 0.6); }
 .cscroll__empty { margin: 60px 0; text-align: center; font: 600 14px/1.4 var(--font-main); color: #c7b99a; }
-.cscroll__next { display: block; margin: 30px auto 4px; }
 @media (max-width: 767px) {
   .cscroll { margin: 4px 6px 0; padding: 0 12px 20px; border-radius: 12px 12px 0 0; }
   .cscroll__chips { margin: 0 -12px 4px; padding: 8px 12px 10px; }

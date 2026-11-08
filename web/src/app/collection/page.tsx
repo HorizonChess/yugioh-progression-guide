@@ -225,11 +225,11 @@ export default function Collection() {
     const searching = KEYS.some((k) => filters[k] !== DEFAULT_FILTERS[k]);
     const activeCount = KEYS.filter((k) => k !== "search" && panel[k] !== DEFAULT_FILTERS[k]).length;
 
+    const ownedSlot = useCallback((e: OwnedEntry): BinderSlot => {
+        const rarity = resolveRarity(e);
+        return { key: e.key, card: e.card, count: e.count, rarity, code: e.setCode === UNKNOWN_SET ? "" : e.setCode, tier: tierOf(rarity) };
+    }, [resolveRarity]);
     const slots = useMemo<BinderSlot[]>(() => {
-        const ownedSlot = (e: OwnedEntry): BinderSlot => {
-            const rarity = resolveRarity(e);
-            return { key: e.key, card: e.card, count: e.count, rarity, code: e.setCode === UNKNOWN_SET ? "" : e.setCode, tier: tierOf(rarity) };
-        };
         if (searching) return filteredCards.map(ownedSlot);
         if (chapter === OTHER) return strays.map(ownedSlot);
         const list = chapter ? chapterCards[chapter] : undefined;
@@ -241,10 +241,22 @@ export default function Collection() {
                 return { key: `${card.id}-${print?.set_code ?? ""}`, card, count: owned.get(card.id) ?? 0, rarity, code: print?.set_code ?? "", tier: tierOf(rarity) };
             })
             .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
-    }, [searching, filteredCards, chapter, strays, chapterCards, owned, resolveRarity]);
+    }, [searching, filteredCards, chapter, strays, chapterCards, owned, ownedSlot]);
 
-    // The scroll view shows only the cards you own; the binder keeps a pocket for every card of the set.
-    const shown = useMemo(() => (view === "scroll" ? slots.filter((s) => s.count > 0) : slots), [view, slots]);
+    // The scroll view: every card you own, one endless wall in the order of the chapters (each
+    // printing under its own set), with no break between sets. The chips only say where you are.
+    // Keyed on the chapters' order alone: their counts filling in mustn't rebuild the wall (and send you to the top).
+    const chapterOrder = chapters.map((c) => c.key).join("|");
+    const wall = useMemo<BinderSlot[]>(() => {
+        const order = new Map(chapterOrder.split("|").map((k, i) => [k, i]));
+        const chapterOf = (e: OwnedEntry) => (e.setCode !== UNKNOWN_SET && order.has(prefixOf(e.setCode)) ? prefixOf(e.setCode) : OTHER);
+        return filterCollection(collection, cards, DEFAULT_FILTERS)
+            .map((e) => ({ ...ownedSlot(e), chapter: chapterOf(e) }))
+            .sort((a, b) => (order.get(a.chapter) ?? 1e9) - (order.get(b.chapter) ?? 1e9) || a.code.localeCompare(b.code, undefined, { numeric: true }));
+    }, [chapterOrder, collection, cards, ownedSlot]);
+
+    // The binder keeps a pocket for every card of the set; the scroll view shows only what you own.
+    const shown = useMemo(() => (view === "binder" || searching ? slots : wall), [view, searching, slots, wall]);
 
     useWelcome("collection", !loading);
 
@@ -284,15 +296,15 @@ export default function Collection() {
             // Yugi's word on the card, if he has one, over the close-up.
             guide.say(cardTip(s.card, currentSetIndex, seed()));
         },
+        // The scroll view's wall moving on to another set's cards: its chip lights up.
+        onSpot: (k: string) => setChapterPick(k),
         showKey: selectedKey,
         bind: (s: BinderSlot) => bind(toStage(s)),
         empty: searching
             ? "No cards match. Try fewer filters."
             : chapter && chapter !== OTHER && !chapterCards[chapter]
                 ? "Opening the chapter…"
-                : view === "scroll" && slots.length > 0
-                    ? "No cards from this set yet. Open some packs to fill it."
-                    : undefined,
+                : undefined,
     };
 
     return (

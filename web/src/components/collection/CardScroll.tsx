@@ -30,14 +30,17 @@ const BATCH = 48;
 /**
  * The collection as one long scrolling wall of cards laid on velvet (the default
  * view; the binder is the other): spare copies fan out behind a card, rares glow
- * in their rarity's colour. Only owned cards are passed in. Chapter chips stay pinned at the top; the grid grows
- * in batches as you scroll, and the end of a chapter offers the next one.
+ * in their rarity's colour. Only owned cards are passed in: the whole collection, set after set
+ * with no break between them, and the grid grows in batches as you scroll. The chapter chips stay
+ * pinned at the top: the one you're scrolling through lights up, and a tap on one jumps to it.
  */
-export default function CardScroll({ slots, chapters, activeChapter, onChapter, onOpen, bind, empty, showKey = null }: {
+export default function CardScroll({ slots, chapters, activeChapter, onChapter, onSpot, onOpen, bind, empty, showKey = null }: {
     slots: BinderSlot[];
     chapters: BinderChapter[];
     activeChapter: string | null;
     onChapter: (key: string) => void;
+    /** Scrolled on to another chapter's cards. */
+    onSpot?: (key: string) => void;
     onOpen: (s: BinderSlot) => void;
     bind: (s: BinderSlot) => object;
     empty?: string;
@@ -49,15 +52,69 @@ export default function CardScroll({ slots, chapters, activeChapter, onChapter, 
     const sentinel = useRef<HTMLDivElement>(null);
     const [shown, setShown] = useState(BATCH);
 
-    // A new chapter or search starts at the top, one batch in.
+    // A new list (a search, or the collection changing) starts at the top, one batch in.
     const [lastList, setLastList] = useState(slots);
     if (lastList !== slots) {
         setLastList(slots);
         setShown(BATCH);
     }
-    // The close-up stepped past what's drawn: draw up to that card.
-    const want = showKey ? slots.findIndex((s) => s.key === showKey) : -1;
+    // The close-up stepped past what's drawn, or a chip asked for a chapter further on: draw up to there.
+    const [jump, setJump] = useState<string | null>(null);
+    const jumpAt = jump ? slots.findIndex((s) => s.chapter === jump) : -1;
+    const want = Math.max(showKey ? slots.findIndex((s) => s.key === showKey) : -1, jumpAt);
     if (want >= shown) setShown(Math.ceil((want + 1) / BATCH) * BATCH);
+    const wall = slots.some((s) => s.chapter);
+
+    // A chip tapped on the wall: scroll to that chapter's first card.
+    const pick = (key: string) => {
+        if (!wall) return onChapter(key);
+        if (slots.some((s) => s.chapter === key)) setJump(key);
+        else onChapter(key);
+    };
+    useEffect(() => {
+        if (!jump) return;
+        const first = slots.find((s) => s.chapter === jump);
+        const el = first && scroller.current?.querySelector<HTMLElement>(`[data-key="${CSS.escape(first.key)}"]`);
+        if (!el || !scroller.current) return;
+        const box = scroller.current;
+        const chips = box.querySelector(".cscroll__chips")?.getBoundingClientRect().height ?? 0;
+        const by = el.getBoundingClientRect().top - box.getBoundingClientRect().top - chips - 4;
+        // A glide when it's near; a leap across a long way (a glide through thousands of cards drags).
+        box.scrollTo({ top: box.scrollTop + by, behavior: Math.abs(by) < box.clientHeight * 3 ? "smooth" : "instant" });
+        onSpot?.(jump);
+        setJump(null);
+    }, [jump, shown, slots, onSpot]);
+
+    // Which chapter's cards are at the top of the view, under the chips.
+    useEffect(() => {
+        const box = scroller.current;
+        if (!box || !wall || !onSpot) return;
+        let raf = 0, last = "";
+        const spy = () => {
+            raf = 0;
+            // The first card whose foot is below the chips (cards lie in reading order, so a short walk).
+            const line = (box.querySelector(".cscroll__chips") ?? box).getBoundingClientRect().bottom;
+            for (const f of box.querySelectorAll<HTMLElement>(".cvault[data-chapter]")) {
+                if (f.getBoundingClientRect().bottom <= line) continue;
+                const k = f.dataset.chapter!;
+                if (k !== last) onSpot((last = k));
+                return;
+            }
+        };
+        const onScroll = () => (raf ||= requestAnimationFrame(spy));
+        box.addEventListener("scroll", onScroll, { passive: true });
+        spy();
+        return () => {
+            box.removeEventListener("scroll", onScroll);
+            cancelAnimationFrame(raf);
+        };
+    }, [wall, onSpot, slots]);
+
+    // Keep the lit chip in sight in the chip row.
+    useEffect(() => {
+        if (!activeChapter) return;
+        scroller.current?.querySelector<HTMLElement>(`.cscroll__chip[data-chip="${CSS.escape(activeChapter)}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }, [activeChapter]);
 
     useEffect(() => {
         scroller.current?.scrollTo({ top: 0 });
@@ -79,14 +136,11 @@ export default function CardScroll({ slots, chapters, activeChapter, onChapter, 
         return () => io.disconnect();
     }, [more, shown]);
 
-    const at = chapters.findIndex((c) => c.key === activeChapter);
-    const next = at >= 0 ? chapters[at + 1] : undefined;
-
     return (
         <div className="cscroll" ref={scroller}>
             <div className="cscroll__chips" role="tablist" aria-label="Chapters">
                 {chapters.map((c) => (
-                    <button key={c.key} role="tab" aria-selected={c.key === activeChapter} className={`cscroll__chip ${c.key === activeChapter ? "cscroll__chip--on" : ""}`} onClick={() => onChapter(c.key)} title={c.label}>
+                    <button key={c.key} role="tab" aria-selected={c.key === activeChapter} className={`cscroll__chip ${c.key === activeChapter ? "cscroll__chip--on" : ""}`} data-chip={c.key} onClick={() => pick(c.key)} title={c.label}>
                         <b>{c.key}</b><small>{c.total === null ? c.owned : `${c.owned}/${c.total}`}</small>
                     </button>
                 ))}
@@ -97,7 +151,7 @@ export default function CardScroll({ slots, chapters, activeChapter, onChapter, 
                     const art = s.card.card_images[0]?.image_url_small;
                     if (!art) return null;
                     return (
-                        <figure key={s.key} data-key={s.key} className="cvault" data-tier={s.tier} style={{ "--i": i % BATCH } as React.CSSProperties}>
+                        <figure key={s.key} data-key={s.key} data-chapter={s.chapter} className="cvault" data-tier={s.tier} style={{ "--i": i % BATCH } as React.CSSProperties}>
                             <button type="button" className="cvault__card" onClick={() => onOpen(s)} aria-label={s.count > 1 ? `${s.card.name}, ${s.count} copies` : s.card.name}
                                 onPointerMove={tilt} onPointerLeave={untilt} {...bind(s)}>
                                 {/* the spare copies: the edges of up to two more cards under it, the deepest drawn first */}
@@ -116,9 +170,6 @@ export default function CardScroll({ slots, chapters, activeChapter, onChapter, 
                 })}
             </div>
             {more && <div ref={sentinel} className="cscroll__more" aria-hidden="true">Loading more cards…</div>}
-            {!more && slots.length > 0 && activeChapter && next && (
-                <button className="ps-btn cscroll__next" onClick={() => onChapter(next.key)}>Next chapter: {next.label} ›</button>
-            )}
         </div>
     );
 }
