@@ -748,14 +748,16 @@ html::-webkit-scrollbar-corner,
 /* The cartouche is ONE painted image: sized by width, its height follows. */
 .cartouche-btn {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
-  aspect-ratio: 1376 / 620; padding: 0 10%; border: 0; cursor: pointer;
+  aspect-ratio: 1376 / 620; padding: 0; border: 0; cursor: pointer;
   background: center / 100% 100% no-repeat; /* the image is set by CartoucheButton, through asset() */
   filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.6));
   transition: transform 0.12s, filter 0.15s; user-select: none; text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
 .cartouche-btn__label {
-  position: relative; z-index: 1; text-align: center;
+  /* The label keeps to the face inside the rim: 80% of the button's width. (Not padding: a % padding
+     is of the container's width, so a cartouche in a wide dock had no room left for its label.) */
+  position: relative; z-index: 1; text-align: center; max-width: 80%;
   font: 800 clamp(11px, 0.45vw + 0.45rem, 0.95rem) / 1.05 var(--font-display); white-space: nowrap;
   letter-spacing: 0.07em; text-transform: uppercase; color: #3a2405;
   text-shadow: 0 1px 0 rgba(255, 243, 200, 0.7), 0 -1px 0 rgba(70, 40, 5, 0.35);
@@ -1016,13 +1018,12 @@ html::-webkit-scrollbar-corner,
 .haul > :last-child:not(.haul__dock) { margin-bottom: 40px; }
 .haul__btn { width: clamp(190px, 10vw + 120px, 230px); }
 /* A long label ("Add to Collection") takes two lines rather than run off the cartouche on a phone. */
-.haul__btn .cartouche-btn__label { white-space: normal; max-width: 100%; }
+.haul__btn .cartouche-btn__label { white-space: normal; }
 .haul__back { flex-basis: 100%; text-align: center; color: #e9d9ad; font: 700 12px/1 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(233, 217, 173, 0.4); }
 /* Phone: the campaign dock's size, side by side, so the haul stays in view. */
 @media (max-width: 767px) {
   .haul__dock { gap: 6px 14px; padding-top: 28px; }
-  /* % padding would be of the whole dock here (not the button, as in the campaign's grid): give it in px. */
-  .haul__btn { width: min(142px, calc(50% - 7px)); padding: 0 14px; }
+  .haul__btn { width: min(142px, calc(50% - 7px)); }
 }
 
 [data-tier="Secret"] { --tc: #ff6ad5; }
