@@ -35,6 +35,13 @@ import "@/components/deck-builder/deck-builder.css";
 /** Says why the deck rules refuse a move, in the game's own dialog. */
 const ruleAlert = (message: string, title = "Not allowed") => void gameAlert(message, { title });
 
+/** `base` plus the cards of `extra` it doesn't already have. */
+function mergeCards(base: Card[], extra: Card[]): Card[] {
+    const have = new Set(base.map((c) => c.id));
+    const added = extra.filter((c) => !have.has(c.id));
+    return added.length ? [...base, ...added] : base;
+}
+
 export default function DeckBuilder() {
     const { collection, saveDeck, savedDecks, deleteDeck, bannedCardIds } = useProgression();
     const isPhone = useIsPhone();
@@ -42,7 +49,11 @@ export default function DeckBuilder() {
     // Cosmetic ban list (Phase 5): banned cards are greyed in the search panel and
     // blocked from being added. Saved decks are never stripped.
     const bannedIds = useMemo(() => new Set(bannedCardIds), [bannedCardIds]);
-    const [allCards, setAllCards] = useState<Card[]>([]);
+    // Two sources, kept apart so neither fetch can overwrite the other's result:
+    // the cards you own, and cards a loaded or imported deck needed beyond those.
+    const [ownedCards, setOwnedCards] = useState<Card[]>([]);
+    const [deckOnlyCards, setDeckOnlyCards] = useState<Card[]>([]);
+    const allCards = useMemo(() => mergeCards(ownedCards, deckOnlyCards), [ownedCards, deckOnlyCards]);
     const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
 
     // Deck State
@@ -88,7 +99,7 @@ export default function DeckBuilder() {
     useEffect(() => {
         let cancelled = false;
         fetchCardsByIds(ownedCardIds(collection)).then(cards => {
-            if (!cancelled) setAllCards(cards);
+            if (!cancelled) setOwnedCards(cards);
         });
         return () => {
             cancelled = true;
@@ -174,9 +185,9 @@ export default function DeckBuilder() {
         let cardsToUse = allCards;
         if (missingIds.length > 0) {
             const fetchedCards = await fetchCardsByIds(missingIds);
-            cardsToUse = [...allCards, ...fetchedCards];
-            // Update allCards state so future operations work
-            setAllCards(cardsToUse);
+            cardsToUse = mergeCards(allCards, fetchedCards);
+            // Added beside the owned cards, never in place of them: the owned fetch may still be landing.
+            setDeckOnlyCards((prev) => mergeCards(prev, fetchedCards));
         }
 
         const getCards = (ids: number[]) => ids.map(id => cardsToUse.find(c => c.id === id)).filter(isDefined);
@@ -235,9 +246,7 @@ export default function DeckBuilder() {
         if ((mainDeck.length > 0 || extraDeck.length > 0 || sideDeck.length > 0) && !(await gameConfirm("The deck you're building will be replaced.", { title: "Import this deck?", confirmLabel: "Import" }))) return;
 
         const fetchedCards = await fetchCardsByIds([...new Set([...main, ...extra, ...side])]);
-        const newAllCards = [...allCards];
-        fetchedCards.forEach(card => { if (!newAllCards.find(c => c.id === card.id)) newAllCards.push(card); });
-        setAllCards(newAllCards);
+        setDeckOnlyCards((prev) => mergeCards(prev, fetchedCards));
 
         const getCards = (ids: number[]) =>
             ids.map(id => fetchedCards.find(c => c.id === id)).filter(isDefined);
