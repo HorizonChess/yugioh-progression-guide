@@ -234,3 +234,108 @@ button.binder-pocket { cursor: pointer; }
   .binder-pager--tabs span { min-width: 40px; font-size: 11px; letter-spacing: 0.04em; }
   .binder-pager--tabs .ps-btn { padding: 4px 9px; font-size: 15px; line-height: 1; }
 }
+
+/* ---------- the view toggle, and the scrolling grid (CardScroll.tsx) ---------- */
+.coll__view { flex: none; display: flex; padding: 3px; gap: 2px; border-radius: 999px; background: rgba(10, 7, 4, 0.7); box-shadow: 0 0 0 1px rgba(224, 181, 79, 0.4); }
+.coll__view-btn { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; cursor: pointer; background: none; color: #c7b99a; font: 700 12px/1 var(--font-main); letter-spacing: 0.08em; text-transform: uppercase; transition: background 0.2s, color 0.2s; }
+.coll__view-btn svg { width: 15px; height: 15px; flex: none; }
+.coll__view-btn:hover { color: #f1e7cc; }
+.coll__view-btn--on { background: linear-gradient(#f0cf73, #c99a3a); color: #2a1c05; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+.coll__view-btn--on:hover { color: #2a1c05; }
+
+.cscroll {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 4px 12px 0; padding: 0 22px 28px; border-radius: 14px 14px 0 0;
+  /* quilted black velvet, a warm light falling from above */
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(150, 70, 40, 0.22), transparent 70%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.28) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.28) 0 1px, transparent 1px 34px),
+    radial-gradient(ellipse at 50% 30%, #2a1210, #120707 60%, #070303);
+  background-attachment: local;
+  box-shadow: inset 0 0 0 1px rgba(224, 181, 79, 0.35), inset 0 2px 0 rgba(255, 220, 150, 0.12), inset 0 0 60px rgba(0, 0, 0, 0.7);
+}
+.cscroll__chips {
+  position: sticky; top: 0; z-index: 10; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -22px 6px; padding: 12px 22px 14px;
+  background: linear-gradient(#1a0b09 65%, rgba(26, 11, 9, 0));
+}
+.cscroll__chips::-webkit-scrollbar { display: none; }
+.cscroll__chip {
+  flex: none; display: flex; align-items: baseline; gap: 6px; padding: 7px 12px; border: 0; border-radius: 999px; cursor: pointer; color: #c7b99a;
+  background: rgba(10, 7, 4, 0.75); box-shadow: 0 0 0 1px rgba(224, 181, 79, 0.3); transition: background 0.2s, color 0.2s;
+}
+.cscroll__chip b { font: 800 12px/1 var(--font-display); letter-spacing: 0.04em; }
+.cscroll__chip small { font: 700 10px/1 var(--font-main); opacity: 0.75; }
+.cscroll__chip:hover { color: #f1e7cc; box-shadow: 0 0 0 1px rgba(224, 181, 79, 0.6); }
+.cscroll__chip--on { background: linear-gradient(#f0cf73, #c99a3a); color: #2a1c05; box-shadow: 0 0 0 1px #8a6420; }
+.cscroll__chip--on:hover { color: #2a1c05; }
+.cscroll__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 26px 20px; padding-top: 6px; }
+
+/* a card on the velvet: bare, its spare copies fanned behind, a caption beneath */
+.cvault { margin: 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; animation: cvault-in 0.5s calc(var(--i, 0) * 18ms) both cubic-bezier(0.2, 0.9, 0.3, 1); }
+@keyframes cvault-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } }
+.cvault__card {
+  position: relative; width: 100%; aspect-ratio: 813 / 1185; padding: 0; border: 0; background: none; cursor: pointer; color: inherit;
+  transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform 0.25s ease-out, translate 0.25s;
+}
+.cvault__card:hover { translate: 0 -5px; transition: transform 0.08s linear, translate 0.25s; }
+.cvault__card img {
+  position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 4.5% / 3.2%;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 18px -4px rgba(0, 0, 0, 0.85), 0 3px 5px rgba(0, 0, 0, 0.6);
+}
+.cvault:not([data-tier="Common"]) .cvault__card img {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tc) 75%, transparent), 0 0 18px -2px color-mix(in srgb, var(--tc) 55%, transparent), 0 10px 18px -4px rgba(0, 0, 0, 0.85);
+}
+/* the light pooled on the velvet under a rare */
+.cvault:not([data-tier="Common"]) .cvault__card::before {
+  content: ""; position: absolute; left: 6%; right: 6%; bottom: -8%; height: 18%; border-radius: 50%; z-index: 0;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tc) 45%, transparent), transparent); filter: blur(4px);
+}
+/* spare copies: card backs peeking out behind, one per copy (up to two) */
+.cvault__stack, .cvault__stack::before {
+  position: absolute; inset: 0; border-radius: 4.5% / 3.2%; z-index: 0;
+  background: radial-gradient(ellipse at 50% 50%, #6b3a1c 0 18%, transparent 19%), linear-gradient(135deg, #4a2412, #24100a);
+  box-shadow: inset 0 0 0 3px #2a140b, inset 0 0 0 4px rgba(224, 181, 79, 0.35), 0 6px 10px rgba(0, 0, 0, 0.7);
+}
+.cvault__stack { transform: translate(5px, -4px) rotate(3deg); }
+.cvault__stack[data-n="3"]::before { content: ""; transform: translate(4px, -3px) rotate(2.5deg); }
+/* holo shimmer on rares, and a glare that follows the pointer */
+.cvault__foil {
+  position: absolute; inset: 0; z-index: 2; border-radius: 4.5% / 3.2%; pointer-events: none; mix-blend-mode: soft-light; opacity: 0.6;
+  background: linear-gradient(115deg, transparent 30%, color-mix(in srgb, var(--tc) 80%, white) 46%, transparent 60%) 0 0 / 250% 100%; animation: binder-foil 5s ease-in-out infinite;
+}
+.cvault__glare { position: absolute; inset: 0; z-index: 3; border-radius: 4.5% / 3.2%; pointer-events: none; opacity: 0; transition: opacity 0.25s; background: radial-gradient(circle at var(--gx, 50%) var(--gy, 30%), rgba(255, 245, 220, 0.3), transparent 55%); mix-blend-mode: overlay; }
+.cvault__card:hover .cvault__glare { opacity: 1; }
+.cvault__count {
+  position: absolute; z-index: 4; right: -7px; bottom: 9%; min-width: 26px; padding: 4px 6px; border-radius: 999px; text-align: center;
+  font: 800 11px/1 var(--font-main); color: #2a1c05; background: linear-gradient(#ffe7a0, #d4a542 60%, #9a6c1e); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+/* the caption: set number and rarity, a dot in the rarity's colour */
+.cvault figcaption {
+  display: flex; align-items: center; gap: 5px; max-width: 100%; white-space: nowrap; overflow: hidden;
+  font: 700 10px/1 var(--font-main); letter-spacing: 0.08em; text-transform: uppercase; color: rgba(199, 185, 154, 0.6);
+}
+.cvault figcaption b { font: 800 10.5px/1 var(--font-display); letter-spacing: 0.06em; color: rgba(224, 181, 79, 0.85); }
+.cvault figcaption i { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 6px var(--tc); }
+
+.cvault__rarity { overflow: hidden; text-overflow: ellipsis; }
+.cvault__rarity--short { display: none; }
+@media (max-width: 767px) { .cvault__rarity { display: none; } .cvault__rarity--short { display: inline; } }
+.cscroll__more { padding: 22px 0; text-align: center; font: 600 12px/1 var(--font-main); letter-spacing: 0.12em; text-transform: uppercase; color: rgba(199, 185, 154, 0.6); }
+.cscroll__empty { margin: 60px 0; text-align: center; font: 600 14px/1.4 var(--font-main); color: #c7b99a; }
+.cscroll__next { display: block; margin: 30px auto 4px; }
+@media (max-width: 767px) {
+  .cscroll { margin: 4px 6px 0; padding: 0 12px 20px; border-radius: 12px 12px 0 0; }
+  .cscroll__chips { margin: 0 -12px 4px; padding: 8px 12px 10px; }
+  .cscroll__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 12px; }
+  .cvault { gap: 6px; }
+  .cvault figcaption { font-size: 8.5px; letter-spacing: 0.04em; }
+  .cvault figcaption b { font-size: 9px; }
+  .cvault__count { right: -5px; min-width: 22px; padding: 3px 5px; font-size: 10px; }
+  .cvault__stack { transform: translate(3px, -3px) rotate(3deg); }
+  .cvault__stack[data-n="3"]::before { transform: translate(3px, -2px) rotate(2.5deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cvault { animation: none; }
+  .cvault__foil { animation: none; }
+  .cvault__card { transform: none; }
+}

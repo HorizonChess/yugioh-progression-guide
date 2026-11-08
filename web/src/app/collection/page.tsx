@@ -5,9 +5,10 @@ import { alertRepoError, useProgression } from "@/context/ProgressionContext";
 import { gameAlert, gameAsk, gameConfirm } from "@/components/ui/GameDialog";
 import { useAuth } from "@/context/AuthContext";
 import { fetchAllSets, fetchCardsByIds, fetchCardsInSet, Card, CardSet } from "@/lib/api";
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from "react";
 import CollectionFilters, { DEFAULT_FILTERS, FilterState } from "@/components/collection/CollectionFilters";
 import Binder, { type BinderChapter, type BinderSlot } from "@/components/collection/Binder";
+import CardScroll from "@/components/collection/CardScroll";
 import { CardCloseUp, useCardPeek } from "@/components/card/CardPlate";
 import { LookedAt } from "@/components/card/LookLater";
 import { tierOf, type StageCard } from "@/components/packs/stage/plate";
@@ -25,13 +26,39 @@ const OTHER = "MORE";
 const prefixOf = (code: string) => code.split("-")[0] ?? code;
 const KEYS = Object.keys(DEFAULT_FILTERS) as (keyof FilterState)[];
 
+/** How the collection is shown: one scrolling grid (the default), or the ring binder. Remembered on this device. */
+type View = "scroll" | "binder";
+const VIEW_KEY = "ygo-collection-view";
+const viewListeners = new Set<() => void>();
+const readView = (): View => {
+    try {
+        return localStorage.getItem(VIEW_KEY) === "binder" ? "binder" : "scroll";
+    } catch {
+        return "scroll";
+    }
+};
+const setView = (v: View) => {
+    try {
+        localStorage.setItem(VIEW_KEY, v);
+    } catch { /* private mode: this visit only */ }
+    viewListeners.forEach((f) => f());
+};
+const subscribeView = (f: () => void) => {
+    viewListeners.add(f);
+    return () => viewListeners.delete(f);
+};
+
+const GRID_ICON = <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="5" height="7" rx="1" /><rect x="9.5" y="3" width="5" height="7" rx="1" /><rect x="16" y="3" width="5" height="7" rx="1" /><rect x="3" y="13" width="5" height="7" rx="1" /><rect x="9.5" y="13" width="5" height="7" rx="1" /><rect x="16" y="13" width="5" height="7" rx="1" /></svg>;
+const BOOK_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 6c-2-1.6-5-2-8-1.6v14c3-.4 6 0 8 1.6 2-1.6 5-2 8-1.6v-14c-3-.4-6 0-8 1.6z" /><path d="M12 6v14" /></svg>;
+
 const toStage = (s: BinderSlot): StageCard => ({
     card: s.card, image: s.card.card_images[0]?.image_url ?? "", tier: s.tier, rarity: s.rarity, code: s.code,
     owned: s.count, ownedNote: s.count ? `Owned ×${s.count}` : "Not owned yet",
 });
 
 /**
- * The card COLLECTION (route: /collection), as a ring binder: a chapter per set
+ * The card COLLECTION (route: /collection), as one scrolling grid (the default)
+ * or a ring binder, toggled from the heading: a chapter per set
  * reached (or that you own cards from), each the whole set in number order with
  * an empty pocket for every card still missing. Searching or any filter turns
  * the binder to just your matching cards, in the chosen sort. Today's filter
@@ -41,6 +68,7 @@ export default function Collection() {
     const { collection, importCollection, currentSetIndex } = useProgression();
     const owner = useAuth().user?.duelistName ?? "Guest";
     const isPhone = useIsPhone();
+    const view = useSyncExternalStore(subscribeView, readView, () => "scroll" as View);
     const [cards, setCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState(true);
     /** The card open in the close-up, by its pocket. */
@@ -215,6 +243,9 @@ export default function Collection() {
             .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
     }, [searching, filteredCards, chapter, strays, chapterCards, owned, resolveRarity]);
 
+    // The scroll view shows only the cards you own; the binder keeps a pocket for every card of the set.
+    const shown = useMemo(() => (view === "scroll" ? slots.filter((s) => s.count > 0) : slots), [view, slots]);
+
     useWelcome("collection", !loading);
 
     if (loading && Object.keys(collection).length > 0) {
@@ -226,7 +257,7 @@ export default function Collection() {
     }
 
     const isEmpty = Object.keys(collection).length === 0;
-    const selectedIndex = selectedKey ? slots.findIndex((s) => s.key === selectedKey) : -1;
+    const selectedIndex = selectedKey ? shown.findIndex((s) => s.key === selectedKey) : -1;
     const info = chapters.find((c) => c.key === chapter);
     const meta = searching
         ? `of ${filterCollection(collection, cards, DEFAULT_FILTERS).length} you own`
@@ -237,6 +268,32 @@ export default function Collection() {
                     ? `${chapterSet?.tcg_date ?? ""} · ${info.owned} collected`
                     : `${chapterSet?.tcg_date ?? ""} · ${info.owned} of ${info.total} collected · ${Math.round((info.owned / Math.max(1, info.total)) * 100)}%`
                 : "Cards from sets outside your binder's chapters";
+
+    // What either view shows: the cards, the chapters, and what a tap does.
+    const shelf = {
+        slots: shown,
+        chapters,
+        activeChapter: searching ? null : chapter,
+        onChapter: (k: string) => {
+            setChapterPick(k);
+            setSearch("");
+        },
+        onOpen: (s: BinderSlot) => {
+            hide();
+            setSelectedKey(s.key);
+            // Yugi's word on the card, if he has one, over the close-up.
+            guide.say(cardTip(s.card, currentSetIndex, seed()));
+        },
+        showKey: selectedKey,
+        bind: (s: BinderSlot) => bind(toStage(s)),
+        empty: searching
+            ? "No cards match. Try fewer filters."
+            : chapter && chapter !== OTHER && !chapterCards[chapter]
+                ? "Opening the chapter…"
+                : view === "scroll" && slots.length > 0
+                    ? "No cards from this set yet. Open some packs to fill it."
+                    : undefined,
+    };
 
     return (
         <div className={`coll ${filtersOpen ? "coll--filters" : ""}`} onClick={() => setMenuOpen(false)}>
@@ -256,6 +313,21 @@ export default function Collection() {
                             Filters{activeCount > 0 && <span className="coll__n">{activeCount}</span>}
                         </button>
                     </>
+                )}
+                {isPhone ? (
+                    // Phones: one button, showing the view it switches to.
+                    <button className="ps-btn coll__icon" aria-label={view === "scroll" ? "Switch to binder view" : "Switch to scroll view"} title={view === "scroll" ? "Binder view" : "Scroll view"} onClick={() => setView(view === "scroll" ? "binder" : "scroll")}>
+                        {view === "scroll" ? BOOK_ICON : GRID_ICON}
+                    </button>
+                ) : (
+                    <div className="coll__view" role="group" aria-label="View">
+                        <button className={`coll__view-btn ${view === "scroll" ? "coll__view-btn--on" : ""}`} aria-pressed={view === "scroll"} onClick={() => setView("scroll")}>
+                            {GRID_ICON}<span>Scroll</span>
+                        </button>
+                        <button className={`coll__view-btn ${view === "binder" ? "coll__view-btn--on" : ""}`} aria-pressed={view === "binder"} onClick={() => setView("binder")}>
+                            {BOOK_ICON}<span>Binder</span>
+                        </button>
+                    </div>
                 )}
                 <div className="coll__menu" ref={menuEl} onClick={(e) => e.stopPropagation()}>
                     <button className="ps-btn" aria-haspopup="true" aria-expanded={menuOpen} aria-label="More" onClick={() => setMenuOpen((v) => !v)}>⋯</button>
@@ -284,28 +356,17 @@ export default function Collection() {
                 </div>
             )}
 
-            <Binder
-                owner={owner}
-                title={searching ? "Search results" : info?.label ?? ""}
-                chapterCode={searching ? "" : chapter ?? ""}
-                slots={slots}
-                chapters={chapters}
-                activeChapter={searching ? null : chapter}
-                onChapter={(k) => {
-                    setChapterPick(k);
-                    setSearch("");
-                }}
-                onOpen={(s) => {
-                    hide();
-                    setSelectedKey(s.key);
-                    // Yugi's word on the card, if he has one, over the close-up.
-                    guide.say(cardTip(s.card, currentSetIndex, seed()));
-                }}
-                showKey={selectedKey}
-                bind={(s) => bind(toStage(s))}
-                empty={searching ? "No cards match. Try fewer filters." : chapter && chapter !== OTHER && !chapterCards[chapter] ? "Opening the chapter…" : undefined}
-                isPhone={isPhone}
-            />
+            {view === "binder" ? (
+                <Binder
+                    owner={owner}
+                    title={searching ? "Search results" : info?.label ?? ""}
+                    chapterCode={searching ? "" : chapter ?? ""}
+                    {...shelf}
+                    isPhone={isPhone}
+                />
+            ) : (
+                <CardScroll {...shelf} />
+            )}
 
             {/* Today's filter panel, unchanged, in a drawer. It stays mounted so it keeps its choices. */}
             <div className="coll__drawer-bg" onClick={() => setFiltersOpen(false)} />
@@ -316,16 +377,16 @@ export default function Collection() {
 
             {peek}
             {selectedIndex >= 0 && (
-                <LookedAt key={slots[selectedIndex]!.card.id} cardId={slots[selectedIndex]!.card.id} />
+                <LookedAt key={shown[selectedIndex]!.card.id} cardId={shown[selectedIndex]!.card.id} />
             )}
             {selectedIndex >= 0 && (
                 <CardCloseUp
-                    card={toStage(slots[selectedIndex]!)}
+                    card={toStage(shown[selectedIndex]!)}
                     mark
                     onClose={() => setSelectedKey(null)}
-                    onPrev={selectedIndex > 0 ? () => setSelectedKey(slots[selectedIndex - 1]!.key) : undefined}
-                    onNext={selectedIndex < slots.length - 1 ? () => setSelectedKey(slots[selectedIndex + 1]!.key) : undefined}
-                    position={`${selectedIndex + 1} / ${slots.length}`}
+                    onPrev={selectedIndex > 0 ? () => setSelectedKey(shown[selectedIndex - 1]!.key) : undefined}
+                    onNext={selectedIndex < shown.length - 1 ? () => setSelectedKey(shown[selectedIndex + 1]!.key) : undefined}
+                    position={`${selectedIndex + 1} / ${shown.length}`}
                 />
             )}
         </div>
