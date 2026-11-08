@@ -3,10 +3,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CardSet, PulledCard } from "@/lib/api";
 import { useIsPhone } from "@/lib/useIsPhone";
-import { useProgression } from "@/context/ProgressionContext";
 import { createPackStage, type PackStage } from "@/components/packs/stage/engine";
 import { setSoundOn, soundOn } from "@/components/packs/stage/fx";
 import { toStageCard } from "@/components/packs/stage/plate";
+import { CardCloseUp } from "@/components/card/CardPlate";
 import "@/components/packs/stage/pack-stage.css";
 
 const CARD_BACK = `${process.env.NEXT_PUBLIC_IMAGE_HOST ?? ""}/cards/back_high.jpg`;
@@ -54,11 +54,18 @@ export default function PackStageView({
     const [sound, setSound] = useState(soundOn);
     const [width, setWidth] = useState(0);
     // The engine keeps the callbacks it was made with; these always reach the latest props.
-    const { marks, setMark } = useProgression();
-    const latest = useRef({ onFlip, ownedBefore, flippedCards, marks, setMark });
+    const latest = useRef({ onFlip, ownedBefore, flippedCards });
     useLayoutEffect(() => {
-        latest.current = { onFlip, ownedBefore, flippedCards, marks, setMark };
+        latest.current = { onFlip, ownedBefore, flippedCards };
     });
+    /** The card open in the close-up, by its place in the pack. */
+    const [inspected, setInspected] = useState<number | null>(null);
+    // A new pack's cards aren't the ones a close-up was showing.
+    const [inspectedPack, setInspectedPack] = useState(packIndex);
+    if (inspectedPack !== packIndex) {
+        setInspectedPack(packIndex);
+        setInspected(null);
+    }
 
     // Re-lay the stage when its width changes (not its height: a phone's address bar moves that).
     useLayoutEffect(() => {
@@ -91,7 +98,7 @@ export default function PackStageView({
             onFlip: (i) => latest.current.onFlip(i),
             onReady: () => setReadyStage(key),
             onAllFlipped: () => undefined,
-            marks: { has: (id) => latest.current.marks.has(id), set: (id, on) => latest.current.setMark(id, on) },
+            onInspect: setInspected,
         });
         stage.current = s;
         return () => {
@@ -142,6 +149,15 @@ export default function PackStageView({
                 )}
                 {isPhone && <button className="ps-btn ps-btn--round" onClick={() => stage.current?.spin(1)} disabled={!ready} aria-label="Turn right">›</button>}
             </div>
+
+            {inspected !== null && pack[inspected] && (
+                <CardCloseUp
+                    card={toStageCard(pack[inspected], ownedBefore(inspected))}
+                    mark
+                    from={() => stage.current?.cardAt(inspected)}
+                    onClose={() => setInspected(null)}
+                />
+            )}
         </div>
     );
 }

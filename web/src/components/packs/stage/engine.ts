@@ -25,11 +25,17 @@ export type StageOptions = {
     /** The cards are out and can be flipped. */
     onReady: () => void;
     onAllFlipped: () => void;
-    /** Marks to look at later: the close-up gets a toggle for its card. */
-    marks?: { has: (cardId: number) => boolean; set: (cardId: number, on: boolean) => void };
+    /** A face-up card was tapped: the page opens its close-up (the shared CardCloseUp), flying out of `cardAt(index)`. */
+    onInspect: (index: number) => void;
 };
 
-export type PackStage = { flipAll: () => void; spin: (dir: 1 | -1) => void; destroy: () => void };
+export type PackStage = {
+    flipAll: () => void;
+    spin: (dir: 1 | -1) => void;
+    /** The card at `index` on the stage, for the close-up to fly out of and back into. */
+    cardAt: (index: number) => HTMLElement | null;
+    destroy: () => void;
+};
 
 const ASPECT = 813 / 1185; // card width / height
 const PACK_ASPECT = 400 / 733;
@@ -136,10 +142,11 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
         peekEl = null;
         stage.querySelectorAll(".ps-card--lift").forEach((e) => e.classList.remove("ps-card--lift"));
     }
-    let inspecting = false;
+    // While a close-up is open, hovering cards under it shows no details.
+    const inspecting = () => !!document.querySelector(".closeup");
     function addPeek(el: CardEl) {
         el.addEventListener("pointerenter", (e) => {
-            if (e.pointerType !== "mouse" || !isUp(el) || inspecting || stage.querySelector(".ps-dim--on")) return;
+            if (e.pointerType !== "mouse" || !isUp(el) || inspecting() || stage.querySelector(".ps-dim--on")) return;
             hidePeek();
             el.classList.add("ps-card--lift");
             peekTimer = setTimeout(() => {
@@ -155,74 +162,11 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
         el.addEventListener("pointerleave", hidePeek);
     }
 
-    /** A face-up card flies up into a close-up, its details beside it (wide) or in a sheet below (phone). */
-    /** "Look later": a bookmark beside the close-up's card (a tap on it doesn't close the close-up). */
-    function markToggle(cardId: number, marks: NonNullable<StageOptions["marks"]>) {
-        const b = document.createElement("button");
-        b.type = "button";
-        const show = (on: boolean) => {
-            const label = on ? "Marked to look at later" : "Look at later";
-            b.className = `mark-toggle mark-toggle--icon closeup__mark ${on ? "mark-toggle--on" : ""}`;
-            b.setAttribute("aria-pressed", String(on));
-            b.setAttribute("aria-label", label);
-            b.title = label;
-            b.innerHTML = `<span class="mark-toggle__icon" aria-hidden="true"></span>`;
-        };
-        show(marks.has(cardId));
-        b.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const on = !marks.has(cardId);
-            marks.set(cardId, on);
-            show(on);
-        });
-        return b;
-    }
-
+    /** A face-up card opens the close-up (the page renders it), its details beside it (wide) or in a sheet below (phone). */
     function inspect(from: CardEl) {
         hidePeek();
-        inspecting = true;
-        const s = o.cards[from.idx]!, VW = innerWidth, VH = innerHeight, wide = VW >= 700;
-        const ov = toBody(document.createElement("div"));
-        ov.className = "ps-inspect";
-        ov.setAttribute("role", "dialog");
-        ov.setAttribute("aria-label", s.card.name);
-        ov.innerHTML = `<span class="ps-close-hint">Tap anywhere to close</span>`;
-        const panel = plate(s, wide ? "" : "ps-sheet");
-        ov.append(panel);
-        const above = wide ? VH : VH - panel.offsetHeight;
-        const ch = wide ? Math.min(VH * 0.72, 560) : Math.min(above - 64, (VW * 0.72) / ASPECT), cw = ch * ASPECT;
-        const el = cardEl(s, cw, from.idx);
-        el.classList.add("ps-card--flipped");
-        if (s.tier !== "Common") el.classList.add("ps-card--revealed");
-        enableTilt(el);
-        if (o.marks) el.append(markToggle(s.card.id, o.marks));
-        ov.prepend(el);
-        const panelW = Math.min(400, VW - cw - 120);
-        const tx = wide ? VW / 2 - (cw + 32 + panelW) / 2 : VW / 2 - cw / 2;
-        const ty = wide ? (VH - ch) / 2 : 40 + (above - 40 - ch) / 2;
-        if (wide) Object.assign(panel.style, { width: panelW + "px", left: tx + cw + 32 + "px", top: (VH - Math.min(ch, 460)) / 2 + "px" });
-        const b = from.getBoundingClientRect();
-        to(ov, { opacity: 1, duration: 0.25 });
-        fromTo(el, { x: b.left + b.width / 2 - cw / 2, y: b.top + b.height / 2 - ch / 2, scale: b.width / cw },
-            { x: tx, y: ty, scale: 1, duration: 0.45, ease: "power3.out" });
-        anims.push(gsap.from(panel, wide ? { opacity: 0, x: -20, duration: 0.35, delay: 0.2 } : { yPercent: 100, duration: 0.4, delay: 0.1, ease: "power3.out" }));
         Sfx.whoosh();
-        const close = () => {
-            const nb = from.getBoundingClientRect();
-            to(el, { x: nb.left + nb.width / 2 - cw / 2, y: nb.top + nb.height / 2 - ch / 2, scale: nb.width / cw, duration: 0.35, ease: "power3.in" });
-            to(ov, { opacity: 0, duration: 0.35, onComplete: () => ov.remove() });
-            removeEventListener("keydown", onKey);
-            inspecting = false;
-        };
-        const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
-        addEventListener("keydown", onKey, { signal });
-        // A tap opens this on finger-up; the browser's click for that same tap then
-        // lands on the new overlay, so clicks in the first moment don't close it.
-        const opened = performance.now();
-        ov.addEventListener("click", (e) => {
-            if (performance.now() - opened < 400) return;
-            if (!(e.target as Element).closest(".ps-plate")) close();
-        });
+        o.onInspect(from.idx);
     }
 
     // ---- the rare reveal -------------------------------------------------------
@@ -332,7 +276,7 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
     }
 
     // ---- phones: tear, then the cards swirl onto a ring -------------------------
-    function ringStage(): Omit<PackStage, "destroy"> {
+    function ringStage(): Omit<PackStage, "destroy" | "cardAt"> {
         const step = (Math.PI * 2) / n;
         const cw = Math.min(W * 0.5, H * 0.4 * ASPECT, 230), ch = cw / ASPECT;
         const R = Math.min(W * 0.48, 400), ringY = H * 0.44;
@@ -548,7 +492,7 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
     }
 
     // ---- wider screens: the duel table -----------------------------------------
-    function tableStage(): Omit<PackStage, "destroy"> {
+    function tableStage(): Omit<PackStage, "destroy" | "cardAt"> {
         const rowsOf = n <= 5 ? [n] : n <= 10 ? [5, n - 5] : [Math.ceil(n / 2), Math.floor(n / 2)];
         const cols = rowsOf[0]!, rows = rowsOf.length, gap = 20, avail = H - 56;
         const cw = Math.min((W * 0.92 - (cols - 1) * gap) / cols, ((avail - (rows - 1) * gap) / rows) * ASPECT, 210), ch = cw / ASPECT;
@@ -720,6 +664,7 @@ export function createPackStage(stage: HTMLElement, o: StageOptions): PackStage 
     const api = o.phone ? ringStage() : tableStage();
     return {
         ...api,
+        cardAt: (index) => [...stage.querySelectorAll<CardEl>(".ps-card")].find((el) => el.idx === index) ?? null,
         destroy() {
             alive = false;
             ac.abort();

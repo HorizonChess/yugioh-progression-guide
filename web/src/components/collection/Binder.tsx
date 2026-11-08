@@ -43,7 +43,7 @@ function Page({ slots, title, chapter, number, onOpen, bind }: {
                 if (!s) return <div key={i} className="binder-pocket" />;
                 const art = s.card.card_images[0]?.image_url_small;
                 return (
-                    <button key={s.key} type="button" className="binder-pocket" data-tier={s.tier} onClick={() => onOpen(s)} aria-label={s.card.name} {...(s.count ? bind(s) : {})}>
+                    <button key={s.key} data-key={s.key} type="button" className="binder-pocket" data-tier={s.tier} onClick={() => onOpen(s)} aria-label={s.card.name} {...(s.count ? bind(s) : {})}>
                         {s.count && art ? (
                             <>
                                 <img src={art} alt="" decoding="sync" />

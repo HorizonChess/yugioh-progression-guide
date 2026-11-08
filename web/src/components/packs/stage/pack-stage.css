@@ -160,11 +160,6 @@
 .ps-plate__foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 7px 2px 0; font: 700 11px/1 var(--font-main); letter-spacing: 0.12em; text-transform: uppercase; color: rgba(20, 13, 5, 0.85); }
 .ps-stamp-new { padding: 4px 8px; color: #fff5d6; background: #b3261e; border-radius: 3px; transform: rotate(-4deg); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45); letter-spacing: 0.2em; }
 .ps-peek { position: fixed; z-index: 270; width: 330px; pointer-events: none; }
-.ps-inspect { position: fixed; inset: 0; z-index: 300; background: rgba(4, 3, 8, 0.86); opacity: 0; cursor: pointer; }
-.ps-inspect .ps-card { cursor: default; }
-.ps-inspect .ps-plate { position: absolute; cursor: default; max-height: 86vh; overflow-y: auto; }
-.ps-inspect .ps-sheet { left: 6px; right: 6px; bottom: 0; border-radius: 14px 14px 0 0; max-height: 48%; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
-.ps-inspect .ps-sheet::before { content: ""; display: block; width: 44px; height: 4px; margin: -2px auto 8px; border-radius: 2px; background: rgba(23, 17, 10, 0.55); }
 .ps-close-hint { position: absolute; top: 14px; right: 16px; font: 700 12px/1 var(--font-main); letter-spacing: 0.14em; text-transform: uppercase; color: #a99d80; }
 
 /* the controls under the stage */

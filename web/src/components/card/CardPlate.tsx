@@ -52,11 +52,38 @@ export function useCardPeek() {
 }
 
 /**
- * The close-up: the card large (it leans toward the pointer) with its plate beside
- * it on wide screens, or in a sheet under it on phones. `action` adds a button
- * under the plate (e.g. ban this card). Click outside or press Escape to close.
+ * Where a close-up flies from when its opener doesn't say: the card (its picture)
+ * last pressed on the page, if that was a moment ago. Every list of cards gets the
+ * flight this way without wiring; a list whose cards move (the collection, the pack
+ * opener) passes `from` so closing flies back to wherever the card is now.
  */
-export function CardCloseUp({ card, onClose, action, mark = false, onPrev, onNext, position }: {
+let lastPress: { el: Element; at: number } | null = null;
+if (typeof window !== "undefined") {
+    addEventListener("pointerdown", (e) => {
+        const hit = (e.target as Element | null)?.closest?.("button, a, [role=button], .ps-card");
+        if (hit && !hit.closest(".closeup")) lastPress = { el: hit.querySelector("img") ?? hit, at: performance.now() };
+    }, true);
+}
+const pressedCard = () => (lastPress && performance.now() - lastPress.at < 1500 && lastPress.el.isConnected ? lastPress.el : null);
+
+const FLY_IN = { duration: 450, easing: "cubic-bezier(.22,.9,.3,1)" };
+const FLY_OUT = { duration: 350, easing: "cubic-bezier(.6,0,.8,.4)" };
+/** The transform that puts `el` (laid out where it ends up) over `src`, centre on centre, scaled to its width. */
+function over(el: Element, src: Element) {
+    const a = src.getBoundingClientRect(), b = el.getBoundingClientRect();
+    if (!a.width || !b.width) return null;
+    return `translate(${a.left + a.width / 2 - (b.left + b.width / 2)}px, ${a.top + a.height / 2 - (b.top + b.height / 2)}px) scale(${a.width / b.width})`;
+}
+const isPhone = () => typeof matchMedia !== "undefined" && matchMedia("(max-width: 767px)").matches;
+
+/**
+ * The close-up, the one every screen uses (the pack opener too): the card flies up
+ * out of where it was tapped, large (it leans toward the pointer), its details
+ * sliding in beside it on wide screens or rising in a sheet under it on phones;
+ * closing flies it back. `action` adds a button under the details (e.g. ban this
+ * card). Click outside or press Escape to close.
+ */
+export function CardCloseUp({ card, onClose, action, mark = false, onPrev, onNext, position, from }: {
     card: StageCard;
     onClose: () => void;
     action?: ReactNode;
@@ -67,12 +94,14 @@ export function CardCloseUp({ card, onClose, action, mark = false, onPrev, onNex
     onNext?: () => void;
     /** Where this card is in that list, e.g. "12 / 144". */
     position?: string;
+    /** The element showing the card now (on the page, under the close-up): it flies out of and back into it. */
+    from?: () => Element | null | undefined;
 }) {
     const tilt = useRef<HTMLDivElement>(null);
     // On phones a pull down on the card or its sheet closes it, as with any bottom sheet.
     const rootEl = useRef<HTMLDivElement>(null);
     const bodyEl = useRef<HTMLDivElement>(null);
-    useSwipeClose(rootEl, onClose, { enabled: typeof matchMedia !== "undefined" && matchMedia("(max-width: 767px)").matches, move: bodyEl });
+    useSwipeClose(rootEl, onClose, { enabled: isPhone(), move: bodyEl });
     // Which way the last step went, so the new card slides in from that side.
     const [dir, setDir] = useState(0);
     const step = (d: 1 | -1) => {
@@ -81,13 +110,46 @@ export function CardCloseUp({ card, onClose, action, mark = false, onPrev, onNex
         setDir(d);
         go();
     };
-    const latest = useRef({ step, onClose });
+
+    // The card it opened on, for flying back to the press when no `from` is given.
+    const [opened] = useState(() => ({ key: `${card.card.id}-${card.code}`, el: from?.() ?? pressedCard() }));
+    const origin = () => from?.() ?? (`${card.card.id}-${card.code}` === opened.key ? opened.el : null);
     useLayoutEffect(() => {
-        latest.current = { step, onClose };
+        const body = bodyEl.current, el = body?.querySelector(".closeup__card"), side = body?.querySelector(".closeup__side");
+        const src = opened.el?.isConnected ? opened.el : null;
+        const t = el && src && over(el, src);
+        if (el && t) {
+            (el as HTMLElement).style.animation = "none";
+            el.animate([{ transform: t }, { transform: "none" }], FLY_IN);
+        }
+        side?.animate(isPhone() ? [{ transform: "translateY(100%)" }, { transform: "none" }] : [{ opacity: 0, transform: "translateX(-20px)" }, { opacity: 1, transform: "none" }],
+            { duration: isPhone() ? 400 : 350, delay: isPhone() ? 100 : 200, easing: "cubic-bezier(.22,.9,.3,1)", fill: "backwards" });
+        // Only on opening: stepping to another card has its own slide.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    const closing = useRef(false);
+    const close = () => {
+        if (closing.current) return;
+        closing.current = true;
+        const root = rootEl.current, el = bodyEl.current?.querySelector(".closeup__card");
+        const dst = origin();
+        const t = el && dst?.isConnected && over(el, dst);
+        if (el && t) el.animate([{ transform: "none" }, { transform: t }], { ...FLY_OUT, fill: "forwards" });
+        else el?.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(.9)" }], { ...FLY_OUT, fill: "forwards" });
+        bodyEl.current?.querySelector(".closeup__side")?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" });
+        const fade = root?.animate([{ backgroundColor: getComputedStyle(root).backgroundColor }, { backgroundColor: "rgba(4, 3, 8, 0)" }], { ...FLY_OUT, fill: "forwards" });
+        root?.querySelectorAll(".closeup__nav, .ps-close-hint").forEach((n) => n.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: "forwards" }));
+        if (fade) fade.onfinish = () => onClose();
+        else onClose();
+    };
+
+    const latest = useRef({ step, close });
+    useLayoutEffect(() => {
+        latest.current = { step, close };
     });
     useLayoutEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") latest.current.onClose();
+            if (e.key === "Escape") latest.current.close();
             if (e.key === "ArrowRight") latest.current.step(1);
             if (e.key === "ArrowLeft") latest.current.step(-1);
         };
@@ -124,7 +186,7 @@ export function CardCloseUp({ card, onClose, action, mark = false, onPrev, onNex
         addEventListener("click", eat, true);
         addEventListener("pointerdown", stop, true);
         setTimeout(stop, 450);
-        onClose();
+        close();
     };
     const lean = (e: React.PointerEvent) => {
         const el = tilt.current;
@@ -144,7 +206,7 @@ export function CardCloseUp({ card, onClose, action, mark = false, onPrev, onNex
     if (typeof document === "undefined") return null;
     return createPortal(
         <div ref={rootEl} className="closeup" role="dialog" aria-label={card.card.name} onPointerDown={down} onPointerUp={up} onPointerCancel={() => (press.current = null)}>
-            <span className="ps-close-hint">{position ? <><b>{position}</b> · swipe for the next card</> : "Tap anywhere to close"}</span>
+            <span className="ps-close-hint">{position ? <b>{position}</b> : "Tap anywhere to close"}</span>
             {onPrev && <NavArrow dir="prev" className="closeup__nav closeup__nav--prev" label="Previous card" onClick={(e) => (e.stopPropagation(), step(-1))} />}
             {onNext && <NavArrow dir="next" className="closeup__nav closeup__nav--next" label="Next card" onClick={(e) => (e.stopPropagation(), step(1))} />}
             <div ref={bodyEl} key={`${card.card.id}-${card.code}`} className="closeup__body" data-dir={dir}>

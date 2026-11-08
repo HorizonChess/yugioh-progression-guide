@@ -383,6 +383,8 @@ export default function Collection() {
                 <CardCloseUp
                     card={toStage(shown[selectedIndex]!)}
                     mark
+                    // Flies back to the card it's showing now, wherever the list has it.
+                    from={() => document.querySelector(`.coll [data-key="${CSS.escape(shown[selectedIndex]!.key)}"] img`)}
                     onClose={() => setSelectedKey(null)}
                     onPrev={selectedIndex > 0 ? () => setSelectedKey(shown[selectedIndex - 1]!.key) : undefined}
                     onNext={selectedIndex < shown.length - 1 ? () => setSelectedKey(shown[selectedIndex + 1]!.key) : undefined}
