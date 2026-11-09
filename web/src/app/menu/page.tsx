@@ -103,7 +103,7 @@ export default function Menu() {
 
             <div className="menu-screen__foot">
                 <span>System · Online</span>
-                <span>Version 0.6 Alpha</span>
+                <span>Version 0.6 Alpha<Link href="/privacy" className="menu-screen__privacy">Privacy</Link></span>
             </div>
             {/* Just his tablet: he's already painted beside the menu. */}
             <GuideSprite bare />

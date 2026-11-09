@@ -1,0 +1,16 @@
+.privacy { height: 100%; overflow-y: auto; display: flex; justify-content: center; padding: 32px 16px calc(32px + env(safe-area-inset-bottom)); }
+.privacy__sheet {
+  width: min(640px, 100%); align-self: flex-start; padding: 28px 30px; border-radius: 14px; color: #d9cdb0;
+  font: 400 15px/1.6 var(--font-main);
+  background: linear-gradient(rgba(20, 14, 26, 0.92), rgba(8, 6, 10, 0.94));
+  box-shadow: 0 0 0 1px rgba(224, 181, 79, 0.3), 0 16px 30px rgba(0, 0, 0, 0.6);
+}
+.privacy__sheet h1 { font: 800 28px/1.1 var(--font-display); letter-spacing: 0.04em; color: #f0cf73; margin-bottom: 8px; }
+.privacy__sheet h2 { font: 700 13px/1 var(--font-main); letter-spacing: 0.16em; text-transform: uppercase; color: #e0b54f; margin: 22px 0 8px; }
+.privacy__lede { color: #a99d80; }
+.privacy__sheet ul { display: grid; gap: 6px; padding-left: 18px; list-style: disc; }
+.privacy__sheet b { color: #f1e7cc; font-weight: 700; }
+.privacy__sheet a { color: #f0cf73; text-decoration: underline; text-underline-offset: 2px; }
+.privacy__sheet .privacy__back { display: inline-block; margin-top: 26px; font: 700 12px/1 var(--font-main); letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none; }
+.privacy__sheet .privacy__back:hover { text-decoration: underline; }
+@media (max-width: 599px) { .privacy__sheet { padding: 22px 18px; } }
