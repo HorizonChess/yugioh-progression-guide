@@ -57,7 +57,11 @@ npm run dev -w @ygo/api          # the API at http://localhost:4000
 
 The title screen at `/` is where you sign up or sign in (or play as a guest).
 Google sign-in and outgoing email are optional and switched on by the `GOOGLE_*`
-and `SMTP_*` settings in `api/.env.example`. Admins can open any set's packs; to
+and `SMTP_*` settings in `api/.env.example`. Mail goes over Gmail SMTP; where the
+host blocks the mail ports (Render's free plan does), it falls back to the same
+Gmail account through the Gmail API over HTTPS, once `GMAIL_REFRESH_TOKEN` is set
+(`npm run gmail-token -w @ygo/api` gets it). Any email that can't be sent is
+logged as `email not sent`. Admins can open any set's packs; to
 make yourself one, sign up, then:
 
 ```bash

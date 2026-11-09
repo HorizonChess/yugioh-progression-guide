@@ -42,3 +42,6 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+      # Free plans can't reach SMTP: mail then goes through the Gmail API (npm run gmail-token -w @ygo/api).
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false

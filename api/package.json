@@ -13,7 +13,8 @@
     "sync-cards": "tsx --env-file-if-exists=.env scripts/sync-cards.ts",
     "test-server": "tsx --env-file-if-exists=.env scripts/test-server.ts",
     "promote-admin": "tsx --env-file-if-exists=.env scripts/promote-admin.ts",
-    "fetch-engine": "tsx scripts/fetch-engine.ts"
+    "fetch-engine": "tsx scripts/fetch-engine.ts",
+    "gmail-token": "tsx --env-file-if-exists=.env scripts/gmail-token.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.5",

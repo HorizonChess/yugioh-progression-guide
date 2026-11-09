@@ -37,6 +37,15 @@ const EnvSchema = z.object({
     SMTP_PASSWORD: z.string().min(1).transform(value => value.replace(/\s+/g, '')).optional(),
     /** The From header, e.g. `Yu-Gi-Oh Progression Guide <me@gmail.com>`. Defaults to `SMTP_USER`. */
     MAIL_FROM: z.string().min(1).optional(),
+    /**
+     * The fallback when this host can't reach the SMTP server (Render's free plan blocks the mail
+     * ports): the same Gmail account, sent through the Gmail API over HTTPS. A refresh token with
+     * the `gmail.send` scope, from `npm run gmail-token -w @ygo/api`. The OAuth client defaults
+     * to Google sign-in's (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`).
+     */
+    GMAIL_REFRESH_TOKEN: z.string().min(1).optional(),
+    GMAIL_CLIENT_ID: z.string().min(1).optional(),
+    GMAIL_CLIENT_SECRET: z.string().min(1).optional(),
     /** Where the browser lands after Google sign-in. Defaults to PUBLIC_URL; set to the Next dev server locally. */
     WEB_URL: z.url().optional(),
 });
