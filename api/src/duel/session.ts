@@ -635,6 +635,15 @@ export class DuelSession {
                     break;
                 case M.CONFIRM_CARDS:
                     for (const c of m.cards) this.revealed[m.player as Team]?.add(this.tracker.uidAt(c.controller, c.location, c.sequence));
+                    // Shown to `m.player` (its owner knows them anyway); the board shows them too.
+                    if (m.cards.length) out.push({ k: 'reveal', viewer: m.player as Team, owner: m.cards[0]!.controller as Team, location: m.cards[0]!.location, codes: m.cards.map((c) => c.code) });
+                    break;
+                case M.CONFIRM_DECKTOP:
+                    // Cards turned over from the top of a Deck: both players see them.
+                    if (m.cards.length) out.push({ k: 'reveal', viewer: null, owner: m.cards[0]!.controller as Team, location: L.DECK, codes: m.cards.map((c) => c.code) });
+                    break;
+                case M.RANDOM_SELECTED:
+                    out.push({ k: 'random', uids: m.cards.map((c) => this.tracker.uidAt(c.controller, c.location, c.sequence)) });
                     break;
                 case M.CHAIN_END:
                     this.revealed = [new Set(), new Set()];
@@ -732,6 +741,11 @@ export class DuelSession {
                 case 'set': return { k: 'set', side: side(e.team) };
                 case 'activate': return { k: 'activate', side: side(e.team), code: this.show(e.code), uid: e.uid, link: e.link };
                 case 'attack': return { k: 'attack', side: side(e.team), attacker: e.attacker, target: e.target };
+                case 'reveal': {
+                    const sees = e.viewer === null || e.viewer === team || e.owner === team;
+                    return { k: 'reveal', side: side(e.owner), by: e.viewer === null ? null : side(e.viewer), from: zoneOf(e.location, 0), codes: sees ? e.codes.map((c) => this.show(c)) : [], count: e.codes.length };
+                }
+                case 'random': return { k: 'random', uids: e.uids };
                 case 'attack-negated': return { k: 'attack-negated', side: side(e.team), ...(e.attacker ? { attacker: e.attacker } : {}) };
                 case 'move': return { k: 'move', uid: e.uid, code: e.public || e.team === team ? this.show(e.code) : 0, side: side(e.team), from: e.from, to: e.to };
                 case 'reposition': return { k: 'reposition', uid: e.uid, code: e.public ? this.show(e.code) : 0 };
@@ -1136,6 +1150,9 @@ type TeamEvent =
     | { k: 'negated'; link: number }
     | { k: 'attack'; team: Team; attacker?: string; target?: string }
     | { k: 'attack-negated'; team: Team; attacker?: string }
+    /** `viewer` null: shown to both players. */
+    | { k: 'reveal'; viewer: Team | null; owner: Team; location: number; codes: number[] }
+    | { k: 'random'; uids: string[] }
     | { k: 'destroyed'; uid: string; code: number }
     | { k: 'move'; uid: string; code: number; team: Team; from: Zone; to: Zone; public: boolean }
     | { k: 'reposition'; uid: string; code: number; public: boolean }
