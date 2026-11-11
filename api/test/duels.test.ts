@@ -79,24 +79,27 @@ function humanAnswer(p: DuelPrompt): DuelAnswer {
     }
 }
 
-/** Plays a duel over its socket, answering every question, until it's over. Resolves with the last state. */
-async function play(p: Pick<Player, 'name'> & { cookie?: string }, duelId: string, token?: string) {
+/** Plays a duel over its socket, answering every question, until it's over (or after `moves` answers). Resolves with the last state. */
+async function play(p: Pick<Player, 'name'> & { cookie?: string }, duelId: string, token?: string, moves = Infinity) {
     // The injected upgrade has no socket of its own; the rate limiter needs an address.
     const url = `/api/duels/${duelId}/live${token ? `?token=${token}` : ''}`;
     const socket = await app.injectWS(url, { headers: p.cookie ? { cookie: p.cookie } : {}, socket: { remoteAddress: '127.0.0.1' } } as never);
     return new Promise<DuelServerMessage['state'] & { frames: number }>((resolve, reject) => {
-        let frames = 0;
+        let frames = 0, answered = 0;
         const timer = setTimeout(() => reject(new Error(`${p.name}: the duel never ended`)), 25_000);
         socket.on('message', (raw: Buffer) => {
             const msg = JSON.parse(raw.toString()) as DuelServerMessage;
             frames += msg.frames.length;
             const { state } = msg;
-            if (state.result) {
+            if (state.result || (answered >= moves && state.prompt)) {
                 clearTimeout(timer);
                 socket.terminate();
                 return resolve({ ...state, frames });
             }
-            if (state.prompt) socket.send(JSON.stringify({ type: 'answer', seq: state.seq, answer: humanAnswer(state.prompt) }));
+            if (state.prompt) {
+                answered++;
+                socket.send(JSON.stringify({ type: 'answer', seq: state.seq, answer: humanAnswer(state.prompt) }));
+            }
         });
     });
 }
@@ -196,6 +199,23 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
             });
         });
         await done;
+    });
+
+    it('picks a duel up again after a restart, the answers the server gave by itself included', async () => {
+        // Several duels, so some open with questions the server or the bot answers before your first move.
+        for (let n = 0; n < 4; n++) {
+            const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot' } });
+            const { duel, token } = started.json();
+            await play({ name: 'Guest' }, duel.id, token, 6);
+            // A restart: a fresh server on the same database rebuilds the duel from storage.
+            const db = app.db.databaseName;
+            await app.close();
+            ({ app } = await testApp(mongo, { MONGODB_DB: db }));
+            const look = (await app.inject({ method: 'GET', url: `/api/duels/${duel.id}`, headers: { 'x-duel-token': token } })).json();
+            expect(look.broken).toBeUndefined();
+            expect(look.state?.view).toBeTruthy();
+            await app.inject({ method: 'POST', url: `/api/duels/${duel.id}/concede`, headers: { 'x-duel-token': token } });
+        }
     });
 
     it('can always give up a duel, even one that can no longer be rebuilt', async () => {

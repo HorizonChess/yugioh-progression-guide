@@ -141,9 +141,29 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const engine = await loadEngine();
         // After a restart, relearn any alternate passcodes the decks use before rebuilding.
         await unknownCards(duel.setup!.decks.flatMap((d) => [...d.main, ...d.extra]));
-        const session = new DuelSession(engine, duel.setup!);
-        session.start(duel.answers.map(decode));
-        const entry = { session, stored: session.answers.length, touched: Date.now() };
+        const stored = duel.answers.map(decode);
+        let session = new DuelSession(engine, duel.setup!);
+        try {
+            session.start(stored);
+        } catch (error) {
+            // Duels from before the fix below lost the answers given right after a rebuild: put
+            // them back if every stored answer still fits, and store the repaired list.
+            session.destroy();
+            session = new DuelSession(engine, duel.setup!);
+            try {
+                session.start(stored, { repair: true });
+            } catch {
+                session.destroy();
+                throw error;
+            }
+            await duels().updateOne({ _id: duel._id }, { $set: { answers: session.answers.map(encode), updatedAt: new Date() } });
+            app.log.warn({ duel: duel._id, stored: stored.length, repaired: session.answers.length }, 'duel repaired: answers lost after a rebuild were put back');
+            duel.answers = session.answers.map(encode);
+        }
+        // Only what's in storage counts as stored. Answers the rebuild gave by itself after the last
+        // stored one (the passes before a new duel's first move, the bot's next move) are saved with
+        // the next step: counting them as stored lost them, and the duel couldn't be rebuilt again.
+        const entry = { session, stored: duel.answers.length, touched: Date.now() };
         live.set(id, entry);
         return entry;
     }
