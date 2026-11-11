@@ -354,6 +354,10 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
 
     // A sheet swiped down on a phone: a question tucks away into a tab (look at the board, tap the
     // tab to answer); anything else (the duel menu, a list of cards) closes.
+    // A pick of cards where they lie that takes cards from your hand too (Polymerization's materials,
+    // a Quick-Play to chain): its bar sits above the hand, which a phone's bar would otherwise cover.
+    const handPick = prompt?.kind === "cards" ? prompt.cards.some((c) => c.side === "me" && c.where === "hand")
+        : prompt?.kind === "chain" ? prompt.options.some((o) => o.where === "hand") : false;
     const sheet = (title: string, body: ReactNode, opts: { text?: string; code?: number; compact?: boolean; onSwipe?: () => void } = {}) => (
         !opts.onSwipe && tucked === promptKey ? (
             <motion.button key="tab" type="button" className="df-tab" {...STEADY} onClick={() => setTucked(null)}
@@ -363,7 +367,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
         ) : (
         // A question is keyed "sheet" (it stays up through the gap to the next one); something you
         // opened yourself (the duel menu, a list of cards) is "menu", and goes as soon as you close it.
-        <motion.div key={opts.onSwipe ? "menu" : "sheet"} {...STEADY} className={`df-sheet ${opts.compact ? "df-sheet--compact" : ""}`}
+        <motion.div key={opts.onSwipe ? "menu" : "sheet"} {...STEADY} className={`df-sheet ${opts.compact ? "df-sheet--compact" : ""} ${opts.compact && handPick ? "df-sheet--over-hand" : ""}`}
             initial={{ y: "70%", opacity: 1 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "70%", opacity: 0 }} transition={{ type: "spring", stiffness: 420, damping: 36 }}
             drag={isPhone ? "y" : false} dragDirectionLock dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.9 }}
             onDragEnd={(_, info) => {
