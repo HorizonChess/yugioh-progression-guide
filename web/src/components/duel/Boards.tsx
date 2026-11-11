@@ -8,7 +8,7 @@ export interface BoardProps {
     view: DuelView;
     marks: CardMarks;
     onCard: (card: DuelCardView, side: Side, zone: ZoneName) => void;
-    onPile: (side: Side, zone: "grave" | "banished") => void;
+    onPile: (side: Side, zone: "grave" | "banished" | "extra") => void;
     onHover?: (code: number) => void;
     /** Phases, turn, menu. */
     phaseBar: ReactNode;
@@ -60,7 +60,7 @@ export function PhoneBoard({ view, marks, onCard, onPile, phaseBar, overlay }: B
                     {view.mode === "MR3" && s.pendulum.map((p, i) => <Zone key={i} card={p} label="P" className="df-zone--mini" zone={zoneKey(side, "pendulum", i)} marks={marks} side={side} onTap={(c) => onCard(c, side, "pendulum")} />)}
                     <Pile small label="GY" count={s.grave.length} top={top(s.grave)} onTap={() => onPile(side, "grave")} />
                     {s.banished.length > 0 && <Pile small label="Banished" count={s.banished.length} top={top(s.banished)} onTap={() => onPile(side, "banished")} />}
-                    <Pile small label="Extra" count={s.extra} back />
+                    <Pile small label="Extra" count={s.extra} back onTap={side === "me" ? () => onPile(side, "extra") : undefined} />
                     <Pile small label="Deck" count={s.deck} back pile={`${side}:deck`} />
                 </div>
             </div>
@@ -104,7 +104,7 @@ export function DesktopBoard({ view, marks, onCard, onPile, onHover, phaseBar, o
         const field = <Zone key="field" card={s.field} label="Field" className="df-zone--side" zone={zoneKey(side, "field", 0)} marks={marks} side={side} onHover={onHover} onTap={(c) => onCard(c, side, "field")} />;
         const gy = <Pile key="gy" label="GY" count={s.grave.length} top={top(s.grave)} onTap={() => onPile(side, "grave")} onHover={onHover} />;
         const deck = <Pile key="deck" label="Deck" count={s.deck} back pile={`${side}:deck`} />;
-        const extra = <Pile key="extra" label="Extra" count={s.extra} back />;
+        const extra = <Pile key="extra" label="Extra" count={s.extra} back onTap={side === "me" ? () => onPile(side, "extra") : undefined} />;
         const monsterRow = side === "opp" ? [gy, ...r.monsters.map((c, i) => zone(c, i, "m")), field] : [field, ...r.monsters.map((c, i) => zone(c, i, "m")), gy];
         const spellRow = side === "opp" ? [deck, ...r.spells.map((c, i) => zone(c, i, "s")), extra] : [extra, ...r.spells.map((c, i) => zone(c, i, "s")), deck];
         return <div className={`df-mat df-mat--${side}`}>{side === "opp" ? <>{spellRow}{monsterRow}</> : <>{monsterRow}{spellRow}</>}</div>;

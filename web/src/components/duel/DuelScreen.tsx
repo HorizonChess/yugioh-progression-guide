@@ -41,7 +41,7 @@ const codesOf = (view: DuelView | null, prompt: DuelPrompt | null) => {
     if (!view) return [];
     const all = (["me", "opp"] as const).flatMap((s) => {
         const v = view[s];
-        return [...v.hand, ...v.monsters, ...v.spells, v.field, ...v.pendulum, ...v.grave, ...v.banished];
+        return [...v.hand, ...v.monsters, ...v.spells, v.field, ...v.pendulum, ...v.grave, ...v.banished, ...(v.extraCards ?? [])];
     });
     const fromPrompt = prompt && "cards" in prompt ? prompt.cards.map((c) => c.code) : prompt?.kind === "chain" ? prompt.options.map((o) => o.code) : [];
     return [...all.flatMap((c) => (c?.code ? [c.code] : [])), ...view.chain.map((c) => c.code), ...fromPrompt];
@@ -302,10 +302,12 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
         if (next) answer({ kind: "choice", id: next.id });
     }, [queuedPhase, duel.answered, duel.playing, prompt, answer]);
 
-    const onPile = (side: Side, zone: "grave" | "banished") => {
+    const onPile = (side: Side, zone: "grave" | "banished" | "extra") => {
         if (!view) return;
-        const list = view[side][zone];
-        setBrowse({ title: `${side === "me" ? "Your" : `${view.opp.name}'s`} ${zone === "grave" ? "Graveyard" : "banished cards"}`, cards: [...list].reverse() });
+        // Only your own Extra Deck can be looked through (the server sends no one else's).
+        const list = zone === "extra" ? view[side].extraCards ?? [] : view[side][zone];
+        const what = zone === "grave" ? "Graveyard" : zone === "banished" ? "banished cards" : "Extra Deck";
+        setBrowse({ title: `${side === "me" ? "Your" : `${view.opp.name}'s`} ${what}`, cards: zone === "extra" ? list : [...list].reverse() });
     };
 
     if (!state || !view) {

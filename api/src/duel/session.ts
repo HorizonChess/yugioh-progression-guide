@@ -783,6 +783,8 @@ export class DuelSession {
             banished: pile(L.REMOVED),
             deck: core.duelQueryCount(this.handle, t, L.DECK),
             extra: core.duelQueryCount(this.handle, t, L.EXTRA),
+            // Your own Extra Deck is yours to look through; the rival's stays a face-down count.
+            ...(t === viewer ? { extraCards: pile(L.EXTRA) } : {}),
         };
     }
 

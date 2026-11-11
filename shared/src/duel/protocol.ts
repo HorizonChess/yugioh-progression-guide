@@ -48,6 +48,8 @@ export interface DuelSideView {
     banished: DuelCardView[];
     deck: number;
     extra: number;
+    /** The Extra Deck's cards, for its owner only (the rival sees just the count). */
+    extraCards?: DuelCardView[];
 }
 
 export interface DuelView {
