@@ -86,6 +86,7 @@ try {
 
     await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: /victory/i }).click();
+    await page.getByRole("button", { name: "I won" }).click();
     await page.getByRole("button", { name: "Spin the wheel" }).click();
     await page.getByRole("button", { name: "Claim prize" }).waitFor({ timeout: 8000 });
     const shown = (await page.locator(".wheel-prize__name").textContent())?.trim();
