@@ -78,12 +78,19 @@ guess gets wrong plays badly, never illegally.
 
 It plays from what a player at the table could see. The rival's face-down monsters count as unknown (guessed at 1400 ATK and DEF) for its attacks, its targets and whether a wipe is worth it; it never reads the rival's hand, deck or set Spells and Traps.
 
+## Ordering cards and removing counters (rules 4)
+
+- **Ordering cards** (`SORT_CARD`, Spellbook Organization: "place them on top of the Deck in any
+  order"): a player taps the cards in order, numbered as they go; the first goes on top. The bot
+  keeps the engine's order. (ocgcore-wasm writes a count byte before the answer that the engine
+  doesn't read; `forEngine` in session.ts works around it.)
+- **Removing counters** (`SELECT_COUNTER`): when there's more than one way to take them, a player
+  picks from the ways ("2 from Breaker, 1 from Royal Magical Library"). Otherwise, and for the
+  bot, they come from the first cards listed.
+- Duels started under rules 3 or earlier keep the old answers, so their replays still land.
+
 ## Open: still decided for the player without reading the card
 
-- **Ordering cards** (`SORT_CARD`, "place them on top of the Deck in any order"): the engine's
-  default order is kept. Should ask whenever the card lets the player choose.
-- **Removing counters** (`SELECT_COUNTER`): taken from the first cards listed. Should ask when the
-  counters are on more than one card.
 - **Rock-paper-scissors** (`ROCK_PAPER_SCISSORS`): always the same hand. Fine for deciding who
   goes first; a card that plays it would need the real choice.
 

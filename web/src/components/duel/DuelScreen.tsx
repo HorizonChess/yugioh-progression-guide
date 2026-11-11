@@ -388,11 +388,13 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     );
     // Taking back the move being set up (its zone, position or Tributes), when the question allows it.
     const backOption = (p: { back?: boolean }) => p.back && option("Back", () => duel.back(), { quiet: true });
-    const listPick = (list: PromptCard[], selected: number[], onTap: (id: number) => void) => (
+    // `ordered`: the order they're picked in counts (the first goes on top), so each picked card shows its place.
+    const listPick = (list: PromptCard[], selected: number[], onTap: (id: number) => void, ordered?: boolean) => (
         <div className="df-sheet__list">
             {list.map((c) => (
                 <button key={c.id} type="button" className={`df-listcard ${selected.includes(c.id) ? "is-picked" : ""}`} onClick={() => onTap(c.id)}>
                     <img src={c.code ? cardImage(c.code) : cardImage(0)} alt="" />
+                    {ordered && selected.includes(c.id) && <b className="df-listcard__order">{selected.indexOf(c.id) + 1}</b>}
                     <span>{c.code ? name(c.code) : c.where === "hand" ? "A card in their hand" : "Face-down card"}</span>
                     <small>{c.side === "opp" ? `${view.opp.name}'s ` : ""}{c.where === "grave" ? "Graveyard" : c.where === "banished" ? "banished" : c.where === "deck" ? "Deck" : c.where === "extra" ? "Extra Deck" : c.where}</small>
                 </button>
@@ -501,7 +503,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 const about = asking ? { code: asking.code, text: `For ${name(asking.code)}` } : {};
                 question = boardPick && prompt.attack ? null : boardPick
                     ? sheet(prompt.title, <div className="df-sheet__bar"><span>{asking ? `For ${name(asking.code)}: tap` : "Tap"} the glowing cards{prompt.sum ? ` (total ${prompt.sum})` : ""}</span>{confirm}{finish}{cancel}</div>, { compact: true })
-                    : sheet(prompt.title, <>{listPick(prompt.cards, prompt.step ? prompt.step.chosen.map((c) => c.id) : picked, (id) => togglePick(id, prompt.max, prompt.min))}<div className="df-sheet__options df-sheet__options--row">{confirm}{finish}{cancel}</div></>, about);
+                    : sheet(prompt.title, <>{listPick(prompt.cards, prompt.step ? prompt.step.chosen.map((c) => c.id) : picked, (id) => togglePick(id, prompt.max, prompt.min), prompt.ordered)}<div className="df-sheet__options df-sheet__options--row">{confirm}{finish}{cancel}</div></>, about);
                 break;
             }
             case "yesno":
