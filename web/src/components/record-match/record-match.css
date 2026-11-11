@@ -9,12 +9,15 @@
   display: grid; grid-template-rows: auto 1fr auto; padding: 0 3.2cqi 2.2cqi; border-radius: 10px;
   background: var(--rm-stone) 0 0 / 1024px repeat, #6f6b62;
   box-shadow: inset 0 0 0 .25cqi #6b4c18, inset 0 0 0 .45cqi #e0b54f, inset 0 0 0 .6cqi #6b4c18, inset 0 0 6cqi rgba(0, 0, 0, .45), 0 0 0 2px #1a140b, 0 30px 60px rgba(0, 0, 0, .75);
-  color: #2f281e;
+  color: var(--rm-ink);
+  /* Light letters with a dark groove read on every part of the grey stone; dark ones didn't. */
+  --rm-ink: #f3e7c7; --rm-ink-red: #ff9070; --rm-ink-gold: #ffd56a;
+  --rm-ink-shadow: 0 1px 0 #000, 0 0 .5cqi rgba(0, 0, 0, .8), 0 2px 4px rgba(0, 0, 0, .6);
 }
 .rm-gilt { font-family: var(--font-display); color: transparent; background: linear-gradient(#fff1bf, #d4af37 55%, #8a6420); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .8)); }
-/* letters cut into the stone: dark in the groove, a light lip below */
-.rm-carved { font-family: var(--font-display); text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255, 244, 220, .4), 0 -1px 0 rgba(0, 0, 0, .5); }
-.rm-carved--red { color: #5c1a10; }
+/* letters cut into the stone: pale inlay, dark in the groove around it */
+.rm-carved { font-family: var(--font-display); text-transform: uppercase; color: var(--rm-ink); text-shadow: var(--rm-ink-shadow); }
+.rm-carved--red { color: var(--rm-ink-red); }
 
 /* the frieze across the top, with the screen's name on a plate */
 .rm-head { position: relative; display: grid; place-items: center; height: 9cqi; margin: 0 -3.2cqi; }
@@ -34,7 +37,7 @@
 .rm-medal b { font: 900 1.5cqi/1.05 var(--font-display); color: #2a1c05; text-align: center; text-transform: uppercase; padding: 0 12%; text-shadow: 0 1px 0 rgba(255, 240, 190, .6); }
 .rm-foe--won .rm-niche img { opacity: 0; transform: scale(.6) rotate(-14deg); }
 .rm-foe--won .rm-medal { opacity: 1; transform: none; }
-.rm-foe small { font: 800 1.05cqi/1 var(--font-display); letter-spacing: .3em; text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255, 244, 220, .4); }
+.rm-foe small { font: 800 1.05cqi/1 var(--font-display); letter-spacing: .3em; text-transform: uppercase; color: var(--rm-ink); text-shadow: var(--rm-ink-shadow); }
 .rm-foe__name { margin-top: -.6cqi; font: 900 3cqi/1.05 var(--font-display); }
 .rm-stats { display: flex; gap: 1cqi; justify-content: center; }
 .rm-stat { min-width: 7.4cqi; padding: .8cqi 1cqi; border-radius: 4px; background: rgba(28, 22, 15, .78); box-shadow: inset 0 2px 5px rgba(0, 0, 0, .7), 0 1px 0 rgba(255, 240, 210, .3); }
@@ -48,8 +51,8 @@
 .rm-act--scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; justify-content: flex-start; }
 .rm-act--scroll > * { flex: none; margin-block: auto; }
 .rm-ask { margin-bottom: 1cqi; font: 900 2cqi/1.1 var(--font-display); letter-spacing: .16em; text-align: center; }
-.rm-note { margin: 0; max-width: 100%; padding: 0 4px; font: 700 1.35cqi/1.45 var(--font-display); text-align: center; color: #2e271d; text-shadow: 0 1px 0 rgba(255, 244, 220, .3); }
-.rm-note b { color: #6e1e10; }
+.rm-note { margin: 0; max-width: 100%; padding: 0 4px; font: 700 1.35cqi/1.45 var(--font-display); text-align: center; color: var(--rm-ink); text-shadow: var(--rm-ink-shadow); }
+.rm-note b { color: var(--rm-ink-gold); }
 .rm-btns { display: flex; gap: 2cqi; justify-content: center; }
 .rm-board .cartouche-btn { width: 19cqi; }
 .rm-board .cartouche-btn__label { font-size: 1.15cqi; }
@@ -100,12 +103,12 @@
 .rm-board .wheel { --wheel-wedge-dark: #1d3a6e; }
 .rm-board .wheel__label { font-family: var(--font-display); font-size: 3.3cqmin; letter-spacing: 0; }
 .rm-board .wheel-prize { text-align: center; }
-.rm-board .wheel-prize__kicker { font: 800 .95cqi/1 var(--font-display); letter-spacing: .3em; text-transform: uppercase; color: #2f281e; text-shadow: 0 1px 0 rgba(255, 244, 220, .35); }
+.rm-board .wheel-prize__kicker { font: 800 .95cqi/1 var(--font-display); letter-spacing: .3em; text-transform: uppercase; color: var(--rm-ink); text-shadow: var(--rm-ink-shadow); }
 .rm-board .wheel-prize__name { margin-top: .6cqi; min-height: 0; font: 900 2.4cqi/1.1 var(--font-display); color: transparent; background: linear-gradient(#fff1bf, #d4af37 55%, #8a6420); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .8)); }
 
 .rm-foot { display: flex; justify-content: center; align-items: center; min-height: 4cqi; }
-.rm-back { border: 0; background: none; cursor: pointer; padding: 6px; font: 800 1.3cqi/1 var(--font-display); letter-spacing: .16em; text-transform: uppercase; color: #000; text-shadow: 0 1px 0 rgba(255, 244, 220, .45); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(0, 0, 0, .55); }
-.rm-back:hover { text-decoration-color: #000; }
+.rm-back { border: 0; background: none; cursor: pointer; padding: 6px; font: 800 1.3cqi/1 var(--font-display); letter-spacing: .16em; text-transform: uppercase; color: var(--rm-ink); text-shadow: var(--rm-ink-shadow); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(243, 231, 199, .5); }
+.rm-back:hover { color: #fff; text-decoration-color: currentColor; }
 
 /* A slab of the board's own stone, raised off it, with its words carved in: the way into a duel
    played here (the tablets below are for duels played elsewhere). */
@@ -116,7 +119,7 @@
   transition: transform .15s cubic-bezier(.2, .9, .3, 1.3), box-shadow .15s;
 }
 .rm-slab .rm-carved { font: 900 1.6cqi/1.1 var(--font-display); letter-spacing: .14em; }
-.rm-slab__tag { font: 800 .75cqi/1 var(--font-display); letter-spacing: .32em; text-transform: uppercase; color: #5c1a10; text-shadow: 0 1px 0 rgba(255, 244, 220, .35); }
+.rm-slab__tag { font: 800 .75cqi/1 var(--font-display); letter-spacing: .32em; text-transform: uppercase; color: var(--rm-ink-red); text-shadow: var(--rm-ink-shadow); }
 .rm-slab:hover { transform: translateY(-.15cqi); }
 .rm-slab:active { transform: translateY(.2cqi); box-shadow: inset 0 .3cqi .5cqi rgba(0, 0, 0, .5), 0 0 0 .2cqi #6b4c18, 0 0 0 .32cqi #e0b54f, 0 0 0 .44cqi #3b2a10, 0 .2cqi .4cqi rgba(0, 0, 0, .5); }
 
