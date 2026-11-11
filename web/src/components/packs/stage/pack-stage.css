@@ -152,8 +152,12 @@
 .ps-plate__box {
   padding: 8px 10px; border: 2px solid #5b4523; color: #1f150a; background: linear-gradient(#f6ebcd, #e8d5aa);
   box-shadow: inset 0 0 14px rgba(120, 90, 40, 0.28); font: 400 14px/1.38 Georgia, "Times New Roman", serif; white-space: pre-line;
+  /* a column, so in a box taller than its text the ATK/DEF line sits at the bottom, as on the card */
+  display: flex; flex-direction: column;
 }
 .ps-plate__box .ps-tl { font-weight: 700; margin-bottom: 3px; }
+/* the text takes any spare height, pushing the ATK/DEF line to the bottom */
+.ps-plate__box > p { flex: 1 0 auto; }
 .ps-plate__box p { margin: 0; }
 .ps-plate__box .ps-flavor { font-style: italic; }
 .ps-plate__stats { margin-top: 7px; padding-top: 4px; border-top: 1px solid #1f150a; text-align: right; font-weight: 700; letter-spacing: 0.02em; }
