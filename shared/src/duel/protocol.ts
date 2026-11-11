@@ -84,6 +84,15 @@ export type DuelEvent =
     | { k: 'resolved'; link: number }
     | { k: 'negated'; link: number }
     | { k: 'attack'; side: Side; attacker?: string; target?: string }
+    /**
+     * Cards shown by an effect: from the hand (a searched card shown to the rival, Confiscation's
+     * look), or the top of the Deck (excavated, as Card Destruction's cousins do). `codes` is
+     * empty when only the other player saw them; `count` says how many there were. `by`: who looks
+     * (null: both players, face up for all).
+     */
+    | { k: 'reveal'; side: Side; by: Side | null; from: Zone; codes: number[]; count: number }
+    /** Cards picked at random (Delinquent Duo's discard). */
+    | { k: 'random'; uids: string[] }
     /** An attack stopped by a card (Negate Attack, Magic Cylinder): no battle follows. */
     | { k: 'attack-negated'; side: Side; attacker?: string }
     | { k: 'destroyed'; uid: string; code: number }

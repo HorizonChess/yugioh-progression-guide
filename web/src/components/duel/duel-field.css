@@ -620,3 +620,10 @@
         repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0 5px, rgba(45, 30, 22, 0.6) 5px 10px);
     filter: drop-shadow(0 1px 1px #000);
 }
+
+/* Cards shown by an effect: dealt face up in a row under who shows them. */
+.df-reveal { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 4px 8px; text-align: center; }
+.df-reveal p { margin: 0; }
+.df-reveal__cards { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; max-width: min(92vw, 640px); }
+.df-reveal__cards img { width: clamp(64px, 11vw, 112px); aspect-ratio: 59 / 86; border-radius: 4px; box-shadow: 0 6px 16px #000, 0 0 0 1px #d4af37; animation: df-reveal-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+@keyframes df-reveal-in { from { opacity: 0; transform: translateY(16px) rotateY(90deg); } }
