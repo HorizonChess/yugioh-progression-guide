@@ -30,6 +30,8 @@ const config = loadConfig({
     PUBLIC_URL: `http://localhost:${port}`,
     WEB_URL: webOrigin,
     ALLOWED_ORIGINS: webOrigin,
+    // A built web app (WEB_DIST=../web/out) is served from this origin too, as in production.
+    ...(process.env.WEB_DIST ? { WEB_DIST: process.env.WEB_DIST } : {}),
 });
 
 const app = await buildApp({
