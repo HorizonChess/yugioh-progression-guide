@@ -70,15 +70,21 @@ const STEADY = { onUpdate: () => {} };
 
 export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeave: (result: "win" | "loss" | "draw" | null) => void }) {
     const isPhone = useIsPhone();
-    const [log, setLog] = useState<{ key: number; text: string; side?: Side }[]>([]);
+    // A log line is worded when it's drawn, so a card whose name arrives later (one an effect
+    // shows from a hidden hand) gets named once it's known.
+    const [log, setLog] = useState<{ key: number; say: (name: (code: number) => string) => string; side?: Side }[]>([]);
+    // Cards the view doesn't hold that events show (revealed from a hand or the Deck): their names are fetched too.
+    const [shown, setShown] = useState<number[]>([]);
     const namesRef = useRef<(code: number) => string>(() => "a card");
     const onEvent = useCallback((e: DuelEvent, view: DuelView) => {
-        const text = describe(e, view, namesRef.current);
-        if (text) setLog((l) => [...l.slice(-199), { key: Math.random(), text, side: "side" in e ? (e.side ?? undefined) : undefined }]);
+        if (e.k === "reveal" && e.codes.length) setShown((s) => [...new Set([...s, ...e.codes])]);
+        if (!describe(e, view, namesRef.current)) return;
+        const say = (name: (code: number) => string) => describe(e, view, name) ?? "";
+        setLog((l) => [...l.slice(-199), { key: Math.random(), say, side: "side" in e ? (e.side ?? undefined) : undefined }]);
     }, []);
     const duel = useDuel(duelId, onEvent);
     const { state, view, prompt, effects } = duel;
-    const cards = useCards(codesOf(view, prompt));
+    const cards = useCards([...codesOf(view, prompt), ...shown]);
     // Tokens aren't in the card catalog: their names come with them, and are kept once seen (a
     // destroyed token leaves the field for good, but the log still names it).
     const tokenNames = useRef(new Map<number, string>());
@@ -433,7 +439,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     } else if (duelMenu === "log") {
         // Phones have no room for the log beside the board: it's here, the latest first.
         question = sheet("What happened", <>
-            <ol className="df-log__list df-log__list--sheet" onPointerDown={(e) => e.stopPropagation() /* scrolls; doesn't drag the sheet */}>{[...log].reverse().map((l) => <li key={l.key} className={l.side ? `is-${l.side}` : ""}>{l.text}</li>)}</ol>
+            <ol className="df-log__list df-log__list--sheet" onPointerDown={(e) => e.stopPropagation() /* scrolls; doesn't drag the sheet */}>{[...log].reverse().map((l) => <li key={l.key} className={l.side ? `is-${l.side}` : ""}>{l.say(name)}</li>)}</ol>
             <div className="df-sheet__options">{option("Back to the duel", () => setDuelMenu("closed"), { quiet: true })}</div>
         </>, { onSwipe: () => setDuelMenu("closed") });
     } else if (duelMenu === "open") {
@@ -589,6 +595,16 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                                 </div>
                             );
                         })()}
+                        {effects.banner.kind === "reveal" && (
+                            <div className="df-reveal">
+                                <p>{revealWords(effects.banner, view.opp.name)}</p>
+                                {effects.banner.codes.length > 0 && (
+                                    <div className="df-reveal__cards">
+                                        {effects.banner.codes.map((c, i) => <img key={i} src={cardImage(c)} alt={name(c)} style={{ animationDelay: `${i * 0.08}s` }} />)}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {effects.banner.kind === "dice" && (
                             <div className="df-toss">
                                 <p>{effects.banner.side === "me" ? "You roll" : `${view.opp.name} rolls`}</p>
@@ -639,7 +655,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     ) : <p className="df-detail__empty">Point at a card to read it.</p>;
     const logPanel = (
         <ol className="df-log__list">
-            {log.map((l) => <li key={l.key} className={l.side ? `is-${l.side}` : ""}>{l.text}</li>)}
+            {log.map((l) => <li key={l.key} className={l.side ? `is-${l.side}` : ""}>{l.say(name)}</li>)}
         </ol>
     );
 
@@ -695,6 +711,14 @@ function describe(e: DuelEvent, view: DuelView, name: (code: number) => string):
             const a = e.attacker ? cards.get(e.attacker) : undefined, t = e.target ? cards.get(e.target) : undefined;
             return `${a?.code ? name(a.code) : "A monster"} attacked ${t ? (t.code ? name(t.code) : "a Set monster") : "directly"}`;
         }
+        case "reveal": {
+            const list = e.codes.length ? `: ${e.codes.map(name).join(", ")}` : "";
+            return `${revealWords(e, view.opp.name)}${list}`;
+        }
+        case "random": {
+            const picked = e.uids.map((u) => cards.get(u)).filter((c): c is NonNullable<typeof c> => !!c);
+            return `Picked at random: ${picked.length ? picked.map((c) => (c.code ? name(c.code) : "a card")).join(", ") : `${e.uids.length} card${e.uids.length === 1 ? "" : "s"}`}`;
+        }
         case "attack-negated": {
             const a = e.attacker ? cards.get(e.attacker) : undefined;
             return `${a?.code ? `${name(a.code)}'s` : "The"} attack was negated`;
@@ -712,4 +736,13 @@ function describe(e: DuelEvent, view: DuelView, name: (code: number) => string):
         case "win": return e.side ? `${who(e.side)} won: ${e.reason}` : `A draw: ${e.reason}`;
         default: return null;
     }
+}
+
+/** What a reveal is, in words: who shows what to whom ("Practice Bot reveals from the top of the Deck"). */
+function revealWords(r: { side: Side; by: Side | null; from: string; count: number }, rival: string): string {
+    const n = `${r.count} card${r.count === 1 ? "" : "s"}`;
+    const deck = r.from === "deck" ? " from the top of the Deck" : r.from === "hand" ? " from the hand" : "";
+    if (r.by === null) return `${r.side === "me" ? "You reveal" : `${rival} reveals`} ${n}${deck}`;
+    if (r.by === r.side) return r.side === "me" ? `You look at ${n}${deck}` : `${rival} looks at ${n} of their own`;
+    return r.by === "me" ? `${rival} shows you ${n}${deck}` : `You show ${rival} ${n}${deck}`;
 }
