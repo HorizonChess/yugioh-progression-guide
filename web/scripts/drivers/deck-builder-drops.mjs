@@ -26,10 +26,10 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 950 } });
 page.on("pageerror", (e) => console.log("pageerror:", e.message));
 page.on("dialog", (d) => { console.log("dialog:", d.message()); d.dismiss(); });
 if (process.env.THROTTLE) { const cdp = await page.context().newCDPSession(page); await cdp.send("Emulation.setCPUThrottlingRate", { rate: Number(process.env.THROTTLE) }); }
-await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }) });
+await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }), "ygo-guide": "off" });
 await page.goto(`${BASE}/deck-builder/`, { waitUntil: "networkidle" });
 
-const search = (name) => page.locator(`.bg-lime img[alt="${name}"]`).first();
+const search = (name) => page.locator(`.db-results img[alt="${name}"]`).first();
 await search("Dark Magician").waitFor({ timeout: 15000 });
 const mainSlot = (i) => page.locator(".grid-cols-10 > div").nth(i);
 const mainNames = () => page.locator(".grid-cols-10 > div").evaluateAll((els) => els.map((el) => el.querySelector("img")?.alt ?? null));
