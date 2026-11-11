@@ -83,7 +83,7 @@ It plays from what a player at the table could see. The rival's face-down monste
 - **Ordering cards** (`SORT_CARD`, Spellbook Organization: "place them on top of the Deck in any
   order"): a player taps the cards in order, numbered as they go; the first goes on top. The bot
   keeps the engine's order. (ocgcore-wasm writes a count byte before the answer that the engine
-  doesn't read; `sortOrder` in session.ts works around it.)
+  doesn't read; `forEngine` in session.ts works around it.)
 - **Removing counters** (`SELECT_COUNTER`): when there's more than one way to take them, a player
   picks from the ways ("2 from Breaker, 1 from Royal Magical Library"). Otherwise, and for the
   bot, they come from the first cards listed.

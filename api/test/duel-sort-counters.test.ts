@@ -29,6 +29,11 @@ describe.skipIf(!engineDataAvailable())('ordering the top of the Deck', () => {
             if (first !== null && team === 0 && s.view.turn > sortedOn && p.kind === 'actions') {
                 // The card drawn this turn is the newest in hand.
                 expect(s.view.me.hand.at(-1)!.code).toBe(first);
+                // The answers go to storage as plain data, and the duel rebuilds from them to the same place.
+                const stored = JSON.parse(JSON.stringify(duel.answers));
+                const rebuilt = new DuelSession(engine, duel.setup);
+                rebuilt.start(stored);
+                expect(rebuilt.state(0, 'd').view).toEqual(s.view);
                 return;
             }
             if (s.view.turn > 9) break;

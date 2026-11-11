@@ -184,13 +184,18 @@ export const counterSplits = (count: number, have: number[]): number[][] => {
     return out;
 };
 /**
- * A SORT_CARD answer as the engine reads it: one byte per card, its place in the new order.
- * ocgcore-wasm writes the list's length before the list, which the engine takes as the first
- * card's place (and then reads one card short, so every answer looked invalid). The length it
- * writes is the list's `length`, the bytes after it are what the list iterates: so the first
- * place goes in `length` and the rest are iterated.
+ * An answer as the engine reads it. A SORT_CARD answer is one byte per card, its place in the new
+ * order, but ocgcore-wasm writes the list's length before the list, which the engine takes as the
+ * first card's place (and then reads one card short, so every answer looked invalid). The length
+ * it writes is the list's `length` and the bytes after it are what the list iterates: so the first
+ * place goes in `length` and the rest are iterated. Answers are stored as plain lists (they go to
+ * the database and rebuild the duel); this is done only as one goes to the engine.
  */
-const sortOrder = (places: number[]) => ({ length: places[0]!, [Symbol.iterator]: () => places.slice(1)[Symbol.iterator]() });
+const forEngine = (r: OcgResponse): OcgResponse => {
+    if (r.type !== R.SORT_CARD || !r.order?.length) return r;
+    const places = r.order;
+    return { type: R.SORT_CARD, order: { length: places[0]!, [Symbol.iterator]: () => places.slice(1)[Symbol.iterator]() } as never };
+};
 /** The names of the bits set in a Type or Attribute mask. */
 const bitNames = (mask: bigint | number, names: readonly string[]) => names.filter((_, i) => (BigInt(mask) >> BigInt(i)) & 1n);
 
@@ -457,7 +462,7 @@ export class DuelSession {
         this.seq++;
         this.retry = false;
         this.question = null;
-        this.engine.core.duelSetResponse(this.handle!, response);
+        this.engine.core.duelSetResponse(this.handle!, forEngine(response));
         this.run();
     }
 
@@ -531,7 +536,7 @@ export class DuelSession {
     private feed(response: OcgResponse) {
         this.noteCall(response);
         this.answers.push(response);
-        this.engine.core.duelSetResponse(this.handle!, response);
+        this.engine.core.duelSetResponse(this.handle!, forEngine(response));
     }
     private lastQuestion: Question | null = null;
 
@@ -1112,7 +1117,7 @@ export class DuelSession {
                     // The engine wants each card's place in the new order.
                     const order = Array<number>(n);
                     ids.forEach((card, place) => (order[card] = place));
-                    return { type: R.SORT_CARD, order: sortOrder(order) as never };
+                    return { type: R.SORT_CARD, order };
                 });
             }
             case M.SELECT_COUNTER: {
