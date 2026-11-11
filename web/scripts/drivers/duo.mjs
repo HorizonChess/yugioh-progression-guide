@@ -94,10 +94,12 @@ try {
     await saveSet(yugi, series.id);
     await yugi.page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
     await yugi.page.getByRole("button", { name: /victory/i }).click();
+    await yugi.page.getByRole("button", { name: "I won" }).click();
     await yugi.page.waitForTimeout(600);
     check(yugi.dialogs.some((d) => /rival hasn't saved/.test(d)), "report: refused while the rival hasn't saved their packs");
     await saveSet(kaiba, series.id);
     await yugi.page.getByRole("button", { name: /victory/i }).click();
+    await yugi.page.getByRole("button", { name: "I won" }).click();
     await yugi.page.getByText(`Waiting for ${kaiba.name} to confirm`).waitFor({ timeout: 8000 });
     check(true, "report: Yugi's victory waits for Kaiba");
 
