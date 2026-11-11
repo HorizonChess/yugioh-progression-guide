@@ -43,9 +43,12 @@ const NavIcon = ({ href }: { href: string }) => (
 );
 const TAB_LABELS: Record<string, string> = { "/deck-builder": "Deck" };
 
-/** "Stage 3 · Solo", under the duelist's name in both bars. */
-const stageLine = (series: { currentSetIndex: number; mode?: string } | null | undefined) =>
-    series ? `Stage ${series.currentSetIndex + 1} · ${series.mode === "duo" ? "Duo" : "Solo"}` : "No save picked";
+/** "Stage 3 · Solo", or "Stage 3 · vs Kaiba" in duo, under the duelist's name in both bars. */
+const stageLine = (series: { currentSetIndex: number; mode?: string; members?: { id: string; duelistName: string }[] } | null | undefined, userId?: string | null) => {
+    if (!series) return "No save picked";
+    const rival = series.mode === "duo" ? series.members?.find((m) => m.id !== userId)?.duelistName : undefined;
+    return `Stage ${series.currentSetIndex + 1} · ${series.mode !== "duo" ? "Solo" : rival ? `vs ${rival}` : "Duo"}`;
+};
 
 const useNavPath = () => usePathname().replace(/(.)\/$/, "$1"); // trailingSlash makes it "/timeline/"
 
@@ -94,9 +97,10 @@ export function PhoneTabBar() {
 function PhoneBar({ duelistName, signedIn }: { duelistName: string; signedIn: boolean }) {
     const pathname = useNavPath();
     const { isGuideVisible, toggleGuide, series, matchHistory } = useProgression();
+    const userId = useAuth().user?.id;
     const wins = matchHistory.filter((m) => m.winner === "player").length;
     const losses = matchHistory.filter((m) => m.winner === "opponent").length;
-    const sub = stageLine(series);
+    const sub = stageLine(series, userId);
     return (
         <header className="phone-bar md:hidden">
             <button
@@ -133,10 +137,11 @@ export default function AppNav() {
     const pathname = useNavPath();
     const { isGuideVisible, toggleGuide, activeSeriesId, series } = useProgression();
     const user = useAuth().user;
+    const userId = user?.id;
     const duelistName = user?.duelistName ?? "Guest";
 
     if (!NAV_ROUTES.has(pathname)) return null;
-    const sub = stageLine(series);
+    const sub = stageLine(series, userId);
 
     return (
         <>
