@@ -885,7 +885,7 @@ html::-webkit-scrollbar-corner,
 
 /* ---------- phone shell: lacquer top bar with a gold meander, and a tab bar ---------- */
 .phone-bar {
-  position: relative; z-index: 100; height: 58px; display: flex; align-items: center; gap: 10px; padding: 0 12px;
+  position: relative; z-index: 100; height: 58px; display: flex; align-items: center; gap: 10px; padding: 0 12px; min-width: 0; /* a grid row of the page: never wider than the screen */
   background: radial-gradient(120% 140% at 20% 0%, #2a1f3a, transparent 60%), linear-gradient(#1a1324, #0a070f);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
 }
@@ -902,9 +902,11 @@ html::-webkit-scrollbar-corner,
   box-shadow: 0 0 0 2px var(--primary), 0 0 0 4px #3a2405, 0 0 12px rgba(212, 175, 55, 0.5); transition: opacity 0.2s, filter 0.2s;
 }
 .phone-bar__face--off { opacity: 0.55; filter: grayscale(0.7); }
-.phone-bar__who { min-width: 0; padding-right: 96px; }
+/* The name and the stage line take what's left beside the scoreboard (about 107px), and cut off with … (a long rival's name). */
+.phone-bar__who { flex: 1 1 auto; min-width: 0; }
+.phone-bar__who--score { padding-right: 104px; }
 .phone-bar__name { font: 800 17px/1 var(--font-display); color: #ffe08a; letter-spacing: 0.05em; text-shadow: 0 1px 0 #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.phone-bar__sub { margin-top: 3px; font: 700 11px/1.2 var(--font-main); letter-spacing: 0.14em; color: #c7b99a; text-transform: uppercase; white-space: nowrap; }
+.phone-bar__sub { margin-top: 3px; font: 700 11px/1.2 var(--font-main); letter-spacing: 0.14em; color: #c7b99a; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* The painted scoreboard hangs from the bar like a plaque. */
 .phone-bar__score { position: absolute; right: 8px; top: 3px; height: 82px; aspect-ratio: 952 / 792; z-index: 2; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.75)); }
 .phone-bar__score .stats-gem { top: 47%; }
