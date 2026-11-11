@@ -149,6 +149,15 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         }
     });
 
+    // The duel as stored (its setup and every answer), for a player in it: a duel the server can't
+    // rebuild is downloaded from its error screen and replayed locally (scripts/replay-duel.ts).
+    app.get('/duels/:duelId/record', { preHandler: loadUser }, async (request, reply) => {
+        const duel = await duelFor(request, reply);
+        if (!duel) return;
+        if (teamIn(duel, request) === null || !duel.setup) return reply.code(404).send({ error: 'Not found' });
+        return { id: duel._id.toHexString(), status: duel.status, setup: duel.setup, answers: duel.answers };
+    });
+
     app.post('/duels/:duelId/accept', { preHandler: requireAuth, config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request, reply) => {
         const body = AcceptBodySchema.safeParse(request.body);
         if (!body.success) return reply.code(400).send({ error: 'Invalid input' });

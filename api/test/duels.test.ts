@@ -209,6 +209,11 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         const look = await app.inject({ method: 'GET', url: `/api/duels/${broken._id.toHexString()}`, headers: { 'x-duel-token': token } });
         expect(look.statusCode).toBe(200);
         expect(look.json()).toMatchObject({ state: null, broken: expect.any(String) });
+        // Its record can be downloaded by a player in it, to replay it and find the fault.
+        const record = await app.inject({ method: 'GET', url: `/api/duels/${broken._id.toHexString()}/record`, headers: { 'x-duel-token': token } });
+        expect(record.json()).toMatchObject({ setup: { seed: expect.any(Array) }, answers: expect.any(Array) });
+        expect(record.json().answers).toHaveLength(30);
+        expect((await app.inject({ method: 'GET', url: `/api/duels/${broken._id.toHexString()}/record` })).statusCode).toBeGreaterThanOrEqual(400);
         const res = await app.inject({ method: 'POST', url: `/api/duels/${broken._id.toHexString()}/concede`, headers: { 'x-duel-token': token } });
         expect(res.statusCode).toBeLessThan(300);
         const stored = await app.db.collection('duels').findOne({ _id: broken._id });

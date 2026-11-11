@@ -67,8 +67,8 @@ export async function ensureDuelIndexes(db: Db): Promise<void> {
     await duelsCollection(db).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 }
 
-const encode = (r: OcgResponse) => JSON.stringify(r, (_k, v) => (typeof v === 'bigint' ? { $b: v.toString() } : v));
-const decode = (s: string): OcgResponse => JSON.parse(s, (_k, v) => (v && typeof v === 'object' && '$b' in v ? BigInt(v.$b) : v));
+export const encode = (r: OcgResponse) => JSON.stringify(r, (_k, v) => (typeof v === 'bigint' ? { $b: v.toString() } : v));
+export const decode = (s: string): OcgResponse => JSON.parse(s, (_k, v) => (v && typeof v === 'object' && '$b' in v ? BigInt(v.$b) : v));
 const newSeed = (): DuelSetup['seed'] => {
     const b = randomBytes(32);
     // Xoshiro256** must not be seeded with all zeros.

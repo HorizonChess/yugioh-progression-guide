@@ -65,6 +65,9 @@ export const acceptDuel = async (duelId: string, deckId: string) => (await apiRe
 
 export const declineDuel = (duelId: string) => apiRequest("POST", `/api/duels/${duelId}/decline`);
 
+/** The duel as the server stores it (setup and answers), for a bug report. */
+export const getDuelRecord = (duelId: string) => apiRequest<unknown>("GET", `/api/duels/${duelId}/record`, undefined, tokenHeader(duelId));
+
 export const concedeDuel = (duelId: string) => apiRequest("POST", `/api/duels/${duelId}/concede`, undefined, tokenHeader(duelId));
 
 export const duelPath = (duelId: string) => `/duel/?id=${duelId}`;

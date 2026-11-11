@@ -8,7 +8,7 @@ import GuideSprite from "@/components/layout/GuideSprite";
 import { useAuth } from "@/context/AuthContext";
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets } from "@/lib/api";
-import { acceptDuel, concedeDuel, declineDuel, getDuel, guestDuelToken, type DuelSummary } from "@/lib/duel-client";
+import { acceptDuel, concedeDuel, declineDuel, getDuel, getDuelRecord, guestDuelToken, type DuelSummary } from "@/lib/duel-client";
 import { ruleLines } from "@/lib/guide/lines";
 import { guide } from "@/lib/guide/store";
 import "@/components/duel/duel-field.css";
@@ -82,12 +82,21 @@ function DuelPageContent() {
     if (broken && duel.status === "active") {
         const rival = duel.kind === "rival";
         const end = () => void concedeDuel(id).then(() => router.push("/record-match")).catch((e: Error) => setError(e.message));
+        // The duel as stored, saved as a file: sent with a bug report, it replays the duel exactly.
+        const save = () => void getDuelRecord(id).then((record) => {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(record)], { type: "application/json" }));
+            a.download = `duel-${id}.json`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }).catch((e: Error) => setError(e.message));
         return (
             <div className="df-arena">
                 <div className="df-loading">
                     <div className="dl">
                         <p>This duel hit a server error and can&rsquo;t be picked up again. Sorry!</p>
                         <p><small>{broken}</small></p>
+                        <button type="button" className="dl-btn" onClick={save}>Download the duel record</button>
                         <button type="button" className="dl-btn" onClick={end}>{rival ? "End it (it counts as a loss)" : "End this duel"}</button>
                         <button type="button" className="dl-btn" onClick={() => router.push("/record-match")}>Back</button>
                     </div>
