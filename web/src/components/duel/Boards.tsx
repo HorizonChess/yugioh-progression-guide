@@ -68,8 +68,9 @@ export function PhoneBoard({ view, marks, onCard, onPile, phaseBar, overlay }: B
     };
     const mat = (side: Side) => {
         const r = rows(view, side);
-        const monsters = r.monsters.map((c, i) => <Zone key={`m${i}`} card={c} className="df-zone--monster" zone={zoneKey(side, "monster", seqAt(side, i))} marks={marks} side={side} onTap={(x) => onCard(x, side, "monster")} />);
-        const spells = r.spells.map((c, i) => <Zone key={`s${i}`} card={c} className="df-zone--spell" zone={zoneKey(side, "spell", seqAt(side, i))} marks={marks} side={side} onTap={(x) => onCard(x, side, "spell")} />);
+        const lock = view[side].locked;
+        const monsters = r.monsters.map((c, i) => <Zone key={`m${i}`} card={c} className="df-zone--monster" zone={zoneKey(side, "monster", seqAt(side, i))} locked={!!lock?.monsters[seqAt(side, i)]} marks={marks} side={side} onTap={(x) => onCard(x, side, "monster")} />);
+        const spells = r.spells.map((c, i) => <Zone key={`s${i}`} card={c} className="df-zone--spell" zone={zoneKey(side, "spell", seqAt(side, i))} locked={!!lock?.spells[seqAt(side, i)]} marks={marks} side={side} onTap={(x) => onCard(x, side, "spell")} />);
         return <div className={`df-mat df-mat--${side}`}>{side === "opp" ? <>{spells}{monsters}</> : <>{monsters}{spells}</>}</div>;
     };
     return (
@@ -99,7 +100,7 @@ export function DesktopBoard({ view, marks, onCard, onPile, onHover, phaseBar, o
         const s = view[side];
         const r = rows(view, side);
         const zone = (c: DuelCardView | null, i: number, row: "m" | "s") => (
-            <Zone key={`${row}${i}`} card={c} className={row === "s" ? "df-zone--spell" : "df-zone--monster"} zone={zoneKey(side, row === "s" ? "spell" : "monster", seqAt(side, i))} marks={marks} side={side} onHover={onHover} onTap={(x) => onCard(x, side, row === "m" ? "monster" : "spell")} />
+            <Zone key={`${row}${i}`} card={c} className={row === "s" ? "df-zone--spell" : "df-zone--monster"} zone={zoneKey(side, row === "s" ? "spell" : "monster", seqAt(side, i))} locked={!!s.locked?.[row === "s" ? "spells" : "monsters"][seqAt(side, i)]} marks={marks} side={side} onHover={onHover} onTap={(x) => onCard(x, side, row === "m" ? "monster" : "spell")} />
         );
         const field = <Zone key="field" card={s.field} label="Field" className="df-zone--side" zone={zoneKey(side, "field", 0)} marks={marks} side={side} onHover={onHover} onTap={(c) => onCard(c, side, "field")} />;
         const gy = <Pile key="gy" label="GY" count={s.grave.length} top={top(s.grave)} onTap={() => onPile(side, "grave")} onHover={onHover} />;

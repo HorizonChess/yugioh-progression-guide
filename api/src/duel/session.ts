@@ -195,6 +195,11 @@ export class DuelSession {
     private pushed: [number, number] = [0, 0];
     private readonly epoch = Math.random().toString(36).slice(2, 10);
     private lp: [number, number] = [START_LP, START_LP];
+    /**
+     * Zones a card has taken out of use (the engine's last FIELD_DISABLED): player 0's Monster
+     * Zones in bits 0-4 and Spell & Trap Zones in 8-12, player 1's 16 higher. A set bit is locked.
+     */
+    private locked = 0;
     private turn = 0;
     private turnPlayer: Team = 0;
     private phase: Phase = 'DP';
@@ -673,6 +678,9 @@ export class DuelSession {
                 case M.SWAP:
                     this.tracker.swap(m.card1, m.card2);
                     break;
+                case M.FIELD_DISABLED:
+                    this.locked = m.field_mask;
+                    break;
                 case M.POS_CHANGE:
                     out.push({ k: 'reposition', uid: this.tracker.uidAt(m.controller, m.location, m.sequence), code: m.code, public: faceUp(m.position) });
                     break;
@@ -785,6 +793,7 @@ export class DuelSession {
             extra: core.duelQueryCount(this.handle, t, L.EXTRA),
             // Your own Extra Deck is yours to look through; the rival's stays a face-down count.
             ...(t === viewer ? { extraCards: pile(L.EXTRA) } : {}),
+            ...lockedOf(this.locked, t),
         };
     }
 
@@ -1146,4 +1155,11 @@ function freePlace(mask: number, player: number) {
         }
     }
     throw new Error('No open zone to place a card');
+}
+
+/** The zones of player `t` that a card has locked, for the board (left out when none are). */
+export function lockedOf(mask: number, t: Team): { locked?: { monsters: boolean[]; spells: boolean[] } } {
+    const bit = (b: number) => (mask & (1 << (t * 16 + b))) !== 0;
+    const monsters = [0, 1, 2, 3, 4].map(bit), spells = [8, 9, 10, 11, 12].map(bit);
+    return monsters.some(Boolean) || spells.some(Boolean) ? { locked: { monsters, spells } } : {};
 }

@@ -50,6 +50,8 @@ export interface DuelSideView {
     extra: number;
     /** The Extra Deck's cards, for its owner only (the rival sees just the count). */
     extraCards?: DuelCardView[];
+    /** Zones a card has taken out of use (Kashtira Shangri-Ira, Excode Talker), the owner's left to right. */
+    locked?: { monsters: boolean[]; spells: boolean[] };
 }
 
 export interface DuelView {
