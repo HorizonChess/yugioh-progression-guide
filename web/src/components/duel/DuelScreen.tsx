@@ -78,6 +78,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     const namesRef = useRef<(code: number) => string>(() => "a card");
     const onEvent = useCallback((e: DuelEvent, view: DuelView) => {
         if (e.k === "reveal" && e.codes.length) setShown((s) => [...new Set([...s, ...e.codes])]);
+        if (e.k === "declare" && e.code) setShown((s) => [...new Set([...s, e.code!])]);
         if (!describe(e, view, namesRef.current)) return;
         const say = (name: (code: number) => string) => describe(e, view, name) ?? "";
         setLog((l) => [...l.slice(-199), { key: Math.random(), say, side: "side" in e ? (e.side ?? undefined) : undefined }]);
@@ -595,6 +596,12 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                                 </div>
                             );
                         })()}
+                        {effects.banner.kind === "declare" && (
+                            <div className="df-declare">
+                                <p>{effects.banner.side === "me" ? "You declare" : `${view.opp.name} declares`}</p>
+                                <b>{effects.banner.code ? name(effects.banner.code) : effects.banner.text}</b>
+                            </div>
+                        )}
                         {effects.banner.kind === "reveal" && (
                             <div className="df-reveal">
                                 <p>{revealWords(effects.banner, view.opp.name)}</p>
@@ -710,6 +717,10 @@ function describe(e: DuelEvent, view: DuelView, name: (code: number) => string):
         case "attack": {
             const a = e.attacker ? cards.get(e.attacker) : undefined, t = e.target ? cards.get(e.target) : undefined;
             return `${a?.code ? name(a.code) : "A monster"} attacked ${t ? (t.code ? name(t.code) : "a Set monster") : "directly"}`;
+        }
+        case "declare": {
+            const what = e.code ? name(e.code) : e.text;
+            return `${e.side === "me" ? "You declared" : `${view.opp.name} declared`} ${e.what === "number" ? `the number ${what}` : what}`;
         }
         case "reveal": {
             const list = e.codes.length ? `: ${e.codes.map(name).join(", ")}` : "";

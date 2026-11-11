@@ -24,6 +24,7 @@ export type Banner =
     | { key: number; kind: "end"; text: string }
     | { key: number; kind: "coin"; side: Side; results: ("heads" | "tails")[]; call?: { side: Side; heads: boolean } }
     | { key: number; kind: "dice"; side: Side; results: number[] }
+    | { key: number; kind: "declare"; side: Side; what: string; text: string; code?: number }
     | { key: number; kind: "reveal"; side: Side; by: Side | null; from: string; codes: number[]; count: number };
 export type Float = { key: number; side?: Side; uid?: string; text: string; tone: "up" | "down" };
 export interface Effects {
@@ -45,7 +46,7 @@ let key = 0;
 
 /** How long each kind of event holds the board, in ms. */
 const HOLD: Partial<Record<DuelEvent["k"], number>> = {
-    activate: 1050, turn: 900, coin: 2400, dice: 2000, reveal: 2200, random: 700, destroyed: 120, damage: 700, pay: 500, recover: 500, summon: 520, move: 300, draw: 260, set: 300, reposition: 340, win: 500, resolved: 220, negated: 600,
+    activate: 1050, turn: 900, coin: 2400, dice: 2000, reveal: 2200, random: 700, declare: 1600, destroyed: 120, damage: 700, pay: 500, recover: 500, summon: 520, move: 300, draw: 260, set: 300, reposition: 340, win: 500, resolved: 220, negated: 600,
 };
 const FIELD = new Set(["monster", "spell", "field", "pendulum", "extra-monster"]);
 
@@ -348,6 +349,7 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                         setTimeout(() => setEffects((x) => ({ ...x, hit: null })), 600);
                     }
                 }
+                if (e.k === "declare") setEffects((x) => ({ ...x, banner: { key: ++key, kind: "declare", side: e.side, what: e.what, text: e.text, code: e.code } }));
                 if (e.k === "reveal") setEffects((x) => ({ ...x, banner: { key: ++key, kind: "reveal", side: e.side, by: e.by, from: e.from, codes: e.codes, count: e.count } }));
                 if (e.k === "recover") float({ side: e.side, text: `+${e.amount}`, tone: "up" });
                 // A negated attack: the words rise from the attacker (or its side, if it's gone).
