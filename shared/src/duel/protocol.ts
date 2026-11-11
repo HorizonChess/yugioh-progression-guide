@@ -31,6 +31,8 @@ export interface DuelCardView {
     counters?: number;
     /** A token's name: tokens aren't in the card catalog, and some have no picture. */
     token?: string;
+    /** What an effect wrote on it: a declared Type or Attribute (DNA Surgery), a named card, a number, a lasting effect. */
+    notes?: string[];
 }
 
 export interface DuelSideView {
@@ -52,6 +54,8 @@ export interface DuelSideView {
     extraCards?: DuelCardView[];
     /** Zones a card has taken out of use (Kashtira Shangri-Ira, Excode Talker), the owner's left to right. */
     locked?: { monsters: boolean[]; spells: boolean[] };
+    /** Lasting effects on the player ("You cannot Normal Summon"). */
+    notes?: string[];
 }
 
 export interface DuelView {
@@ -95,6 +99,8 @@ export type DuelEvent =
     | { k: 'random'; uids: string[] }
     /** An attack stopped by a card (Negate Attack, Magic Cylinder): no battle follows. */
     | { k: 'attack-negated'; side: Side; attacker?: string }
+    /** A player declared a Type, an Attribute, a card or a number (Mind Crush, DNA Surgery, Prohibition). */
+    | { k: 'declare'; side: Side; what: 'type' | 'attribute' | 'card' | 'number'; text: string; code?: number }
     | { k: 'destroyed'; uid: string; code: number }
     | { k: 'move'; uid: string; code: number; side: Side; from: Zone; to: Zone }
     | { k: 'damage'; side: Side; amount: number }

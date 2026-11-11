@@ -107,6 +107,8 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
                         <b>{stat.value}</b>
                     </span>
                 )}
+                {/* What an effect wrote on it: a declared Type, Attribute or card (DNA Surgery, Prohibition). */}
+                {up && card.notes?.length ? <span className={`df-note ${card.defense ? "is-def" : ""}`} title={card.notes.join("\n")}>{card.notes.join(" · ")}</span> : null}
                 {/* What acts on it: the Equip Spell or continuous card's art, negation, counters. */}
                 {up && (card.by?.length || card.negated || card.counters) ? (
                     <span className={`df-affect ${card.defense ? "is-def" : ""}`} aria-label={affectLabel(card)}>
@@ -196,7 +198,7 @@ export function Pile({ label, count, top, back, onTap, onHover, small, pile }: {
 }
 
 /** Life points that count to their new value, with the damage floating off them. */
-export function LifePoints({ value, side, name, floats, active, hit }: { value: number; side: Side; name: string; floats: readonly Float[]; active: boolean; hit?: boolean }) {
+export function LifePoints({ value, side, name, floats, active, hit, notes }: { value: number; side: Side; name: string; floats: readonly Float[]; active: boolean; hit?: boolean; notes?: string[] }) {
     const [shown, setShown] = useState(value);
     const from = useRef(value);
     useEffect(() => {
@@ -214,6 +216,8 @@ export function LifePoints({ value, side, name, floats, active, hit }: { value: 
     return (
         <div className={`df-lp df-lp--${side} ${active ? "is-turn" : ""} ${hit ? "is-hit" : ""}`}>
             <span className="df-lp__name">{name}</span>
+            {/* Lasting effects on the player ("cannot Normal Summon"). */}
+            {notes?.length ? <span className="df-lp__notes">{notes.map((n) => <i key={n}>{n}</i>)}</span> : null}
             <span className="df-lp__value">
                 <small>LP</small>
                 <b className={shown !== value ? "is-ticking" : ""}>{shown}</b>
