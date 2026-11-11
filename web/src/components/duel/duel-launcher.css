@@ -1,20 +1,51 @@
 /* The "Duel here" act on the record-match board. */
 .dl { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(100%, 440px); text-align: center; }
-.dl-rules { margin: 0; font-size: 13px; color: #e6dcc3; text-shadow: 0 1px 2px #000; }
-.dl-card { display: flex; flex-direction: column; gap: 10px; width: 100%; padding: 12px 14px; border-radius: 12px; background: rgba(20, 14, 8, 0.78); border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.6); }
-.dl-card p { margin: 0; font-size: 14px; color: #f0e6d2; }
-.dl-card b { color: #f5c542; }
-.dl-note { margin: 0; font-size: 12px; color: #c9bc9a; }
+.dl-rules { margin: 0; font: 700 13px/1.4 var(--font-display); color: var(--rm-ink, #e6dcc3); text-shadow: var(--rm-ink-shadow, 0 1px 2px #000); }
+/* a panel sunk into the board's stone */
+.dl-card {
+  display: flex; flex-direction: column; gap: 12px; width: 100%; padding: 14px 16px; border-radius: 8px;
+  background: linear-gradient(rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.14));
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.55), inset 0 -1px 0 rgba(255, 240, 210, 0.22), 0 1px 0 rgba(255, 240, 210, 0.12);
+}
+.dl-card p { margin: 0; font: 700 14px/1.4 var(--font-display); color: var(--rm-ink, #f0e6d2); text-shadow: var(--rm-ink-shadow, none); }
+.dl-card b { color: var(--rm-ink-gold, #f5c542); }
+.dl-note { margin: 0; font: 600 12px/1.45 var(--font-display); color: var(--rm-ink, #c9bc9a); text-shadow: var(--rm-ink-shadow, none); opacity: 0.88; }
 .dl-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .dl-row > * { flex: 1 1 160px; }
-.dl-deck { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #c9bc9a; }
-.dl-deck select { flex: 1; min-height: 40px; padding: 0 10px; border-radius: 8px; border: 1px solid #8b7355; background: #e6dcc3; color: #2c1810; font-size: 14px; }
-.dl-btn { min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid #b8860b; background: linear-gradient(#3a2c17, #21180c); color: #f0e6d2; font: 14px var(--font-heading); cursor: pointer; }
-.dl-btn:hover:not(:disabled) { background: linear-gradient(#4a3820, #2a1f10); }
-.dl-btn:disabled { opacity: 0.45; cursor: default; }
-.dl-btn--main { background: linear-gradient(#f5c542, #b8860b); color: #1a120b; border-color: #f5c542; font-weight: 600; }
-.dl-btn--main:hover:not(:disabled) { background: linear-gradient(#ffd55e, #c8961b); }
-.dl-btn--quiet { background: transparent; border-color: #6b543a; color: #c9bc9a; }
+.dl-deck { display: flex; align-items: center; gap: 10px; font: 800 12px/1 var(--font-display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--rm-ink, #c9bc9a); text-shadow: var(--rm-ink-shadow, none); }
+/* dark lacquer with a gold rim, as the new-run form's fields */
+.dl-deck select {
+  flex: 1; min-width: 0; min-height: 40px; padding: 0 10px; border: 0; border-radius: 6px; font: 600 14px var(--font-main); color: #f1e7cc;
+  background: rgba(14, 10, 6, 0.85); box-shadow: inset 0 0 0 1px rgba(224, 181, 79, 0.6), inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.dl-deck select option { background: #120d08; color: #f1e7cc; }
+/* raised slabs of the board's stone, words and glyph carved in, gold-rimmed (as "Duel in the app") */
+.dl-slabs { display: flex; gap: 12px; justify-content: center; }
+.dl-slab, .dl-btn {
+  position: relative; border: 0; border-radius: 6px; cursor: pointer; color: var(--rm-ink, #f0e6d2);
+  background: linear-gradient(rgba(255, 245, 225, 0.14), rgba(0, 0, 0, 0.12)), var(--rm-stone, none) 37% 61% / 1024px, #7a766c;
+  box-shadow: inset 0 2px 0 rgba(255, 246, 228, 0.5), inset 0 -3px 4px rgba(0, 0, 0, 0.45), 0 0 0 2px #6b4c18, 0 0 0 3.5px #e0b54f, 0 0 0 5px #3b2a10, 0 7px 12px rgba(0, 0, 0, 0.55);
+  transition: transform 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.3), filter 0.15s;
+}
+.dl-slab { flex: 1 1 0; max-width: 170px; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 10px 10px; }
+.dl-slab svg { width: 58px; height: auto; filter: drop-shadow(0 1px 0 #000) drop-shadow(0 0 3px rgba(0, 0, 0, 0.7)); transition: color 0.2s, filter 0.2s; }
+.dl-slab span { font: 900 14px/1.1 var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; text-shadow: var(--rm-ink-shadow, none); }
+.dl-slab small { font: 800 9.5px/1 var(--font-display); letter-spacing: 0.26em; text-transform: uppercase; color: var(--rm-ink-gold, #f5c542); text-shadow: var(--rm-ink-shadow, none); }
+.dl-slab:hover:not(:disabled), .dl-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.08); }
+.dl-slab:hover:not(:disabled) svg { color: #ffe08a; filter: drop-shadow(0 1px 0 #000) drop-shadow(0 0 6px rgba(255, 200, 90, 0.85)); }
+.dl-slab:active:not(:disabled), .dl-btn:active:not(:disabled) { transform: translateY(1px) scale(0.985); }
+.dl-slab:disabled, .dl-btn:disabled { opacity: 0.5; cursor: default; filter: grayscale(0.6); }
+/* the duel that counts: the glyph is lit gold */
+.dl-slab--main svg { color: #ffe08a; }
+.dl-btn { min-height: 44px; padding: 8px 14px; font: 800 13px/1.2 var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; text-shadow: var(--rm-ink-shadow, none); }
+.dl-btn--main { color: #2a1c05; text-shadow: 0 1px 0 rgba(255, 240, 190, 0.6); background: linear-gradient(#f3d98a, #c99a3a); }
+.dl-btn--quiet { background: transparent; box-shadow: inset 0 0 0 1px rgba(243, 231, 199, 0.45); }
+@media (max-width: 899px) {
+  .dl-slabs { gap: 10px; }
+  .dl-slab { padding: 10px 6px 8px; }
+  .dl-slab svg { width: 46px; }
+  .dl-slab span { font-size: 12.5px; }
+}
 .rm-duel-open { margin-bottom: 4px; }
 .df-waiting { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 2; }
 
