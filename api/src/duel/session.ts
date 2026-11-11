@@ -35,12 +35,13 @@ export interface DuelSetup {
      *   2: a lone mandatory effect resolves without asking.
      *   3: so do several copies of one mandatory effect at once (two Masks of the Accursed): the
      *      order they go on the chain changes nothing. (See RULES.md.)
+     *   4: a player is asked to order cards (Spellbook Organization) and which cards lose counters.
      */
     rules?: number;
 }
 
 /** The rules new duels start under (see DuelSetup.rules). */
-export const DUEL_RULES = 3;
+export const DUEL_RULES = 4;
 
 export const MODE_FLAGS: Record<DuelModeId, bigint> = {
     MR1: OcgDuelMode.MODE_MR1,
@@ -168,6 +169,28 @@ const POSITION_LABEL: Record<number, string> = {
 };
 const RACES = ['Warrior', 'Spellcaster', 'Fairy', 'Fiend', 'Zombie', 'Machine', 'Aqua', 'Pyro', 'Rock', 'Winged Beast', 'Plant', 'Insect', 'Thunder', 'Dragon', 'Beast', 'Beast-Warrior', 'Dinosaur', 'Fish', 'Sea Serpent', 'Reptile', 'Psychic', 'Divine-Beast', 'Creator God', 'Wyrm', 'Cyberse'];
 const ATTRIBUTES = ['EARTH', 'WATER', 'FIRE', 'WIND', 'LIGHT', 'DARK', 'DIVINE'];
+/**
+ * The ways to take `count` counters from cards holding `have` each (at most 24, the first ones
+ * found): each is how many come off each card.
+ */
+export const counterSplits = (count: number, have: number[]): number[][] => {
+    const out: number[][] = [];
+    const walk = (i: number, left: number, acc: number[]) => {
+        if (out.length >= 24) return;
+        if (i === have.length) { if (left === 0) out.push(acc); return; }
+        for (let k = Math.min(left, have[i]!); k >= 0; k--) walk(i + 1, left - k, [...acc, k]);
+    };
+    walk(0, count, []);
+    return out;
+};
+/**
+ * A SORT_CARD answer as the engine reads it: one byte per card, its place in the new order.
+ * ocgcore-wasm writes the list's length before the list, which the engine takes as the first
+ * card's place (and then reads one card short, so every answer looked invalid). The length it
+ * writes is the list's `length`, the bytes after it are what the list iterates: so the first
+ * place goes in `length` and the rest are iterated.
+ */
+const sortOrder = (places: number[]) => ({ length: places[0]!, [Symbol.iterator]: () => places.slice(1)[Symbol.iterator]() });
 /** The names of the bits set in a Type or Attribute mask. */
 const bitNames = (mask: bigint | number, names: readonly string[]) => names.filter((_, i) => (BigInt(mask) >> BigInt(i)) & 1n);
 
@@ -542,6 +565,9 @@ export class DuelSession {
                 return m.type === M.SELECT_PLACE ? { type: R.SELECT_PLACE, places } : { type: R.SELECT_DISFIELD, places };
             }
             case M.SORT_CARD:
+                // A player puts the cards in order themselves (Spellbook Organization); the bot keeps the engine's.
+                if (!this.setup.bots[m.player as Team] && m.cards.length > 1 && (this.setup.rules ?? 1) >= 4) return null;
+                return { type: R.SORT_CARD, order: null };
             case M.SORT_CHAIN:
                 return { type: R.SORT_CARD, order: null };
             case M.SELECT_CHAIN:
@@ -558,6 +584,8 @@ export class DuelSession {
                 }
                 return null;
             case M.SELECT_COUNTER: {
+                // A player chooses which cards lose the counters, when there's a choice to make.
+                if (!this.setup.bots[m.player as Team] && (this.setup.rules ?? 1) >= 4 && counterSplits(m.count, m.cards.map((c) => (c as unknown as { count: number }).count ?? 0)).length > 1) return null;
                 let left = m.count;
                 const counters = m.cards.map((c) => {
                     const take = Math.min(left, (c as unknown as { count: number }).count ?? 0);
@@ -1073,6 +1101,28 @@ export class DuelSession {
                 return q({ kind: 'position', code: this.show(m.code), options }, (a) => {
                     const id = choice(a);
                     return id !== null && options.some((o) => o.id === id) ? { type: R.SELECT_POSITION, position: id as P } : null;
+                });
+            }
+            case M.SORT_CARD: {
+                const cards = m.cards.map((c, i) => this.ref(c, i, team));
+                const n = cards.length;
+                return q({ kind: 'cards', title: 'Put them in order: the first you choose goes on top', min: n, max: n, cancel: false, cards, ordered: true }, (a) => {
+                    const ids = many(a);
+                    if (!ids || ids.length !== n || new Set(ids).size !== n || ids.some((i) => i < 0 || i >= n)) return null;
+                    // The engine wants each card's place in the new order.
+                    const order = Array<number>(n);
+                    ids.forEach((card, place) => (order[card] = place));
+                    return { type: R.SORT_CARD, order: sortOrder(order) as never };
+                });
+            }
+            case M.SELECT_COUNTER: {
+                const have = m.cards.map((c) => (c as unknown as { count: number }).count ?? 0);
+                const splits = counterSplits(m.count, have);
+                const label = (split: number[]) => split.flatMap((k, i) => (k ? [`${k} from ${this.engine.name(m.cards[i]!.code)}${m.cards.filter((c) => c.code === m.cards[i]!.code).length > 1 ? ` (${zoneOf(m.cards[i]!.location, m.cards[i]!.sequence)})` : ''}`] : [])).join(', ');
+                const options = splits.map((split, id) => ({ id, text: label(split) }));
+                return q({ kind: 'option', title: `Remove ${m.count} counter${m.count > 1 ? 's' : ''}`, options }, (a) => {
+                    const id = choice(a);
+                    return id !== null && splits[id] ? { type: R.SELECT_COUNTER, counters: splits[id]! } : null;
                 });
             }
             case M.ANNOUNCE_NUMBER: {

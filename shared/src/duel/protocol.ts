@@ -153,7 +153,7 @@ export type DuelPrompt =
           ask?: string;
       }
     /** Choose cards. `step` mode: one at a time, with `done` to finish. */
-    | { kind: 'cards'; title: string; min: number; max: number; cancel: boolean; cards: PromptCard[]; tribute?: boolean; /** The pick of what to attack: the glowing targets say it all. */ attack?: boolean; sum?: number; step?: { chosen: PromptCard[]; canFinish: boolean }; back?: boolean }
+    | { kind: 'cards'; title: string; min: number; max: number; cancel: boolean; cards: PromptCard[]; tribute?: boolean; /** The pick of what to attack: the glowing targets say it all. */ attack?: boolean; sum?: number; step?: { chosen: PromptCard[]; canFinish: boolean }; back?: boolean; /** The order they're tapped in counts (the first goes on top): number them. */ ordered?: boolean }
     | { kind: 'yesno'; title: string; code?: number }
     | { kind: 'option'; title: string; options: { id: number; text: string }[] }
     | { kind: 'position'; code: number; options: { id: number; label: string }[]; back?: boolean }
