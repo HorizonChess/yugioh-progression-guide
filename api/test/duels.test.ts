@@ -205,6 +205,10 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         const original = await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) });
         const broken = { ...original!, _id: new ObjectId(), openKey: `broken:${duel.id}`, answers: Array(30).fill({ t: 'bogus' }) };
         await app.db.collection('duels').insertOne(broken);
+        // Opening it says why it can't go on (no bare server error), and offers no board.
+        const look = await app.inject({ method: 'GET', url: `/api/duels/${broken._id.toHexString()}`, headers: { 'x-duel-token': token } });
+        expect(look.statusCode).toBe(200);
+        expect(look.json()).toMatchObject({ state: null, broken: expect.any(String) });
         const res = await app.inject({ method: 'POST', url: `/api/duels/${broken._id.toHexString()}/concede`, headers: { 'x-duel-token': token } });
         expect(res.statusCode).toBeLessThan(300);
         const stored = await app.db.collection('duels').findOne({ _id: broken._id });
