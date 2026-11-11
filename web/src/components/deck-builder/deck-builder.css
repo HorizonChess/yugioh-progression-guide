@@ -28,6 +28,11 @@
 }
 .db-band small { font: 800 14px/1 var(--font-main); letter-spacing: 0; }
 .db-band small.db-short { color: #8a1c10; }
+/* the card band: name left, look-later toggle centred, set code right; the toggle never grows the band */
+.db-band--card { display: grid; grid-template-columns: 1fr auto 1fr; }
+.db-band--card > small { justify-self: end; }
+.db-band__mark.mark-toggle { margin: -5px 0; padding: 5px 10px 5px 8px; gap: 6px; font-size: 10.5px; }
+.db-band__mark.mark-toggle--on { color: #ffe08a; background: #2a1c05; box-shadow: inset 0 0 0 1px #2a1c05, 0 0 0 1px rgba(255, 245, 210, 0.6); }
 .db-band--side { background: linear-gradient(#8fd3cc, #3f8f8a); }
 .db-band--extra { background: linear-gradient(#c7a7f0, #7a4fb5); color: #1c0f33; }
 .db-gems { display: flex; gap: 16px; margin-left: auto; margin-right: 18px; color: #2a1c05; }

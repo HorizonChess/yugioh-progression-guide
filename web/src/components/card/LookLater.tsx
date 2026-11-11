@@ -10,7 +10,13 @@ import { useProgression } from "@/context/ProgressionContext";
  */
 
 /** "Look at later": the bookmark toggle in a card's details; `icon` makes it just the bookmark (beside a close-up's card). */
-export function MarkToggle({ cardId, className = "", icon = false }: { cardId: number; className?: string; icon?: boolean }) {
+export function MarkToggle({ cardId, className = "", icon = false, short = false }: {
+    cardId: number;
+    className?: string;
+    icon?: boolean;
+    /** Two-word label, for a header bar. */
+    short?: boolean;
+}) {
     const { marks, setMark } = useProgression();
     const on = marks.has(cardId);
     return (
@@ -26,7 +32,7 @@ export function MarkToggle({ cardId, className = "", icon = false }: { cardId: n
             }}
         >
             <span className="mark-toggle__icon" aria-hidden="true" />
-            {!icon && (on ? "Marked to look at later" : "Look at later")}
+            {!icon && (short ? (on ? "Marked" : "Look later") : on ? "Marked to look at later" : "Look at later")}
         </button>
     );
 }
