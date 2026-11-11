@@ -6,6 +6,7 @@ import { ruleEraFor } from "@ygo/shared";
 import type { SavedDeck } from "@/lib/storage";
 import { acceptDuel, concedeDuel, declineDuel, duelPath, getDuel, lastGuestDuel, openDuels, startDuel, startGuestDuel, type DuelSummary, type PracticeOpponent } from "@/lib/duel-client";
 import { alertRepoError } from "@/context/ProgressionContext";
+import { BotGlyph, HandGlyph, SwordsGlyph } from "./DuelGlyphs";
 import "./duel-launcher.css";
 
 /**
@@ -129,10 +130,23 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
             {open && !challenge && (
                 <div className="dl-card">
                     {deckPicker}
-                    <div className="dl-row">
-                        {duo && <button type="button" className="dl-btn dl-btn--main" disabled={!deckId || busy} onClick={() => run(() => startDuel(seriesId, deckId, "rival"))}>Challenge {rival}</button>}
-                        {!practice && <button type="button" className="dl-btn" disabled={!deckId || busy} onClick={() => practise("bot")}>Practice against the bot</button>}
-                        {!practice && <button type="button" className="dl-btn" disabled={!deckId || busy} onClick={() => practise("solo")}>Solo: test your deck</button>}
+                    {/* The ways to duel, as slabs of the board's stone with their glyph carved in. */}
+                    <div className="dl-slabs">
+                        {duo && (
+                            <button type="button" className="dl-slab dl-slab--main" disabled={!deckId || busy} onClick={() => run(() => startDuel(seriesId, deckId, "rival"))}>
+                                <SwordsGlyph /><span>Challenge {rival}</span><small>Counts for the series</small>
+                            </button>
+                        )}
+                        {!practice && (
+                            <button type="button" className="dl-slab" disabled={!deckId || busy} onClick={() => practise("bot")} aria-label="Practice against the bot">
+                                <BotGlyph /><span>Duel the bot</span><small>Practice</small>
+                            </button>
+                        )}
+                        {!practice && (
+                            <button type="button" className="dl-slab" disabled={!deckId || busy} onClick={() => practise("solo")} aria-label="Solo: test your deck">
+                                <HandGlyph /><span>Solo</span><small>Test your deck</small>
+                            </button>
+                        )}
                     </div>
                     <p className="dl-note">
                         {duo ? "The rival duel counts for the series. Practice doesn't." : "Practice doesn't count: record your real duels below as before."}
