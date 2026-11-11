@@ -58,7 +58,8 @@ export async function startGuestDuel(deck: { main: number[]; extra: number[] }, 
 
 export const openDuels = async (seriesId: string) => (await apiRequest<{ duels: DuelSummary[] }>("GET", `/api/series/${seriesId}/duels/open`)).duels;
 
-export const getDuel = (duelId: string) => apiRequest<{ duel: DuelSummary; state: DuelState | null }>("GET", `/api/duels/${duelId}`, undefined, tokenHeader(duelId));
+/** `broken`: the server couldn't rebuild the duel, and why. */
+export const getDuel = (duelId: string) => apiRequest<{ duel: DuelSummary; state: DuelState | null; broken?: string }>("GET", `/api/duels/${duelId}`, undefined, tokenHeader(duelId));
 
 export const acceptDuel = async (duelId: string, deckId: string) => (await apiRequest<{ duel: DuelSummary }>("POST", `/api/duels/${duelId}/accept`, { deckId })).duel;
 
