@@ -347,6 +347,8 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                     }
                 }
                 if (e.k === "recover") float({ side: e.side, text: `+${e.amount}`, tone: "up" });
+                // A negated attack: the words rise from the attacker (or its side, if it's gone).
+                if (e.k === "attack-negated") float({ ...(e.attacker ? { uid: e.attacker } : { side: e.side }), text: "Attack negated", tone: "down" });
                 hold = Math.max(hold, HOLD[e.k] ?? 120);
             }
             // Each play of the rival's gets a beat of its own, so you can follow what it did.
