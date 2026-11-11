@@ -111,7 +111,7 @@ function PhoneBar({ duelistName, signedIn }: { duelistName: string; signedIn: bo
                 aria-label={isGuideVisible ? "Hide Guide" : "Show Guide"}
                 aria-pressed={isGuideVisible}
             />
-            <Link href="/menu" className="phone-bar__who">
+            <Link href="/menu" className={`phone-bar__who ${pathname === "/timeline" ? "phone-bar__who--score" : ""}`}>
                 <div className="phone-bar__name">{duelistName}</div>
                 <div className="phone-bar__sub">{sub}</div>
             </Link>
