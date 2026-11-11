@@ -84,6 +84,8 @@ export type DuelEvent =
     | { k: 'resolved'; link: number }
     | { k: 'negated'; link: number }
     | { k: 'attack'; side: Side; attacker?: string; target?: string }
+    /** An attack stopped by a card (Negate Attack, Magic Cylinder): no battle follows. */
+    | { k: 'attack-negated'; side: Side; attacker?: string }
     | { k: 'destroyed'; uid: string; code: number }
     | { k: 'move'; uid: string; code: number; side: Side; from: Zone; to: Zone }
     | { k: 'damage'; side: Side; amount: number }

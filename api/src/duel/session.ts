@@ -678,6 +678,10 @@ export class DuelSession {
                 case M.SWAP:
                     this.tracker.swap(m.card1, m.card2);
                     break;
+                case M.ATTACK_DISABLED:
+                    // The attack declared last is stopped: say so, and whose it was.
+                    if (this.attacking) out.push({ k: 'attack-negated', team: this.attacking.team, attacker: this.attacking.attacker });
+                    break;
                 case M.FIELD_DISABLED:
                     this.locked = m.field_mask;
                     break;
@@ -728,6 +732,7 @@ export class DuelSession {
                 case 'set': return { k: 'set', side: side(e.team) };
                 case 'activate': return { k: 'activate', side: side(e.team), code: this.show(e.code), uid: e.uid, link: e.link };
                 case 'attack': return { k: 'attack', side: side(e.team), attacker: e.attacker, target: e.target };
+                case 'attack-negated': return { k: 'attack-negated', side: side(e.team), ...(e.attacker ? { attacker: e.attacker } : {}) };
                 case 'move': return { k: 'move', uid: e.uid, code: e.public || e.team === team ? this.show(e.code) : 0, side: side(e.team), from: e.from, to: e.to };
                 case 'reposition': return { k: 'reposition', uid: e.uid, code: e.public ? this.show(e.code) : 0 };
                 case 'damage': case 'pay': case 'recover': return { k: e.k, side: side(e.team), amount: e.amount };
@@ -1130,6 +1135,7 @@ type TeamEvent =
     | { k: 'resolved'; link: number }
     | { k: 'negated'; link: number }
     | { k: 'attack'; team: Team; attacker?: string; target?: string }
+    | { k: 'attack-negated'; team: Team; attacker?: string }
     | { k: 'destroyed'; uid: string; code: number }
     | { k: 'move'; uid: string; code: number; team: Team; from: Zone; to: Zone; public: boolean }
     | { k: 'reposition'; uid: string; code: number; public: boolean }
