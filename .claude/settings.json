@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./package-lock.json)",
+      "Read(./duel-spike/package-lock.json)",
+      "Read(./web/.next/**)",
+      "Read(./web/out/**)",
+      "Read(./web/visual-baseline/**)",
+      "Read(./web/visual-after/**)",
+      "Read(./web/public/unused/**)",
+      "Read(./web/scripts/prototypes/**/data.js)"
+    ]
+  }
+}
