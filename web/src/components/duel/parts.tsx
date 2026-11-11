@@ -133,7 +133,7 @@ const affectLabel = (card: DuelCardView) =>
     [card.by?.length ? `affected by ${card.by.length} card${card.by.length > 1 ? "s" : ""}` : "", card.negated ? "negated" : "", card.counters ? `${card.counters} counters` : ""].filter(Boolean).join(", ");
 
 /** An empty zone or one holding a card. */
-export function Zone({ card, label, marks, onTap, onHover, side, className = "", zone }: {
+export function Zone({ card, label, marks, onTap, onHover, side, className = "", zone, locked = false }: {
     card: DuelCardView | null;
     label?: string;
     marks: CardMarks;
@@ -143,14 +143,17 @@ export function Zone({ card, label, marks, onTap, onHover, side, className = "",
     className?: string;
     /** This zone's key, so a `place` question can offer it. */
     zone?: string;
+    /** A card has taken this zone out of use. */
+    locked?: boolean;
 }) {
     const offered = zone === undefined ? undefined : marks.zones.get(zone);
     const preview = zone === undefined || offered ? undefined : marks.preview.get(zone);
     const chosen = zone !== undefined && marks.chosenZones.has(zone);
     const pose = offered ?? preview;
-    const cls = ["df-zone", label ? "df-zone--labelled" : "", offered ? "is-offered" : "", preview ? "is-preview" : "", pose === "side" ? "is-side" : "", chosen ? "is-chosen" : "", className];
+    const cls = ["df-zone", label ? "df-zone--labelled" : "", offered ? "is-offered" : "", preview ? "is-preview" : "", pose === "side" ? "is-side" : "", chosen ? "is-chosen" : "", locked ? "is-locked" : "", className];
     return (
-        <div className={cls.join(" ")} data-label={label} data-zone={zone}>
+        <div className={cls.join(" ")} data-label={label} data-zone={zone} {...(locked ? { title: "Locked: a card has taken this zone out of use", "aria-label": "Locked zone" } : {})}>
+            {locked && <span className="df-zone__lock" aria-hidden="true" />}
             {card && <FieldCard card={card} marks={marks} onTap={onTap} onHover={onHover} side={side} />}
             {offered && <button type="button" className="df-zone__pick" aria-label="Put the card here" onClick={() => marks.onZone(zone!)} />}
         </div>
