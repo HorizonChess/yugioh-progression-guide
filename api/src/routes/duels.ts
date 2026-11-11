@@ -138,8 +138,15 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         const duel = await duelFor(request, reply);
         if (!duel) return;
         const team = teamIn(duel, request);
-        const state = duel.status === 'active' || (duel.status === 'finished' && duel.setup) ? (team === null ? null : (await app.duels.stateFor(duel, team)).state) : null;
-        return { duel: summary(duel), state };
+        if (team === null || !(duel.status === 'active' || (duel.status === 'finished' && duel.setup))) return { duel: summary(duel), state: null };
+        try {
+            return { duel: summary(duel), state: (await app.duels.stateFor(duel, team)).state };
+        } catch (error) {
+            // A duel the server can't rebuild: say why (so it can be reported and fixed) and let the
+            // player end it, rather than a bare server error every time they look.
+            request.log.error({ err: error, duel: duel._id }, 'duel could not be loaded');
+            return { duel: summary(duel), state: null, broken: error instanceof Error ? error.message : String(error) };
+        }
     });
 
     app.post('/duels/:duelId/accept', { preHandler: requireAuth, config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request, reply) => {
