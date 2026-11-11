@@ -215,6 +215,16 @@ export class DuelSession {
     private question: Question | null = null;
     private retry = false;
     private replayQueue: OcgResponse[] = [];
+    private repairing = false;
+    /**
+     * The stored answer for a question the server or the bot answers, or this fresh one: when
+     * repairing, a stored answer of another kind was given to a later question (this one's was lost).
+     */
+    private storedOr(fresh: OcgResponse): OcgResponse {
+        const next = this.replayQueue[0];
+        if (next && this.repairing && next.type !== fresh.type) return fresh;
+        return this.replayQueue.shift() ?? fresh;
+    }
     private frames: [DuelFrame[], DuelFrame[]] = [[], []];
     /**
      * Every frame a player was sent lately, numbered, so a page that lost its connection (a phone
@@ -261,8 +271,16 @@ export class DuelSession {
     /** The code a player sees: an older version shows as the card they own. */
     private show = (code: number) => this.setup.shown?.[String(code)] ?? code;
 
-    /** Starts the duel, replaying `answers` (from storage) to rebuild where it was. */
-    start(answers: readonly OcgResponse[] = []): void {
+    /**
+     * Starts the duel, replaying `answers` (from storage) to rebuild where it was.
+     *
+     * `repair`: for duels stored before answers the server gave by itself right after a rebuild
+     * were saved (the passes before the first move of a new duel). There, a stored answer of the
+     * wrong kind for a question the server or the bot answers means that answer was never saved:
+     * it's given again instead. The rebuild still has to use every stored answer, each accepted.
+     */
+    start(answers: readonly OcgResponse[] = [], options: { repair?: boolean } = {}): void {
+        this.repairing = !!options.repair;
         const { core } = this.engine;
         const seed = this.setup.seed.map(BigInt) as [bigint, bigint, bigint, bigint];
         const team = { startingLP: START_LP, startingDrawCount: 5, drawCountPerTurn: 1 };
@@ -292,6 +310,7 @@ export class DuelSession {
         // means the replay went another way (the rules changed under the duel): say so, don't stall.
         const left = this.replayQueue.length;
         this.replayQueue = [];
+        this.repairing = false;
         if (answers.length && (left || this.retry)) throw new Error(`The duel could not be rebuilt from its answers (${left} left over${this.retry ? ', one refused' : ''})`);
         // A rebuilt duel's frames (from before a restart) are history: the board starts from the state
         // now. A new duel keeps them, so the first look at it shows the decks dealt out.
@@ -498,13 +517,14 @@ export class DuelSession {
             // When rebuilding a stored duel, each is taken from the stored list instead.
             const auto = this.autoAnswer(last);
             if (auto) {
-                this.feed(this.replayQueue.shift() ?? auto);
+                this.feed(this.storedOr(auto));
                 continue;
             }
             const question = this.ask(last);
             if (!question) throw new Error(`The duel server can't ask engine message ${last.type}`);
             if (this.setup.bots[question.team]) {
-                this.feed(this.replayQueue.shift() ?? botAnswer(last, this, question.team, this.setup.solo));
+                // (When repairing, the bot's answer is worked out to compare it with the stored one.)
+                this.feed(this.replayQueue.length && !this.repairing ? this.replayQueue.shift()! : this.storedOr(botAnswer(last, this, question.team, this.setup.solo)));
                 continue;
             }
             const replayed = this.replayQueue.shift();
