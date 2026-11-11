@@ -7,10 +7,24 @@ import type { DuelSession, Team } from './session';
 /*
  * The practice opponent: plain, legal play. It summons its strongest monster, plays its
  * spells and sets its traps, attacks only what it can beat, and always chains when it can.
- * Questions the server answers for everyone (zones, ordering) never reach it.
+ * Questions the server answers for everyone (zones, ordering) never reach it. It sees what a
+ * player at the table would: the rival's face-down monsters are guesses, and it never looks at
+ * the rival's hand, deck or set cards.
  */
 
 const MAX_ACTIONS_PER_TURN = 12;
+/**
+ * What the bot takes a face-down monster of the rival's to be worth: it plays from what a player
+ * at the table could see, so a set monster's ATK and DEF are unknown. About what a monster set
+ * in defense held in the early sets.
+ */
+const HIDDEN_GUESS = 1400;
+type Seen = { atk: number; def: number; position: number };
+/** A monster as `viewer` sees it: the rival's face-down ones are a guess, never their real stats. */
+const seenBy = (viewer: Team, controller: number, st: Seen): Seen =>
+    controller !== viewer && !(st.position & P.FACEUP) ? { atk: HIDDEN_GUESS, def: HIDDEN_GUESS, position: st.position } : st;
+/** What it takes to beat a monster in battle: ATK in Attack Position, DEF otherwise. */
+const toBeat = (st: Seen) => ((st.position & P.ATTACK) && (st.position & P.FACEUP) ? st.atk : st.def);
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
 export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = false): OcgResponse {
@@ -51,8 +65,8 @@ export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = f
             return { type: R.SELECT_IDLECMD, action: m.to_bp ? I.TO_BP : I.TO_EP, index: null };
         }
         case M.SELECT_BATTLECMD: {
-            const theirs = duel.monstersOf((1 - team) as Team);
-            const weakest = Math.min(...theirs.map((t) => ((t.position & P.ATTACK) && (t.position & P.FACEUP) ? t.atk : t.def)));
+            const theirs = duel.monstersOf((1 - team) as Team).map((t) => seenBy(team, 1 - team, t));
+            const weakest = Math.min(...theirs.map(toBeat));
             const attacker = m.attacks.findIndex((a) => a.can_direct || duel.stats(a).atk > weakest);
             if (attacker >= 0) {
                 duel.botAttacker = duel.stats(m.attacks[attacker]!).atk;
@@ -74,10 +88,7 @@ export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = f
             const attackerAtk = duel.botAttacker;
             duel.botAttacker = null;
             if (m.type === M.SELECT_CARD && attackerAtk !== null && m.selects.every((c) => c.controller !== team && c.location === L.MZONE)) {
-                const value = (c: (typeof m.selects)[number]) => {
-                    const st = duel.stats(c);
-                    return st.position & P.ATTACK ? st.atk : st.def;
-                };
+                const value = (c: (typeof m.selects)[number]) => toBeat(seenBy(team, c.controller, duel.stats(c)));
                 const order = range(m.selects.length).sort((a, b) => value(m.selects[a]!) - value(m.selects[b]!));
                 const beaten = order.filter((i) => value(m.selects[i]!) < attackerAtk);
                 return { type: R.SELECT_CARD, indicies: [beaten.length ? beaten[beaten.length - 1]! : order[0]!] };
@@ -87,7 +98,7 @@ export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = f
             const boosting = m.type === M.SELECT_CARD && duel.botUsing !== null && duel.effectKind(duel.botUsing) === 'buff';
             duel.botUsing = null;
             const score = (c: (typeof m.selects)[number]) => {
-                const s = c.location === L.MZONE ? duel.stats(c).atk : 0;
+                const s = c.location === L.MZONE ? seenBy(team, c.controller, duel.stats(c)).atk : 0;
                 if (boosting) return c.controller === team ? -s - 100000 : s;
                 return c.controller === team ? s : -s;
             };
@@ -153,7 +164,7 @@ function worthUsing(code: number, duel: DuelSession, team: Team, responding = fa
         return own && (!responding || duel.currentPhase === 'BP');
     }
     if (kind === 'wipe') {
-        const total = (t: Team) => duel.monstersOf(t).reduce((n, x) => n + Math.max(x.atk, x.def, 1000), 0);
+        const total = (t: Team) => duel.monstersOf(t).map((x) => seenBy(team, t, x)).reduce((n, x) => n + Math.max(x.atk, x.def, 1000), 0);
         return total((1 - team) as Team) > total(team);
     }
     return true;

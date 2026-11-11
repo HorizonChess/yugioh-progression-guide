@@ -76,6 +76,8 @@ wipe only when the rival has more on the field, a Continuous Trap only on the ri
 they have a face-up monster, and always says yes to optional effects. These are guesses: a card the
 guess gets wrong plays badly, never illegally.
 
+It plays from what a player at the table could see. The rival's face-down monsters count as unknown (guessed at 1400 ATK and DEF) for its attacks, its targets and whether a wipe is worth it; it never reads the rival's hand, deck or set Spells and Traps.
+
 ## Open: still decided for the player without reading the card
 
 - **Ordering cards** (`SORT_CARD`, "place them on top of the Deck in any order"): the engine's
