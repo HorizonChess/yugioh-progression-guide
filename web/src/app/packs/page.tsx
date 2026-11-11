@@ -82,34 +82,46 @@ function PacksPageContent() {
 
     useEffect(() => {
         if (!hasLoaded) return;
+        // The store stays hidden until we know whether an opening is half done: showing it
+        // first flashed the store's pack in the middle of the screen before the resume.
+        // A newer load (the series arriving after sign-in, another set) makes this one stale.
+        let live = true;
+        setLoading(true);
         async function loadData() {
             try {
                 const sets = await fetchAllSets();
                 const set = sets[targetSetIndex];
+                if (!live) return;
                 if (set) {
                     setCurrentSet(set);
                     // Reaching a set where the duel rules change: Yugi says what's different.
                     const change = targetSetIndex === currentSetIndex ? ruleChangeAt(set.tcg_date, sets[targetSetIndex - 1]?.tcg_date) : null;
-                    if (change) setTimeout(() => guide.sayAll(ruleLines(change)), 1200);
-                    // Cards the player owns whose errata takes effect with this set.
+                    if (change) setTimeout(() => live && guide.sayAll(ruleLines(change)), 1200);
+                    // Cards the player owns whose errata takes effect with this set (it doesn't hold up the page).
                     const owned = [...ownedCountsById(collection).keys()];
                     const prev = targetSetIndex === currentSetIndex ? sets[targetSetIndex - 1]?.tcg_date : null;
                     const errata = errataBetween(prev, set.tcg_date);
                     if (errata.length && owned.length) {
-                        const ownedNames = new Set((await fetchCardsByIds(owned)).map((c) => c.name));
-                        const line = errataLine(errata.map((v) => v.name).filter((n) => ownedNames.has(n)));
-                        if (line) setTimeout(() => guide.say(line), 1600);
+                        void fetchCardsByIds(owned).then((cards) => {
+                            const ownedNames = new Set(cards.map((c) => c.name));
+                            const line = errataLine(errata.map((v) => v.name).filter((n) => ownedNames.has(n)));
+                            if (line && live) setTimeout(() => guide.say(line), 1600);
+                        }).catch(() => undefined);
                     }
-                    setSetCards(await fetchCardsInSet(set.set_name));
                 }
-                const unsaved = await activeOpening("set");
+                const [cards, unsaved] = await Promise.all([set ? fetchCardsInSet(set.set_name) : null, activeOpening("set")]);
+                if (!live) return;
+                if (cards) setSetCards(cards);
                 if (unsaved && unsaved.setName === set?.set_name) startReveal(unsaved);
             } catch (e) {
                 console.error("Error loading data:", e);
             }
-            setLoading(false);
+            if (live) setLoading(false);
         }
         loadData();
+        return () => {
+            live = false;
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per set
     }, [targetSetIndex, hasLoaded]);
 
