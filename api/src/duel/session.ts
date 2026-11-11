@@ -168,6 +168,8 @@ const POSITION_LABEL: Record<number, string> = {
 };
 const RACES = ['Warrior', 'Spellcaster', 'Fairy', 'Fiend', 'Zombie', 'Machine', 'Aqua', 'Pyro', 'Rock', 'Winged Beast', 'Plant', 'Insect', 'Thunder', 'Dragon', 'Beast', 'Beast-Warrior', 'Dinosaur', 'Fish', 'Sea Serpent', 'Reptile', 'Psychic', 'Divine-Beast', 'Creator God', 'Wyrm', 'Cyberse'];
 const ATTRIBUTES = ['EARTH', 'WATER', 'FIRE', 'WIND', 'LIGHT', 'DARK', 'DIVINE'];
+/** The names of the bits set in a Type or Attribute mask. */
+const bitNames = (mask: bigint | number, names: readonly string[]) => names.filter((_, i) => (BigInt(mask) >> BigInt(i)) & 1n);
 
 /** The question the engine is waiting on, and how to turn an answer into the engine's response. */
 interface Question {
@@ -200,6 +202,11 @@ export class DuelSession {
      * Zones in bits 0-4 and Spell & Trap Zones in 8-12, player 1's 16 higher. A set bit is locked.
      */
     private locked = 0;
+    /** What effects wrote on cards (by uid, one line per kind of note) and on players. */
+    private cardNotes = new Map<string, Map<string, string>>();
+    private playerNotes: [Set<string>, Set<string>] = [new Set(), new Set()];
+    /** Who the engine last asked to declare something. */
+    private announcer: Team | null = null;
     private turn = 0;
     private turnPlayer: Team = 0;
     private phase: Phase = 'DP';
@@ -573,6 +580,9 @@ export class DuelSession {
         const out: TeamEvent[] = [];
         for (const m of messages) {
             switch (m.type) {
+                case M.ANNOUNCE_RACE: case M.ANNOUNCE_ATTRIB: case M.ANNOUNCE_CARD: case M.ANNOUNCE_NUMBER:
+                    this.announcer = m.player as Team;
+                    break;
                 case M.NEW_TURN:
                     this.turn++;
                     this.turnPlayer = m.player as Team;
@@ -590,6 +600,17 @@ export class DuelSession {
                     if (m.hint_type === 3 && (m.player === 0 || m.player === 1)) {
                         this.selectHint[m.player] = this.engine.describe(m.hint);
                         this.selectHintCode[m.player] = Number(m.hint);
+                    }
+                    // A declaration (Type, Attribute, card, number): the one who declared is whoever was
+                    // last asked to (the engine's own hint names them; a script's may name the rival).
+                    if (m.hint_type >= 6 && m.hint_type <= 9 && (m.player === 0 || m.player === 1)) {
+                        const d = BigInt(m.hint);
+                        const team = this.announcer ?? (m.player as Team);
+                        this.announcer = null;
+                        if (m.hint_type === 6) out.push({ k: 'declare', team, what: 'type', text: bitNames(d, RACES).join(', ') });
+                        else if (m.hint_type === 7) out.push({ k: 'declare', team, what: 'attribute', text: bitNames(d, ATTRIBUTES).join(', ') });
+                        else if (m.hint_type === 8) out.push({ k: 'declare', team, what: 'card', text: this.engine.name(Number(d)), code: Number(d) });
+                        else out.push({ k: 'declare', team, what: 'number', text: String(d) });
                     }
                     break;
                 case M.TOSS_COIN:
@@ -671,6 +692,8 @@ export class DuelSession {
                     break;
                 }
                 case M.MOVE: {
+                    // A card that changes place starts afresh: what effects wrote on it is gone.
+                    if (m.from.location) this.cardNotes.delete(this.tracker.uidAt(m.from.controller, m.from.location, m.from.sequence));
                     const fromField = m.from.location === L.MZONE || m.from.location === L.SZONE;
                     const uidBefore = fromField ? this.tracker.uidAt(m.from.controller, m.from.location, m.from.sequence) : undefined;
                     // A monster leaving the field for the Graveyard breaks; a spell that just resolved doesn't.
@@ -693,6 +716,25 @@ export class DuelSession {
                     break;
                 case M.FIELD_DISABLED:
                     this.locked = m.field_mask;
+                    break;
+                case M.CARD_HINT: {
+                    const uid = this.tracker.uidAt(m.controller, m.location, m.sequence);
+                    const notes = this.cardNotes.get(uid) ?? new Map<string, string>();
+                    const d = m.description;
+                    if (m.card_hint === 2) notes.set('card', this.engine.name(Number(d)));
+                    else if (m.card_hint === 3) notes.set('type', bitNames(d, RACES).join(', '));
+                    else if (m.card_hint === 4) notes.set('attribute', bitNames(d, ATTRIBUTES).join(', '));
+                    else if (m.card_hint === 5) notes.set('number', String(d));
+                    else if (m.card_hint === 6) notes.set(`desc:${d}`, this.engine.describe(d));
+                    else if (m.card_hint === 7) notes.delete(`desc:${d}`);
+                    this.cardNotes.set(uid, notes);
+                    break;
+                }
+                case M.PLAYER_HINT:
+                    if (m.player === 0 || m.player === 1) {
+                        if (m.player_hint === 6) this.playerNotes[m.player].add(this.engine.describe(m.description));
+                        else if (m.player_hint === 7) this.playerNotes[m.player].delete(this.engine.describe(m.description));
+                    }
                     break;
                 case M.POS_CHANGE:
                     out.push({ k: 'reposition', uid: this.tracker.uidAt(m.controller, m.location, m.sequence), code: m.code, public: faceUp(m.position) });
@@ -746,6 +788,7 @@ export class DuelSession {
                     return { k: 'reveal', side: side(e.owner), by: e.viewer === null ? null : side(e.viewer), from: zoneOf(e.location, 0), codes: sees ? e.codes.map((c) => this.show(c)) : [], count: e.codes.length };
                 }
                 case 'random': return { k: 'random', uids: e.uids };
+                case 'declare': return { k: 'declare', side: side(e.team), what: e.what, text: e.text, ...(e.code ? { code: this.show(e.code) } : {}) };
                 case 'attack-negated': return { k: 'attack-negated', side: side(e.team), ...(e.attacker ? { attacker: e.attacker } : {}) };
                 case 'move': return { k: 'move', uid: e.uid, code: e.public || e.team === team ? this.show(e.code) : 0, side: side(e.team), from: e.from, to: e.to };
                 case 'reposition': return { k: 'reposition', uid: e.uid, code: e.public ? this.show(e.code) : 0 };
@@ -813,6 +856,7 @@ export class DuelSession {
             // Your own Extra Deck is yours to look through; the rival's stays a face-down count.
             ...(t === viewer ? { extraCards: pile(L.EXTRA) } : {}),
             ...lockedOf(this.locked, t),
+            ...(this.playerNotes[t].size ? { notes: [...this.playerNotes[t]] } : {}),
         };
     }
 
@@ -850,8 +894,12 @@ export class DuelSession {
         const visible = up || controller === viewer;
         const field = location === L.MZONE;
         const token = visible && c.code && this.engine.isToken(c.code) ? this.engine.name(c.code) : null;
+        const uid = this.tracker.uidAt(controller, location, sequence);
+        // Notes are public, but a face-down card's would give it away.
+        const notes = up && location !== L.HAND ? [...(this.cardNotes.get(uid)?.values() ?? [])].filter(Boolean) : [];
         return {
-            uid: this.tracker.uidAt(controller, location, sequence),
+            uid,
+            ...(notes.length ? { notes } : {}),
             ...(token ? { token } : {}),
             code: visible ? this.show(c.code ?? 0) : 0,
             faceUp: location === L.HAND ? controller === viewer : up,
@@ -1150,6 +1198,7 @@ type TeamEvent =
     | { k: 'negated'; link: number }
     | { k: 'attack'; team: Team; attacker?: string; target?: string }
     | { k: 'attack-negated'; team: Team; attacker?: string }
+    | { k: 'declare'; team: Team; what: 'type' | 'attribute' | 'card' | 'number'; text: string; code?: number }
     /** `viewer` null: shown to both players. */
     | { k: 'reveal'; viewer: Team | null; owner: Team; location: number; codes: number[] }
     | { k: 'random'; uids: string[] }
