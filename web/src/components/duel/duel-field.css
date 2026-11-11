@@ -645,3 +645,6 @@
 /* A card's place in the order being picked (1 goes on top). */
 .df-listcard { position: relative; }
 .df-listcard__order { position: absolute; top: 4px; left: 4px; min-width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #8dff8d; color: #0b2a0b; font: 700 13px/1 var(--font-techno); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
+
+/* A pick that includes cards in your hand: on a phone its bar sits just above the hand instead of over it. */
+.df--phone .df-sheet--over-hand { bottom: calc(var(--hw) * 1.46 + 6px); padding-bottom: 10px; border-radius: 14px 14px 0 0; }
