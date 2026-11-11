@@ -695,6 +695,10 @@ function describe(e: DuelEvent, view: DuelView, name: (code: number) => string):
             const a = e.attacker ? cards.get(e.attacker) : undefined, t = e.target ? cards.get(e.target) : undefined;
             return `${a?.code ? name(a.code) : "A monster"} attacked ${t ? (t.code ? name(t.code) : "a Set monster") : "directly"}`;
         }
+        case "attack-negated": {
+            const a = e.attacker ? cards.get(e.attacker) : undefined;
+            return `${a?.code ? `${name(a.code)}'s` : "The"} attack was negated`;
+        }
         case "destroyed": return `${name(e.code)} was destroyed`;
         case "move":
             if (e.to === "hand" && e.from !== "deck") return `${e.code ? name(e.code) : "A card"} went back to ${e.side === "me" ? "your" : "their"} hand`;
