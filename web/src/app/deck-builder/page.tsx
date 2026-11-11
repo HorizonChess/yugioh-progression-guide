@@ -21,6 +21,7 @@ import { ownedCardIds, ownedCountsById } from "@/lib/collection";
 import { readDeckDraft, writeDeckDraft } from "@/lib/deck-draft";
 import { isDefined } from "@/lib/utils";
 import CardInfoPanel from "@/components/deck-builder/CardInfoPanel";
+import { MarkToggle } from "@/components/card/LookLater";
 import MainDeckGrid from "@/components/deck-builder/MainDeckGrid";
 import SideExtraDeckGrid from "@/components/deck-builder/SideExtraDeckGrid";
 import CardSearchPanel from "@/components/deck-builder/CardSearchPanel";
@@ -540,7 +541,12 @@ export default function DeckBuilder() {
 
                 {/* Left Column: Info + Controls */}
                 <div className="w-[300px] shrink-0 db-panel">
-                    <div className="db-band">Card <small>{hoveredCard ? printings.get(hoveredCard.id)?.setCode ?? hoveredCard.card_sets?.[0]?.set_code ?? "" : ""}</small></div>
+                    {/* The look-later toggle sits in the middle of the bar, leaving the panel to the card's text. */}
+                    <div className="db-band db-band--card">
+                        <span>Card</span>
+                        {hoveredCard && <MarkToggle cardId={hoveredCard.id} short className="db-band__mark" />}
+                        <small>{hoveredCard ? printings.get(hoveredCard.id)?.setCode ?? hoveredCard.card_sets?.[0]?.set_code ?? "" : ""}</small>
+                    </div>
                     {/* Card Info: its text box scrolls inside the card */}
                     <div className="flex-1 min-h-0 overflow-hidden">
                         <CardInfoPanel card={hoveredCard} owned={hoveredCard ? ownedCounts.get(hoveredCard.id) ?? 0 : 0} printing={hoveredCard ? printings.get(hoveredCard.id) : undefined} />

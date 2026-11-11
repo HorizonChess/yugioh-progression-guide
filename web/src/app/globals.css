@@ -1186,7 +1186,6 @@ html::-webkit-scrollbar-corner,
   background: linear-gradient(#ffe7a0, #c8902c 60%, #8a5a14); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8));
 }
-.db-info__mark { margin: 10px auto 0; }
 
 /* Yugi over a card close-up: a line about the card shows while you look at it, not after.
    Desktop: he comes in over the close-up in his corner, clear of the card and its details.
