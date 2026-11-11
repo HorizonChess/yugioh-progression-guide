@@ -8,7 +8,7 @@ import GuideSprite from "@/components/layout/GuideSprite";
 import { useAuth } from "@/context/AuthContext";
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets } from "@/lib/api";
-import { acceptDuel, declineDuel, getDuel, guestDuelToken, type DuelSummary } from "@/lib/duel-client";
+import { acceptDuel, concedeDuel, declineDuel, getDuel, guestDuelToken, type DuelSummary } from "@/lib/duel-client";
 import { ruleLines } from "@/lib/guide/lines";
 import { guide } from "@/lib/guide/store";
 import "@/components/duel/duel-field.css";
@@ -27,6 +27,8 @@ function DuelPageContent() {
     const { refresh, series, savedDecks, matchHistory, loadSeries, activeSeriesId } = useProgression();
     const [duel, setDuel] = useState<DuelSummary | null>(null);
     const [error, setError] = useState<string | null>(null);
+    /** The server couldn't rebuild this duel: why, to show and report. */
+    const [broken, setBroken] = useState<string | null>(null);
     const [deckId, setDeckId] = useState("");
     // A guest's practice duel opens with the token this browser kept. The server can't see it, so
     // the page renders as loading until the browser has looked (no mismatch, no "Sign in" flash).
@@ -36,7 +38,11 @@ function DuelPageContent() {
     useEffect(() => {
         if (!id || !allowed) return;
         let live = true;
-        const load = () => getDuel(id).then(({ duel: d }) => live && setDuel(d)).catch((e: Error) => live && setError(e.message));
+        const load = () => getDuel(id).then(({ duel: d, broken: b }) => {
+            if (!live) return;
+            setDuel(d);
+            setBroken(b ?? null);
+        }).catch((e: Error) => live && setError(e.message));
         void load();
         // While waiting for the rival, look again now and then.
         const t = setInterval(() => duel?.status === "waiting" && void load(), 5000);
@@ -73,6 +79,22 @@ function DuelPageContent() {
     if (!allowed) return <Message text="Sign in to duel." onBack={() => router.push("/record-match")} />;
     if (error) return <Message text={error} onBack={() => router.push("/record-match")} />;
     if (!id || !duel) return <Message text="Shuffling the decks…" />;
+    if (broken && duel.status === "active") {
+        const rival = duel.kind === "rival";
+        const end = () => void concedeDuel(id).then(() => router.push("/record-match")).catch((e: Error) => setError(e.message));
+        return (
+            <div className="df-arena">
+                <div className="df-loading">
+                    <div className="dl">
+                        <p>This duel hit a server error and can&rsquo;t be picked up again. Sorry!</p>
+                        <p><small>{broken}</small></p>
+                        <button type="button" className="dl-btn" onClick={end}>{rival ? "End it (it counts as a loss)" : "End this duel"}</button>
+                        <button type="button" className="dl-btn" onClick={() => router.push("/record-match")}>Back</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (duel.status === "waiting" && user) {
         const mine = duel.challengerId === user.id;
