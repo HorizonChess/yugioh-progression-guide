@@ -122,6 +122,10 @@
       "want": 2,
       "why": "It comes back every time, so a second Axe makes even small monsters scary.",
       "until": "IOC"
+    },
+    "Cyber Dragon": {
+      "want": 3,
+      "why": "Every deck wanted three. A free 2100 ATK monster whenever they summon first!"
     }
   },
   "LOB": {
@@ -616,6 +620,344 @@
       ],
       "Compulsory Evacuation Device": [
         "Compulsory Evacuation Device sends a monster back to the hand. Perfect against a big fusion!"
+      ]
+    }
+  },
+  "AST": {
+    "intro": [
+      "Ancient Sanctuary! Fairies gather at The Sanctuary in the Sky, and Zaborg is the first of the Monarchs.",
+      "Enemy Controller is in here. Kaiba loved that card, and it does two different jobs!"
+    ],
+    "cards": {
+      "Enemy Controller": [
+        "Enemy Controller! Switch a monster's battle position, or Tribute one of yours to take theirs for the turn."
+      ],
+      "Zaborg the Thunder Monarch": [
+        "Zaborg the Thunder Monarch! Tribute Summon him and he destroys a monster. A summon and an answer in one!"
+      ],
+      "Night Assailant": [
+        "Night Assailant destroys a monster when it's flipped. Discard it, and a Flip monster comes back to your hand!"
+      ],
+      "Level Limit - Area B": [
+        "Level Limit - Area B turns every Level 4 or higher monster to Defense Position. Almost nothing can attack!"
+      ],
+      "King of the Swamp": [
+        "King of the Swamp stands in for a Fusion Material. Or discard it to fetch Polymerization from your deck!"
+      ],
+      "Burst Stream of Destruction": [
+        "Burst Stream of Destruction! With Blue-Eyes out, it destroys all their monsters. Kaiba's favorite attack!"
+      ],
+      "Draining Shield": [
+        "Draining Shield stops an attack, and you gain Life Points equal to that monster's ATK!"
+      ]
+    }
+  },
+  "SOD": {
+    "intro": [
+      "Soul of the Duelist brings LV monsters! Do what they ask and they grow into something much stronger.",
+      "Mobius the Frost Monarch is in here too. Tribute Summon him and up to two Spells or Traps are destroyed!"
+    ],
+    "cards": {
+      "Mobius the Frost Monarch": [
+        "Mobius the Frost Monarch! Tribute Summon him and destroy up to two Spell or Trap cards. Their back row is gone!"
+      ],
+      "Horus the Black Flame Dragon LV8": [
+        "Horus LV8! While he's out, you can negate any Spell they activate. They'll have to fight without magic!"
+      ],
+      "Horus the Black Flame Dragon LV6": [
+        "Horus LV6 isn't touched by Spells. Destroy a monster in battle and he becomes LV8 at the End Phase!"
+      ],
+      "Armed Dragon LV5": [
+        "Armed Dragon LV5! Send a monster from your hand to the Graveyard to destroy one of theirs with no more ATK than it."
+      ],
+      "Mystic Swordsman LV2": [
+        "Mystic Swordsman LV2 destroys any face-down monster he attacks, before it can even flip!"
+      ],
+      "Hammer Shot": [
+        "Hammer Shot destroys the Attack Position monster with the highest ATK. Careful, that could be yours!"
+      ],
+      "Mind Crush": [
+        "Mind Crush! Name a card. If it's in their hand, they discard every copy. If not, you discard one at random!"
+      ],
+      "Inferno Fire Blast": [
+        "Inferno Fire Blast! Red-Eyes deals its ATK straight to their Life Points. Joey would love this one!"
+      ],
+      "Masked Dragon": [
+        "Masked Dragon! Destroyed in battle, it brings a Dragon with 1500 or less ATK from your deck. Even another one!"
+      ],
+      "Ninja Grandmaster Sasuke": [
+        "Ninja Grandmaster Sasuke destroys any face-up Defense Position monster he attacks. No wall stops him!"
+      ]
+    }
+  },
+  "RDS": {
+    "intro": [
+      "Rise of Destiny! Thestalos joins the Monarchs, and the Harpie Ladies get their own hunting ground.",
+      "Mai would love this set: three new Harpie Ladies, and Triangle Ecstasy Spark to power up the Sisters!"
+    ],
+    "cards": {
+      "Thestalos the Firestorm Monarch": [
+        "Thestalos the Firestorm Monarch! Tribute Summon him and they discard a random card. A monster? They take damage too!"
+      ],
+      "Mirage Dragon": [
+        "Mirage Dragon! While it's face-up, they can't activate Traps in the Battle Phase. Attack without fear!"
+      ],
+      "Dekoichi the Battlechanted Locomotive": [
+        "Dekoichi draws you a card when it's flipped. A free card, and 1400 ATK left on the field!"
+      ],
+      "Harpies' Hunting Ground": [
+        "Harpies' Hunting Ground! Every Harpie Lady summoned destroys a Spell or Trap. Mai's birds rule this sky!"
+      ],
+      "Divine Wrath": [
+        "Divine Wrath! Discard a card to negate a monster's effect and destroy it. Even the Monarchs fear it."
+      ],
+      "The Creator": [
+        "The Creator! Once a turn, send a card from your hand to the Graveyard to bring a monster back from it."
+      ],
+      "Machine Duplication": [
+        "Machine Duplication! Pick a Machine of yours with 500 or less ATK, and two more copies come from your deck."
+      ],
+      "Monster Reincarnation": [
+        "Monster Reincarnation: discard a card to take a monster from your Graveyard back to your hand."
+      ],
+      "Silent Swordsman LV3": [
+        "Silent Swordsman LV3! Spells that target him do nothing, and he grows on your next Standby Phase. One of mine!"
+      ]
+    }
+  },
+  "FET": {
+    "intro": [
+      "Flaming Eternity! Lightning Vortex clears their face-up monsters, and the Sacred Phoenix of Nephthys keeps coming back.",
+      "Granmarg the Rock Monarch is here too. Tribute Summon him and a Set card is destroyed!"
+    ],
+    "cards": {
+      "Lightning Vortex": [
+        "Lightning Vortex! Discard a card and every face-up monster they have is destroyed. Raigeki's little brother!"
+      ],
+      "Granmarg the Rock Monarch": [
+        "Granmarg the Rock Monarch! Tribute Summon him to destroy a Set card. Face-down monsters and traps beware!"
+      ],
+      "Sacred Phoenix of Nephthys": [
+        "Sacred Phoenix of Nephthys! Destroyed by an effect, it returns next Standby Phase and wipes every Spell and Trap."
+      ],
+      "Hand of Nephthys": [
+        "Hand of Nephthys! Tribute her and another monster to bring the Sacred Phoenix out from your hand or deck."
+      ],
+      "Rescue Cat": [
+        "Rescue Cat! Send it to the Graveyard for two Level 3 or lower Beasts from your deck. They're destroyed at the End Phase."
+      ],
+      "Deck Devastation Virus": [
+        "Deck Devastation Virus! Tribute a DARK with 2000 or more ATK, and their small monsters are destroyed for 3 turns."
+      ],
+      "Threatening Roar": [
+        "Threatening Roar: they can't declare an attack this turn. A whole turn of safety from one trap!"
+      ],
+      "Phoenix Wing Wind Blast": [
+        "Phoenix Wing Wind Blast! Discard a card to put one of their cards back on top of their deck. They draw it again!"
+      ],
+      "Chiron the Mage": [
+        "Chiron the Mage! Discard a Spell to destroy one of their Spells or Traps. Once every turn!"
+      ],
+      "Gearfried the Swordmaster": [
+        "Gearfried the Swordmaster! Every Equip Spell you give him destroys one of their monsters."
+      ],
+      "Silent Swordsman LV5": [
+        "Silent Swordsman LV5! Their Spells don't affect him at all. Hit them directly and he becomes LV7!"
+      ],
+      "King Dragun": [
+        "King Dragun! Your Dragons can't be targeted by effects, and he Special Summons one from your hand each turn."
+      ]
+    }
+  },
+  "TLM": {
+    "intro": [
+      "The Lost Millennium! The first Elemental HEROes are here: fuse them into Flame Wingman and Thunder Giant.",
+      "Brain Control and Card of Sanctity are in this set, and the huge Ancient Gear Golem!"
+    ],
+    "cards": {
+      "Brain Control": [
+        "Brain Control! Pay 800 Life Points and one of their face-up monsters is yours until the End Phase."
+      ],
+      "Card of Sanctity": [
+        "Card of Sanctity! Banish everything in your hand and on your field, then draw until you hold two. Risky!"
+      ],
+      "Ancient Gear Golem": [
+        "Ancient Gear Golem! 3000 ATK, it pierces defense, and they can't use Spells or Traps when it attacks."
+      ],
+      "Elemental HERO Flame Wingman": [
+        "Elemental HERO Flame Wingman! When he destroys a monster in battle, they take damage equal to its ATK!"
+      ],
+      "Elemental HERO Thunder Giant": [
+        "Elemental HERO Thunder Giant! Discard a card to destroy a monster with less original ATK than his."
+      ],
+      "Winged Kuriboh": [
+        "Winged Kuriboh! When it's destroyed, you take no battle damage for the rest of the turn. A Kuriboh with wings!"
+      ],
+      "Megarock Dragon": [
+        "Megarock Dragon! Banish Rocks from your Graveyard to summon it. It gets 700 ATK and DEF for each one!"
+      ],
+      "D.D. Survivor": [
+        "D.D. Survivor comes back at the End Phase whenever it's banished while face-up. Hard to get rid of!"
+      ]
+    }
+  },
+  "CRV": {
+    "intro": [
+      "Cybernetic Revolution! Cyber Dragon summons itself when only they have a monster. Every deck wanted three.",
+      "Power Bond doubles a Machine Fusion's ATK. Cyber End Dragon at 8000? One hit ends it!"
+    ],
+    "cards": {
+      "Cyber Dragon": [
+        "Cyber Dragon! If they have a monster and you don't, Special Summon it from your hand. 2100 ATK for free!"
+      ],
+      "Cyber Twin Dragon": [
+        "Cyber Twin Dragon! 2800 ATK, and it attacks twice in the same Battle Phase."
+      ],
+      "Cyber End Dragon": [
+        "Cyber End Dragon! Three Cyber Dragons become 4000 ATK that pierces straight through defense."
+      ],
+      "Power Bond": [
+        "Power Bond! Fuse Machines and double the Fusion's ATK. But you take its original ATK as damage at the End Phase!"
+      ],
+      "Miracle Fusion": [
+        "Miracle Fusion! Banish Fusion Materials from your field or Graveyard to summon an Elemental HERO Fusion."
+      ],
+      "Elemental HERO Bubbleman": [
+        "Elemental HERO Bubbleman! If he's your only card, in hand and on the field, summoning him draws you two."
+      ],
+      "Dragon's Mirror": [
+        "Dragon's Mirror! Banish Fusion Materials from your field or Graveyard to Fusion Summon a Dragon."
+      ],
+      "System Down": [
+        "System Down! Pay 1000 Life Points and every Machine they have, on the field and in the Graveyard, is banished."
+      ],
+      "Skyscraper": [
+        "Skyscraper! An Elemental HERO attacking a stronger monster gains 1000 ATK. The HEROes' home field!"
+      ]
+    }
+  },
+  "EEN": {
+    "intro": [
+      "Elemental Energy! The Dark World monsters want to be discarded: that's when their effects go off!",
+      "Pot of Avarice is in here: shuffle five monsters from your Graveyard back and draw two cards."
+    ],
+    "cards": {
+      "Pot of Avarice": [
+        "Pot of Avarice! Shuffle five monsters from your Graveyard into your deck, then draw two. Greed's cousin!"
+      ],
+      "Sillva, Warlord of Dark World": [
+        "Sillva, Warlord of Dark World! Discarded by an effect, he Special Summons himself with 2300 ATK."
+      ],
+      "Goldd, Wu-Lord of Dark World": [
+        "Goldd, Wu-Lord of Dark World! Discard him with an effect and he hits the field with 2300 ATK."
+      ],
+      "Broww, Huntsman of Dark World": [
+        "Broww, Huntsman of Dark World draws you a card when an effect discards him."
+      ],
+      "Dark World Lightning": [
+        "Dark World Lightning destroys a Set card, then you discard a card. Make it a Dark World monster!"
+      ],
+      "Elemental HERO Shining Flare Wingman": [
+        "Shining Flare Wingman! 300 ATK for every Elemental HERO in your Graveyard, and he burns like Flame Wingman."
+      ],
+      "Elemental HERO Wildheart": [
+        "Elemental HERO Wildheart! Traps don't affect him at all. Mirror Force? He walks right through."
+      ],
+      "Hydrogeddon": [
+        "Hydrogeddon! When it destroys a monster in battle, another Hydrogeddon comes straight from your deck."
+      ],
+      "VWXYZ-Dragon Catapult Cannon": [
+        "VWXYZ-Dragon Catapult Cannon! Kaiba's XYZ, even bigger: once a turn it banishes one of their cards."
+      ],
+      "King's Knight | Jack's Knight": [
+        "Summon King's Knight next to Queen's Knight, and Jack's Knight joins them from your deck. My three knights!"
+      ]
+    }
+  },
+  "SOI": {
+    "intro": [
+      "Shadow of Infinity! The three Sacred Beasts are here: Uria, Hamon and Raviel. Each asks you to give up three cards.",
+      "Treeborn Frog hops back from the Graveyard every turn. A free Tribute for your Monarchs!"
+    ],
+    "cards": {
+      "Treeborn Frog": [
+        "Treeborn Frog! With no Spells or Traps on your field, it returns from the Graveyard in your Standby Phase."
+      ],
+      "Uria, Lord of Searing Flames": [
+        "Uria, Lord of Searing Flames! Send three face-up Traps to summon him. 1000 ATK for each Continuous Trap in your Graveyard."
+      ],
+      "Hamon, Lord of Striking Thunder": [
+        "Hamon, Lord of Striking Thunder! Send three face-up Continuous Spells to summon 4000 ATK."
+      ],
+      "Raviel, Lord of Phantasms": [
+        "Raviel, Lord of Phantasms! Tribute three Fiends to summon him. 4000 ATK, and a token whenever they Normal Summon."
+      ],
+      "Demise, King of Armageddon": [
+        "Demise, King of Armageddon! Pay 2000 Life Points and every other card on the field is destroyed."
+      ],
+      "Karma Cut": [
+        "Karma Cut! Discard a card to banish a face-up monster, and every copy of it in their Graveyard."
+      ]
+    }
+  },
+  "EOJ": {
+    "intro": [
+      "Enemy of Justice! The Destiny HEROes arrive, and Macro Cosmos banishes everything that would go to the Graveyard.",
+      "Cyber Phoenix protects your Machines, and Dimensional Fissure sends every fallen monster out of the game!"
+    ],
+    "cards": {
+      "Destiny HERO - Diamond Dude": [
+        "Destiny HERO - Diamond Dude! Turn over your top card. A Normal Spell? You get its effect next turn, for free!"
+      ],
+      "Macro Cosmos": [
+        "Macro Cosmos! While it's up, every card that would go to a Graveyard is banished instead."
+      ],
+      "Dimensional Fissure": [
+        "Dimensional Fissure! Every monster that would go to a Graveyard is banished instead. Bye-bye, Treeborn Frog!"
+      ],
+      "Cyber Phoenix": [
+        "Cyber Phoenix! In Attack Position it stops Spells and Traps that target one of your Machines. Destroyed in battle, you draw."
+      ],
+      "Banisher of the Radiance": [
+        "Banisher of the Radiance banishes every card that would go to the Graveyard. 1600 ATK of trouble!"
+      ],
+      "Elemental HERO Shining Phoenix Enforcer": [
+        "Shining Phoenix Enforcer! Battle can't destroy him, and he gains 300 ATK per Elemental HERO in your Graveyard."
+      ],
+      "E - Emergency Call": [
+        "E - Emergency Call fetches any Elemental HERO from your deck. The right hero at the right time!"
+      ],
+      "Forced Back": [
+        "Forced Back! Negate a Normal or Flip Summon and send that monster back to their hand."
+      ]
+    }
+  },
+  "POTD": {
+    "intro": [
+      "Power of the Duelist! Elemental HERO Neos and his Neo-Spacian friends fuse without Polymerization!",
+      "Future Fusion and Overload Fusion made Chimeratech Overdragon famous: 800 ATK for every Machine you give it!"
+    ],
+    "cards": {
+      "Elemental HERO Neos": [
+        "Elemental HERO Neos! A hero from space with 2500 ATK. Return him and a Neo-Spacian to the deck to fuse!"
+      ],
+      "Future Fusion": [
+        "Future Fusion! Send the materials from your deck to the Graveyard now, and the Fusion arrives in two turns."
+      ],
+      "Overload Fusion": [
+        "Overload Fusion! Banish Machines from your field or Graveyard to summon a DARK Machine Fusion."
+      ],
+      "Chimeratech Overdragon": [
+        "Chimeratech Overdragon! 800 ATK for each material, and it can attack that many of their monsters in one turn!"
+      ],
+      "Destiny HERO - Dogma": [
+        "Destiny HERO - Dogma! Tribute three monsters, a Destiny HERO among them. In their Standby Phase, their Life Points are halved!"
+      ],
+      "Sabersaurus": [
+        "Sabersaurus! 1900 ATK with no Tribute. A Dinosaur that hits as hard as anything its size."
+      ],
+      "Mausoleum of the Emperor": [
+        "Mausoleum of the Emperor! Pay 1000 Life Points for each Tribute you don't have, and Normal Summon anyway."
       ]
     }
   }

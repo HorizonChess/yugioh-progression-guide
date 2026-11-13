@@ -483,7 +483,7 @@ Guide, finished (user, 2026-11-07, branch `feat/guide-more`):
 - A card's worth depends on where the series is (user: "Fissure is great on set one, not on set 20"), so a note can carry `until` (a set code): past it he says nothing about that card. `timeline.json` (from `build.mjs`) places the set codes.
 - Repeats: silent, unless more copies make a deck better (`_multiples`: want, why, until). The app allows 3 of any card, so cards limited to 1 in real tournaments (Pot of Greed, Raigeki, Monster Reborn, Change of Heart) are worth acknowledging on a second or third copy.
 - Sources read: YGOPRODeck's "History of the Meta" parts 1 and 2. Pojo and Yugipedia refused automated fetches, so no historic limited lists were used.
-- Notes now cover the first ten sets (LOB to IOC). Later sets have no notes yet: he stays quiet there except for timeless notes on reprinted cards.
+- Notes cover the first ten sets (LOB to IOC) and, since 2026-11-13, the next ten core sets (AST, SOD, RDS, FET, TLM, CRV, EEN, SOI, EOJ, POTD), each line checked against the card's text. The reprint sets between them (DB1, DR1, DB, DR2) have no notes of their own: he speaks there through the notes of the cards they reprint. From CDIP on he is quiet except for those.
 - Yugi now speaks inside the pity and tournament pack chamber on Rewards. On phones a tap anywhere on the page moves him along, so his strip never blocks the bottom buttons for long.
 - `scripts/guide/simulate.ts` prints what he'd say over real openings, for review. Short Print rates are left alone (user).
 
