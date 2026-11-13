@@ -1,7 +1,7 @@
 import {
     OcgDuelMode, OcgLocation as L, OcgMessageType as M, OcgPhase, OcgPosition as P, OcgProcessResult, OcgQueryFlags as Q, OcgResponseType as R, type OcgQueryFlags,
     SelectBattleCMDAction as B, SelectIdleCMDAction as I,
-    type OcgCardLoc, type OcgDuelHandle, type OcgMessage, type OcgResponse,
+    type OcgCardLoc, type OcgCoreSync, type OcgDuelHandle, type OcgMessage, type OcgResponse,
 } from 'ocgcore-wasm';
 import type {
     ActionVerb, DuelAnswer, DuelCardView, PlaceZone, DuelEvent, DuelFrame, DuelModeId, DuelPrompt, DuelSideView, DuelState, DuelView, Phase, PromptCard, Side, Zone,
@@ -270,7 +270,15 @@ export class DuelSession {
     /** For the bot: actions taken this turn, so it can't loop. */
     botActions = 0;
 
-    constructor(private readonly engine: Engine, readonly setup: DuelSetup) {}
+    /**
+     * The WASM core this duel runs on, kept from the start: if the engine is ever replaced after a
+     * fault (`Engine.revive`), a duel begun on the old core must never touch the new one.
+     */
+    private readonly core: OcgCoreSync;
+
+    constructor(private readonly engine: Engine, readonly setup: DuelSetup) {
+        this.core = engine.core;
+    }
 
     /** The code a player sees: an older version shows as the card they own. */
     private show = (code: number) => this.setup.shown?.[String(code)] ?? code;
@@ -285,7 +293,7 @@ export class DuelSession {
      */
     start(answers: readonly OcgResponse[] = [], options: { repair?: boolean } = {}): void {
         this.repairing = !!options.repair;
-        const { core } = this.engine;
+        const core = this.core;
         const seed = this.setup.seed.map(BigInt) as [bigint, bigint, bigint, bigint];
         const team = { startingLP: START_LP, startingDrawCount: 5, drawCountPerTurn: 1 };
         const handle = core.createDuel({
@@ -370,7 +378,7 @@ export class DuelSession {
     }
 
     destroy(): void {
-        if (this.handle) this.engine.core.destroyDuel(this.handle);
+        if (this.handle) this.core.destroyDuel(this.handle);
         this.handle = null;
     }
 
@@ -489,12 +497,12 @@ export class DuelSession {
         this.seq++;
         this.retry = false;
         this.question = null;
-        this.engine.core.duelSetResponse(this.handle!, forEngine(response));
+        this.core.duelSetResponse(this.handle!, forEngine(response));
         this.run();
     }
 
     private run() {
-        const { core } = this.engine;
+        const core = this.core;
         for (let guard = 0; guard < 200_000 && this.handle; guard++) {
             const status = core.duelProcess(this.handle);
             const messages = core.duelGetMessage(this.handle);
@@ -564,7 +572,7 @@ export class DuelSession {
     private feed(response: OcgResponse) {
         this.noteCall(response);
         this.answers.push(response);
-        this.engine.core.duelSetResponse(this.handle!, forEngine(response));
+        this.core.duelSetResponse(this.handle!, forEngine(response));
     }
     private lastQuestion: Question | null = null;
 
@@ -873,7 +881,7 @@ export class DuelSession {
         const emz: DuelView['extraMonsters'] = [null, null];
         if (this.setup.mode === 'MR4' && this.handle) {
             for (const t of [0, 1] as const) {
-                const row = this.engine.core.duelQueryLocation(this.handle, { flags: CARD_FLAGS, controller: t, location: L.MZONE });
+                const row = this.core.duelQueryLocation(this.handle, { flags: CARD_FLAGS, controller: t, location: L.MZONE });
                 for (const seq of [5, 6]) {
                     const card = row[seq] ? this.cardView(row[seq]!, t, L.MZONE, seq, team) : null;
                     // Sequence 5 is the left zone as team 0 sees it; the other team sees it mirrored.
@@ -896,7 +904,7 @@ export class DuelSession {
     private sideView(t: Team, viewer: Team): DuelSideView {
         const empty: DuelSideView = { name: this.setup.names[t], lp: this.lp[t], hand: [], monsters: Array(5).fill(null), spells: Array(5).fill(null), field: null, pendulum: [null, null], grave: [], banished: [], deck: 0, extra: 0 };
         if (!this.handle) return empty;
-        const { core } = this.engine;
+        const core = this.core;
         const query = (location: number) => core.duelQueryLocation(this.handle!, { flags: CARD_FLAGS, controller: t, location: location as never });
         const pile = (location: number) => {
             const cards = query(location);
@@ -926,7 +934,7 @@ export class DuelSession {
     /** Marks the cards on the field that something acts on, so the board can show it. */
     private markAffected(sides: Record<Team, DuelSideView>) {
         if (!this.handle) return;
-        const { core } = this.engine;
+        const core = this.core;
         const at = (t: number, location: number, seq: number): DuelCardView | null => {
             const side = sides[t as Team];
             if (location === L.MZONE) return side.monsters[seq] ?? null;
@@ -975,7 +983,7 @@ export class DuelSession {
 
     /** A card's position on the field, from the engine (a question's card list doesn't carry it). */
     private positionOf(c: OcgCardLoc): number {
-        const info = this.engine.core.duelQuery(this.handle!, { flags: Q.POSITION as OcgQueryFlags, controller: c.controller as Team, location: c.location as never, sequence: c.sequence, overlaySequence: 0 });
+        const info = this.core.duelQuery(this.handle!, { flags: Q.POSITION as OcgQueryFlags, controller: c.controller as Team, location: c.location as never, sequence: c.sequence, overlaySequence: 0 });
         return info?.position ?? P.FACEDOWN_DEFENSE;
     }
 
@@ -1235,12 +1243,12 @@ export class DuelSession {
 
     /** A card's ATK, DEF and position on the field, as the engine has them now. */
     stats(c: { controller: number; location: number; sequence: number }) {
-        const info = this.engine.core.duelQuery(this.handle!, { flags: STAT_FLAGS, controller: c.controller as Team, location: c.location as never, sequence: c.sequence, overlaySequence: 0 });
+        const info = this.core.duelQuery(this.handle!, { flags: STAT_FLAGS, controller: c.controller as Team, location: c.location as never, sequence: c.sequence, overlaySequence: 0 });
         return { atk: info?.attack ?? 0, def: info?.defense ?? 0, position: info?.position ?? P.FACEDOWN_DEFENSE, code: info?.code ?? 0 };
     }
 
     monstersOf(t: Team) {
-        const row = this.engine.core.duelQueryLocation(this.handle!, { flags: STAT_FLAGS, controller: t, location: L.MZONE });
+        const row = this.core.duelQueryLocation(this.handle!, { flags: STAT_FLAGS, controller: t, location: L.MZONE });
         return row.flatMap((c, sequence) => (c ? [{ sequence, atk: c.attack ?? 0, def: c.defense ?? 0, position: c.position ?? P.FACEDOWN_DEFENSE, code: c.code ?? 0 }] : []));
     }
 
