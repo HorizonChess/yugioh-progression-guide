@@ -268,7 +268,8 @@ export class DuelSession {
     private turn = 0;
     private turnPlayer: Team = 0;
     private phase: Phase = 'DP';
-    private chain: { code: number; team: Team; uid?: string }[] = [];
+    /** The chain: each link's card, and the cards its activation targeted. */
+    private chain: { code: number; team: Team; uid?: string; targets?: string[] }[] = [];
     /** Who made the last play (a summon, Set, attack or activation): a chain window after your own play is quiet. */
     private lastActor: Team | null = null;
     /** Cards whose chain link just resolved: a spell or trap going to the Graveyard after it isn't destroyed. */
@@ -776,6 +777,13 @@ export class DuelSession {
                     out.push({ k: 'activate', team: m.controller, code: m.code, uid, link: this.chain.length });
                     break;
                 }
+                case M.BECOME_TARGET: {
+                    // Targets are chosen while a card is activated, after it joins the chain: they're the
+                    // newest link's. (Targets chosen as a link resolves are that link's too: it's on top then.)
+                    const top = this.chain[this.chain.length - 1];
+                    if (top) top.targets = [...(top.targets ?? []), ...m.cards.map((c) => this.tracker.uidAt(c.controller, c.location, c.sequence))];
+                    break;
+                }
                 case M.CHAIN_SOLVED: {
                     const link = this.chain[m.chain_size - 1];
                     if (link?.uid) this.resolved.add(link.uid);
@@ -967,7 +975,7 @@ export class DuelSession {
             me,
             opp,
             extraMonsters: emz,
-            chain: this.chain.map((c) => ({ code: this.show(c.code), side: c.team === team ? 'me' : 'opp', uid: c.uid })),
+            chain: this.chain.map((c) => ({ code: this.show(c.code), side: c.team === team ? 'me' : 'opp', uid: c.uid, ...(c.targets?.length ? { targets: c.targets } : {}) })),
         };
     }
 

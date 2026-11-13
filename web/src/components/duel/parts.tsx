@@ -20,6 +20,8 @@ export type Pose = "up" | "side";
 export interface CardMarks {
     /** Cards the question is about (or that have actions): they glow. */
     glow: ReadonlySet<string>;
+    /** Cards the newest chain link targets. */
+    targeted: ReadonlySet<string>;
     /** Cards chosen so far in a pick. */
     picked: ReadonlySet<string>;
     destroying: readonly string[];
@@ -82,7 +84,7 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
     const turning = flip ?? (landing && !up && side === "me" && card.code > 0 ? "set" : null);
     const cls = [
         "df-card", marks.glow.has(card.uid) ? "is-glow" : "", marks.raised === card.uid ? "is-raised" : "", marks.picked.has(card.uid) ? "is-picked" : "", breaking ? "is-breaking" : "",
-        landing ? (landing.heavy ? "is-landing is-heavy" : "is-landing") : "", marks.flaring.includes(card.uid) ? "is-flaring" : "",
+        marks.targeted.has(card.uid) ? "is-targeted" : "", landing ? (landing.heavy ? "is-landing is-heavy" : "is-landing") : "", marks.flaring.includes(card.uid) ? "is-flaring" : "",
     ].join(" ");
     return (
         <motion.button
@@ -107,6 +109,7 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
                     )}
                     {!up && card.code > 0 && <i className="df-card__peek">Set</i>}
                 </span>
+                {marks.targeted.has(card.uid) && <i className="df-target" aria-label="Targeted" />}
                 {stat && (
                     <span className={`df-stat ${card.defense ? "is-def" : ""} ${tone ? `is-${tone}` : ""}`} title={tone ? `${card.defense ? "DEF" : "ATK"} ${stat.base} → ${stat.value}` : undefined}>
                         {tone && <i aria-hidden>{tone === "up" ? "▲" : "▼"}</i>}
@@ -169,7 +172,7 @@ export function Zone({ card, label, marks, onTap, onHover, side, className = "",
 }
 
 /** Deck, Extra Deck, Graveyard or banished cards: the top card (or a back) and how many. */
-export function Pile({ label, count, top, back, face, onTap, onHover, small, pile }: {
+export function Pile({ label, count, top, back, face, onTap, onHover, small, pile, targeted }: {
     label: string;
     /** Which pile this is ("me:deck"), for cards dealt from it to fly out of. */
     pile?: string;
@@ -181,11 +184,13 @@ export function Pile({ label, count, top, back, face, onTap, onHover, small, pil
     onTap?: () => void;
     onHover?: (code: number) => void;
     small?: boolean;
+    /** A card in it is targeted by the newest chain link (not necessarily the top one). */
+    targeted?: boolean;
 }) {
     return (
         <button
             type="button"
-            className={`df-pile ${small ? "df-pile--small" : ""}`}
+            className={`df-pile ${small ? "df-pile--small" : ""} ${targeted ? "is-targeted" : ""}`}
             data-label={label}
             data-pile={pile}
             onClick={onTap}
@@ -200,6 +205,7 @@ export function Pile({ label, count, top, back, face, onTap, onHover, small, pil
                 </motion.span>
             )}
             <span className="df-pile__label">{label}</span>
+            {targeted && <i className="df-target" aria-label="A card here is targeted" />}
             {count > 0 && <span className="df-pile__count">{count}</span>}
         </button>
     );
