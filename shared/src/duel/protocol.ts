@@ -75,7 +75,7 @@ export interface DuelView {
     /** New Master Rule: the two Extra Monster Zones (left, right as `me` sees them), and whose each card is. */
     extraMonsters: ({ side: Side; card: DuelCardView } | null)[];
     /** The chain being built, chain link 1 first. */
-    chain: { code: number; side: Side; uid?: string }[];
+    chain: { code: number; side: Side; uid?: string; /** The cards its activation targeted, by uid. */ targets?: string[] }[];
 }
 
 /** Something that happened, for the board to animate and the log to tell. */

@@ -68,6 +68,28 @@ const byUid = (view: DuelView) => {
     return map;
 };
 
+/** Whose a card on the board is, by its uid. */
+const sideOf = (view: DuelView, uid: string): Side | null => {
+    for (const s of ["me", "opp"] as const) {
+        const v = view[s];
+        if ([...v.hand, ...v.monsters, ...v.spells, v.field, ...v.pendulum, ...v.grave, ...v.banished].some((c) => c?.uid === uid)) return s;
+    }
+    return view.extraMonsters.find((z) => z?.card.uid === uid)?.side ?? null;
+};
+
+/** "your Dark Magician and Rival's Set card": the cards a chain link targets, in words. */
+const targetsInWords = (view: DuelView, uids: readonly string[], name: (code: number) => string, rival: string) => {
+    const cards = byUid(view);
+    view.extraMonsters.forEach((z) => z && cards.set(z.card.uid, z.card));
+    const words = uids.flatMap((uid) => {
+        const c = cards.get(uid);
+        if (!c) return [];
+        const what = c.faceUp && c.code > 0 ? name(c.code) : "Set card";
+        return [`${sideOf(view, uid) === "me" ? "your" : `${rival}'s`} ${what}`];
+    });
+    return words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}` : words[0] ?? "";
+};
+
 type Action = Extract<DuelPrompt, { kind: "actions" }>["actions"][number];
 /** Verbs that put a card from the hand onto the field. */
 const PLACES: ReadonlySet<ActionVerb> = new Set(["summon", "special", "set", "set-spell", "activate"]);
@@ -235,8 +257,10 @@ export default function DuelScreen({ duelId, onLeave, onNext }: {
             if (prompt.count === 1) return answer({ kind: "choice", id: z.id });
             setPicked((p) => (p.includes(z.id) ? p.filter((x) => x !== z.id) : p.length < prompt.count ? [...p, z.id] : p));
         };
+        // The cards the newest chain link targets: marked on the board while it waits to resolve.
+        const targeted = new Set(view?.chain[view.chain.length - 1]?.targets ?? []);
         return {
-            glow, picked: chosen, destroying: effects.destroying, landing: effects.landing, flaring: effects.flaring, hit: effects.hit, floats: effects.floats,
+            glow, picked: chosen, targeted, destroying: effects.destroying, landing: effects.landing, flaring: effects.flaring, hit: effects.hit, floats: effects.floats,
             zones, chosenZones, onZone, preview, raised: held?.card.uid ?? null,
         };
     }, [prompt, boardPick, picked, effects, answer, placing, held, view, cards, choosing]);
@@ -512,7 +536,8 @@ export default function DuelScreen({ duelId, onLeave, onNext }: {
                     : extras ? `${musts.join(" and ")} can't be skipped; the one you pick first resolves last. Your other glowing cards are optional`
                     : "None can be skipped; the one you pick first resolves last. Tap a glowing card";
                 const title = prompt.forced ? (lone ? `${musts[0]}'s effect happens now` : "These all happen: which goes on the chain first?") : !last ? (prompt.ask ?? "Activate a card?") : last.side === "me" ? "Chain another card?" : `Respond to ${name(last.code)}?`;
-                const said = last ? `${last.side === "me" ? "You" : view.opp.name} activated it as chain link ${view.chain.length}.` : undefined;
+                const aimed = last?.targets?.length ? targetsInWords(view, last.targets, name, view.opp.name) : "";
+                const said = last ? `${last.side === "me" ? "You" : view.opp.name} activated it as chain link ${view.chain.length}${aimed ? `, targeting ${aimed}` : ""}.` : undefined;
                 if (!choosing && !prompt.forced) {
                     question = sheet(title, (
                         <div className="df-sheet__options df-sheet__options--row">

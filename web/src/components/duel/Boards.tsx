@@ -20,6 +20,8 @@ export interface BoardProps {
 }
 
 const top = (cards: DuelCardView[]) => cards[cards.length - 1];
+/** Whether a card in this pile is targeted by the newest chain link. */
+const aimedAt = (cards: DuelCardView[], marks: CardMarks) => cards.some((c) => marks.targeted.has(c.uid));
 /** A row's zone shown at position `i`: the rival's rows are mirrored, so their sequence runs backwards. */
 const seqAt = (side: Side, i: number) => (side === "opp" ? 4 - i : i);
 
@@ -65,8 +67,8 @@ export function PhoneBoard({ view, marks, onCard, onPile, phaseBar, overlay }: B
                 <div className="df-bar__zones">
                     <Zone card={s.field} label="Field" className="df-zone--mini" zone={zoneKey(side, "field", 0)} marks={marks} side={side} onTap={(c) => onCard(c, side, "field")} />
                     {view.mode === "MR3" && s.pendulum.map((p, i) => <Zone key={i} card={p} label="P" className="df-zone--mini" zone={zoneKey(side, "pendulum", i)} marks={marks} side={side} onTap={(c) => onCard(c, side, "pendulum")} />)}
-                    <Pile small label="GY" count={s.grave.length} top={top(s.grave)} onTap={() => onPile(side, "grave")} />
-                    {s.banished.length > 0 && <Pile small label="Banished" count={s.banished.length} top={top(s.banished)} onTap={() => onPile(side, "banished")} />}
+                    <Pile small label="GY" count={s.grave.length} top={top(s.grave)} targeted={aimedAt(s.grave, marks)} onTap={() => onPile(side, "grave")} />
+                    {s.banished.length > 0 && <Pile small label="Banished" count={s.banished.length} top={top(s.banished)} targeted={aimedAt(s.banished, marks)} onTap={() => onPile(side, "banished")} />}
                     <Pile small label="Extra" count={s.extra} back onTap={side === "me" ? () => onPile(side, "extra") : undefined} />
                     <Pile small label="Deck" count={s.deck} back face={s.deckTop} pile={`${side}:deck`} onTap={deckTap(side)} />
                 </div>
@@ -111,7 +113,7 @@ export function DesktopBoard({ view, marks, onCard, onPile, onHover, phaseBar, o
             <Zone key={`${row}${i}`} card={c} className={row === "s" ? "df-zone--spell" : "df-zone--monster"} zone={zoneKey(side, row === "s" ? "spell" : "monster", seqAt(side, i))} locked={!!s.locked?.[row === "s" ? "spells" : "monsters"][seqAt(side, i)]} marks={marks} side={side} onHover={onHover} onTap={(x) => onCard(x, side, row === "m" ? "monster" : "spell")} />
         );
         const field = <Zone key="field" card={s.field} label="Field" className="df-zone--side" zone={zoneKey(side, "field", 0)} marks={marks} side={side} onHover={onHover} onTap={(c) => onCard(c, side, "field")} />;
-        const gy = <Pile key="gy" label="GY" count={s.grave.length} top={top(s.grave)} onTap={() => onPile(side, "grave")} onHover={onHover} />;
+        const gy = <Pile key="gy" label="GY" count={s.grave.length} top={top(s.grave)} targeted={aimedAt(s.grave, marks)} onTap={() => onPile(side, "grave")} onHover={onHover} />;
         const deck = <Pile key="deck" label="Deck" count={s.deck} back face={s.deckTop} pile={`${side}:deck`} onTap={deckTap(side)} onHover={onHover} />;
         const extra = <Pile key="extra" label="Extra" count={s.extra} back onTap={side === "me" ? () => onPile(side, "extra") : undefined} />;
         const monsterRow = side === "opp" ? [gy, ...r.monsters.map((c, i) => zone(c, i, "m")), field] : [field, ...r.monsters.map((c, i) => zone(c, i, "m")), gy];
@@ -123,7 +125,7 @@ export function DesktopBoard({ view, marks, onCard, onPile, onHover, phaseBar, o
             <LifePoints value={view[s].lp} side={s} name={view[s].name} floats={marks.floats} active={view.turnPlayer === s} hit={marks.hit === s} notes={view[s].notes} />
             <div className="df-side-block__piles">
                 {view.mode === "MR3" && view[s].pendulum.map((p, i) => <Zone key={i} card={p} label={i ? "Right P" : "Left P"} className="df-zone--mini" zone={zoneKey(s, "pendulum", i)} marks={marks} side={s} onHover={onHover} onTap={(c) => onCard(c, s, "pendulum")} />)}
-                <Pile small label="Banished" count={view[s].banished.length} top={top(view[s].banished)} onTap={() => onPile(s, "banished")} onHover={onHover} />
+                <Pile small label="Banished" count={view[s].banished.length} top={top(view[s].banished)} targeted={aimedAt(view[s].banished, marks)} onTap={() => onPile(s, "banished")} onHover={onHover} />
                 <span className="df-side-block__hand">{view[s].hand.length} in hand</span>
             </div>
         </div>
