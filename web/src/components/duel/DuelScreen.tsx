@@ -38,7 +38,12 @@ function useCards(codes: number[]) {
         const ids = key ? key.split(",").map(Number).filter((id) => !asked.current.has(id)) : [];
         if (!ids.length) return;
         ids.forEach((id) => asked.current.add(id));
-        fetchCardsByIds(ids).then((list) => setCards((m) => new Map([...m, ...list.map((c) => [c.id, c] as const)])));
+        fetchCardsByIds(ids).then((list) => {
+            // Ids that didn't come back may be asked again, the next time the cards on screen change.
+            const got = new Set(list.map((c) => c.id));
+            ids.forEach((id) => !got.has(id) && asked.current.delete(id));
+            setCards((m) => new Map([...m, ...list.map((c) => [c.id, c] as const)]));
+        });
     }, [key]);
     return cards;
 }
@@ -728,11 +733,12 @@ export default function DuelScreen({ duelId, onLeave, onNext }: {
         </>
     );
 
+    // The art shows as soon as you point at a card; its text joins it once the card data is in.
     const detailCard = detail ? cards.get(detail) : null;
-    const detailPanel = detailCard ? (
+    const detailPanel = detail ? (
         <div className="df-detail">
-            <img src={cardImage(detailCard.id)} alt={detailCard.name} />
-            <CardPlate card={printedIn(detailCard, "", 0, "In this duel")} className="df-detail__plate" />
+            <img src={cardImage(detail)} alt={detailCard?.name ?? ""} />
+            {detailCard && <CardPlate card={printedIn(detailCard, "", 0, "In this duel")} className="df-detail__plate" />}
         </div>
     ) : <p className="df-detail__empty">Point at a card to read it.</p>;
     const logPanel = logShut ? <p className="df-detail__empty">Closed while Question is being resolved.</p> : (

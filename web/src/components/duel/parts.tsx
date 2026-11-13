@@ -4,9 +4,15 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import type { DuelCardView, Side } from "@ygo/shared";
 import type { Float } from "./useDuel";
+import { isPhoneNow } from "@/lib/useIsPhone";
 
 const IMG = process.env.NEXT_PUBLIC_IMAGE_HOST ?? "";
-export const cardImage = (code: number) => `${IMG}/cards/${code}_md.jpg`;
+/**
+ * A card's art. Phones show cards small, so they get the 200px copy. Wider screens show them
+ * bigger (the hover panel, the hand, on high-density displays), so they get the full-size art;
+ * the 200px copy looked blurry there. Duels render only in the browser, so the width is known.
+ */
+export const cardImage = (code: number) => `${IMG}/cards/${code}${isPhoneNow() ? "_md" : ""}.jpg`;
 export const CARD_BACK = `${IMG}/cards/back_high.jpg`;
 
 export type Pose = "up" | "side";
