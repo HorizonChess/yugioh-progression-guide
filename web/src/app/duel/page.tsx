@@ -152,7 +152,7 @@ function DuelPageContent() {
             if (duel.seriesId) await refresh(duel.seriesId);
             router.push(rival ? "/rewards" : "/record-match");
         };
-        return <PreGame view={pregame} busy={acting} onAct={act} onGiveUp={() => void giveUp()} />;
+        return <PreGame duelId={id} view={pregame} busy={acting} onAct={act} onGiveUp={() => void giveUp()} />;
     }
     if (duel.status === "pregame") return <Message text="Shuffling the decks…" />;
     if (duel.status === "cancelled") return <Message text="That duel was called off. Nothing was recorded, and a new challenge can be sent." onBack={() => router.push("/record-match")} />;

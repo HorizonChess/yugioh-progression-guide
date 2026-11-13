@@ -7,6 +7,11 @@ import { CardCloseUp, CardPlate } from "@/components/card/CardPlate";
 import { printedIn, type StageCard } from "@/components/packs/stage/plate";
 import { fetchCardsByIds, type Card } from "@/lib/api";
 import { useIsPhone } from "@/lib/useIsPhone";
+import { rpsSeenKey } from "./PreGame";
+import RpsShowdown from "./RpsShowdown";
+
+/** How long the opening showdown stays before the board is yours (a tap closes it sooner). */
+const RPS_SHOWDOWN_MS = 6000;
 import { DesktopBoard, PhoneBoard } from "./Boards";
 import { NameDeclare } from "./NameDeclare";
 import { cardImage, type CardMarks, type Pose } from "./parts";
@@ -358,6 +363,21 @@ export default function DuelScreen({ duelId, onLeave, onNext }: {
         const what = zone === "grave" ? "Graveyard" : zone === "banished" ? "banished cards" : "Extra Deck";
         setBrowse({ title: `${side === "me" ? "Your" : `${view.opp.name}'s`} ${what}`, cards: zone === "extra" ? list : [...list].reverse() });
     };
+
+    // Game 1's rock-paper-scissors, when you didn't see it decided (your rival or the bot won and
+    // chose at once): its showdown opens the board. Once per duel in this browser.
+    const [rpsChecked, setRpsChecked] = useState(false);
+    const [rpsOpen, setRpsOpen] = useState(false);
+    if (!rpsChecked && state && view) {
+        setRpsChecked(true);
+        setRpsOpen(!!state.match?.rps && view.turn <= 1 && !sessionStorage.getItem(rpsSeenKey(duelId)));
+    }
+    useEffect(() => {
+        if (!rpsOpen) return;
+        sessionStorage.setItem(rpsSeenKey(duelId), "1");
+        const t = setTimeout(() => setRpsOpen(false), RPS_SHOWDOWN_MS);
+        return () => clearTimeout(t);
+    }, [rpsOpen, duelId]);
 
     if (!state || !view) {
         return <div className="df-arena"><div className="df-loading">Shuffling the decks…</div></div>;
@@ -793,6 +813,19 @@ export default function DuelScreen({ duelId, onLeave, onNext }: {
                 {isPhone ? <PhoneBoard {...props} /> : <DesktopBoard {...props} detail={detailPanel} log={logPanel} />}
             </LayoutGroup>
             {closeUp && <CardCloseUp card={closeUp} onClose={() => setCloseUp(null)} />}
+            {rpsOpen && state.match?.rps && (() => {
+                const { mine, theirs, won } = state.match.rps;
+                // Turn 1 is the first player's: the winner went first if it's theirs.
+                const winnerFirst = (view.turnPlayer === "me") === won;
+                return (
+                    <div className="df-rps" onClick={() => setRpsOpen(false)}>
+                        <RpsShowdown mine={mine} theirs={theirs} rival={view.opp.name}>
+                            <p className="df-rps__first">{won ? "You" : view.opp.name} chose to go {winnerFirst ? "first" : "second"}.</p>
+                            <button type="button" className="df-opt">Duel!</button>
+                        </RpsShowdown>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
