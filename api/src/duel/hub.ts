@@ -6,7 +6,7 @@ import type { OcgResponse } from 'ocgcore-wasm';
 import { DuelClientMessageSchema, cardVersionAt, ruleEraFor, resolveSetIndex, type DuelModeId, type DuelServerMessage } from '@ygo/shared';
 import { confirmReport, reportDuoMatch } from '../game/matches';
 import { findSeries } from '../game/series';
-import { loadEngine } from './engine';
+import { engineFaulted, loadEngine } from './engine';
 import { DUEL_RULES, DuelSession, type DuelSetup, type Team } from './session';
 
 /*
@@ -131,6 +131,20 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         live.clear();
     });
 
+    /**
+     * The engine itself failed (not a rule: see `engineFaulted`): it's broken for every duel, so all
+     * the duels in memory are dropped, unsaved step and all, and a new engine is started. Each duel
+     * is rebuilt from storage the next time one of its players does anything. True if it was that.
+     */
+    async function recover(error: unknown): Promise<boolean> {
+        if (!engineFaulted(error)) return false;
+        app.log.error({ err: error, duels: live.size }, 'the duel engine failed: starting a new one');
+        // Not destroyed: their handles belong to the broken core.
+        live.clear();
+        await (await loadEngine()).revive();
+        return true;
+    }
+
     async function sessionOf(duel: DuelDoc) {
         const id = duel._id.toHexString();
         const cached = live.get(id);
@@ -141,11 +155,16 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const engine = await loadEngine();
         // After a restart, relearn any alternate passcodes the decks use before rebuilding.
         await unknownCards(duel.setup!.decks.flatMap((d) => [...d.main, ...d.extra]));
+        // The answers as they're stored now: the caller's copy of the duel may be from when its
+        // page connected, many moves ago.
+        const latest = await duels().findOne({ _id: duel._id }, { projection: { answers: 1 } });
+        if (latest) duel.answers = latest.answers;
         const stored = duel.answers.map(decode);
         let session = new DuelSession(engine, duel.setup!);
         try {
             session.start(stored);
         } catch (error) {
+            if (await recover(error)) throw error;
             // Duels from before the fix below lost the answers given right after a rebuild: put
             // them back if every stored answer still fits, and store the repaired list.
             session.destroy();
@@ -461,11 +480,16 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 }).catch(async (error: unknown) => {
                     app.log.error({ err: error, duel: id }, 'duel step failed');
                     // Never leave a player waiting on a reply that won't come: rebuild the duel from what's
-                    // stored (the failed step is dropped) and send everyone the truth.
+                    // stored (the failed step is dropped) and send everyone the truth. If the engine
+                    // itself failed on that step, the player is told the move can't be made.
+                    const faulted = await recover(error).catch(() => false);
                     live.delete(id);
                     try {
                         const { session } = await sessionOf(duel);
-                        for (const s of sockets.get(id) ?? []) send(s.socket, { type: 'state', frames: [], state: session.state(s.team, id), cursor: session.cursor(s.team) });
+                        for (const s of sockets.get(id) ?? []) {
+                            const state = session.state(s.team, id);
+                            send(s.socket, { type: 'state', frames: [], state: faulted && s.team === team && state.prompt ? { ...state, retry: true } : state, cursor: session.cursor(s.team) });
+                        }
                     } catch (rebuild) {
                         app.log.error({ err: rebuild, duel: id }, 'duel could not be rebuilt after a failed step');
                     }

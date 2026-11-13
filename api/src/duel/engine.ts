@@ -23,6 +23,11 @@ interface CardRow {
 
 export interface Engine {
     core: OcgCoreSync;
+    /**
+     * Starts a new WASM core in place of this one. After the core faults (see `engineFaulted`) it
+     * is unusable for every duel, so the duels in memory are dropped and rebuilt on the new core.
+     */
+    revive(): Promise<void>;
     /** The pinned commits the data came from, stored with each duel (a replay needs the same ones). */
     version: string;
     cardData(code: number): OcgCardData | null;
@@ -80,6 +85,14 @@ function findDataDir(): string {
     throw new Error('Duel engine data is missing: run `npm run fetch-engine -w @ygo/api`');
 }
 
+/**
+ * Whether an error is the WASM core itself failing (not a rule or a script error, which the core
+ * reports and survives). Seen with two Double Spells, one in each Graveyard: each checks whether
+ * the other could be activated, without end, and the core's stack runs out. The fault leaves the
+ * core broken for every duel on it.
+ */
+export const engineFaulted = (error: unknown): boolean => error instanceof WebAssembly.RuntimeError || (error instanceof RangeError && /call stack/i.test(error.message));
+
 export function engineDataAvailable(): boolean {
     try {
         findDataDir();
@@ -117,6 +130,9 @@ async function build(): Promise<Engine> {
     const engine: Engine = {
         core,
         version,
+        async revive() {
+            engine.core = await createCore({ sync: true });
+        },
         cardData(code) {
             const cached = data.get(code);
             if (cached) return cached;

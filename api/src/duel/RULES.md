@@ -79,6 +79,14 @@ A page that lost its connection (a phone put away mid-turn) is shown what it mis
 back: the moves play out and are in the log. If too much happened (over 300 steps) or the duel was
 rebuilt meanwhile, it gets the board as it stands.
 
+## When the engine itself fails (hub.ts, `recover`)
+
+A rule or script error is reported by the engine and the duel goes on. The engine's own WASM core
+failing is different: it stays broken for every duel on the server. Known cause: a Double Spell in
+each Graveyard (each checks whether the other could be activated, without end, until the core's
+stack runs out). The server then starts a new core, drops the duels in memory and rebuilds each
+from storage as its players act; the move that set it off isn't made, and its player is told so.
+
 ## The practice bot (bot.ts)
 
 The bot plays legally but by rules of thumb, and reads a card's script to guess what it does:

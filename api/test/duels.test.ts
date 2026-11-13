@@ -4,7 +4,7 @@ import type { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { cardVersionAt, collectionKey, type DuelAnswer, type DuelPrompt, type DuelServerMessage } from '@ygo/shared';
 import { cardSetsCollection, cardsCollection } from '../src/cards/sync';
-import { engineDataAvailable } from '../src/duel/engine';
+import { engineDataAvailable, loadEngine } from '../src/duel/engine';
 import { packSessions } from '../src/game/packs';
 import { seriesCollection, seriesPlayersCollection } from '../src/game/series';
 import { startMongo, testApp } from './helpers';
@@ -216,6 +216,44 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
             expect(look.state?.view).toBeTruthy();
             await app.inject({ method: 'POST', url: `/api/duels/${duel.id}/concede`, headers: { 'x-duel-token': token } });
         }
+    });
+
+    it('starts a new engine when the engine itself fails, and the duel goes on from what was stored', async () => {
+        const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot' } });
+        const { duel, token } = started.json();
+        await play({ name: 'Guest' }, duel.id, token, 4);
+        const before = (await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) }))!.answers.length;
+        // The engine faults on the next step (as it does when its stack runs out), for every duel on it.
+        const engine = await loadEngine();
+        const broken = engine.core;
+        broken.duelProcess = () => {
+            throw new WebAssembly.RuntimeError('memory access out of bounds');
+        };
+        const socket = await app.injectWS(`/api/duels/${duel.id}/live?token=${token}`, { socket: { remoteAddress: '127.0.0.1' } } as never);
+        const retried = await new Promise<DuelServerMessage['state']>((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error('no reply after the engine failed')), 15_000);
+            let sent = false;
+            socket.on('message', (raw: Buffer) => {
+                const { state } = JSON.parse(raw.toString()) as DuelServerMessage;
+                if (!sent && state.prompt) {
+                    sent = true;
+                    return socket.send(JSON.stringify({ type: 'answer', seq: state.seq, answer: humanAnswer(state.prompt) }));
+                }
+                if (sent) {
+                    clearTimeout(timer);
+                    socket.terminate();
+                    resolve(state);
+                }
+            });
+        });
+        // The move wasn't made: the same question again, marked as refused, on a new engine.
+        expect(retried.retry).toBe(true);
+        expect(retried.prompt).not.toBeNull();
+        expect(engine.core).not.toBe(broken);
+        expect((await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) }))!.answers.length).toBe(before);
+        // And the duel plays to its end.
+        const end = await play({ name: 'Guest' }, duel.id, token);
+        expect(end.result).not.toBeNull();
     });
 
     it('can always give up a duel, even one that can no longer be rebuilt', async () => {
