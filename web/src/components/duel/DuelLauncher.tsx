@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ruleEraFor } from "@ygo/shared";
 import type { SavedDeck } from "@/lib/storage";
-import { acceptDuel, concedeDuel, declineDuel, duelPath, getDuel, lastGuestDuel, openDuels, startDuel, startGuestDuel, type DuelSummary, type PracticeOpponent } from "@/lib/duel-client";
+import { acceptDuel, carryGuestToken, concedeDuel, declineDuel, duelPath, getDuel, lastGuestDuel, openDuels, startDuel, startGuestDuel, type DuelSummary, type PracticeOpponent } from "@/lib/duel-client";
 import { alertRepoError } from "@/context/ProgressionContext";
 import { BotGlyph, HandGlyph, SwordsGlyph } from "./DuelGlyphs";
 import "./duel-launcher.css";
@@ -41,8 +41,13 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
             if (guest) {
                 // A guest's practice duel still going in this browser.
                 const last = lastGuestDuel();
-                const duel = last ? (await getDuel(last).catch(() => null))?.duel : null;
-                setOpen(duel?.status === "active" ? [duel] : []);
+                let duel = last ? (await getDuel(last).catch(() => null))?.duel : null;
+                // A match left between two games: its next game is the one that's open.
+                while (duel?.status === "finished" && duel.next) {
+                    carryGuestToken(duel.id, duel.next);
+                    duel = (await getDuel(duel.next).catch(() => null))?.duel;
+                }
+                setOpen(duel?.status === "active" || duel?.status === "pregame" ? [duel] : []);
             } else {
                 setOpen(await openDuels(seriesId));
             }
@@ -80,7 +85,7 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
     const practise = (against: PracticeOpponent) => run(async () => {
         const deck = legal.find((d) => d.id === deckId);
         if (!deck) return;
-        go(guest ? await startGuestDuel({ main: deck.mainDeck, extra: deck.extraDeck }, setName ?? "", against) : await startDuel(seriesId, deckId, against));
+        go(guest ? await startGuestDuel({ main: deck.mainDeck, extra: deck.extraDeck, side: deck.sideDeck ?? [] }, setName ?? "", against) : await startDuel(seriesId, deckId, against));
     });
 
     const deckPicker = legal.length ? (
@@ -98,7 +103,7 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
     const practiceSlabs = !practice && (
         <>
             <button type="button" className={`dl-slab ${duo ? "" : "dl-slab--main"}`} disabled={!deckId || busy} onClick={() => practise("bot")} aria-label="Practice against the bot">
-                <BotGlyph /><span>Duel the bot</span><small>Practice</small>
+                <BotGlyph /><span>Duel the bot</span><small>Practice · best of 3</small>
             </button>
             <button type="button" className="dl-slab" disabled={!deckId || busy} onClick={() => practise("solo")} aria-label="Solo: test your deck">
                 <HandGlyph /><span>Solo</span><small>Test your deck</small>
@@ -112,12 +117,12 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
             <p className="dl-rules">Played by {era.name}: {era.changes[0]?.toLowerCase()}.</p>
             {open === null && <p className="dl-note">Looking for open duels…</p>}
 
-            {challenge?.status === "active" && <button type="button" className="dl-btn dl-btn--main" onClick={() => go(challenge)}>Back to your duel with {rival}</button>}
+            {(challenge?.status === "active" || challenge?.status === "pregame") && <button type="button" className="dl-btn dl-btn--main" onClick={() => go(challenge)}>Back to your match with {rival}</button>}
             {practice && (
                 <div className="dl-row">
-                    <button type="button" className="dl-btn" onClick={() => go(practice)}>Back to your practice duel</button>
+                    <button type="button" className="dl-btn" onClick={() => go(practice)}>Back to your practice {practice.match ? "match" : "duel"}</button>
                     {/* A practice duel that went wrong (or that you're done with) shouldn't stand in the way of a new one. */}
-                    <button type="button" className="dl-btn" disabled={busy} onClick={() => run(() => concedeDuel(practice.id))}>End it, start a new one</button>
+                    <button type="button" className="dl-btn" disabled={busy} onClick={() => run(() => concedeDuel(practice.id, true))}>End it, start a new one</button>
                 </div>
             )}
 
@@ -151,13 +156,13 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
                     <div className="dl-slabs">
                         {duo && (
                             <button type="button" className="dl-slab dl-slab--main" disabled={!deckId || busy} onClick={() => run(() => startDuel(seriesId, deckId, "rival"))}>
-                                <SwordsGlyph /><span>Challenge {rival}</span><small>Counts for the series</small>
+                                <SwordsGlyph /><span>Challenge {rival}</span><small>Best of 3 · counts for the series</small>
                             </button>
                         )}
                         {practiceSlabs}
                     </div>
                     <p className="dl-note">
-                        {duo ? "The rival duel counts for the series. Practice doesn't." : "Practice doesn't count for the series: a duel played for real is recorded below."}
+                        {duo ? "The match against your rival counts for the series. Practice doesn't." : "Practice doesn't count for the series: a duel played for real is recorded below."}
                         {" "}In solo the opponent only passes its turns, so you can draw and play out your own.
                     </p>
                 </div>

@@ -71,10 +71,10 @@ export default function RecordMatchPage() {
         // /record-match?spin=<rewardId> comes back to spin a reward left unspun.
         const query = new URLSearchParams(window.location.search);
         // /record-match?record=1 opens on recording a duel played elsewhere.
+        /* eslint-disable react-hooks/set-state-in-effect -- read once from the URL */
         if (query.get("record")) setAct("record");
         const pendingSpin = query.get("spin");
         if (pendingSpin) {
-            /* eslint-disable react-hooks/set-state-in-effect -- read once from the URL */
             setSpinRewardId(pendingSpin);
             setStage("wheel");
             /* eslint-enable react-hooks/set-state-in-effect */

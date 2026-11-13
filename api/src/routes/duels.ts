@@ -212,7 +212,8 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
             return reply.code(204).send();
         }
         if (team === null || duel.status !== 'active') return reply.code(409).send({ error: 'That duel is not being played' });
-        await app.duels.concede(duel, team);
+        // ?match=1 gives the whole match up, not only this game.
+        await app.duels.concede(duel, team, !!(request.query as { match?: unknown }).match);
         return reply.code(204).send();
     });
 

@@ -153,7 +153,8 @@ export interface DuelHub {
     find(id: ObjectId): Promise<DuelDoc | null>;
     teamOf(duel: DuelDoc, userId: ObjectId | null, guestToken?: string): Team | null;
     stateFor(duel: DuelDoc, team: Team): Promise<DuelServerMessage>;
-    concede(duel: DuelDoc, team: Team): Promise<void>;
+    /** `wholeMatch`: the match is given up with the game (ending a practice match to start another). */
+    concede(duel: DuelDoc, team: Team, wholeMatch?: boolean): Promise<void>;
     /** `after`: where the page was (its last cursor), so a reconnect is shown what it missed. */
     connect(duel: DuelDoc, team: Team, socket: WebSocket, after?: string): void;
     /** Rule check before a duel: are these all cards the engine knows? */
@@ -346,6 +347,8 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         return { ...session.state(team, duel._id.toHexString()), ...(match ? { match } : {}) };
     };
 
+    /** Duels whose surrender gives up the match too (by id), until the game is closed. */
+    const givenUp = new Set<string>();
     const BEATS: Record<RpsHand, RpsHand> = { rock: 'scissors', paper: 'rock', scissors: 'paper' };
     const randomHand = (): RpsHand => (['rock', 'paper', 'scissors'] as const)[randomBytes(1)[0]! % 3]!;
 
@@ -430,6 +433,11 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         if (calledOff) {
             m.over = true;
             m.winner = null;
+        } else if (givenUp.delete(duel._id.toHexString()) && wonSeat !== null) {
+            // The loser gave the whole match up with this game.
+            m.wins[wonSeat]++;
+            m.over = true;
+            m.winner = wonSeat;
         } else {
             if (wonSeat !== null) m.wins[wonSeat]++;
             if (m.wins[0] >= 2 || m.wins[1] >= 2 || m.game >= 3) {
@@ -684,8 +692,9 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             const { session } = await sessionOf(duel);
             return { type: 'state', frames: [], state: stateOf(duel, session, team) };
         },
-        concede(duel, team) {
+        concede(duel, team, wholeMatch) {
             return serial(duel._id.toHexString(), async () => {
+                if (wholeMatch) givenUp.add(duel._id.toHexString());
                 const entry = await sessionOf(duel).catch((error: unknown) => {
                     app.log.error({ err: error, duel: duel._id }, 'duel could not be rebuilt; closing it as conceded');
                     return null;

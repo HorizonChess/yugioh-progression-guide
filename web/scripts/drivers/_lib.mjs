@@ -100,3 +100,20 @@ export function reward(overrides = {}) {
         ...overrides,
     };
 }
+
+/**
+ * A duel against the bot or the rival is a match that opens on its pregame: throws Rock until
+ * rock-paper-scissors is decided, goes first when that's yours to choose, and keeps the deck as it
+ * is when there's side decking, until the board is up.
+ */
+export async function throughPregame(page) {
+    for (let i = 0; i < 80; i++) {
+        if (await page.locator(".df-phases").count()) return;
+        for (const name of ["Rock", "Go first", "Keep the deck as it is"]) {
+            const button = page.getByRole("button", { name, exact: true });
+            if (await button.count()) await button.click({ timeout: 2000 }).catch(() => {});
+        }
+        await page.waitForTimeout(400);
+    }
+    throw new Error("the pregame never finished");
+}

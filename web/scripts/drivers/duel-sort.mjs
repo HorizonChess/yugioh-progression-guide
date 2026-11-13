@@ -4,7 +4,7 @@
 //   npm run test-server -w @ygo/api   (WEB_DIST serves the built web on the same port)
 //   node web/scripts/drivers/duel-sort.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY } from "./_lib.mjs";
+import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 let failures = 0;
@@ -47,6 +47,7 @@ try {
         await page.waitForURL(/duel/, { timeout: 30000 }).catch(async (e) => {
             throw new Error(`no duel: ${(await page.locator(".gd").textContent().catch(() => null)) ?? e.message}`);
         });
+        await throughPregame(page);
 
         // Turns pass (End, and the first card for any question) until Spellbook Organization is in hand.
         const card = page.locator(`[aria-label="Card in hand ${ORGANIZATION}"]`).first();

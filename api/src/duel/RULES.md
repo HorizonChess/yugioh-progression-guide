@@ -73,6 +73,23 @@ before the next one.
 A move still being set up (its zone, its position, its Tributes) can be taken back until anything of
 it shows on the board: the duel is rebuilt from the answers before it. After that it's played.
 
+## Matches: best of 3 (hub.ts; page, `PreGame`)
+
+A duel against the rival or the bot is a game of a match. Solo practice is a single game.
+
+- **Game 1** opens with rock-paper-scissors (a tie is thrown again); its winner chooses to go first
+  or second. The bot throws at random and, winning, goes first.
+- **Games 2 and 3**: both players may side deck, and the loser of the last game chooses who goes
+  first (the rulebook's rule). After a drawn game a coin picks who chooses.
+- **Side decking** moves cards between the parts of the deck registered for the match (main, Extra,
+  side). Each part must end the size it started, and only Extra Deck monsters go in the Extra
+  Deck. It starts from the deck as last played. The bot never side decks.
+- **The match is decided** at two wins, or by the lead after three games (level: a draw, and
+  nothing is booked). Only then is the series booked, once.
+- **Surrender** on the board gives up the game being played. Before a game starts, giving up gives
+  up the match. Calling a duel off calls the whole match off.
+- Each game is a duel document of its own (setup, answers), linked by `match` and `next`.
+
 ## Calling a duel off (server, `callOff`; page, the duel menu)
 
 Against a rival, stopping without a winner takes both players. One asks from the duel menu; the

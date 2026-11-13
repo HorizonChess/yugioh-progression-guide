@@ -8,7 +8,10 @@ import GuideSprite from "@/components/layout/GuideSprite";
 import { useAuth } from "@/context/AuthContext";
 import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets } from "@/lib/api";
-import { acceptDuel, concedeDuel, declineDuel, getDuel, getDuelRecord, guestDuelToken, type DuelSummary } from "@/lib/duel-client";
+import { acceptDuel, carryGuestToken, concedeDuel, declineDuel, duelPath, getDuel, getDuelRecord, guestDuelToken, pregameAct, type DuelSummary } from "@/lib/duel-client";
+import type { DuelPregameView, PregameAction } from "@ygo/shared";
+import PreGame from "@/components/duel/PreGame";
+import { gameConfirm } from "@/components/ui/GameDialog";
 import { ruleLines } from "@/lib/guide/lines";
 import { guide } from "@/lib/guide/store";
 import "@/components/duel/duel-field.css";
@@ -30,6 +33,9 @@ function DuelPageContent() {
     /** The server couldn't rebuild this duel: why, to show and report. */
     const [broken, setBroken] = useState<string | null>(null);
     const [deckId, setDeckId] = useState("");
+    /** Before a game of a match: what's still to be done, and whether a step of mine is on its way. */
+    const [pregame, setPregame] = useState<DuelPregameView | null>(null);
+    const [acting, setActing] = useState(false);
     // A guest's practice duel opens with the token this browser kept. The server can't see it, so
     // the page renders as loading until the browser has looked (no mismatch, no "Sign in" flash).
     const hasToken = useSyncExternalStore(noSubscribe, () => !!id && !!guestDuelToken(id), () => null);
@@ -38,14 +44,15 @@ function DuelPageContent() {
     useEffect(() => {
         if (!id || !allowed) return;
         let live = true;
-        const load = () => getDuel(id).then(({ duel: d, broken: b }) => {
+        const load = () => getDuel(id).then(({ duel: d, broken: b, pregame: p }) => {
             if (!live) return;
             setDuel(d);
             setBroken(b ?? null);
+            setPregame(p ?? null);
         }).catch((e: Error) => live && setError(e.message));
         void load();
-        // While waiting for the rival, look again now and then.
-        const t = setInterval(() => duel?.status === "waiting" && void load(), 5000);
+        // While waiting for the rival (their answer to the challenge, their hand, their deck), look again now and then.
+        const t = setInterval(() => (duel?.status === "waiting" || duel?.status === "pregame") && void load(), duel?.status === "pregame" ? 1500 : 5000);
         return () => {
             live = false;
             clearInterval(t);
@@ -78,7 +85,8 @@ function DuelPageContent() {
     if (hasToken === null && !user) return <Message text="Shuffling the decks…" />;
     if (!allowed) return <Message text="Sign in to duel." onBack={() => router.push("/record-match")} />;
     if (error) return <Message text={error} onBack={() => router.push("/record-match")} />;
-    if (!id || !duel) return <Message text="Shuffling the decks…" />;
+    // (Also between a match's games: the next game's page, while its duel loads.)
+    if (!id || !duel || duel.id !== id) return <Message text="Shuffling the decks…" />;
     if (broken && duel.status === "active") {
         const rival = duel.kind === "rival";
         const end = () => void concedeDuel(id).then(() => router.push("/record-match")).catch((e: Error) => setError(e.message));
@@ -129,13 +137,37 @@ function DuelPageContent() {
             </div>
         );
     }
+    if (duel.status === "pregame" && pregame) {
+        const act = (action: PregameAction) => {
+            setActing(true);
+            pregameAct(id, action).then(({ duel: d, pregame: p }) => {
+                setDuel(d);
+                setPregame(p ?? null);
+            }).catch((e: Error) => setError(e.message)).finally(() => setActing(false));
+        };
+        const giveUp = async () => {
+            const rival = duel.kind === "rival";
+            if (!(await gameConfirm(rival ? <>Give the match up? It counts as a loss for the series.</> : <>End this practice match?</>, { title: "Give up?", confirmLabel: "Give up", cancelLabel: "Keep playing" }))) return;
+            await concedeDuel(id).catch((e: Error) => setError(e.message));
+            if (duel.seriesId) await refresh(duel.seriesId);
+            router.push(rival ? "/rewards" : "/record-match");
+        };
+        return <PreGame view={pregame} busy={acting} onAct={act} onGiveUp={() => void giveUp()} />;
+    }
+    if (duel.status === "pregame") return <Message text="Shuffling the decks…" />;
     if (duel.status === "cancelled") return <Message text="That duel was called off. Nothing was recorded, and a new challenge can be sent." onBack={() => router.push("/record-match")} />;
     if (duel.status === "declined") return <Message text="That challenge was turned down." onBack={() => router.push("/record-match")} />;
 
     return (
         <>
             <DuelScreen
+                key={duel.id}
                 duelId={duel.id}
+                // The match's next game: its page, which opens on side decking.
+                onNext={(next) => {
+                    carryGuestToken(duel.id, next);
+                    router.push(duelPath(next));
+                }}
                 onLeave={async (outcome) => {
                     if (duel.seriesId) await refresh(duel.seriesId);
                     // A duel called off has no reward to go to.

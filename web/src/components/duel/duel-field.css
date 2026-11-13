@@ -657,3 +657,8 @@
 .df-calloff p { margin: 0 0 8px; }
 .df-calloff__row { display: flex; gap: 8px; }
 .df-calloff__row .df-opt { justify-content: center; min-height: 40px; }
+
+/* A match's score on a game's result: You 1 – 0 Rival. */
+.df-result__score { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 6px 0 2px; font: 13px/1 var(--font-heading); color: #c9bc9a; }
+.df-result__score b { font: 700 30px/1 var(--font-techno); color: #f5c542; }
+.df-result__score i { font-style: normal; color: #8b7355; }
