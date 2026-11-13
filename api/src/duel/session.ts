@@ -59,6 +59,8 @@ const LINK_FLAGS = (Q.CODE | Q.POSITION | Q.EQUIP_CARD | Q.TARGET_CARD | Q.COUNT
 /** ocgcore's STATUS_DISABLED: the card's effects are negated. */
 const STATUS_DISABLED = 0x0001;
 type MessageOf<T extends M> = Extract<OcgMessage, { type: T }>;
+/** Messages that start something new: what was sent to the Graveyard before them is no longer "just now". */
+const NEW_MOMENT: ReadonlySet<M> = new Set([M.NEW_TURN, M.NEW_PHASE, M.SUMMONING, M.SPSUMMONING, M.FLIPSUMMONING, M.SET, M.ATTACK, M.CHAINING]);
 
 /** A seeded Fisher-Yates shuffle (mulberry32), so a replay deals the same cards. */
 export function shuffled<T>(list: readonly T[], seed: bigint): T[] {
@@ -261,6 +263,8 @@ export class DuelSession {
     private damageOffered: [Set<string>, Set<string>] = [new Set(), new Set()];
     /** The attack under way (for the question's words): its attacker and target, as uids. */
     private attacking: { team: Team; attacker: string; target?: string } | null = null;
+    /** The monster that last left the field for the Graveyard (for the question's words), until the next play or phase. */
+    private lastSent: { team: Team; code: number } | null = null;
     /** The last summon or Set (for the question's words), until the phase changes. */
     private lastPlay: { team: Team; k: 'summon' | 'set'; code: number; how: 'normal' | 'special' | 'flip'; monster: boolean } | null = null;
     /** For the bot: actions taken this turn, so it can't loop. */
@@ -375,7 +379,7 @@ export class DuelSession {
      * window: an attack declared, the damage step, damage calculation, a summon, a phase) and the
      * cards involved, then the question. "Respond?" after the rival's play, "Activate a card?" otherwise.
      */
-    private askFor(team: Team, timing: number): string {
+    private askFor(team: Team, timing: number, answering = false): string {
         const view = this.view(team);
         const cards = new Map([view.me, view.opp].flatMap((s) => [...s.monsters, ...s.spells, s.field]).filter((c): c is DuelCardView => !!c).map((c) => [c.uid, c]));
         const yours = (t: Team) => (t === team ? 'your' : `${this.setup.names[t]}'s`);
@@ -390,7 +394,11 @@ export class DuelSession {
         const a = this.attacking, play = this.lastPlay, tp = this.turnPlayer;
         const battle = a ? `${card(a.attacker, a.team)} ${a.target ? `battles ${card(a.target, (1 - a.team) as Team)}` : `attacks ${a.team === team ? `${this.setup.names[1 - team]}` : 'you'} directly`}` : '';
         let moment: string, rivals = false;
-        if (a && timing & T.DAMAGE_CAL) moment = `Damage calculation: ${battle}`;
+        const sent = this.lastSent;
+        // A monster just went to the Graveyard and a card of yours answers that: say so (it's no
+        // longer on the field to be named as the attacker or the target).
+        if (answering && sent) moment = `${yours(sent.team)[0]!.toUpperCase()}${yours(sent.team).slice(1)} ${this.engine.name(this.show(sent.code))} was sent to the Graveyard`;
+        else if (a && timing & T.DAMAGE_CAL) moment = `Damage calculation: ${battle}`;
         else if (a && (timing & T.DAMAGE_STEP || this.damageStep)) moment = `Damage step: ${battle}`;
         else if (a && timing & T.ATTACK) {
             const by = card(a.attacker, a.team), at = a.target ? `an attack on ${card(a.target, (1 - a.team) as Team)}` : 'a direct attack';
@@ -632,6 +640,7 @@ export class DuelSession {
     private apply(messages: OcgMessage[]): TeamEvent[] {
         const out: TeamEvent[] = [];
         for (const m of messages) {
+            if (NEW_MOMENT.has(m.type)) this.lastSent = null;
             switch (m.type) {
                 case M.ANNOUNCE_RACE: case M.ANNOUNCE_ATTRIB: case M.ANNOUNCE_CARD: case M.ANNOUNCE_NUMBER:
                     this.announcer = m.player as Team;
@@ -752,6 +761,7 @@ export class DuelSession {
                     // A monster leaving the field for the Graveyard breaks; a spell that just resolved doesn't.
                     if (uidBefore && m.to.location === L.GRAVE && (m.from.location === L.MZONE || !(this.chain.some((c) => c.uid === uidBefore) || this.resolved.has(uidBefore))))
                         out.push({ k: 'destroyed', uid: uidBefore, code: m.card });
+                    if (m.from.location === L.MZONE && m.to.location === L.GRAVE) this.lastSent = { team: m.from.controller as Team, code: m.card };
                     const uid = this.tracker.move(m.from, m.to);
                     out.push({
                         k: 'move', uid, code: m.card, team: (m.to.location ? m.to.controller : m.from.controller) as Team,
@@ -1061,8 +1071,11 @@ export class DuelSession {
                 const top = this.chain[this.chain.length - 1];
                 const fresh = this.damageStep && Number(m.hint_timing) !== 0 ? options.map((o) => `${o.uid}:${o.text ?? ''}`).filter((k) => !this.damageOffered[team].has(k)) : [];
                 fresh.forEach((k) => this.damageOffered[team].add(k));
-                const quiet = !m.forced && (!options.length || (!top && !fresh.length && (this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team)));
-                const ask = !top && !m.forced ? this.askFor(team, Number(m.hint_timing) | Number(m.hint_timing_other)) : null;
+                // A card that answers what just happened (Michizure, when your monster went to the
+                // Graveyard) has only this moment, whoever's turn it is and whoever played last.
+                const answering = m.spe_count > 0 && m.selects.some((c) => this.engine.answersEvents(c.code));
+                const quiet = !m.forced && (!options.length || (!top && !fresh.length && !answering && (this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team)));
+                const ask = !top && !m.forced ? this.askFor(team, Number(m.hint_timing) | Number(m.hint_timing_other), answering) : null;
                 return q({ kind: 'chain', forced: m.forced, options, pass, ...(quiet ? { quiet } : {}), ...(ask ? { ask } : {}) }, (a) => {
                     const id = choice(a);
                     if (id === null) return null;

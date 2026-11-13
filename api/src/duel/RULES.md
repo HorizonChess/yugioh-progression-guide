@@ -40,6 +40,12 @@ respond: when it matters", as Master Duel's *Auto*) a moment is asked about:
   (tap the card), like an attack.
 - **Without a chain, on the rival's turn**: after the rival's play, when the engine flags a card of
   yours as made for that moment (Trap Hole on a summon).
+- **A card that answers what just happened** (Michizure when your monster goes to the Graveyard,
+  Torrential Tribute on a summon): always asked, on either player's turn and whoever played last.
+  That moment is the card's only chance, unlike a card usable at any time. Which cards these are
+  is read from their scripts (`answersEvents` in engine.ts): an activation or Quick Effect that
+  waits for an event. The question names what happened: "Your Celtic Guardian was sent to the
+  Graveyard. Activate a card?"
 - **In a battle's damage step**: once per card per attack, right before damage calculation (Reinforcements).
   The window at the very start of the damage step isn't asked: anything usable then is still usable
   just before damage calculation. A card usable only *during* damage calculation (Injection Fairy

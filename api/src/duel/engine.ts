@@ -54,6 +54,12 @@ export interface Engine {
      * free-timing effects and every one of them is optional ("you can").
      */
     mandatoryInPhase(code: number): boolean;
+    /**
+     * Whether a card can be activated in answer to something happening (Michizure: a monster of
+     * yours sent to the Graveyard; Trap Hole: a summon), as far as its script shows. Such a card
+     * can only be used at that moment, unlike one usable at any time.
+     */
+    answersEvents(code: number): boolean;
     /** A Continuous Trap (it stays on the field once flipped). */
     isContinuousTrap(code: number): boolean;
     /** A token (Sheep Token, Ojama Token): made by an effect, never in a deck. */
@@ -181,6 +187,10 @@ async function build(): Promise<Engine> {
             const timed = effects.filter((e) => /SetCode\(\s*EVENT_(PHASE|FREE_CHAIN)/.test(e));
             const must = (e: string) => /SetCode\(\s*EVENT_PHASE/.test(e) && /SetType\([^)]*(TRIGGER_F|CONTINUOUS)/.test(e);
             return !timed.length || timed.some(must);
+        },
+        answersEvents(code) {
+            const script = engine.readScript(`c${learned.get(code) ?? code}.lua`) ?? '';
+            return script.split(/Effect\.CreateEffect\(/).slice(1).some((e) => /SetType\([^)]*EFFECT_TYPE_(ACTIVATE|QUICK_[OF])/.test(e) && /SetCode\(\s*EVENT_(?!FREE_CHAIN)/.test(e));
         },
         effectKind(code) {
             const script = engine.readScript(`c${learned.get(code) ?? code}.lua`) ?? '';
