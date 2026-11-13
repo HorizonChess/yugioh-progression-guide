@@ -28,7 +28,7 @@ interface StarlightSearchModalProps {
 /**
  * The Starlight Rare wildcard claim — a full-catalog search (unlike the plain
  * wildcard, which is limited to the won pack). A card is eligible iff it has a
- * printing dated BEFORE the won pack (`earliestPrintingDate < sets[wonFromSetIndex]
+ * printing dated up to the won pack, included (`earliestPrintingDate <= sets[wonFromSetIndex]
  * .tcg_date`) — a pure-date gate, so off-timeline cards (e.g. structure-deck
  * classics) are reachable, matching the Starlight rule. Tapping a result opens
  * its close-up for confirmation (a starlight is one-shot); confirming grants it
@@ -86,7 +86,7 @@ export default function StarlightSearchModal({ entry, onChoose, onClose }: Starl
         return () => clearTimeout(t);
     }, [query, gate]);
 
-    // Keep only cards with a printing dated before the won pack (Starlight gate).
+    // Keep only cards with a printing dated up to the won pack, that pack included (Starlight gate).
     const eligible = useMemo(() => {
         if (!gate) return [];
         const { anchorDate, setDates } = gate;
@@ -94,7 +94,7 @@ export default function StarlightSearchModal({ entry, onChoose, onClose }: Starl
             .filter((card) => {
                 const earliest = earliestPrintingDate(card, setDates);
                 if (earliest == null) return false;
-                return anchorDate == null ? true : earliest < anchorDate;
+                return anchorDate == null ? true : earliest <= anchorDate;
             })
             .slice(0, 40);
     }, [results, gate]);
@@ -108,7 +108,7 @@ export default function StarlightSearchModal({ entry, onChoose, onClose }: Starl
         for (const printing of card.card_sets ?? []) {
             const date = setDates.get(printing.set_name);
             if (date == null) continue;
-            if (anchorDate != null && date >= anchorDate) continue;
+            if (anchorDate != null && date > anchorDate) continue;
             if (best == null || date < best.date) best = { date, code: printing.set_code };
         }
         return best?.code ?? "STARLIGHT";
@@ -135,7 +135,7 @@ export default function StarlightSearchModal({ entry, onChoose, onClose }: Starl
             prizeId={entry.prizeId}
             kicker={`Won on the ${entry.wonFromPackName} wheel`}
             title={prizeLabel}
-            lead={<>Any card released before <b>{entry.wonFromPackName}</b>, as a Starlight Rare.</>}
+            lead={<>Any card released up to <b>{entry.wonFromPackName}</b> (its own cards included), as a Starlight Rare.</>}
             tools={<RiteSearch value={query} onChange={setQuery} placeholder={gate ? "Search a card name" : "Loading the catalog…"} disabled={!gate} />}
             onClose={onClose}
         >
@@ -146,7 +146,7 @@ export default function StarlightSearchModal({ entry, onChoose, onClose }: Starl
                     items={items}
                     flat
                     onOpen={(item) => setPending(item.card)}
-                    empty={<RiteNote>{query.trim().length < 2 ? "Type at least 2 letters of a card's name." : "No card by that name was out before this pack."}</RiteNote>}
+                    empty={<RiteNote>{query.trim().length < 2 ? "Type at least 2 letters of a card's name." : "No card by that name was out by this pack."}</RiteNote>}
                 />
             )}
 

@@ -161,10 +161,18 @@ describe('reward claims', () => {
         expect((await claim({ cardId: 100 })).statusCode).toBe(409);
     });
 
-    it('grants a starlight only for cards released before the won set', async () => {
+    it('grants a starlight for cards released up to the won set, that set included', async () => {
         const r = await setup();
-        expect((await (await r.give('wildcard-starlight'))({ cardId: 100 })).statusCode).toBe(400);
-        expect((await (await r.give('wildcard-starlight', MRD.set_name))({ cardId: 100 })).statusCode).toBe(201);
+        // A card first printed in Metal Raiders, the set after the one played.
+        await cardsCollection(app.db).insertOne({
+            _id: 999, id: 999, name: 'Later Card', type: 'Normal Monster', frameType: 'normal', desc: '', race: 'Dragon',
+            card_sets: [{ set_name: MRD.set_name, set_code: 'MRD-EN001', set_rarity: 'Common', set_rarity_code: '', set_price: '0' }], card_images: [],
+        } as never);
+        // Won on Legend of Blue Eyes: not a card from a later set, but one of its own cards.
+        expect((await (await r.give('wildcard-starlight'))({ cardId: 999 })).statusCode).toBe(400);
+        expect((await (await r.give('wildcard-starlight'))({ cardId: 100 })).statusCode).toBe(201);
+        // Won on Metal Raiders: its cards too.
+        expect((await (await r.give('wildcard-starlight', MRD.set_name))({ cardId: 999 })).statusCode).toBe(201);
     });
 
     it('bans any card and unbans only banned ones', async () => {

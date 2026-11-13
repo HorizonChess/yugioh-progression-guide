@@ -25,12 +25,12 @@ export function wildcardGrant(card: Card, set: CardSet, prizeId: PrizeId): Grant
     return rarity ? { setCode: set.set_code, rarity } : null;
 }
 
-/** A starlight grants any card printed before the won set, keyed by its earliest such printing. */
+/** A starlight grants any card printed up to and including the won set, keyed by its earliest such printing. */
 export function starlightGrant(card: Card, anchorDate: string, setDates: ReadonlyMap<string, string>): Grant | null {
     let best: { date: string; code: string } | null = null;
     for (const p of card.card_sets ?? []) {
         const date = setDates.get(p.set_name);
-        if (date !== undefined && date < anchorDate && (!best || date < best.date)) best = { date, code: p.set_code };
+        if (date !== undefined && date <= anchorDate && (!best || date < best.date)) best = { date, code: p.set_code };
     }
     return best ? { setCode: best.code, rarity: 'Starlight Rare' } : null;
 }
