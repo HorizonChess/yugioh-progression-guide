@@ -465,6 +465,10 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 note: prefs.chain === "auto" ? "Only when your rival plays something, or a card of yours is made for the moment" : "Stops at every point where a card of yours could be activated",
             })}
             {isPhone && option("What happened", () => setDuelMenu("log"), { note: "The duel so far, move by move" })}
+            {/* Against a rival, stopping without a winner takes both players. */}
+            {!state.rival.bot && (state.callOff === "asked"
+                ? option("Take back your request", () => (setDuelMenu("closed"), duel.callOff(false)), { note: `You asked to call the duel off; ${state.rival.name} hasn't answered` })
+                : option("Call the duel off", () => (setDuelMenu("closed"), duel.callOff(true)), { note: `Nobody wins and nothing is recorded, if ${state.rival.name} agrees` }))}
             {option("Surrender", () => setDuelMenu("surrender"))}
             {option("Back to the duel", () => setDuelMenu("closed"), { quiet: true })}
         </div>, { text: "Dueling in the app is experimental: if something looks wrong, tell us what happened.", onSwipe: () => setDuelMenu("closed") });
@@ -660,14 +664,28 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             </AnimatePresence>
             {!duel.connected && !result && <div className="df-offline">Reconnecting…</div>}
             {state.retry && prompt && <div className="df-retry">That isn&apos;t allowed right now. Try another choice.</div>}
+            {state.callOff && !result && (
+                <div className="df-calloff" role="status">
+                    {state.callOff === "asking" ? <>
+                        <p><b>{state.rival.name}</b> asks to call the duel off. Nobody wins and nothing is recorded.</p>
+                        <div className="df-calloff__row">
+                            <button type="button" className="df-opt" onClick={() => duel.callOff(true)}>Call it off</button>
+                            <button type="button" className="df-opt df-opt--quiet" onClick={() => duel.callOff(false)}>Keep dueling</button>
+                        </div>
+                    </> : <>
+                        <p>You asked to call the duel off. Waiting for {state.rival.name}…</p>
+                        <div className="df-calloff__row"><button type="button" className="df-opt df-opt--quiet" onClick={() => duel.callOff(false)}>Take it back</button></div>
+                    </>}
+                </div>
+            )}
             {result && (
                 <motion.div className="df-result" {...STEADY} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <div className={`df-result__card df-result__card--${result.winner ?? "draw"}`}>
-                        <h2>{result.winner === "me" ? "You win!" : result.winner === "opp" ? `${view.opp.name} wins` : "A draw"}</h2>
+                        <h2>{result.calledOff ? "Duel called off" : result.winner === "me" ? "You win!" : result.winner === "opp" ? `${view.opp.name} wins` : "A draw"}</h2>
                         <p>{result.reason}</p>
-                        {!state.rival.bot && <p className="df-result__note">The result is booked on your series.</p>}
-                        <button type="button" className="df-opt" onClick={() => onLeave(result.winner === "me" ? "win" : result.winner === "opp" ? "loss" : "draw")}>
-                            {state.rival.bot ? "Back to the board" : result.winner === "me" ? "To your reward" : "To your pity packs"}
+                        {!state.rival.bot && <p className="df-result__note">{result.calledOff ? "Nothing was recorded. You can challenge each other again." : "The result is booked on your series."}</p>}
+                        <button type="button" className="df-opt" onClick={() => onLeave(result.calledOff ? null : result.winner === "me" ? "win" : result.winner === "opp" ? "loss" : "draw")}>
+                            {state.rival.bot || result.calledOff ? "Back to the board" : result.winner === "me" ? "To your reward" : "To your pity packs"}
                         </button>
                     </div>
                 </motion.div>

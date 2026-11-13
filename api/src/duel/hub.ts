@@ -34,7 +34,10 @@ export interface DuelDoc {
     setIndex: number;
     setName: string;
     kind: 'practice' | 'rival';
-    status: 'waiting' | 'active' | 'finished' | 'declined';
+    /** `cancelled`: both players agreed to call it off; nothing was recorded. */
+    status: 'waiting' | 'active' | 'finished' | 'declined' | 'cancelled';
+    /** The team that asked to call the duel off, while the other hasn't answered. */
+    callOffBy?: Team;
     /** Set while the duel is open, so a series has one open rival duel (and a player one practice duel). */
     openKey?: string;
     /** By team: team 0 goes first. While waiting, only the challenger (team 0 for now) is known. */
@@ -157,8 +160,9 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         await unknownCards(duel.setup!.decks.flatMap((d) => [...d.main, ...d.extra]));
         // The answers as they're stored now: the caller's copy of the duel may be from when its
         // page connected, many moves ago.
-        const latest = await duels().findOne({ _id: duel._id }, { projection: { answers: 1 } });
+        const latest = await duels().findOne({ _id: duel._id }, { projection: { answers: 1, callOffBy: 1 } });
         if (latest) duel.answers = latest.answers;
+        const callOffBy = latest?.callOffBy ?? null;
         const stored = duel.answers.map(decode);
         let session = new DuelSession(engine, duel.setup!);
         try {
@@ -182,6 +186,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         // Only what's in storage counts as stored. Answers the rebuild gave by itself after the last
         // stored one (the passes before a new duel's first move, the bot's next move) are saved with
         // the next step: counting them as stored lost them, and the duel couldn't be rebuilt again.
+        session.callOffBy = callOffBy;
         const entry = { session, stored: duel.answers.length, touched: Date.now() };
         live.set(id, entry);
         return entry;
@@ -209,12 +214,16 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             { _id: duel._id },
             {
                 ...(fresh.length ? { $push: { answers: { $each: fresh } } } : {}),
-                $set: { updatedAt: new Date(), ...(finished ? { status: 'finished' as const, winner: session.result!.winner, reason: session.result!.reason } : {}) },
-                ...(finished ? { $unset: { openKey: '' as const } } : {}),
+                $set: {
+                    updatedAt: new Date(),
+                    ...(finished ? { status: session.result!.calledOff ? ('cancelled' as const) : ('finished' as const), winner: session.result!.winner, reason: session.result!.reason } : {}),
+                    ...(!finished && session.callOffBy !== null ? { callOffBy: session.callOffBy } : {}),
+                },
+                ...(finished ? { $unset: { openKey: '' as const, callOffBy: '' as const } } : session.callOffBy === null ? { $unset: { callOffBy: '' as const } } : {}),
             },
         );
         // A finished rival duel is booked on the series before anyone is told, so their next screen shows it.
-        if (finished && duel.kind === 'rival') await recordResult(duel, session.result!.winner);
+        if (finished && duel.kind === 'rival' && !session.result!.calledOff) await recordResult(duel, session.result!.winner);
         for (const s of sockets.get(id) ?? []) send(s.socket, { type: 'state', frames: session.takeFrames(s.team), state: session.state(s.team, id), cursor: session.cursor(s.team) });
         if (finished) live.delete(id);
     }
@@ -470,7 +479,15 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                         await takeBack(duel, team, message.seq);
                         return;
                     }
-                    if (message.type === 'concede') session.concede(team);
+                    if (message.type === 'call-off') {
+                        const outcome = session.callOff(team, message.agree);
+                        if (!outcome) return;
+                        // The rival may not be looking: the bell tells them, and the one who asked when it's settled.
+                        const other = duel.players[1 - team], me = duel.players[team]!;
+                        if (other?.userId && duel.seriesId && outcome !== 'cleared') {
+                            app.notify(other.userId, 'duel-call-off', duel.seriesId, { from: me.name, setName: duel.setName, duelId: id, done: outcome === 'done' });
+                        }
+                    } else if (message.type === 'concede') session.concede(team);
                     else if (!session.answer(team, message.seq, message.answer)) {
                         // Not this player's turn to answer, or an answer that doesn't fit: resend the truth.
                         send(socket, { type: 'state', frames: [], state: session.state(team, id), cursor: session.cursor(team) });

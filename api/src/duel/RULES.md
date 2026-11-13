@@ -73,6 +73,14 @@ before the next one.
 A move still being set up (its zone, its position, its Tributes) can be taken back until anything of
 it shows on the board: the duel is rebuilt from the answers before it. After that it's played.
 
+## Calling a duel off (server, `callOff`; page, the duel menu)
+
+Against a rival, stopping without a winner takes both players. One asks from the duel menu; the
+other is asked on the board (and in the bell, if they aren't looking) and agrees or keeps dueling.
+The one who asked can take it back. Agreed: the duel ends with no winner, nothing is recorded on
+the series, and either can challenge again. The request is stored with the duel. Practice needs
+no one's leave: Surrender ends it, and records nothing.
+
 ## Reconnecting (server, `framesSince`)
 
 A page that lost its connection (a phone put away mid-turn) is shown what it missed when it comes

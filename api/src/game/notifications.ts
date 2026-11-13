@@ -20,6 +20,7 @@ export type NotificationType =
     | 'duel-challenge'
     | 'duel-accepted'
     | 'duel-declined'
+    | 'duel-call-off'
     | 'duel-result';
 
 /** Display-ready details: who did it, in which series, to which card. */

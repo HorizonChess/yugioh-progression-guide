@@ -27,6 +27,7 @@ export type NotificationType =
     | "duel-challenge"
     | "duel-accepted"
     | "duel-declined"
+    | "duel-call-off"
     | "duel-result";
 
 export interface AppNotification {
@@ -128,6 +129,8 @@ export function describeNotification({ type, payload: p }: AppNotification): str
             return `${p.from} accepted your challenge on ${p.setName}. Your duel is on!`;
         case "duel-declined":
             return `Your challenge on ${p.setName} was declined.`;
+        case "duel-call-off":
+            return p.done ? `Your duel with ${p.from} on ${p.setName} was called off. Nothing was recorded.` : `${p.from} asks to call off your duel on ${p.setName}. Open it to answer.`;
         case "duel-result":
             return `You ${p.youWon ? "beat" : "lost to"} ${p.from} on ${p.setName}. It's on the series.`;
     }
