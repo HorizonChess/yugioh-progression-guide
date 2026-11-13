@@ -78,7 +78,7 @@ export function PhoneBoard({ view, marks, onCard, onPile, phaseBar, overlay }: B
         const lock = view[side].locked;
         const monsters = r.monsters.map((c, i) => <Zone key={`m${i}`} card={c} className="df-zone--monster" zone={zoneKey(side, "monster", seqAt(side, i))} locked={!!lock?.monsters[seqAt(side, i)]} marks={marks} side={side} onTap={(x) => onCard(x, side, "monster")} />);
         const spells = r.spells.map((c, i) => <Zone key={`s${i}`} card={c} className="df-zone--spell" zone={zoneKey(side, "spell", seqAt(side, i))} locked={!!lock?.spells[seqAt(side, i)]} marks={marks} side={side} onTap={(x) => onCard(x, side, "spell")} />);
-        return <div className={`df-mat df-mat--${side}`}>{side === "opp" ? <>{spells}{monsters}</> : <>{monsters}{spells}</>}</div>;
+        return <div className={`df-mat df-mat--${side} ${view.turnPlayer === side ? "is-turn" : ""}`}>{side === "opp" ? <>{spells}{monsters}</> : <>{monsters}{spells}</>}</div>;
     };
     return (
         <div className="df df--phone">
@@ -116,7 +116,7 @@ export function DesktopBoard({ view, marks, onCard, onPile, onHover, phaseBar, o
         const extra = <Pile key="extra" label="Extra" count={s.extra} back onTap={side === "me" ? () => onPile(side, "extra") : undefined} />;
         const monsterRow = side === "opp" ? [gy, ...r.monsters.map((c, i) => zone(c, i, "m")), field] : [field, ...r.monsters.map((c, i) => zone(c, i, "m")), gy];
         const spellRow = side === "opp" ? [deck, ...r.spells.map((c, i) => zone(c, i, "s")), extra] : [extra, ...r.spells.map((c, i) => zone(c, i, "s")), deck];
-        return <div className={`df-mat df-mat--${side}`}>{side === "opp" ? <>{spellRow}{monsterRow}</> : <>{monsterRow}{spellRow}</>}</div>;
+        return <div className={`df-mat df-mat--${side} ${view.turnPlayer === side ? "is-turn" : ""}`}>{side === "opp" ? <>{spellRow}{monsterRow}</> : <>{monsterRow}{spellRow}</>}</div>;
     };
     const side = (s: Side) => (
         <div className={`df-side-block df-side-block--${s}`}>
