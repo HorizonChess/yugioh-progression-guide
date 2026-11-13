@@ -48,6 +48,12 @@ export interface Engine {
      * a monster's ATK/DEF or equips it, `wipe` destroys or removes monsters on both sides at once.
      */
     effectKind(code: number): 'buff' | 'wipe' | 'other';
+    /**
+     * Whether a card's script holds an effect that must happen in a phase (an upkeep, "during each
+     * Standby Phase: ..."), as far as its script shows. False only when the script has phase or
+     * free-timing effects and every one of them is optional ("you can").
+     */
+    mandatoryInPhase(code: number): boolean;
     /** A Continuous Trap (it stays on the field once flipped). */
     isContinuousTrap(code: number): boolean;
     /** A token (Sheep Token, Ojama Token): made by an effect, never in a deck. */
@@ -166,6 +172,16 @@ async function build(): Promise<Engine> {
         },
         baseAttack: (code) => row(code)?.atk ?? 0,
         level: (code) => row(code)?.level ?? 0,
+        mandatoryInPhase(code) {
+            const script = engine.readScript(`c${learned.get(code) ?? code}.lua`);
+            // Effects a library registers (a Spirit monster's return to the hand) aren't in the card's own script.
+            if (!script || /Spirit\.|aux\.\w*(Maintenance|Spirit)/.test(script)) return true;
+            // One chunk per effect the script creates: its type and the event it waits for.
+            const effects = script.split(/Effect\.CreateEffect\(/).slice(1);
+            const timed = effects.filter((e) => /SetCode\(\s*EVENT_(PHASE|FREE_CHAIN)/.test(e));
+            const must = (e: string) => /SetCode\(\s*EVENT_PHASE/.test(e) && /SetType\([^)]*(TRIGGER_F|CONTINUOUS)/.test(e);
+            return !timed.length || timed.some(must);
+        },
         effectKind(code) {
             const script = engine.readScript(`c${learned.get(code) ?? code}.lua`) ?? '';
             const harms = /CATEGORY_(DESTROY|REMOVE|TOGRAVE|TOHAND|TODECK|DISABLE|NEGATE|CONTROL|DAMAGE)/.test(script);

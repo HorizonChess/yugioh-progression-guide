@@ -1034,10 +1034,16 @@ export class DuelSession {
                 });
             }
             case M.SELECT_CHAIN: {
+                // A forced list at a phase mixes what must happen (an upkeep, a mandatory trigger) with
+                // what could be activated then: a Set or hand card is always the latter, and so is a
+                // face-up card whose script has only optional effects for a phase. If that leaves
+                // nothing, the list is taken as the engine gave it: all of it must happen.
+                const optional = m.selects.map((c) => c.location === L.HAND || (FIELD_LOCATIONS.has(c.location) && !faceUp(this.positionOf(c))) || !this.engine.mandatoryInPhase(c.code));
+                const mixed = m.forced && optional.some(Boolean) && !optional.every(Boolean);
                 const options = m.selects.map((c, i) => {
                     const r = this.ref(c, i, team);
                     const text = describe(c.description);
-                    return { id: i, uid: r.uid, code: this.show(c.code), where: r.where, ...(text ? { text } : {}) };
+                    return { id: i, uid: r.uid, code: this.show(c.code), where: r.where, ...(text ? { text } : {}), ...(m.forced && !(mixed && optional[i]) ? { must: true } : {}) };
                 });
                 const pass = m.forced ? null : 1 << 20;
                 // One question per moment, listing every card you can legally use then; none if there's
