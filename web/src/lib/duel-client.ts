@@ -14,7 +14,7 @@ export interface DuelSummary {
     seriesId: string | null;
     guest?: boolean;
     kind: "practice" | "rival";
-    status: "waiting" | "active" | "finished" | "declined";
+    status: "waiting" | "active" | "finished" | "declined" | "cancelled";
     setName: string;
     mode: DuelModeId;
     challenger: string;
@@ -75,6 +75,8 @@ export const duelPath = (duelId: string) => `/duel/?id=${duelId}`;
 export interface DuelConnection {
     answer(seq: number, answer: DuelAnswer): void;
     concede(): void;
+    /** Ask to call the duel off (or agree to the rival's asking); false withdraws or refuses. */
+    callOff(agree: boolean): void;
     /** Take back the move being set up (when the question offers it). */
     back(seq: number): void;
     close(): void;
@@ -122,6 +124,7 @@ export function connectDuel(duelId: string, onMessage: (m: DuelServerMessage) =>
     return {
         answer: (seq, answer) => send({ type: "answer", seq, answer }),
         concede: () => send({ type: "concede" }),
+        callOff: (agree) => send({ type: "call-off", agree }),
         back: (seq) => send({ type: "back", seq }),
         close() {
             stopped = true;

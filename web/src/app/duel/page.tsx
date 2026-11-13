@@ -129,15 +129,17 @@ function DuelPageContent() {
             </div>
         );
     }
+    if (duel.status === "cancelled") return <Message text="That duel was called off. Nothing was recorded, and a new challenge can be sent." onBack={() => router.push("/record-match")} />;
     if (duel.status === "declined") return <Message text="That challenge was turned down." onBack={() => router.push("/record-match")} />;
 
     return (
         <>
             <DuelScreen
                 duelId={duel.id}
-                onLeave={async () => {
+                onLeave={async (outcome) => {
                     if (duel.seriesId) await refresh(duel.seriesId);
-                    router.push(duel.kind === "practice" ? "/record-match" : "/rewards");
+                    // A duel called off has no reward to go to.
+                    router.push(duel.kind === "practice" || outcome === null ? "/record-match" : "/rewards");
                 }}
             />
             {series && <GuideSprite />}

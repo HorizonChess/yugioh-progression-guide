@@ -220,7 +220,9 @@ interface Question {
 export class DuelSession {
     readonly answers: OcgResponse[] = [];
     seq = 0;
-    result: { winner: Team | null; reason: string } | null = null;
+    result: { winner: Team | null; reason: string; calledOff?: boolean } | null = null;
+    /** Who has asked to call the duel off, while the other hasn't answered. */
+    callOffBy: Team | null = null;
     private handle: OcgDuelHandle | null = null;
     private tracker = new Tracker();
     private question: Question | null = null;
@@ -474,6 +476,31 @@ export class DuelSession {
         return this.answers.slice(0, b.answers);
     }
 
+    /**
+     * Calling the duel off, which takes both players: `agree` asks (or accepts the rival's asking),
+     * otherwise the request is withdrawn or refused. A bot agrees at once. Returns what came of it.
+     */
+    callOff(team: Team, agree: boolean): 'asked' | 'cleared' | 'done' | null {
+        if (this.result) return null;
+        const rival = (1 - team) as Team;
+        if (!agree) {
+            if (this.callOffBy === null) return null;
+            this.callOffBy = null;
+            return 'cleared';
+        }
+        if (this.callOffBy !== rival && !this.setup.bots[rival]) {
+            if (this.callOffBy === team) return null;
+            this.callOffBy = team;
+            return 'asked';
+        }
+        this.callOffBy = null;
+        this.result = { winner: null, reason: 'Both players agreed to call the duel off', calledOff: true };
+        this.question = null;
+        for (const t of [0, 1] as const) this.pushFrame([{ k: 'win', side: null, reason: this.result.reason }], t);
+        this.destroy();
+        return 'done';
+    }
+
     concede(team: Team): void {
         if (this.result) return;
         this.result = { winner: (1 - team) as Team, reason: `${this.setup.names[team]} surrendered` };
@@ -501,7 +528,8 @@ export class DuelSession {
             view: this.view(team),
             prompt: mine && !this.result ? (this.backAnswers(team) ? ({ ...this.question!.prompt, back: true } as DuelPrompt) : this.question!.prompt) : null,
             ...(mine && this.retry ? { retry: true } : {}),
-            result: this.result ? { winner: this.result.winner === null ? null : this.result.winner === team ? 'me' : 'opp', reason: this.result.reason } : null,
+            result: this.result ? { winner: this.result.winner === null ? null : this.result.winner === team ? 'me' : 'opp', reason: this.result.reason, ...(this.result.calledOff ? { calledOff: true } : {}) } : null,
+            ...(this.callOffBy !== null && !this.result ? { callOff: this.callOffBy === team ? ('asked' as const) : ('asking' as const) } : {}),
         };
     }
 

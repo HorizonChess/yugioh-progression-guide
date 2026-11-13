@@ -457,6 +457,7 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
     }, [duelId]);
 
     const concede = useCallback(() => conn.current?.concede(), []);
+    const callOff = useCallback((agree: boolean) => conn.current?.callOff(agree), []);
 
     /** Takes back the move being set up: like an answer, the question stays (inert) until the reply. */
     const back = useCallback(() => {
@@ -482,6 +483,7 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         effects,
         answer,
         concede,
+        callOff,
         back,
     };
 }

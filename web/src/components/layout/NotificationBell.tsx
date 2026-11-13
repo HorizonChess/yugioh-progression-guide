@@ -42,7 +42,7 @@ export default function NotificationBell() {
         } catch (error) {
             return alertRepoError(error);
         }
-        if ((n.type === "duel-challenge" || n.type === "duel-accepted") && typeof n.payload.duelId === "string") return router.push(duelPath(n.payload.duelId));
+        if ((n.type === "duel-challenge" || n.type === "duel-accepted" || (n.type === "duel-call-off" && !n.payload.done)) && typeof n.payload.duelId === "string") return router.push(duelPath(n.payload.duelId));
         router.push(n.type === "report" ? "/record-match" : n.type === "report-confirmed" || n.type === "duel-result" ? "/rewards" : "/timeline");
     };
 

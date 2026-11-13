@@ -320,4 +320,71 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(series!.currentSetName).toBe(TIMELINE[1]);
         expect((await yami.call('GET', '/api/notifications')).json().notifications[0]).toMatchObject({ type: 'duel-result' });
     });
+
+    it('calls a rival duel off only when both players agree: nothing is recorded, and a new challenge can be sent', async () => {
+        const yami = await player('Yami');
+        const kaiba = await player('Kaiba');
+        const id = (await yami.call('POST', '/api/series', { name: 'Battle City', mode: 'duo', startSetIndex: 0, packsPerSet: 12 })).json().series.id;
+        const { code } = (await yami.call('POST', `/api/series/${id}/invites`)).json();
+        await kaiba.call('POST', '/api/invites/accept', { code });
+        for (const userId of [await withDeck(yami, id), await withDeck(kaiba, id)]) {
+            await packSessions(app.db).insertOne({ _id: new ObjectId(), seriesId: new ObjectId(id), userId, setIndex: 0, setName: TIMELINE[0]!, source: 'set', packs: [], flipped: [], stage: 'saved', active: true, createdAt: new Date(), updatedAt: new Date() } as never);
+        }
+        const duel = (await yami.call('POST', `/api/series/${id}/duels`, { deckId: 'main', against: 'rival' })).json().duel;
+        await kaiba.call('POST', `/api/duels/${duel.id}/accept`, { deckId: 'main' });
+
+        // Each player's socket, and the next state it's sent that fits.
+        const open = async (p: Player) => {
+            const socket = await app.injectWS(`/api/duels/${duel.id}/live`, { headers: { cookie: p.cookie }, socket: { remoteAddress: '127.0.0.1' } } as never);
+            const seen: DuelServerMessage['state'][] = [];
+            const waiting: { fits: (s: DuelServerMessage['state']) => boolean; done: (s: DuelServerMessage['state']) => void }[] = [];
+            socket.on('message', (raw: Buffer) => {
+                const { state } = JSON.parse(raw.toString()) as DuelServerMessage;
+                seen.push(state);
+                for (const w of [...waiting]) if (w.fits(state)) { waiting.splice(waiting.indexOf(w), 1); w.done(state); }
+            });
+            const next = (fits: (s: DuelServerMessage['state']) => boolean) => new Promise<DuelServerMessage['state']>((done, fail) => {
+                const hit = seen.find(fits);
+                if (hit) return done(hit);
+                waiting.push({ fits, done });
+                setTimeout(() => fail(new Error(`${p.name}: no such state`)), 10_000);
+            });
+            return { socket, next, forget: () => seen.splice(0) };
+        };
+        const [y, k] = [await open(yami), await open(kaiba)];
+        await Promise.all([y.next(() => true), k.next(() => true)]);
+
+        // Yami asks: Kaiba is asked, and told in the bell. Kaiba refuses: the duel goes on.
+        y.socket.send(JSON.stringify({ type: 'call-off', agree: true }));
+        expect((await k.next((s) => s.callOff === 'asking')).result).toBeNull();
+        await y.next((s) => s.callOff === 'asked');
+        await app.settleBackground();
+        expect((await kaiba.call('GET', '/api/notifications')).json().notifications[0]).toMatchObject({ type: 'duel-call-off', payload: { from: 'Yami', duelId: duel.id, done: false } });
+        // It's kept with the duel, for a page that looks later.
+        expect((await kaiba.call('GET', `/api/duels/${duel.id}`)).json().state.callOff).toBe('asking');
+        y.forget(); k.forget();
+        k.socket.send(JSON.stringify({ type: 'call-off', agree: false }));
+        expect((await y.next((s) => s.callOff === undefined)).result).toBeNull();
+        expect((await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) }))!.status).toBe('active');
+
+        // Asked again and agreed to: over, with no winner.
+        y.forget(); k.forget();
+        y.socket.send(JSON.stringify({ type: 'call-off', agree: true }));
+        await k.next((s) => s.callOff === 'asking');
+        k.socket.send(JSON.stringify({ type: 'call-off', agree: true }));
+        const [endY, endK] = await Promise.all([y.next((s) => !!s.result), k.next((s) => !!s.result)]);
+        expect(endY.result).toMatchObject({ winner: null, calledOff: true });
+        expect(endK.result).toMatchObject({ winner: null, calledOff: true });
+        y.socket.terminate(); k.socket.terminate();
+
+        await app.settleBackground();
+        const stored = await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) });
+        expect(stored).toMatchObject({ status: 'cancelled', winner: null });
+        expect(stored!.openKey).toBeUndefined();
+        const series = await seriesCollection(app.db).findOne({ _id: new ObjectId(id) });
+        expect(series!.matchHistory).toEqual([]);
+        expect(series!.currentSetName).toBe(TIMELINE[0]);
+        // They can duel again.
+        expect((await kaiba.call('POST', `/api/series/${id}/duels`, { deckId: 'main', against: 'rival' })).statusCode).toBe(201);
+    });
 });

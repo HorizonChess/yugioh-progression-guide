@@ -226,13 +226,21 @@ export interface DuelState {
     prompt: DuelPrompt | null;
     /** Why the last answer was refused (the engine said it isn't allowed). */
     retry?: boolean;
-    result: { winner: Side | null; reason: string } | null;
+    /** `calledOff`: both players agreed to stop; nobody won and nothing is recorded. */
+    result: { winner: Side | null; reason: string; calledOff?: boolean } | null;
+    /**
+     * Calling the duel off needs both players: `asked` when you've asked and your rival hasn't
+     * answered, `asking` when your rival asks you.
+     */
+    callOff?: 'asked' | 'asking';
 }
 
 /** Client → server over the duel socket. */
 export const DuelClientMessageSchema = z.discriminatedUnion('type', [
     z.strictObject({ type: z.literal('answer'), seq: z.number().int().min(0), answer: DuelAnswerSchema }),
     z.strictObject({ type: z.literal('concede') }),
+    /** Call the duel off: `agree` asks for it (or accepts the rival's asking); false withdraws or refuses. */
+    z.strictObject({ type: z.literal('call-off'), agree: z.boolean() }),
     /** Take back the move being set up (its zone, position or Tributes): the prompt says when you can. */
     z.strictObject({ type: z.literal('back'), seq: z.number().int().min(0) }),
 ]);
