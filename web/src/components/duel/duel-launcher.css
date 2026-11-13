@@ -35,8 +35,12 @@
 .dl-slab:hover:not(:disabled) svg { color: #ffe08a; filter: drop-shadow(0 1px 0 #000) drop-shadow(0 0 6px rgba(255, 200, 90, 0.85)); }
 .dl-slab:active:not(:disabled), .dl-btn:active:not(:disabled) { transform: translateY(1px) scale(0.985); }
 .dl-slab:disabled, .dl-btn:disabled { opacity: 0.5; cursor: default; filter: grayscale(0.6); }
-/* the duel that counts: the glyph is lit gold */
-.dl-slab--main svg { color: #ffe08a; }
+/* the main way to play: a wide slab on a row of its own, glyph lit gold, with a warm glow under it */
+.dl-slabs { flex-wrap: wrap; }
+.dl-slab--main { flex: 1 1 100%; max-width: none; flex-direction: row; justify-content: center; gap: 12px; padding: 12px 16px; box-shadow: inset 0 2px 0 rgba(255, 246, 228, 0.5), inset 0 -3px 4px rgba(0, 0, 0, 0.45), 0 0 0 2px #6b4c18, 0 0 0 3.5px #ffd76a, 0 0 0 5px #3b2a10, 0 0 22px rgba(255, 200, 90, 0.45), 0 7px 12px rgba(0, 0, 0, 0.55); }
+.dl-slab--main svg { color: #ffe08a; width: 46px; }
+.dl-slab--main span { font-size: 17px; }
+.dl-slab--main small { flex-basis: auto; }
 .dl-btn { min-height: 44px; padding: 8px 14px; font: 800 13px/1.2 var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; text-shadow: var(--rm-ink-shadow, none); }
 .dl-btn--main { color: #2a1c05; text-shadow: 0 1px 0 rgba(255, 240, 190, 0.6); background: linear-gradient(#f3d98a, #c99a3a); }
 .dl-btn--quiet { background: transparent; box-shadow: inset 0 0 0 1px rgba(243, 231, 199, 0.45); }
@@ -55,3 +59,6 @@
     font: 9px/1.5 var(--font-techno); letter-spacing: 0.1em; text-transform: uppercase;
     color: #f5c542; background: rgba(10, 7, 4, 0.65); border: 1px solid rgba(212, 175, 55, 0.5);
 }
+
+/* The link to recording a duel played elsewhere can wrap: give its lines room. */
+.dl .rm-back, .rm-act--choose .rm-back { line-height: 1.6; }

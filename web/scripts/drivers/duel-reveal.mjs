@@ -34,7 +34,7 @@ try {
     let played = false, words = "";
     for (let attempt = 0; attempt < 5 && !played && !words; attempt++) {
         await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-        await page.getByRole("button", { name: /Duel in the app/i }).click();
+        // (Playing here is what the board opens on.)
         // A duel from an earlier attempt may still be open: end it first.
         const old = page.getByRole("button", { name: "End it, start a new one" });
         const practice = page.getByRole("button", { name: "Practice against the bot" });

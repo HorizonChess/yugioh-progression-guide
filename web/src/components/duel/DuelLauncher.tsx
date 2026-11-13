@@ -94,10 +94,21 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
         <p className="dl-note">Build a deck of 40 to 60 cards in the deck builder first.</p>
     );
 
+    // Practice is always there (one at a time), also while your challenge waits for the rival.
+    const practiceSlabs = !practice && (
+        <>
+            <button type="button" className={`dl-slab ${duo ? "" : "dl-slab--main"}`} disabled={!deckId || busy} onClick={() => practise("bot")} aria-label="Practice against the bot">
+                <BotGlyph /><span>Duel the bot</span><small>Practice</small>
+            </button>
+            <button type="button" className="dl-slab" disabled={!deckId || busy} onClick={() => practise("solo")} aria-label="Solo: test your deck">
+                <HandGlyph /><span>Solo</span><small>Test your deck</small>
+            </button>
+        </>
+    );
+
     return (
         <div className="dl">
-            <b className="rm-ask rm-carved">Duel here <span className="dl-tag">Experimental</span></b>
-            <p className="dl-note">Dueling in the app is still being built: expect rough edges, and record your duel below if something goes wrong.</p>
+            <b className="rm-ask rm-carved">{duo ? `Duel ${rival}` : "Duel here"} <span className="dl-tag">Experimental</span></b>
             <p className="dl-rules">Played by {era.name}: {era.changes[0]?.toLowerCase()}.</p>
             {open === null && <p className="dl-note">Looking for open duels…</p>}
 
@@ -124,37 +135,34 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
                 <div className="dl-card">
                     <p>Waiting for <b>{rival}</b> to accept your challenge…</p>
                     <button type="button" className="dl-btn dl-btn--quiet" disabled={busy} onClick={() => run(() => declineDuel(challenge.id))}>Withdraw it</button>
+                    {/* No need to sit and wait: practice meanwhile. */}
+                    {practiceSlabs && <>
+                        <p className="dl-note">Meanwhile, you can practice:</p>
+                        {deckPicker}
+                        <div className="dl-slabs">{practiceSlabs}</div>
+                    </>}
                 </div>
             )}
 
             {open && !challenge && (
                 <div className="dl-card">
                     {deckPicker}
-                    {/* The ways to duel, as slabs of the board's stone with their glyph carved in. */}
+                    {/* The ways to duel, as slabs of the board's stone: the one that counts is the wide one on top. */}
                     <div className="dl-slabs">
                         {duo && (
                             <button type="button" className="dl-slab dl-slab--main" disabled={!deckId || busy} onClick={() => run(() => startDuel(seriesId, deckId, "rival"))}>
                                 <SwordsGlyph /><span>Challenge {rival}</span><small>Counts for the series</small>
                             </button>
                         )}
-                        {!practice && (
-                            <button type="button" className="dl-slab" disabled={!deckId || busy} onClick={() => practise("bot")} aria-label="Practice against the bot">
-                                <BotGlyph /><span>Duel the bot</span><small>Practice</small>
-                            </button>
-                        )}
-                        {!practice && (
-                            <button type="button" className="dl-slab" disabled={!deckId || busy} onClick={() => practise("solo")} aria-label="Solo: test your deck">
-                                <HandGlyph /><span>Solo</span><small>Test your deck</small>
-                            </button>
-                        )}
+                        {practiceSlabs}
                     </div>
                     <p className="dl-note">
-                        {duo ? "The rival duel counts for the series. Practice doesn't." : "Practice doesn't count: record your real duels below as before."}
+                        {duo ? "The rival duel counts for the series. Practice doesn't." : "Practice doesn't count for the series: a duel played for real is recorded below."}
                         {" "}In solo the opponent only passes its turns, so you can draw and play out your own.
                     </p>
                 </div>
             )}
-            <button type="button" className="rm-back" onClick={onBack}>← Record a duel played elsewhere</button>
+            <button type="button" className="rm-back" onClick={onBack}>Played it somewhere else? Record the result →</button>
         </div>
     );
 }

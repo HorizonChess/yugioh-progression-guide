@@ -33,7 +33,7 @@ try {
     let asked = false;
     for (let attempt = 0; attempt < 12 && !asked; attempt++) {
         await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-        await page.getByRole("button", { name: /Duel in the app/i }).click();
+        // (Playing here is what the board opens on.)
         const old = btn("End it, start a new one"), practice = btn("Solo: test your deck"); // the opponent only passes: the duel lasts
         await old.or(practice).first().waitFor({ timeout: 15000 });
         if (await old.count()) await old.click();

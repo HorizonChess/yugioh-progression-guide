@@ -26,15 +26,15 @@
       "key": "deck",
       "mood": "neutral",
       "target": "a.cartouche-btn[href^='/deck-builder'], .road-dock__small a[href^='/deck-builder']",
-      "solo": "Then build a deck from what you pulled, and duel wherever you like to play. The Deck Builder can export it for you.",
-      "duo": "Then build a deck from what you pulled and duel {rival} wherever you two like to play. The Deck Builder can export it."
+      "solo": "Then build a deck from what you pulled. You can duel right here, or export it and play wherever you like.",
+      "duo": "Then build a deck from what you pulled and duel {rival}: right here, or wherever you two like to play."
     },
     {
       "key": "record",
       "mood": "neutral",
       "target": "a.cartouche-btn[href^='/record-match']",
-      "solo": "After the duel, come back and tap Record Match. Win or lose, the road moves on to the next set.",
-      "duo": "After the duel, one of you records it and the other confirms. Then the road moves on to the next set for you both."
+      "solo": "Tap Play / Record to duel right here, or to record a duel you played elsewhere. Win or lose, the road moves on.",
+      "duo": "Tap Play / Record to challenge {rival} here. Played elsewhere? One of you records it and the other confirms."
     },
     {
       "key": "rewards",
