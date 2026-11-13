@@ -39,6 +39,8 @@ export interface Engine {
     /** A card's passcode by its exact name (case ignored), for "declare a card name". */
     codeByName(name: string): number | null;
     isMonster(code: number): boolean;
+    /** A card that goes in the Extra Deck (Fusion, Synchro, Xyz, Link). */
+    isExtra(code: number): boolean;
     /**
      * Teaches the engine a passcode it doesn't have, by the card's name: YGOPRODeck lists a few
      * cards under an alternate-art passcode (Barrel Dragon's 81480461) that EDOPro doesn't use.
@@ -76,6 +78,8 @@ const TYPE_TRAP = 0x4;
 const TYPE_CONTINUOUS = 0x20000;
 const TYPE_TOKEN = 0x4000;
 const TYPE_LINK = 0x4000000;
+/** Fusion, Synchro, Xyz and Link monsters. */
+const TYPE_EXTRA = 0x40 | 0x2000 | 0x800000 | TYPE_LINK;
 
 /** Where the engine data lives: next to the source in development, next to dist/ when built. */
 function findDataDir(): string {
@@ -183,6 +187,7 @@ async function build(): Promise<Engine> {
         victoryReason: (reason) => strings.victory[String(reason)] ?? 'The duel is over',
         codeByName: (name) => byName.get(name.trim().toLowerCase()) ?? null,
         isMonster: (code) => ((row(code)?.type ?? 0) & TYPE_MONSTER) !== 0,
+        isExtra: (code) => ((row(learned.get(code) ?? code)?.type ?? 0) & TYPE_EXTRA) !== 0,
         isToken: (code) => ((row(code)?.type ?? 0) & TYPE_TOKEN) !== 0,
         isContinuousTrap: (code) => ((row(learned.get(code) ?? code)?.type ?? 0) & (TYPE_TRAP | TYPE_CONTINUOUS)) === (TYPE_TRAP | TYPE_CONTINUOUS),
         learn(code, name) {

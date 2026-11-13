@@ -104,6 +104,47 @@ async function play(p: Pick<Player, 'name'> & { cookie?: string }, duelId: strin
     });
 }
 
+type Headers = Record<string, string>;
+const lookAt = async (duelId: string, headers: Headers) => (await app.inject({ method: 'GET', url: `/api/duels/${duelId}`, headers })).json();
+const pregame = (duelId: string, headers: Headers, payload: object) => app.inject({ method: 'POST', url: `/api/duels/${duelId}/pregame`, headers, payload });
+
+/**
+ * Takes a game of a match through its pregame, each player doing what's asked of them: a hand
+ * (the first player rock, the second scissors, so two players never tie), going first when it's
+ * theirs to choose, and their deck as it stands when there's side decking. Returns who chose.
+ */
+async function ready(duelId: string, players: Headers[]) {
+    let chooser: { player: number; why: string } | null = null;
+    for (let round = 0; round < 60; round++) {
+        let waiting = false;
+        for (const [i, headers] of players.entries()) {
+            const { duel, pregame: view } = await lookAt(duelId, headers);
+            if (duel.status !== 'pregame') continue;
+            waiting = true;
+            if (view.rps && !view.rps.mine) await pregame(duelId, headers, { rps: i === 0 ? 'rock' : 'scissors' });
+            else if (view.chooser?.side === 'me' && !view.chooser.chosen) {
+                chooser = { player: i, why: view.chooser.why };
+                await pregame(duelId, headers, { first: true });
+            } else if (view.siding && !view.siding.done) await pregame(duelId, headers, { deck: view.siding.deck });
+        }
+        if (!waiting) return chooser;
+    }
+    throw new Error('the pregame never finished');
+}
+
+/** Plays a whole match: each game's pregame, then the game, until the match is decided. Returns the last states and the games' ids. */
+async function playMatch(players: (Pick<Player, 'name'> & { cookie?: string; token?: string })[], firstId: string) {
+    const headers = players.map((p): Headers => (p.cookie ? { cookie: p.cookie } : { 'x-duel-token': p.token! }));
+    const games: string[] = [];
+    for (let id = firstId; ; ) {
+        games.push(id);
+        await ready(id, headers);
+        const ends = await Promise.all(players.map((p) => play(p, id, p.token)));
+        if (!ends[0]!.match || ends[0]!.match.over) return { ends, games };
+        id = ends[0]!.match.next!;
+    }
+}
+
 describe.skipIf(!engineDataAvailable())('duels', () => {
     it('plays a practice duel against the bot over the live socket', async () => {
         const yugi = await player('Yugi');
@@ -113,20 +154,30 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         const started = await yugi.call('POST', `/api/series/${id}/duels`, { deckId: 'main', against: 'bot' });
         expect(started.statusCode).toBe(201);
         const duel = started.json().duel;
-        expect(duel).toMatchObject({ kind: 'practice', status: 'active', mode: 'MR1', setName: TIMELINE[0] });
+        // Against the bot it's a match: it opens on rock-paper-scissors.
+        expect(duel).toMatchObject({ kind: 'practice', status: 'pregame', mode: 'MR1', setName: TIMELINE[0], match: { game: 1, wins: [0, 0] } });
         // One practice duel at a time.
         expect((await yugi.call('POST', `/api/series/${id}/duels`, { deckId: 'main', against: 'bot' })).statusCode).toBe(409);
+        await ready(duel.id, [{ cookie: yugi.cookie }]);
 
         const { state } = (await yugi.call('GET', `/api/duels/${duel.id}`)).json();
         expect(state.rival).toEqual({ name: 'Practice Bot', bot: true });
         expect(state.view.me.deck + state.view.me.hand.length).toBe(40 - (state.view.me.monsters.filter(Boolean).length + state.view.me.spells.filter(Boolean).length + state.view.me.grave.length));
 
-        const end = await play(yugi, duel.id);
+        const { ends, games } = await playMatch([yugi], duel.id);
+        const end = ends[0]!;
         expect(end.result).not.toBeNull();
         expect(end.frames).toBeGreaterThan(5);
+        // Best of 3: two or three games, and whoever is ahead at the end has the match.
+        expect(games.length).toBeGreaterThanOrEqual(2);
+        expect(games.length).toBeLessThanOrEqual(3);
+        expect(end.match).toMatchObject({ game: games.length, over: true });
+        expect(end.match!.score[0] + end.match!.score[1]).toBeLessThanOrEqual(3);
+        expect(end.match!.winner).toBe(end.match!.score[0] === end.match!.score[1] ? null : end.match!.score[0] > end.match!.score[1] ? 'me' : 'opp');
         const stored = await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) });
         expect(stored).toMatchObject({ status: 'finished' });
-        expect(stored!.openKey).toBeUndefined();
+        // No game is left open, so a new practice match can start.
+        expect(await app.db.collection('duels').countDocuments({ openKey: { $exists: true } })).toBe(0);
         // A 2002 series plays Sangan as first printed (its errata came in 2016), and shows it as the player's own Sangan.
         const sangan = cardVersionAt('Sangan', '2002-03-08')!;
         expect(stored!.setup.decks[0].main).toContain(sangan.code);
@@ -206,6 +257,7 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         for (let n = 0; n < 4; n++) {
             const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot' } });
             const { duel, token } = started.json();
+            await ready(duel.id, [{ 'x-duel-token': token }]);
             await play({ name: 'Guest' }, duel.id, token, 6);
             // A restart: a fresh server on the same database rebuilds the duel from storage.
             const db = app.db.databaseName;
@@ -221,6 +273,7 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
     it('starts a new engine when the engine itself fails, and the duel goes on from what was stored', async () => {
         const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot' } });
         const { duel, token } = started.json();
+            await ready(duel.id, [{ 'x-duel-token': token }]);
         await play({ name: 'Guest' }, duel.id, token, 4);
         const before = (await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) }))!.answers.length;
         // The engine faults on the next step (as it does when its stack runs out), for every duel on it.
@@ -259,6 +312,7 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
     it('can always give up a duel, even one that can no longer be rebuilt', async () => {
         const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot' } });
         const { duel, token } = started.json();
+            await ready(duel.id, [{ 'x-duel-token': token }]);
         // A stored copy whose answers no longer fit the duel (as when the rules changed under it).
         const original = await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) });
         const broken = { ...original!, _id: new ObjectId(), openKey: `broken:${duel.id}`, answers: Array(30).fill({ t: 'bogus' }) };
@@ -310,9 +364,14 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         // The challenger can't accept their own challenge.
         expect((await yami.call('POST', `/api/duels/${challenge.id}/accept`, { deckId: 'main' })).statusCode).toBe(409);
 
-        expect((await kaiba.call('POST', `/api/duels/${challenge.id}/accept`, { deckId: 'main' })).json().duel.status).toBe('active');
-        const [a, b] = await Promise.all([play(yami, challenge.id), play(kaiba, challenge.id)]);
-        expect(a.result!.winner === 'me').toBe(b.result!.winner === 'opp');
+        expect((await kaiba.call('POST', `/api/duels/${challenge.id}/accept`, { deckId: 'main' })).json().duel.status).toBe('pregame');
+        // Nothing is booked until the match is decided.
+        const { ends: [a, b], games } = await playMatch([yami, kaiba], challenge.id);
+        expect(a!.result!.winner === 'me').toBe(b!.result!.winner === 'opp');
+        expect(a!.match!.over).toBe(true);
+        expect(a!.match!.score).toEqual([b!.match!.score[1], b!.match!.score[0]]);
+        expect(Math.max(...a!.match!.score)).toBe(2);
+        expect(games.length).toBe(a!.match!.score[0] + a!.match!.score[1]);
 
         await app.settleBackground();
         const series = await seriesCollection(app.db).findOne({ _id: new ObjectId(id) });
@@ -332,6 +391,7 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         }
         const duel = (await yami.call('POST', `/api/series/${id}/duels`, { deckId: 'main', against: 'rival' })).json().duel;
         await kaiba.call('POST', `/api/duels/${duel.id}/accept`, { deckId: 'main' });
+        await ready(duel.id, [{ cookie: yami.cookie }, { cookie: kaiba.cookie }]);
 
         // Each player's socket, and the next state it's sent that fits.
         const open = async (p: Player) => {
@@ -386,5 +446,54 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(series!.currentSetName).toBe(TIMELINE[0]);
         // They can duel again.
         expect((await kaiba.call('POST', `/api/series/${id}/duels`, { deckId: 'main', against: 'rival' })).statusCode).toBe(201);
+    });
+
+    it('opens a match on rock-paper-scissors, and lets the loser of a game side deck and choose who goes first', async () => {
+        const SANGAN = 26202165;
+        const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [], side: [SANGAN, SANGAN] }, setName: TIMELINE[0], against: 'bot' } });
+        const { duel, token } = started.json();
+        const mine = { 'x-duel-token': token };
+        // Game 1: a hand to throw; no side decking yet. A tie is thrown again.
+        let view = (await lookAt(duel.id, mine)).pregame;
+        expect(view).toMatchObject({ game: 1, score: [0, 0], rival: { name: 'Practice Bot', bot: true }, rps: { mine: null } });
+        expect(view.siding).toBeUndefined();
+        expect((await pregame(duel.id, mine, { first: true })).statusCode).toBe(409);
+        for (let i = 0; i < 30 && view?.rps; i++) view = (await pregame(duel.id, mine, { rps: 'paper' })).json().pregame;
+        // Decided: the winner chooses. The bot, winning, goes first and the game starts; winning yourself, you choose.
+        if (view) {
+            expect(view.chooser).toMatchObject({ side: 'me', why: 'rps', hands: { mine: 'paper', theirs: 'rock' }, chosen: false });
+            expect((await pregame(duel.id, mine, { first: false })).json().duel.status).toBe('active');
+            const { state } = await lookAt(duel.id, mine);
+            // The bot went first: it's on its turn 1, or has finished it and you're on turn 2.
+            expect(state.view.turn === 1 ? state.view.turnPlayer : state.view.turn).toBe(state.view.turn === 1 ? 'opp' : 2);
+        }
+        expect((await lookAt(duel.id, mine)).duel.status).toBe('active');
+        // Lose game 1 (a surrender): the loser side decks and chooses who goes first in game 2.
+        await app.inject({ method: 'POST', url: `/api/duels/${duel.id}/concede`, headers: mine });
+        const after = await lookAt(duel.id, mine);
+        expect(after.duel).toMatchObject({ status: 'finished', match: { game: 1, over: false } });
+        expect(after.state.match).toMatchObject({ game: 1, score: [0, 1], over: false, next: expect.any(String) });
+        const next: string = after.state.match.next;
+        view = (await lookAt(next, mine)).pregame;
+        expect(view).toMatchObject({ game: 2, score: [0, 1], chooser: { side: 'me', why: 'lost', chosen: false }, siding: { done: false, rivalDone: true } });
+        expect(view.siding.deck).toEqual({ main: DECK, extra: [], side: [SANGAN, SANGAN] });
+        // Not the registered deck with cards swapped: a card from nowhere, or a main deck a card short.
+        const swapped = { main: [SANGAN, ...DECK.slice(1)], extra: [], side: [DECK[0]!, SANGAN] };
+        expect((await pregame(next, mine, { deck: { ...swapped, main: [46986414, ...DECK.slice(1)] } })).statusCode).toBe(409);
+        expect((await pregame(next, mine, { deck: { main: DECK, extra: [], side: [SANGAN] } })).statusCode).toBe(409);
+        view = (await pregame(next, mine, { deck: swapped })).json().pregame;
+        expect(view.siding).toMatchObject({ done: true, deck: swapped });
+        expect((await pregame(next, mine, { deck: swapped })).statusCode).toBe(409);
+        expect((await pregame(next, mine, { first: true })).json().duel.status).toBe('active');
+        const second = await lookAt(next, mine);
+        expect([second.state.view.turn, second.state.view.turnPlayer]).toEqual([1, 'me']);
+        expect(second.state.match).toMatchObject({ game: 2, score: [0, 1], over: false });
+        // The side-decked deck is the one dealt: 40 cards between the hand and the Deck.
+        expect(second.state.view.me.deck + second.state.view.me.hand.length).toBe(40);
+        const stored = await app.db.collection('duels').findOne({ _id: new ObjectId(next) });
+        expect(stored!.match.current.find((d: { side: number[] }) => d.side.includes(DECK[0]!))).toMatchObject(swapped);
+        // Losing again loses the match, 0-2: no third game.
+        await app.inject({ method: 'POST', url: `/api/duels/${next}/concede`, headers: mine });
+        expect((await lookAt(next, mine)).state.match).toEqual({ game: 2, score: [0, 2], over: true, winner: 'opp' });
     });
 });

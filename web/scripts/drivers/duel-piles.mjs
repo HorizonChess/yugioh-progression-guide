@@ -5,7 +5,7 @@
 //   NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web
 //   node web/scripts/drivers/duel-piles.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY } from "./_lib.mjs";
+import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 let failures = 0;
@@ -37,6 +37,7 @@ try {
     if (await old.count()) await old.click();
     await page.getByRole("button", { name: "Practice against the bot" }).click();
     await page.waitForURL(/duel/, { timeout: 30000 }).catch(async (e) => {
+    await throughPregame(page);
         // A refusal shows in the game's dialog: say what it was.
         throw new Error(`no duel: ${(await page.locator(".gd").textContent().catch(() => null)) ?? e.message}`);
     });

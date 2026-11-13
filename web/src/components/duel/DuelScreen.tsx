@@ -69,7 +69,13 @@ const PLACES: ReadonlySet<ActionVerb> = new Set(["summon", "special", "set", "se
  */
 const STEADY = { onUpdate: () => {} };
 
-export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeave: (result: "win" | "loss" | "draw" | null) => void }) {
+export default function DuelScreen({ duelId, onLeave, onNext }: {
+    duelId: string;
+    /** Leaving once it's all over, with how it went (null: nothing was recorded). */
+    onLeave: (result: "win" | "loss" | "draw" | null) => void;
+    /** On to the next game of the match (its duel id). */
+    onNext?: (duelId: string) => void;
+}) {
     const isPhone = useIsPhone();
     // A log line is worded when it's drawn, so a card whose name arrives later (one an effect
     // shows from a hidden hand) gets named once it's known.
@@ -333,7 +339,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     const phaseBar = (
         <div className="df-phases">
             <span className="df-turn">
-                <b>Turn {view.turn}</b>
+                <b>Turn {view.turn}{state.match ? ` · G${state.match.game} ${state.match.score[0]}–${state.match.score[1]}` : ""}</b>
                 <span>{view.turnPlayer === "me" ? "Your turn" : `${view.opp.name}'s turn`}</span>
             </span>
             <div className="df-phases__pills" role="tablist" aria-label="Phases">
@@ -450,7 +456,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             <button key={c.uid} type="button" className="df-listcard" onClick={() => look(c.code)}><img src={cardImage(c.code)} alt="" /><span>{name(c.code)}</span></button>
         ))}</div>{option("Close", () => setBrowse(null), { quiet: true })}</>, { onSwipe: () => setBrowse(null) });
     } else if (duelMenu === "surrender") {
-        question = sheet("Surrender this duel?", <div className="df-sheet__options">{option("Surrender", () => (setDuelMenu("closed"), duel.concede()))}{option("Keep dueling", () => setDuelMenu("closed"), { quiet: true })}</div>, { text: state.rival.bot ? "It's only practice." : `${state.rival.name} wins the duel, and the result counts for the series.`, onSwipe: () => setDuelMenu("closed") });
+        question = sheet("Surrender this duel?", <div className="df-sheet__options">{option("Surrender", () => (setDuelMenu("closed"), duel.concede()))}{option("Keep dueling", () => setDuelMenu("closed"), { quiet: true })}</div>, { text: state.match ? `${state.rival.name} takes game ${state.match.game} of the match${state.rival.bot ? ". It's only practice." : ", which counts for the series."}` : state.rival.bot ? "It's only practice." : `${state.rival.name} wins the duel, and the result counts for the series.`, onSwipe: () => setDuelMenu("closed") });
     } else if (duelMenu === "log") {
         // Phones have no room for the log beside the board: it's here, the latest first.
         question = sheet("What happened", <>
@@ -681,12 +687,31 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             {result && (
                 <motion.div className="df-result" {...STEADY} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <div className={`df-result__card df-result__card--${result.winner ?? "draw"}`}>
-                        <h2>{result.calledOff ? "Duel called off" : result.winner === "me" ? "You win!" : result.winner === "opp" ? `${view.opp.name} wins` : "A draw"}</h2>
-                        <p>{result.reason}</p>
-                        {!state.rival.bot && <p className="df-result__note">{result.calledOff ? "Nothing was recorded. You can challenge each other again." : "The result is booked on your series."}</p>}
-                        <button type="button" className="df-opt" onClick={() => onLeave(result.calledOff ? null : result.winner === "me" ? "win" : result.winner === "opp" ? "loss" : "draw")}>
-                            {state.rival.bot || result.calledOff ? "Back to the board" : result.winner === "me" ? "To your reward" : "To your pity packs"}
-                        </button>
+                        {(() => {
+                            const m = result.calledOff ? undefined : state.match;
+                            const rival = view.opp.name;
+                            // A game of a match that isn't decided yet: on to the next. Otherwise it's over, and the match's winner counts.
+                            const going = m && !m.over && m.next;
+                            const winner = m?.over ? (m.winner ?? null) : result.winner;
+                            const title = result.calledOff ? "Duel called off"
+                                : going ? (result.winner === "me" ? `You win game ${m.game}!` : result.winner === "opp" ? `${rival} wins game ${m.game}` : `Game ${m.game} is a draw`)
+                                : m ? (winner === "me" ? "You win the match!" : winner === "opp" ? `${rival} wins the match` : "The match is a draw")
+                                : winner === "me" ? "You win!" : winner === "opp" ? `${rival} wins` : "A draw";
+                            const booked = !state.rival.bot && (result.calledOff ? "Nothing was recorded. You can challenge each other again."
+                                : going ? "Best of 3: the series is booked when the match is decided."
+                                : winner === null ? "A draw: nothing is booked on your series." : "The result is booked on your series.");
+                            return <>
+                                <h2>{title}</h2>
+                                <p>{result.reason}</p>
+                                {m && <p className="df-result__score" aria-label={`You ${m.score[0]}, ${rival} ${m.score[1]}`}><span>You</span><b>{m.score[0]}</b><i>–</i><b>{m.score[1]}</b><span>{rival}</span></p>}
+                                {booked && <p className="df-result__note">{booked}</p>}
+                                {going ? <button type="button" className="df-opt" onClick={() => onNext?.(m.next!)}>To game {m.game + 1}: side decking</button> : (
+                                    <button type="button" className="df-opt" onClick={() => onLeave(result.calledOff || winner === null ? null : winner === "me" ? "win" : "loss")}>
+                                        {state.rival.bot || result.calledOff || winner === null ? "Back to the board" : winner === "me" ? "To your reward" : "To your pity packs"}
+                                    </button>
+                                )}
+                            </>;
+                        })()}
                     </div>
                 </motion.div>
             )}

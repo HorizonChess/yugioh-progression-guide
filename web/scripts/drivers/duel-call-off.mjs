@@ -66,6 +66,10 @@ try {
     await kaiba.api("POST", `/api/duels/${duelId}/accept`, { deckId: "main" });
 
     for (const p of [yugi, kaiba]) await p.page.goto(`${BASE}/duel/?id=${duelId}`, { waitUntil: "networkidle" });
+    // The match opens on rock-paper-scissors: Yugi throws Rock, Kaiba Scissors, and Yugi goes first.
+    await yugi.page.getByRole("button", { name: "Rock", exact: true }).click({ timeout: 20000 });
+    await kaiba.page.getByRole("button", { name: "Scissors", exact: true }).click({ timeout: 20000 });
+    await yugi.page.getByRole("button", { name: "Go first", exact: true }).click({ timeout: 20000 });
     for (const p of [yugi, kaiba]) await p.page.locator(".df-phases").waitFor({ timeout: 30000 });
     await yugi.page.waitForTimeout(4000); // the opening hands are dealt
 
