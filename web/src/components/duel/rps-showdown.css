@@ -1,0 +1,86 @@
+/* Rock-paper-scissors: the showdown of two cards (RpsShowdown.tsx). */
+
+.rps { --w: clamp(96px, 15vw, 140px); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.rps--compact { --w: clamp(84px, 22vw, 112px); }
+.rps__table { display: flex; align-items: center; justify-content: center; gap: clamp(14px, 4vw, 34px); }
+.rps__slot { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.rps__who { font: 800 11px/1 var(--font-display); letter-spacing: 0.16em; text-transform: uppercase; color: #c9bc9a; text-shadow: 0 1px 2px #000; }
+.rps__vs { font: 900 clamp(22px, 4vw, 34px)/1 var(--font-techno); color: #f5c542; text-shadow: 0 0 12px rgba(245, 197, 66, 0.6), 0 2px 0 #000; animation: rps-vs 0.5s 0.95s cubic-bezier(.3, .7, .3, 1.6) both; }
+@keyframes rps-vs { from { scale: 2.4; opacity: 0; } }
+
+/* In face down from either side, then both turn over together. */
+.rps__card { position: relative; display: block; width: var(--w); aspect-ratio: 59 / 86; perspective: 900px; }
+.rps__slot--opp .rps__card { animation: rps-in-opp 0.5s cubic-bezier(.2, .8, .3, 1) both; }
+.rps__slot--me .rps__card { animation: rps-in-me 0.5s 0.1s cubic-bezier(.2, .8, .3, 1) both; }
+@keyframes rps-in-opp { from { translate: -60px -30px; rotate: -14deg; opacity: 0; } }
+@keyframes rps-in-me { from { translate: 60px 30px; rotate: 14deg; opacity: 0; } }
+.rps__flip { position: absolute; inset: 0; transform-style: preserve-3d; animation: rps-turn 0.55s 0.85s cubic-bezier(.3, .7, .3, 1) both; }
+@keyframes rps-turn {
+    0% { transform: rotateY(180deg); }
+    55% { transform: rotateY(80deg) scale(1.12); }
+    100% { transform: rotateY(0deg); }
+}
+.rps__front, .rps__back { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 6px; }
+.rps__back { width: 100%; height: 100%; object-fit: cover; transform: rotateY(180deg); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7); }
+
+/* The clash: the winner strikes and glows, the loser shakes, dims and cracks; a tie bounces both. */
+.rps__slot.is-win .rps__card { animation-name: rps-in-me, rps-strike; animation-duration: 0.5s, 0.5s; animation-delay: 0.1s, 1.5s; animation-fill-mode: both, both; }
+.rps__slot--opp.is-win .rps__card { animation-name: rps-in-opp, rps-strike; animation-delay: 0s, 1.5s; }
+@keyframes rps-strike { 40% { scale: 1.16; } 100% { scale: 1.08; } }
+.rps__slot.is-win .rps__front { animation: rps-glow 1.2s 1.6s ease-in-out infinite alternate both; }
+@keyframes rps-glow { from { box-shadow: 0 0 0 2px #f5c542, 0 0 10px rgba(245, 197, 66, 0.5); } to { box-shadow: 0 0 0 3px #ffe08a, 0 0 28px rgba(245, 197, 66, 0.9); } }
+.rps__slot.is-lose .rps__card { animation-name: rps-in-me, rps-hit; animation-duration: 0.5s, 0.5s; animation-delay: 0.1s, 1.62s; animation-fill-mode: both, both; }
+.rps__slot--opp.is-lose .rps__card { animation-name: rps-in-opp, rps-hit; animation-delay: 0s, 1.62s; }
+@keyframes rps-hit { 20% { translate: -6px 0; rotate: -3deg; } 45% { translate: 6px 0; rotate: 2deg; } 70% { translate: -3px 0; } 100% { translate: 0 6px; rotate: -4deg; filter: grayscale(0.85) brightness(0.55); } }
+.rps__slot.is-tie .rps__card { animation-name: rps-in-me, rps-bounce; animation-duration: 0.5s, 0.6s; animation-delay: 0.1s, 1.5s; animation-fill-mode: both, both; }
+.rps__slot--opp.is-tie .rps__card { animation-name: rps-in-opp, rps-bounce; animation-delay: 0s, 1.5s; }
+@keyframes rps-bounce { 35% { translate: 0 -10px; scale: 1.06; } 70% { translate: 0 3px; } }
+.rps__crack {
+    position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 6px; opacity: 0;
+    background:
+        linear-gradient(62deg, transparent 47%, rgba(255, 255, 255, 0.85) 48%, transparent 50%) 0 0 / 100% 100%,
+        linear-gradient(-38deg, transparent 52%, rgba(255, 255, 255, 0.7) 53%, transparent 54.5%) 0 0 / 100% 100%,
+        linear-gradient(110deg, transparent 60%, rgba(255, 255, 255, 0.6) 61%, transparent 62.5%) 0 0 / 100% 100%;
+    animation: rps-crack 0.3s 1.75s ease-out forwards;
+}
+@keyframes rps-crack { to { opacity: 1; } }
+
+/* (Doubled classes: the pregame panel styles its own p and b.) */
+.rps .rps__said { margin: 0; font: 800 clamp(18px, 3vw, 24px)/1.2 var(--font-display); letter-spacing: 0.04em; color: #f5c542; text-shadow: 0 2px 0 #000, 0 0 14px rgba(245, 197, 66, 0.45); text-align: center; animation: rps-said 0.4s 1.85s ease-out both; }
+.rps--lose .rps__said.rps__said { color: #ff9a85; text-shadow: 0 2px 0 #000, 0 0 14px rgba(255, 90, 60, 0.4); }
+.rps--tie .rps__said.rps__said { color: #e6dcc3; }
+@keyframes rps-said { from { opacity: 0; translate: 0 8px; } }
+.rps__after { display: flex; flex-direction: column; align-items: center; gap: 10px; animation: rps-said 0.4s 2.1s ease-out both; }
+
+/* A hand as a card: a Yu-Gi-Oh!-style frame, name bar, art box and a line of text. */
+.rps-face {
+    --frame: #c9772d; --frame-dark: #7a3f12; --art: radial-gradient(circle at 50% 40%, #ffd28a, #b86221 70%, #5a2a0a);
+    position: absolute; inset: 0; display: flex; flex-direction: column; gap: 5%; padding: 6% 7%; border-radius: 6px;
+    background: linear-gradient(160deg, var(--frame), var(--frame-dark));
+    box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.45), inset 0 0 0 4px rgba(255, 255, 255, 0.12), 0 6px 16px rgba(0, 0, 0, 0.7);
+}
+.rps-face--paper { --frame: #1d9a7c; --frame-dark: #0c4f3f; --art: radial-gradient(circle at 50% 40%, #c8fff0, #2fb592 70%, #0b4b3c); }
+.rps-face--scissors { --frame: #b44c94; --frame-dark: #5c1d4a; --art: radial-gradient(circle at 50% 40%, #ffd0f2, #c24f9f 70%, #4d1240); }
+.rps-face .rps-face__name {
+    padding: 4% 6%; border-radius: 2px; background: linear-gradient(#f3ead2, #d8c9a2); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+    font: 900 calc(var(--w, 120px) * 0.105)/1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; color: #1d140a;
+}
+.rps-face__art {
+    flex: 1; display: grid; place-items: center; border-radius: 2px; background: var(--art);
+    box-shadow: inset 0 0 0 2px #2b1d10, inset 0 0 18px rgba(0, 0, 0, 0.5);
+    font-size: calc(var(--w, 120px) * 0.42); line-height: 1; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.5));
+}
+.rps-face__text {
+    padding: 3% 5%; border-radius: 2px; background: linear-gradient(#efe4c8, #d6c69b); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+    font: 700 calc(var(--w, 120px) * 0.075)/1.25 var(--font-main); color: #2a1d10; text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rps *, .rps__said, .rps__after { animation-duration: 0.01s !important; animation-delay: 0s !important; }
+}
+
+/* On the board: the opening showdown over the field, until tapped (or a few seconds pass). */
+.df-rps { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: radial-gradient(ellipse at center, rgba(20, 14, 6, 0.86), rgba(0, 0, 0, 0.9)); animation: rps-dim 0.3s ease-out both; cursor: pointer; }
+@keyframes rps-dim { from { opacity: 0; } }
+.df-rps .rps { --w: clamp(110px, 18vw, 170px); }
+.df-rps__first { margin: 0; font: 700 15px/1.4 var(--font-display); color: #f0e6d2; text-shadow: 0 1px 2px #000; }

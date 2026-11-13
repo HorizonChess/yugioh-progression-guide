@@ -468,6 +468,8 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
             expect(state.view.turn === 1 ? state.view.turnPlayer : state.view.turn).toBe(state.view.turn === 1 ? 'opp' : 2);
         }
         expect((await lookAt(duel.id, mine)).duel.status).toBe('active');
+        // Either way the board is told how it went, for its showdown: you threw paper.
+        expect((await lookAt(duel.id, mine)).state.match.rps).toEqual(view ? { mine: 'paper', theirs: 'rock', won: true } : { mine: 'paper', theirs: 'scissors', won: false });
         // Lose game 1 (a surrender): the loser side decks and chooses who goes first in game 2.
         await app.inject({ method: 'POST', url: `/api/duels/${duel.id}/concede`, headers: mine });
         const after = await lookAt(duel.id, mine);
@@ -485,6 +487,8 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(view.siding).toMatchObject({ done: true, deck: swapped });
         expect((await pregame(next, mine, { deck: swapped })).statusCode).toBe(409);
         expect((await pregame(next, mine, { first: true })).json().duel.status).toBe('active');
+        // Game 2 had no rock-paper-scissors.
+        expect((await lookAt(next, mine)).state.match.rps).toBeUndefined();
         const second = await lookAt(next, mine);
         expect([second.state.view.turn, second.state.view.turnPlayer]).toEqual([1, 'me']);
         expect(second.state.match).toMatchObject({ game: 2, score: [0, 1], over: false });

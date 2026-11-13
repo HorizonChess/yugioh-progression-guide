@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DuelPregameView, MatchDeck, PregameAction, RpsHand } from "@ygo/shared";
 import { fetchCardsByIds, type Card } from "@/lib/api";
-import { cardImage } from "./parts";
+import { CARD_BACK, cardImage } from "./parts";
+import RpsShowdown, { RPS_HANDS, RpsCard, handLabel } from "./RpsShowdown";
 import "./duel-launcher.css";
 
 /*
@@ -13,15 +14,14 @@ import "./duel-launcher.css";
  * and sends the next step.
  */
 
-const HANDS: { hand: RpsHand; glyph: string; label: string }[] = [
-    { hand: "rock", glyph: "✊", label: "Rock" },
-    { hand: "paper", glyph: "✋", label: "Paper" },
-    { hand: "scissors", glyph: "✌", label: "Scissors" },
-];
-const handName = (h: RpsHand) => HANDS.find((x) => x.hand === h)!.label;
-const glyphOf = (h: RpsHand) => HANDS.find((x) => x.hand === h)!.glyph;
+/** How long a tie's showdown stays before the next throw. */
+const TIE_MS = 2800;
 
-export default function PreGame({ view, busy, onAct, onGiveUp }: {
+/** The rock-paper-scissors showdown of this duel was seen here: the board doesn't play it again. */
+export const rpsSeenKey = (duelId: string) => `ygo-rps-seen:${duelId}`;
+
+export default function PreGame({ duelId, view, busy, onAct, onGiveUp }: {
+    duelId: string;
     view: DuelPregameView;
     /** A step is on its way to the server. */
     busy: boolean;
@@ -30,6 +30,27 @@ export default function PreGame({ view, busy, onAct, onGiveUp }: {
 }) {
     const rival = view.rival.name;
     const { chooser, rps, siding } = view;
+    // The hand you threw, until the round is decided; a tie's showdown, while it plays.
+    const [thrown, setThrown] = useState<RpsHand | null>(null);
+    const [tie, setTie] = useState<RpsHand | null>(null);
+    if (thrown && rps?.tied && !rps.mine) {
+        setThrown(null);
+        setTie(rps.tied);
+    }
+    if (thrown && chooser) setThrown(null);
+    useEffect(() => {
+        if (!tie) return;
+        const t = setTimeout(() => setTie(null), TIE_MS);
+        return () => clearTimeout(t);
+    }, [tie]);
+    const decided = chooser?.why === "rps" && chooser.hands ? chooser.hands : null;
+    useEffect(() => {
+        if (decided) sessionStorage.setItem(rpsSeenKey(duelId), "1");
+    }, [decided, duelId]);
+    const throwHand = (hand: RpsHand) => {
+        setThrown(hand);
+        onAct({ rps: hand });
+    };
     return (
         <div className="df-arena">
             <div className="df-waiting dl pg">
@@ -38,25 +59,33 @@ export default function PreGame({ view, busy, onAct, onGiveUp }: {
                     <span>You</span><b>{view.score[0]}</b><i>–</i><b>{view.score[1]}</b><span>{rival}</span>
                 </div>
 
-                {rps && (
+                {rps && (tie ? (
+                    <div className="dl-card"><RpsShowdown key={`tie-${tie}`} mine={tie} theirs={tie} rival={rival} compact /></div>
+                ) : (
                     <div className="dl-card">
                         <p>Rock, paper, scissors: the winner chooses who goes first.</p>
-                        {rps.tied && !rps.mine && <p className="dl-note">You both threw {handName(rps.tied)}. Again!</p>}
-                        {rps.mine ? <p className="pg-wait"><span className="pg-hand">{glyphOf(rps.mine)}</span> You threw {handName(rps.mine)}. Waiting for {rival}…</p> : (
+                        {rps.mine ? (
+                            <div className="pg-thrown">
+                                <span className="pg-thrown__card is-waiting"><img src={CARD_BACK} alt="" /></span>
+                                <span className="pg-thrown__card"><RpsCard hand={rps.mine} /></span>
+                                <p className="pg-wait">You threw {handLabel(rps.mine)}. Waiting for {rival}…</p>
+                            </div>
+                        ) : (
                             <div className="pg-hands">
-                                {HANDS.map((h) => (
-                                    <button key={h.hand} type="button" className="dl-slab" disabled={busy} onClick={() => onAct({ rps: h.hand })} aria-label={h.label}>
-                                        <span className="pg-hand" aria-hidden>{h.glyph}</span><span>{h.label}</span>
+                                {RPS_HANDS.map((h) => (
+                                    <button key={h.hand} type="button" className="pg-rps" disabled={busy} onClick={() => throwHand(h.hand)} aria-label={h.label}>
+                                        <RpsCard hand={h.hand} />
                                     </button>
                                 ))}
                             </div>
                         )}
                     </div>
-                )}
+                ))}
 
                 {chooser && (
                     <div className="dl-card">
-                        {chooser.hands && <p className="pg-duel"><span><i className="pg-hand">{glyphOf(chooser.hands.mine)}</i>You</span><b>{chooser.side === "me" ? "beats" : "loses to"}</b><span><i className="pg-hand">{glyphOf(chooser.hands.theirs)}</i>{rival}</span></p>}
+                        {decided && <RpsShowdown mine={decided.mine} theirs={decided.theirs} rival={rival} compact />}
+                        <div className={decided ? "pg-after-rps" : ""}>
                         <p>
                             {chooser.why === "rps" ? (chooser.side === "me" ? "You won, so you choose who goes first." : `${rival} won, and chooses who goes first.`)
                                 : chooser.why === "lost" ? (chooser.side === "me" ? "You lost the last game, so you choose who goes first." : `${rival} lost the last game, and chooses who goes first.`)
@@ -69,6 +98,7 @@ export default function PreGame({ view, busy, onAct, onGiveUp }: {
                                     <button type="button" className="dl-btn" disabled={busy} onClick={() => onAct({ first: false })}>Go second</button>
                                 </div>
                             ) : <p className="pg-wait">Waiting for {rival} to choose…</p>}
+                        </div>
                     </div>
                 )}
 

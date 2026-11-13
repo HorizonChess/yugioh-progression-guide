@@ -86,6 +86,8 @@ export interface DuelDoc {
     seats?: [Seat, Seat];
     /** The next game of the match, once this one is over. */
     next?: ObjectId;
+    /** Game 1, once started: the rock-paper-scissors hands by team, and the team that won it. */
+    rps?: { hands: [RpsHand, RpsHand]; winner: Team };
     /** The team that asked to call the duel off, while the other hasn't answered. */
     callOffBy?: Team;
     /** Set while the duel is open, so a series has one open rival duel (and a player one practice duel). */
@@ -340,6 +342,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             over: !!m.over,
             ...(m.over ? { winner: m.winner === undefined || m.winner === null ? null : m.winner === mine ? ('me' as const) : ('opp' as const) } : {}),
             ...(duel.next ? { next: duel.next.toHexString() } : {}),
+            ...(duel.rps ? { rps: { mine: duel.rps.hands[team], theirs: duel.rps.hands[1 - team]!, won: duel.rps.winner === team } } : {}),
         };
     }
     const stateOf = (duel: DuelDoc, session: DuelSession, team: Team): DuelState => {
@@ -412,9 +415,13 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const decks = [await playedAt(pre.decks[seats[0]]!, date, shown), await playedAt(pre.decks[seats[1]]!, date, shown)] as DuelSetup['decks'];
         const setup: DuelSetup = { seed: newSeed(), mode: duel.mode, decks, names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown, rules: DUEL_RULES };
         const match: MatchInfo = { ...m, current: [pre.decks[0]!, pre.decks[1]!] };
+        // Rock-paper-scissors, kept by team (the seats are now in turn order) for the showdown.
+        const rps = pre.why === 'rps' && pre.hands
+            ? { hands: [pre.hands[seats[0]], pre.hands[seats[1]]] as [RpsHand, RpsHand], winner: (seats[0] === pre.chooser ? 0 : 1) as Team }
+            : undefined;
         const updated = await duels().findOneAndUpdate(
             { _id: duel._id, status: 'pregame' },
-            { $set: { status: 'active', players, seats, setup, match, updatedAt: new Date() }, $unset: { pre: '' } },
+            { $set: { status: 'active', players, seats, setup, match, ...(rps ? { rps } : {}), updatedAt: new Date() }, $unset: { pre: '' } },
             { returnDocument: 'after' },
         );
         if (!updated) return duel;

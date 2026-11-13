@@ -249,6 +249,11 @@ export interface DuelMatchView {
     winner?: Side | null;
     /** The next game's duel, once this one is over and the match isn't. */
     next?: string;
+    /**
+     * Game 1: how rock-paper-scissors went (your hand, your rival's, who won). The winner chose who
+     * goes first, so the board can play the showdown even when it was decided without you watching.
+     */
+    rps?: { mine: RpsHand; theirs: RpsHand; won: boolean };
 }
 
 export type RpsHand = 'rock' | 'paper' | 'scissors';
