@@ -89,7 +89,7 @@ export async function migrateCardIds(db: Db): Promise<CardIdMigrationReport> {
     const duels = duelsCollection(db);
     for (const d of await duels.find({ status: 'waiting', challengerDeck: { $exists: true } }, { projection: { challengerDeck: 1 } }).toArray()) {
         const deck = d.challengerDeck!;
-        const next = { main: canonicalCardIds(deck.main), extra: canonicalCardIds(deck.extra) };
+        const next = { main: canonicalCardIds(deck.main), extra: canonicalCardIds(deck.extra), ...(deck.side ? { side: canonicalCardIds(deck.side) } : {}) };
         if (sameIds([...next.main, ...next.extra], [...deck.main, ...deck.extra])) continue;
         await duels.updateOne({ _id: d._id }, { $set: { challengerDeck: next } });
         report.duels++;

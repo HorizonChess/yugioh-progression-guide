@@ -3,7 +3,10 @@ import { MongoServerError, ObjectId, type Db } from 'mongodb';
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import type { OcgResponse } from 'ocgcore-wasm';
-import { DuelClientMessageSchema, cardVersionAt, ruleEraFor, resolveSetIndex, type DuelModeId, type DuelServerMessage } from '@ygo/shared';
+import {
+    DuelClientMessageSchema, cardVersionAt, ruleEraFor, resolveSetIndex,
+    type DuelMatchView, type DuelModeId, type DuelPregameView, type DuelServerMessage, type DuelState, type MatchDeck, type PregameAction, type RpsHand,
+} from '@ygo/shared';
 import { confirmReport, reportDuoMatch } from '../game/matches';
 import { findSeries } from '../game/series';
 import { engineFaulted, loadEngine } from './engine';
@@ -18,7 +21,47 @@ import { DUEL_RULES, DuelSession, type DuelSetup, type Team } from './session';
  * and is opened with a secret token, and storage drops it after a day. A rival
  * duel is between the two members of a duo series: one challenges with a deck, the other
  * accepts with theirs, and the result goes through the series like a confirmed report.
+ *
+ * A duel against the rival or the bot is a game of a match, best of 3. Each game is a duel of its
+ * own (its own document, setup and answers), linked by `match`. Before a game there's a pregame:
+ * game 1 opens with rock-paper-scissors, whose winner chooses who goes first; before games 2 and
+ * 3 both players may swap cards with their side deck, and the loser of the last game chooses who
+ * goes first (a coin, after a drawn game). The series is booked once, when the match is decided.
  */
+
+/** A player's place in a match: fixed for all its games (the team, who goes first, changes). */
+export type Seat = 0 | 1;
+
+export interface MatchInfo {
+    /** The match's id: its first game's. */
+    id: ObjectId;
+    game: number;
+    /** Games won, by seat. */
+    wins: [number, number];
+    /** The decks as registered for the match, by seat: side decking only moves cards within one. */
+    registered: [MatchDeck, MatchDeck];
+    /** The decks as last played, by seat: where the next side decking starts from. */
+    current: [MatchDeck, MatchDeck];
+    over?: boolean;
+    /** The seat that won the match (null: drawn, or called off). */
+    winner?: Seat | null;
+}
+
+export interface PreGame {
+    /** Rock-paper-scissors, by seat: the hands thrown this round. */
+    rps: [RpsHand | null, RpsHand | null];
+    /** The hand both threw last round. */
+    tied?: RpsHand;
+    /** The hands that decided it. */
+    hands?: [RpsHand, RpsHand];
+    /** The seat that chooses who goes first, and why it's theirs to choose. */
+    chooser: Seat | null;
+    why: 'rps' | 'lost' | 'coin';
+    /** The chooser goes first (true) or second. */
+    first: boolean | null;
+    /** The decks handed in for this game, by seat. */
+    decks: [MatchDeck | null, MatchDeck | null];
+}
 
 export interface DuelPlayer {
     userId: ObjectId | null;
@@ -34,8 +77,15 @@ export interface DuelDoc {
     setIndex: number;
     setName: string;
     kind: 'practice' | 'rival';
-    /** `cancelled`: both players agreed to call it off; nothing was recorded. */
-    status: 'waiting' | 'active' | 'finished' | 'declined' | 'cancelled';
+    /** `pregame`: a game of a match about to start. `cancelled`: both players agreed to call it off; nothing was recorded. */
+    status: 'waiting' | 'pregame' | 'active' | 'finished' | 'declined' | 'cancelled';
+    /** The match this duel is a game of. */
+    match?: MatchInfo;
+    pre?: PreGame;
+    /** Once active: the seat of team 0 and of team 1. (Before that, `players` is in seat order.) */
+    seats?: [Seat, Seat];
+    /** The next game of the match, once this one is over. */
+    next?: ObjectId;
     /** The team that asked to call the duel off, while the other hasn't answered. */
     callOffBy?: Team;
     /** Set while the duel is open, so a series has one open rival duel (and a player one practice duel). */
@@ -50,7 +100,7 @@ export interface DuelDoc {
     expiresAt?: Date;
     mode: DuelModeId;
     /** While waiting: the challenger's deck, until the rival accepts and the setup is made. */
-    challengerDeck?: { main: number[]; extra: number[] };
+    challengerDeck?: { main: number[]; extra: number[]; side?: number[] };
     setup: DuelSetup | null;
     /** The pinned engine data the duel was played with. */
     engineVersion: string;
@@ -81,17 +131,24 @@ const newSeed = (): DuelSetup['seed'] => {
 export const hashGuestToken = (token: string) => createHash('sha256').update(token).digest('hex');
 const GUEST_DUEL_MS = 24 * 60 * 60_000;
 
-export type Deck = { main: number[]; extra: number[] };
+export type Deck = MatchDeck;
 export type Opponent = 'bot' | 'solo';
 
-export type DuelProblem = 'no-set' | 'no-deck' | 'deck-illegal' | 'unknown-card' | 'busy' | 'finished' | 'no-rival' | 'not-yours' | 'not-waiting';
+export type DuelProblem = 'no-set' | 'no-deck' | 'deck-illegal' | 'unknown-card' | 'busy' | 'finished' | 'no-rival' | 'not-yours' | 'not-waiting' | 'not-now' | 'bad-side';
 
 export interface DuelHub {
     /** Starts a practice duel or challenges the rival. */
     create(input: { seriesId: ObjectId; userId: ObjectId; name: string; deck: Deck; deckId: string; against: Opponent | 'rival' }): Promise<DuelDoc | DuelProblem>;
     /** A guest's practice duel at a set of the timeline, opened later with the returned token. */
     createGuest(input: { deck: Deck; setName: string; against: Opponent }): Promise<{ duel: DuelDoc; token: string } | DuelProblem>;
-    accept(input: { duel: DuelDoc; userId: ObjectId; name: string; deck: { main: number[]; extra: number[] }; deckId: string }): Promise<DuelDoc | DuelProblem>;
+    accept(input: { duel: DuelDoc; userId: ObjectId; name: string; deck: Deck; deckId: string }): Promise<DuelDoc | DuelProblem>;
+    /** Before a game: a hand thrown, who goes first chosen, or a side-decked deck handed in. */
+    pregame(duel: DuelDoc, seat: Seat, action: PregameAction): Promise<DuelDoc | DuelProblem>;
+    pregameView(duel: DuelDoc, seat: Seat): DuelPregameView;
+    /** The match as a player of this duel sees it (their seat while it's a pregame, their team after). */
+    matchView(duel: DuelDoc, team: Team): DuelMatchView | undefined;
+    /** Gives the match up before a game starts. */
+    forfeit(duel: DuelDoc, seat: Seat): Promise<void>;
     decline(duel: DuelDoc, userId: ObjectId): Promise<boolean>;
     find(id: ObjectId): Promise<DuelDoc | null>;
     teamOf(duel: DuelDoc, userId: ObjectId | null, guestToken?: string): Team | null;
@@ -160,8 +217,8 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         await unknownCards(duel.setup!.decks.flatMap((d) => [...d.main, ...d.extra]));
         // The answers as they're stored now: the caller's copy of the duel may be from when its
         // page connected, many moves ago.
-        const latest = await duels().findOne({ _id: duel._id }, { projection: { answers: 1, callOffBy: 1 } });
-        if (latest) duel.answers = latest.answers;
+        const latest = await duels().findOne({ _id: duel._id });
+        if (latest) Object.assign(duel, latest);
         const callOffBy = latest?.callOffBy ?? null;
         const stored = duel.answers.map(decode);
         let session = new DuelSession(engine, duel.setup!);
@@ -222,9 +279,11 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 ...(finished ? { $unset: { openKey: '' as const, callOffBy: '' as const } } : session.callOffBy === null ? { $unset: { callOffBy: '' as const } } : {}),
             },
         );
-        // A finished rival duel is booked on the series before anyone is told, so their next screen shows it.
-        if (finished && duel.kind === 'rival' && !session.result!.calledOff) await recordResult(duel, session.result!.winner);
-        for (const s of sockets.get(id) ?? []) send(s.socket, { type: 'state', frames: session.takeFrames(s.team), state: session.state(s.team, id), cursor: session.cursor(s.team) });
+        // A finished game moves its match along (the next game, or the match's result booked on the
+        // series) before anyone is told, so their next screen shows it.
+        if (finished && duel.match) await closeGame(duel, session.result!.winner, !!session.result!.calledOff);
+        else if (finished && duel.kind === 'rival' && !session.result!.calledOff && session.result!.winner !== null) await recordResult(duel, duel.players[session.result!.winner]!, duel.players[1 - session.result!.winner]!);
+        for (const s of sockets.get(id) ?? []) send(s.socket, { type: 'state', frames: session.takeFrames(s.team), state: stateOf(duel, session, s.team), cursor: session.cursor(s.team) });
         if (finished) live.delete(id);
     }
 
@@ -238,20 +297,19 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const answers = session.state(team, id).seq === seq ? session.backAnswers(team) : null;
         const watchers = sockets.get(id) ?? [];
         if (!answers) {
-            for (const s of watchers) if (s.team === team) send(s.socket, { type: 'state', frames: [], state: session.state(team, id), cursor: session.cursor(team) });
+            for (const s of watchers) if (s.team === team) send(s.socket, { type: 'state', frames: [], state: stateOf(duel, session, team), cursor: session.cursor(team) });
             return;
         }
         const rebuilt = new DuelSession(await loadEngine(), duel.setup!);
         rebuilt.start(answers);
         live.set(id, { session: rebuilt, stored: answers.length, touched: Date.now() });
         await duels().updateOne({ _id: duel._id }, { $set: { answers: answers.map(encode), updatedAt: new Date() } });
-        for (const s of watchers) send(s.socket, { type: 'state', frames: [], state: rebuilt.state(s.team, id), cursor: rebuilt.cursor(s.team) });
+        for (const s of watchers) send(s.socket, { type: 'state', frames: [], state: stateOf(duel, rebuilt, s.team), cursor: rebuilt.cursor(s.team) });
     }
 
-    /** A rival duel's result counts like a confirmed report: the set advances, rewards are booked. */
-    async function recordResult(duel: DuelDoc, winner: Team | null) {
-        if (winner === null) return;
-        const winnerId = duel.players[winner]!.userId!, loserId = duel.players[1 - winner]!.userId!;
+    /** A rival duel's (or match's) result counts like a confirmed report: the set advances, rewards are booked. */
+    async function recordResult(duel: DuelDoc, won: DuelPlayer, lost: DuelPlayer) {
+        const winnerId = won.userId!, loserId = lost.userId!;
         const at = await setOf(duel.seriesId!);
         if (!at || at.setIndex !== duel.setIndex) return;
         const report = await reportDuoMatch(app.db, { series: at.series, userId: winnerId, won: true, timeline: at.timeline });
@@ -259,9 +317,150 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const fresh = await findSeries(app.db, duel.seriesId!);
         const confirmed = await confirmReport(app.mongo, app.db, { series: fresh!, userId: loserId, reportId: report._id, timeline: at.timeline });
         if (typeof confirmed === 'string') return app.log.warn({ duel: duel._id, problem: confirmed }, 'duel result not confirmed');
-        for (const [userId, rival, won] of [[winnerId, duel.players[1 - winner]!.name, true], [loserId, duel.players[winner]!.name, false]] as const) {
-            app.notify(userId, 'duel-result', duel.seriesId!, { seriesName: at.series.name, from: rival, setName: duel.setName, youWon: won });
+        for (const [userId, rival, youWon] of [[winnerId, lost.name, true], [loserId, won.name, false]] as const) {
+            app.notify(userId, 'duel-result', duel.seriesId!, { seriesName: at.series.name, from: rival, setName: duel.setName, youWon });
         }
+    }
+
+    // ---- matches ------------------------------------------------------------------------------
+
+    /** The players in seat order, whatever the duel's stage. */
+    const seated = (duel: DuelDoc): DuelPlayer[] => (duel.seats ? [duel.players[duel.seats.indexOf(0)]!, duel.players[duel.seats.indexOf(1)]!] : duel.players);
+    /** The seat a team sits in (while a duel is a pregame, `players` is in seat order: team is the seat). */
+    const seatOfTeam = (duel: DuelDoc, team: Team): Seat => (duel.seats ? duel.seats[team] : team);
+
+    function matchView(duel: DuelDoc, team: Team): DuelMatchView | undefined {
+        const m = duel.match;
+        if (!m) return undefined;
+        const mine = seatOfTeam(duel, team), theirs = (1 - mine) as Seat;
+        return {
+            game: m.game,
+            score: [m.wins[mine], m.wins[theirs]],
+            over: !!m.over,
+            ...(m.over ? { winner: m.winner === undefined || m.winner === null ? null : m.winner === mine ? ('me' as const) : ('opp' as const) } : {}),
+            ...(duel.next ? { next: duel.next.toHexString() } : {}),
+        };
+    }
+    const stateOf = (duel: DuelDoc, session: DuelSession, team: Team): DuelState => {
+        const match = matchView(duel, team);
+        return { ...session.state(team, duel._id.toHexString()), ...(match ? { match } : {}) };
+    };
+
+    const BEATS: Record<RpsHand, RpsHand> = { rock: 'scissors', paper: 'rock', scissors: 'paper' };
+    const randomHand = (): RpsHand => (['rock', 'paper', 'scissors'] as const)[randomBytes(1)[0]! % 3]!;
+
+    /**
+     * Moves a pregame as far as it goes by itself: the bot throws its hand, chooses to go first and
+     * keeps its deck; two hands thrown decide rock-paper-scissors (or tie, and are thrown again).
+     * True once everything is in and the game can start.
+     */
+    function settle(duel: DuelDoc): boolean {
+        const pre = duel.pre!, m = duel.match!;
+        for (;;) {
+            for (const s of [0, 1] as const) {
+                if (!duel.players[s]!.bot) continue;
+                if (pre.chooser === null && !pre.rps[s]) pre.rps[s] = randomHand();
+                if (pre.chooser === s && pre.first === null) pre.first = true;
+                pre.decks[s] ??= m.current[s];
+            }
+            const [a, b] = pre.rps;
+            if (pre.chooser !== null || !a || !b) break;
+            if (a === b) {
+                pre.tied = a;
+                pre.rps = [null, null];
+                continue;
+            }
+            pre.hands = [a, b];
+            pre.chooser = BEATS[a] === b ? 0 : 1;
+            delete pre.tied;
+        }
+        return pre.chooser !== null && pre.first !== null && !!pre.decks[0] && !!pre.decks[1];
+    }
+
+    /** A side-decked deck is the registered one with cards moved between its parts, each part the size it was. */
+    async function sidedFrom(registered: MatchDeck, deck: MatchDeck): Promise<boolean> {
+        const engine = await loadEngine();
+        const all = (d: MatchDeck) => [...d.main, ...d.extra, ...d.side].sort((x, y) => x - y).join(',');
+        return all(registered) === all(deck) && deck.main.length === registered.main.length && deck.extra.length === registered.extra.length
+            && deck.extra.every((c) => engine.isExtra(c)) && !deck.main.some((c) => engine.isExtra(c));
+    }
+
+    /** The first pregame of a match between two seated players, with the decks they registered. */
+    function openMatch(id: ObjectId, players: DuelPlayer[], decks: [MatchDeck, MatchDeck]): Pick<DuelDoc, 'status' | 'players' | 'match' | 'pre'> {
+        const duel = {
+            status: 'pregame' as const,
+            players,
+            match: { id, game: 1, wins: [0, 0] as [number, number], registered: decks, current: decks },
+            // Game 1 is played with the decks as registered.
+            pre: { rps: [null, null], chooser: null, why: 'rps', first: null, decks: [decks[0], decks[1]] } as PreGame,
+        };
+        settle(duel as DuelDoc);
+        return duel;
+    }
+
+    /** Everything is in: the game is set up (the chooser's pick decides the teams) and dealt. */
+    async function activate(duel: DuelDoc): Promise<DuelDoc> {
+        const pre = duel.pre!, m = duel.match!;
+        const firstSeat = (pre.first ? pre.chooser! : 1 - pre.chooser!) as Seat;
+        const seats: [Seat, Seat] = [firstSeat, (1 - firstSeat) as Seat];
+        const players = seats.map((s) => duel.players[s]!);
+        const shown: Record<string, number> = {};
+        const date = await setDate(duel);
+        const decks = [await playedAt(pre.decks[seats[0]]!, date, shown), await playedAt(pre.decks[seats[1]]!, date, shown)] as DuelSetup['decks'];
+        const setup: DuelSetup = { seed: newSeed(), mode: duel.mode, decks, names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown, rules: DUEL_RULES };
+        const match: MatchInfo = { ...m, current: [pre.decks[0]!, pre.decks[1]!] };
+        const updated = await duels().findOneAndUpdate(
+            { _id: duel._id, status: 'pregame' },
+            { $set: { status: 'active', players, seats, setup, match, updatedAt: new Date() }, $unset: { pre: '' } },
+            { returnDocument: 'after' },
+        );
+        if (!updated) return duel;
+        await start(updated);
+        return updated;
+    }
+
+    /**
+     * A game is over: the match's score moves, and either the match is decided (two wins, or three
+     * games played) and booked on the series, or the next game's pregame is opened.
+     */
+    async function closeGame(duel: DuelDoc, winner: Team | null, calledOff: boolean) {
+        const m = duel.match!;
+        const seats = seated(duel);
+        const wonSeat = winner === null ? null : seatOfTeam(duel, winner);
+        if (calledOff) {
+            m.over = true;
+            m.winner = null;
+        } else {
+            if (wonSeat !== null) m.wins[wonSeat]++;
+            if (m.wins[0] >= 2 || m.wins[1] >= 2 || m.game >= 3) {
+                m.over = true;
+                m.winner = m.wins[0] === m.wins[1] ? null : m.wins[0] > m.wins[1] ? 0 : 1;
+            }
+        }
+        if (m.over) {
+            await duels().updateOne({ _id: duel._id }, { $set: { match: m } });
+            if (duel.kind === 'rival' && m.winner !== null && m.winner !== undefined) await recordResult(duel, seats[m.winner]!, seats[1 - m.winner]!);
+            return;
+        }
+        // The loser chooses who goes first next; after a drawn game, a coin picks who chooses.
+        const chooser = (wonSeat === null ? randomBytes(1)[0]! & 1 : 1 - wonSeat) as Seat;
+        const now = new Date();
+        const next: DuelDoc = {
+            _id: new ObjectId(),
+            seriesId: duel.seriesId, setIndex: duel.setIndex, setName: duel.setName, kind: duel.kind, status: 'pregame',
+            ...(duel.openKey ? { openKey: duel.openKey } : {}),
+            players: seats, challengerId: duel.challengerId,
+            ...(duel.guestTokenHash ? { guestTokenHash: duel.guestTokenHash, expiresAt: new Date(now.getTime() + GUEST_DUEL_MS) } : {}),
+            mode: duel.mode, setup: null, engineVersion: duel.engineVersion, answers: [], winner: null, reason: null,
+            match: { ...m, game: m.game + 1 },
+            pre: { rps: [null, null], chooser, why: wonSeat === null ? 'coin' : 'lost', first: null, decks: [null, null] },
+            createdAt: now, updatedAt: now,
+        };
+        settle(next);
+        // (The finished game gave up its place as the open duel just before this.)
+        await duels().insertOne(next);
+        await duels().updateOne({ _id: duel._id }, { $set: { match: m, next: next._id } });
+        duel.next = next._id;
     }
 
     const send = (socket: WebSocket, message: DuelServerMessage) => {
@@ -294,9 +493,14 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
     }
     const setDate = async (duel: Pick<DuelDoc, 'setName'>) => (await app.catalog.timeline()).find((s) => s.set_name === duel.setName)?.tcg_date;
 
-    /** A practice duel's players and setup: the bot plays a mirror of your deck; a coin decides who goes first. */
-    async function practice(me: DuelPlayer, deck: Deck, date: string | undefined, mode: DuelModeId, against: Opponent) {
+    /**
+     * A practice duel. Against the bot (which plays a mirror of your deck) it's a match like any
+     * other, opening on its pregame. Solo, where the opponent only passes, is one game: it's set up
+     * here, and a coin decides who goes first.
+     */
+    async function practice(id: ObjectId, me: DuelPlayer, deck: Deck, date: string | undefined, mode: DuelModeId, against: Opponent): Promise<Partial<DuelDoc>> {
         const bot: DuelPlayer = { userId: null, name: against === 'solo' ? 'Solo Practice' : 'Practice Bot', deckId: null, bot: true };
+        if (against === 'bot') return openMatch(id, [me, bot], [deck, deck]);
         const players = randomBytes(1)[0]! & 1 ? [me, bot] : [bot, me];
         const shown: Record<string, number> = {};
         const played = await playedAt(deck, date, shown);
@@ -317,7 +521,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         async create({ seriesId, userId, name, deck, deckId, against }) {
             const at = await setOf(seriesId);
             if (!at) return 'finished';
-            if ((await unknownCards([...deck.main, ...deck.extra])).length) return 'unknown-card';
+            if ((await unknownCards([...deck.main, ...deck.extra, ...deck.side])).length) return 'unknown-card';
             const rivalId = at.series.memberIds.find((m) => !m.equals(userId)) ?? null;
             if (against === 'rival' && (at.series.mode !== 'duo' || at.series.status !== 'active' || !rivalId)) return 'no-rival';
             const engine = await loadEngine();
@@ -331,7 +535,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 setIndex: at.setIndex,
                 setName: at.set.set_name,
                 kind: solo ? 'practice' : 'rival',
-                status: solo ? 'active' : 'waiting',
+                status: against === 'solo' ? 'active' : 'waiting',
                 openKey: solo ? `${seriesId}:${userId}:practice` : `${seriesId}:rival`,
                 players: [me],
                 challengerId: userId,
@@ -345,7 +549,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 updatedAt: now,
             };
             if (solo) {
-                Object.assign(doc, await practice(me, deck, at.set.tcg_date, mode, against));
+                Object.assign(doc, await practice(doc._id, me, deck, at.set.tcg_date, mode, against));
             } else {
                 doc.challengerDeck = deck;
             }
@@ -355,7 +559,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 if (error instanceof MongoServerError && error.code === 11000) return 'busy';
                 throw error;
             }
-            if (solo) await start(doc);
+            if (doc.status === 'active') await start(doc);
             return doc;
         },
         async createGuest({ deck, setName, against }) {
@@ -363,20 +567,23 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             const setIndex = timeline.findIndex((s) => s.set_name === setName);
             const set = timeline[setIndex];
             if (!set) return 'no-set';
-            if ((await unknownCards([...deck.main, ...deck.extra])).length) return 'unknown-card';
+            if ((await unknownCards([...deck.main, ...deck.extra, ...deck.side])).length) return 'unknown-card';
             const engine = await loadEngine();
             const mode = ruleEraFor(set.tcg_date).id;
             const token = randomBytes(24).toString('base64url');
             const me: DuelPlayer = { userId: null, name: 'Guest', deckId: null, bot: false };
             const now = new Date();
+            const _id = new ObjectId();
             const doc: DuelDoc = {
-                _id: new ObjectId(),
+                _id,
                 seriesId: null,
                 setIndex,
                 setName: set.set_name,
                 kind: 'practice',
                 status: 'active',
-                ...(await practice(me, deck, set.tcg_date, mode, against)),
+                players: [],
+                setup: null,
+                ...(await practice(_id, me, deck, set.tcg_date, mode, against)),
                 challengerId: null,
                 guestTokenHash: hashGuestToken(token),
                 expiresAt: new Date(now.getTime() + GUEST_DUEL_MS),
@@ -389,30 +596,22 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 updatedAt: now,
             };
             await duels().insertOne(doc);
-            await start(doc);
+            if (doc.status === 'active') await start(doc);
             return { duel: doc, token };
         },
         async accept({ duel, userId, name, deck, deckId }) {
             if (duel.status !== 'waiting') return 'not-waiting';
             if (duel.challengerId?.equals(userId)) return 'not-yours';
-            if ((await unknownCards([...deck.main, ...deck.extra])).length) return 'unknown-card';
-            const challengerDeck = duel.challengerDeck!;
-            const challenger = duel.players[0]!;
+            if ((await unknownCards([...deck.main, ...deck.extra, ...deck.side])).length) return 'unknown-card';
+            const challengerDeck = { side: [], ...duel.challengerDeck! };
             const rival: DuelPlayer = { userId, name, deckId, bot: false };
-            const flip = randomBytes(1)[0]! & 1;
-            const players = flip ? [challenger, rival] : [rival, challenger];
-            const shown: Record<string, number> = {};
-            const date = await setDate(duel);
-            const [mine, theirs] = [await playedAt(challengerDeck, date, shown), await playedAt(deck, date, shown)];
-            const decks = (flip ? [mine, theirs] : [theirs, mine]) as DuelSetup['decks'];
-            const setup: DuelSetup = { seed: newSeed(), mode: duel.mode, decks, names: [players[0]!.name, players[1]!.name], bots: [false, false], shown, rules: DUEL_RULES };
+            // The challenger takes seat 0. Rock-paper-scissors decides who chooses to go first.
             const updated = await duels().findOneAndUpdate(
                 { _id: duel._id, status: 'waiting' },
-                { $set: { status: 'active', players, setup, updatedAt: new Date() }, $unset: { challengerDeck: '' } },
+                { $set: { ...openMatch(duel._id, [duel.players[0]!, rival], [challengerDeck, deck]), updatedAt: new Date() }, $unset: { challengerDeck: '' } },
                 { returnDocument: 'after' },
             );
             if (!updated) return 'not-waiting';
-            await start(updated);
             app.notify(duel.challengerId!, 'duel-accepted', duel.seriesId!, { from: name, duelId: duel._id.toHexString(), setName: duel.setName });
             return updated;
         },
@@ -423,6 +622,57 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             if (!duel.challengerId!.equals(userId)) app.notify(duel.challengerId!, 'duel-declined', duel.seriesId!, { duelId: duel._id.toHexString(), setName: duel.setName });
             return true;
         },
+        pregame(duel, seat, action) {
+            return serial(duel._id.toHexString(), async () => {
+                const fresh = await duels().findOne({ _id: duel._id });
+                if (!fresh || fresh.status !== 'pregame' || !fresh.pre || !fresh.match) return 'not-now' as const;
+                const pre = fresh.pre, m = fresh.match;
+                if ('rps' in action) {
+                    // One hand a round; nothing to throw once it's decided.
+                    if (pre.chooser !== null || pre.rps[seat]) return 'not-now' as const;
+                    pre.rps[seat] = action.rps;
+                } else if ('first' in action) {
+                    if (pre.chooser !== seat || pre.first !== null) return 'not-now' as const;
+                    pre.first = action.first;
+                } else {
+                    if (pre.decks[seat]) return 'not-now' as const;
+                    if (!(await sidedFrom(m.registered[seat], action.deck))) return 'bad-side' as const;
+                    pre.decks[seat] = action.deck;
+                }
+                if (settle(fresh)) return activate(fresh);
+                await duels().updateOne({ _id: fresh._id, status: 'pregame' }, { $set: { pre, updatedAt: new Date() } });
+                return fresh;
+            });
+        },
+        pregameView(duel, seat) {
+            const pre = duel.pre!, m = duel.match!;
+            const other = (1 - seat) as Seat, rival = duel.players[other]!;
+            const side = (s: Seat) => (s === seat ? ('me' as const) : ('opp' as const));
+            return {
+                game: m.game,
+                score: [m.wins[seat], m.wins[other]],
+                rival: { name: rival.name, bot: rival.bot },
+                ...(pre.chooser === null ? { rps: { mine: pre.rps[seat], ...(pre.tied ? { tied: pre.tied } : {}) } } : {
+                    chooser: { side: side(pre.chooser), why: pre.why, ...(pre.hands ? { hands: { mine: pre.hands[seat], theirs: pre.hands[other] } } : {}), chosen: pre.first !== null },
+                }),
+                // Side decking, from game 2 on: your deck as it stands, never the rival's.
+                ...(m.game > 1 ? { siding: { deck: pre.decks[seat] ?? m.current[seat], done: !!pre.decks[seat], rivalDone: !!pre.decks[other] } } : {}),
+            };
+        },
+        matchView,
+        forfeit(duel, seat) {
+            return serial(duel._id.toHexString(), async () => {
+                const fresh = await duels().findOne({ _id: duel._id });
+                if (!fresh || fresh.status !== 'pregame' || !fresh.match) return;
+                const winner = (1 - seat) as Seat;
+                const match: MatchInfo = { ...fresh.match, over: true, winner };
+                await duels().updateOne(
+                    { _id: fresh._id, status: 'pregame' },
+                    { $set: { status: 'finished', match, winner: null, reason: `${fresh.players[seat]!.name} gave the match up`, updatedAt: new Date() }, $unset: { openKey: '', pre: '' } },
+                );
+                if (fresh.kind === 'rival') await recordResult(fresh, fresh.players[winner]!, fresh.players[seat]!);
+            });
+        },
         find: (id) => duels().findOne({ _id: id }),
         teamOf(duel, userId, guestToken) {
             // A guest's duel: the human seat, for the right token.
@@ -432,7 +682,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         },
         async stateFor(duel, team) {
             const { session } = await sessionOf(duel);
-            return { type: 'state', frames: [], state: session.state(team, duel._id.toHexString()) };
+            return { type: 'state', frames: [], state: stateOf(duel, session, team) };
         },
         concede(duel, team) {
             return serial(duel._id.toHexString(), async () => {
@@ -450,7 +700,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                     { _id: duel._id, status: 'active' },
                     { $set: { status: 'finished', winner, reason: `${duel.players[team]!.name} surrendered`, updatedAt: new Date() }, $unset: { openKey: '' } },
                 );
-                if (duel.kind === 'rival') await recordResult(duel, winner);
+                if (duel.kind === 'rival') await recordResult(duel, duel.players[winner]!, duel.players[team]!);
             });
         },
         connect(duel, team, socket, after) {
@@ -490,7 +740,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                     } else if (message.type === 'concede') session.concede(team);
                     else if (!session.answer(team, message.seq, message.answer)) {
                         // Not this player's turn to answer, or an answer that doesn't fit: resend the truth.
-                        send(socket, { type: 'state', frames: [], state: session.state(team, id), cursor: session.cursor(team) });
+                        send(socket, { type: 'state', frames: [], state: stateOf(duel, session, team), cursor: session.cursor(team) });
                         return;
                     }
                     await persistAndBroadcast(duel);
@@ -504,7 +754,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                     try {
                         const { session } = await sessionOf(duel);
                         for (const s of sockets.get(id) ?? []) {
-                            const state = session.state(s.team, id);
+                            const state = stateOf(duel, session, s.team);
                             send(s.socket, { type: 'state', frames: [], state: faulted && s.team === team && state.prompt ? { ...state, retry: true } : state, cursor: session.cursor(s.team) });
                         }
                     } catch (rebuild) {
@@ -517,7 +767,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 // The first look at a new duel plays it from the deal. A page reconnecting (a phone put
                 // away mid-turn) is shown what it missed, when that's known; otherwise the board as it is.
                 const missed = after ? session.framesSince(team, after) : null;
-                send(socket, { type: 'state', frames: missed ?? session.framesOnConnect(team), state: session.state(team, id), cursor: session.cursor(team) });
+                send(socket, { type: 'state', frames: missed ?? session.framesOnConnect(team), state: stateOf(duel, session, team), cursor: session.cursor(team) });
             }).catch((error: unknown) => app.log.error({ err: error, duel: id }, 'duel connect failed'));
         },
     };

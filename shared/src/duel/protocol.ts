@@ -228,12 +228,63 @@ export interface DuelState {
     retry?: boolean;
     /** `calledOff`: both players agreed to stop; nobody won and nothing is recorded. */
     result: { winner: Side | null; reason: string; calledOff?: boolean } | null;
+    /** The match this duel is a game of (best of 3), as it stands: after this game, once it's over. */
+    match?: DuelMatchView;
     /**
      * Calling the duel off needs both players: `asked` when you've asked and your rival hasn't
      * answered, `asking` when your rival asks you.
      */
     callOff?: 'asked' | 'asking';
 }
+
+/** A best-of-3 match, as one of its players sees it. */
+export interface DuelMatchView {
+    /** Which game this duel is: 1, 2 or 3. */
+    game: number;
+    /** Games won so far: yours, then your rival's. */
+    score: [number, number];
+    /** The match is decided (or was called off). */
+    over: boolean;
+    /** Who won the match, once it's over (null: a drawn match). */
+    winner?: Side | null;
+    /** The next game's duel, once this one is over and the match isn't. */
+    next?: string;
+}
+
+export type RpsHand = 'rock' | 'paper' | 'scissors';
+
+/** A deck as registered for a match: what's played, and the side deck to swap with between games. */
+export const MatchDeckSchema = z.strictObject({
+    main: z.array(z.number().int().positive()).min(40).max(60),
+    extra: z.array(z.number().int().positive()).max(15),
+    side: z.array(z.number().int().positive()).max(15),
+});
+export type MatchDeck = z.infer<typeof MatchDeckSchema>;
+
+/**
+ * Before a game of a match starts, as one player sees it. Game 1: rock-paper-scissors, and its
+ * winner chooses who goes first. Later games: both players may swap cards with their side deck,
+ * and the loser of the last game chooses who goes first.
+ */
+export interface DuelPregameView {
+    game: number;
+    score: [number, number];
+    rival: { name: string; bot: boolean };
+    /** Rock-paper-scissors is still to be decided; `mine` is your hand once thrown, `tied` the hand both threw last. */
+    rps?: { mine: RpsHand | null; tied?: RpsHand };
+    /** Who chooses who goes first, once that's known, and why. */
+    chooser?: { side: Side; why: 'rps' | 'lost' | 'coin'; hands?: { mine: RpsHand; theirs: RpsHand }; chosen: boolean };
+    /** Side decking (game 2 on): your deck as it stands, and whether each of you is done. */
+    siding?: { deck: MatchDeck; done: boolean; rivalDone: boolean };
+}
+
+/** What a player does before a game: throw a hand, choose who goes first, or hand in their deck. */
+export const PregameActionSchema = z.union([
+    z.strictObject({ rps: z.enum(['rock', 'paper', 'scissors']) }),
+    z.strictObject({ first: z.boolean() }),
+    z.strictObject({ deck: MatchDeckSchema }),
+]);
+export type PregameAction = z.infer<typeof PregameActionSchema>;
 
 /** Client → server over the duel socket. */
 export const DuelClientMessageSchema = z.discriminatedUnion('type', [
