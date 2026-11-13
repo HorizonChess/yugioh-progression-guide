@@ -14,6 +14,9 @@ const subscribe = (onChange: () => void) => {
 };
 
 /** True on a phone-width screen; false during the static prerender. */
+/** The same test outside React, for code that only runs in the browser. */
+export const isPhoneNow = () => hasMedia() && window.matchMedia(QUERY).matches;
+
 export function useIsPhone() {
     return useSyncExternalStore(subscribe, () => hasMedia() && window.matchMedia(QUERY).matches, () => false);
 }

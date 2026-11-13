@@ -31,6 +31,7 @@ import { deckRoutes } from './routes/decks';
 import { duelRoutes } from './routes/duels';
 import { googleRoutes } from './routes/google';
 import { healthRoutes } from './routes/health';
+import { cardRoutes } from './routes/cards';
 import { inviteRoutes } from './routes/invites';
 import { matchRoutes } from './routes/matches';
 import { notificationRoutes } from './routes/notifications';
@@ -148,6 +149,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
         api.options('/*', async (_request, reply) => reply.code(204).send());
         await api.register(rateLimit, { max: 300, timeWindow: '1 minute' });
         await api.register(healthRoutes);
+        await api.register(cardRoutes);
         const secureCookies = config.NODE_ENV === 'production';
         await api.register(authRoutes, { prefix: '/auth', secureCookies, emailFlows });
         await api.register(seriesRoutes, { prefix: '/series', catalog: app.catalog });

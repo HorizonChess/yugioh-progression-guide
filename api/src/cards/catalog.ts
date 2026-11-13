@@ -12,6 +12,8 @@ import { cardSetsCollection, cardsCollection } from './sync';
  * session in a set reads the same list.
  */
 export interface CardCatalog {
+    /** Every synced set, unfiltered: what the browser reads in place of YGOPRODeck's cardsets.php. */
+    sets(): Promise<CardSet[]>;
     /** The progression timeline; `currentSetIndex` indexes into it. */
     timeline(): Promise<CardSet[]>;
     /** The tournament-pack pool, oldest first. */
@@ -22,6 +24,8 @@ export interface CardCatalog {
     cardsInSet(setName: string): Promise<Card[]>;
     /** The cards with these ids that exist in the pool (unknown ids are left out). */
     cardsByIds(ids: readonly number[]): Promise<Card[]>;
+    /** Cards whose name contains `query` (any case), by name, at most `limit` of them. */
+    searchByName(query: string, limit: number): Promise<Card[]>;
     /** Which of these ids are cards in the pool, without loading the cards. */
     knownIds(ids: readonly number[]): Promise<Set<number>>;
     /** Drops the caches, e.g. after a sync. */
@@ -59,6 +63,7 @@ export function createCardCatalog(db: Db): CardCatalog {
     };
 
     return {
+        sets: async () => (await loadViews()).raw,
         timeline: async () => (await loadViews()).timeline,
         tournamentSets: async () => (await loadViews()).tournament,
         setDates: async () => (await loadViews()).dates,
@@ -89,6 +94,13 @@ export function createCardCatalog(db: Db): CardCatalog {
             const unique = [...new Set(ids)];
             if (unique.length === 0) return [];
             return (await cardsCollection(db).find({ _id: { $in: unique } }, { projection: { _id: 0 } }).toArray()) as Card[];
+        },
+
+        async searchByName(query, limit) {
+            const q = query.trim();
+            if (!q) return [];
+            const contains = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+            return (await cardsCollection(db).find({ name: contains }, { projection: { _id: 0 } }).sort({ name: 1 }).limit(limit).toArray()) as Card[];
         },
 
         async knownIds(ids) {
