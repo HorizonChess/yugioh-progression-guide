@@ -46,7 +46,7 @@ let key = 0;
 
 /** How long each kind of event holds the board, in ms. */
 const HOLD: Partial<Record<DuelEvent["k"], number>> = {
-    activate: 1050, turn: 900, coin: 2400, dice: 2000, reveal: 2200, random: 700, declare: 1600, destroyed: 120, damage: 700, pay: 500, recover: 500, summon: 520, move: 300, draw: 260, set: 300, reposition: 340, win: 500, resolved: 220, negated: 600,
+    activate: 1050, turn: 900, coin: 2400, dice: 2000, reveal: 2200, random: 700, declare: 1600, destroyed: 120, damage: 700, pay: 500, recover: 500, lp: 900, "hand-shuffle": 540, summon: 520, move: 300, draw: 260, set: 300, reposition: 340, win: 500, resolved: 220, negated: 600,
 };
 const FIELD = new Set(["monster", "spell", "field", "pendulum", "extra-monster"]);
 
@@ -128,6 +128,19 @@ function riffle(side: Side) {
         { transform: "translate(0, -4px)" },
         { transform: "none" },
     ], { duration: 640, easing: "ease-in-out" });
+}
+
+/** A hand is shuffled: its cards close up into a stack, and fan out again. */
+function shuffleHand(side: Side) {
+    const cards = [...document.querySelectorAll<HTMLElement>(side === "me" ? ".df-hand .df-hand__card" : ".df-rival-hand .df-rival-hand__card")];
+    if (cards.length < 2) return;
+    const boxes = cards.map((c) => c.getBoundingClientRect());
+    const middle = (boxes[0]!.left + boxes[boxes.length - 1]!.right) / 2;
+    cards.forEach((el, i) => {
+        const dx = middle - (boxes[i]!.left + boxes[i]!.width / 2);
+        // Added to whatever holds the card where it is (its place in the fan), so it returns there.
+        void anim(el, [{ transform: "translateX(0)" }, { transform: `translateX(${dx}px)`, offset: 0.4 }, { transform: `translateX(${dx}px)`, offset: 0.6 }, { transform: "translateX(0)" }], { duration: 520, easing: "ease-in-out", composite: "add" });
+    });
 }
 
 /** The whole table jolts. */
@@ -292,6 +305,11 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                 riffle(e.side);
                 sfx.shuffle();
             }
+            for (const e of frame.events) if (e.k === "hand-shuffle" && pace === 1) {
+                await nextPaint();
+                shuffleHand(e.side);
+                if (loud) sfx.shuffle();
+            }
             const summoned = frame.events.some((e) => e.k === "summon");
             const landing = frame.events.flatMap((e) => (e.k === "move" && FIELD.has(e.to) && !FIELD.has(e.from) ? [{ uid: e.uid, heavy: summoned && e.to !== "spell" }] : []));
             // A card activated flares; so do cards picked at random.
@@ -352,6 +370,11 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                 if (e.k === "declare") setEffects((x) => ({ ...x, banner: { key: ++key, kind: "declare", side: e.side, what: e.what, text: e.text, code: e.code } }));
                 if (e.k === "reveal") setEffects((x) => ({ ...x, banner: { key: ++key, kind: "reveal", side: e.side, by: e.by, from: e.from, codes: e.codes, count: e.count } }));
                 if (e.k === "recover") float({ side: e.side, text: `+${e.amount}`, tone: "up" });
+                // Life Points set outright (Reversal Quiz swaps them): the new total rises from the counter.
+                if (e.k === "lp") {
+                    float({ side: e.side, text: `${e.lp} LP`, tone: e.lp >= e.was ? "up" : "down" });
+                    if (loud) sfx.lpCount(700, e.lp < e.was);
+                }
                 // A negated attack: the words rise from the attacker (or its side, if it's gone).
                 if (e.k === "attack-negated") float({ ...(e.attacker ? { uid: e.attacker } : { side: e.side }), text: "Attack negated", tone: "down" });
                 hold = Math.max(hold, HOLD[e.k] ?? 120);

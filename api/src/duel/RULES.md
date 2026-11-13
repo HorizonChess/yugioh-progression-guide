@@ -109,6 +109,22 @@ It plays from what a player at the table could see. The rival's face-down monste
   bot, they come from the first cards listed.
 - Duels started under rules 3 or earlier keep the old answers, so their replays still land.
 
+## Cards the board treats by name, and what it shows that the engine only reports
+
+- **Question** ("your opponent declares the first monster in your Graveyard", from memory): while
+  it is on the chain its controller's Graveyard is closed to the rival. The server sends those
+  cards without names (in the view and in any question), and the page shuts the log too.
+  The engine only asks for a card name; the "can't look" is the card's text, kept here.
+- **Declaring a card** (Question, Mind Crush, Prohibition): typed and picked from the matching
+  cards, limited to the kind the effect asks for when it's one kind. The pick goes by passcode.
+- **A choice between options** is titled by what the card said it's for ("Declare 1 card type",
+  Reversal Quiz), else "Choose one"; every such question shows the card that asks.
+- **Life Points set outright** (Reversal Quiz swapping them) are an event: the new total rises
+  from the counter and the log says what it was.
+- **Decks turned over** (Convulsion of Nature): each Deck's top card is in the view for both
+  players, and can be read like any face-up card.
+- **A hand shuffled** closes up and fans out again, and the log says so.
+
 ## Open: still decided for the player without reading the card
 
 - **Rock-paper-scissors** (`ROCK_PAPER_SCISSORS`): always the same hand. Fine for deciding who

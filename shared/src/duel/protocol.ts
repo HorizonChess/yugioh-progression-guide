@@ -47,8 +47,15 @@ export interface DuelSideView {
     /** Master Rule 3: the two Pendulum Zones (left, right). */
     pendulum: (DuelCardView | null)[];
     grave: DuelCardView[];
+    /**
+     * This player's Graveyard is closed to you for now: their Question is being resolved, and you
+     * have to name its first monster from memory. Its cards come without codes, face-down.
+     */
+    graveHidden?: boolean;
     banished: DuelCardView[];
     deck: number;
+    /** The Decks are turned over (Convulsion of Nature): the card on top of this one, which both players see. */
+    deckTop?: number;
     extra: number;
     /** The Extra Deck's cards, for its owner only (the rival sees just the count). */
     extraCards?: DuelCardView[];
@@ -78,6 +85,8 @@ export type DuelEvent =
     | { k: 'draw'; side: Side; count: number }
     /** A deck shuffled (after a search, say). */
     | { k: 'shuffle'; side: Side }
+    /** A hand shuffled (after a card whose place in it was known came back, or was shown). */
+    | { k: 'hand-shuffle'; side: Side }
     /** A coin tossed (Fairy Box, Time Wizard…): each result, and who called it, if anyone did. */
     | { k: 'coin'; side: Side; results: ('heads' | 'tails')[]; call?: { side: Side; heads: boolean } }
     /** A die rolled (Dice Jar, Graceful Dice…). */
@@ -106,6 +115,8 @@ export type DuelEvent =
     | { k: 'damage'; side: Side; amount: number }
     | { k: 'recover'; side: Side; amount: number }
     | { k: 'pay'; side: Side; amount: number }
+    /** Life Points set outright by an effect (Reversal Quiz swapping them): what they become, and what they were. */
+    | { k: 'lp'; side: Side; lp: number; was: number }
     | { k: 'reposition'; uid: string; code: number }
     | { k: 'win'; side: Side | null; reason: string };
 
@@ -163,7 +174,8 @@ export type DuelPrompt =
     | { kind: 'position'; code: number; options: { id: number; label: string }[]; back?: boolean }
     | { kind: 'number'; title: string; options: { id: number; label: string }[] }
     | { kind: 'declare'; title: string; what: 'type' | 'attribute'; count: number; options: { id: number; label: string }[] }
-    | { kind: 'card-name'; title: string }
+    /** Name a card. `only`: the kind of card the effect asks for (Question: a monster). */
+    | { kind: 'card-name'; title: string; only?: 'monster' | 'spell' | 'trap' }
     /** Choose zones on the field: where to put a card, or (`disable`) which zones an effect shuts. */
     | { kind: 'place'; title: string; count: number; disable: boolean; zones: PlaceZone[]; back?: boolean };
 
@@ -196,7 +208,8 @@ export const DuelAnswerSchema = z.discriminatedUnion('kind', [
     z.strictObject({ kind: z.literal('cancel') }),
     /** `step` mode: finish choosing. */
     z.strictObject({ kind: z.literal('done') }),
-    z.strictObject({ kind: z.literal('name'), name: z.string().trim().min(1).max(80) }),
+    /** A declared card: its name, and its passcode when it was picked from a list (the name alone must match exactly). */
+    z.strictObject({ kind: z.literal('name'), name: z.string().trim().min(1).max(80), code: z.number().int().positive().max(999_999_999).optional() }),
 ]);
 export type DuelAnswer = z.infer<typeof DuelAnswerSchema>;
 

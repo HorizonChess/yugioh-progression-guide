@@ -33,6 +33,12 @@ function rows(view: DuelView, side: Side) {
     };
 }
 
+/** A Deck turned over shows its top card: a tap reads it, like any face-up card. */
+const deckPeek = (view: DuelView, onCard: BoardProps["onCard"]) => (side: Side) => {
+    const code = view[side].deckTop;
+    return code ? () => onCard({ uid: `${side}:deck-top`, code, faceUp: true, defense: false }, side, "deck") : undefined;
+};
+
 /** The Extra Monster Zones (New Master Rule only), between the two fields. */
 function ExtraMonsterZones({ view, marks, onCard, onHover }: Pick<BoardProps, "view" | "marks" | "onCard" | "onHover">) {
     if (view.mode !== "MR4") return null;
@@ -50,6 +56,7 @@ function ExtraMonsterZones({ view, marks, onCard, onHover }: Pick<BoardProps, "v
  * across, the Field Spell, piles and life points in each duelist's bar.
  */
 export function PhoneBoard({ view, marks, onCard, onPile, phaseBar, overlay }: BoardProps) {
+    const deckTap = deckPeek(view, onCard);
     const bar = (side: Side) => {
         const s = view[side];
         return (
@@ -61,7 +68,7 @@ export function PhoneBoard({ view, marks, onCard, onPile, phaseBar, overlay }: B
                     <Pile small label="GY" count={s.grave.length} top={top(s.grave)} onTap={() => onPile(side, "grave")} />
                     {s.banished.length > 0 && <Pile small label="Banished" count={s.banished.length} top={top(s.banished)} onTap={() => onPile(side, "banished")} />}
                     <Pile small label="Extra" count={s.extra} back onTap={side === "me" ? () => onPile(side, "extra") : undefined} />
-                    <Pile small label="Deck" count={s.deck} back pile={`${side}:deck`} />
+                    <Pile small label="Deck" count={s.deck} back face={s.deckTop} pile={`${side}:deck`} onTap={deckTap(side)} />
                 </div>
             </div>
         );
@@ -96,6 +103,7 @@ export function PhoneBoard({ view, marks, onCard, onPile, phaseBar, overlay }: B
  * on the left, life points and the duel log on the right.
  */
 export function DesktopBoard({ view, marks, onCard, onPile, onHover, phaseBar, overlay, detail, log }: BoardProps) {
+    const deckTap = deckPeek(view, onCard);
     const mat = (side: Side) => {
         const s = view[side];
         const r = rows(view, side);
@@ -104,7 +112,7 @@ export function DesktopBoard({ view, marks, onCard, onPile, onHover, phaseBar, o
         );
         const field = <Zone key="field" card={s.field} label="Field" className="df-zone--side" zone={zoneKey(side, "field", 0)} marks={marks} side={side} onHover={onHover} onTap={(c) => onCard(c, side, "field")} />;
         const gy = <Pile key="gy" label="GY" count={s.grave.length} top={top(s.grave)} onTap={() => onPile(side, "grave")} onHover={onHover} />;
-        const deck = <Pile key="deck" label="Deck" count={s.deck} back pile={`${side}:deck`} />;
+        const deck = <Pile key="deck" label="Deck" count={s.deck} back face={s.deckTop} pile={`${side}:deck`} onTap={deckTap(side)} onHover={onHover} />;
         const extra = <Pile key="extra" label="Extra" count={s.extra} back onTap={side === "me" ? () => onPile(side, "extra") : undefined} />;
         const monsterRow = side === "opp" ? [gy, ...r.monsters.map((c, i) => zone(c, i, "m")), field] : [field, ...r.monsters.map((c, i) => zone(c, i, "m")), gy];
         const spellRow = side === "opp" ? [deck, ...r.spells.map((c, i) => zone(c, i, "s")), extra] : [extra, ...r.spells.map((c, i) => zone(c, i, "s")), deck];
