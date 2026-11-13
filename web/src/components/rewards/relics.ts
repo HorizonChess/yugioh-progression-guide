@@ -123,7 +123,7 @@ export function prizeDoes(prizeId: PrizeId, redoerNote: string): string {
         case "pity": return "Three packs of the set you just finished, for the match you lost.";
         case "tournament": return "Three packs of the latest tournament set released before this one.";
         case "wildcard": return prizeId === "wildcard-common" ? "Pick any Common from the pack you won." : `Pick any card of ${RARITY_WORDS[prizeId]} or below from the pack you won.`;
-        case "starlight": return "Any card released before this pack, as a Starlight Rare.";
+        case "starlight": return "Any card released up to this pack (its own cards too), as a Starlight Rare.";
         case "ban": return "Name a card neither of you can put in a deck.";
         case "unban": return "Lift one ban.";
         case "spin": return "A spin of the Winner's Wheel.";

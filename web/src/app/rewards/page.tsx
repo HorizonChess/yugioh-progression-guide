@@ -43,7 +43,7 @@ import "@/components/rewards/rewards.css";
  *  - ban / unban → the `BanInput` typeahead (the deck builder reads
  *                  `bannedCardIds` and blocks/greys the add).
  *  - starlight   → the `StarlightSearchModal`: a full-catalog typeahead gated to
- *                  cards released before the won pack, granted at Starlight Rare.
+ *                  cards released up to the won pack (included), granted at Starlight Rare.
  *  - snatch      → the `SnatchModal`: copy a card from the rival's binder, who
  *                  keeps theirs (duo series only; solo wheels leave it off).
  *  - spin        → the wheel on the record-match screen.

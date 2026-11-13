@@ -1,5 +1,5 @@
 // Verifies the Starlight Rare wildcard claim (full-catalog search):
-//  - the search is gated to cards released BEFORE the won pack (a pure-date
+//  - the search is gated to cards released up to the won pack, included (a pure-date
 //    rule, so off-timeline classics are reachable);
 //  - clicking a result opens its DETAIL MODAL with a confirm step (not instant);
 //  - confirming grants the card at Starlight Rare and moves the reward to the
@@ -11,7 +11,7 @@ import { launchSeeded, reward, readSave, outPath } from "./_lib.mjs";
 
 const DARK_MAGICIAN = 46986414; // LOB (2002) — dated well before a late pack.
 
-// Won from a late set so the "released before this pack" gate is permissive;
+// Won from a late set so the "released by this pack" gate is permissive;
 // wonFromSetIndex=30 matches the seeded currentSetIndex.
 const save = {
     id: "test-save", name: "Tester", currentSetIndex: 30, collection: {}, savedDecks: [],
