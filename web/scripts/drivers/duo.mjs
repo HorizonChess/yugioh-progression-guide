@@ -92,7 +92,7 @@ try {
 
     // 3. Reporting waits for both openings.
     await saveSet(yugi, series.id);
-    await yugi.page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
+    await yugi.page.goto(`${BASE}/record-match/?record=1`, { waitUntil: "networkidle" });
     await yugi.page.getByRole("button", { name: /victory/i }).click();
     await yugi.page.getByRole("button", { name: "I won" }).click();
     await yugi.page.waitForTimeout(600);

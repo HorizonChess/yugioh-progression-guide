@@ -2,7 +2,7 @@
 //   node scripts/drivers/report-confirm.mjs
 import { launchSeeded, makeSave, outPath, readSave } from "./_lib.mjs";
 
-const { browser, page, errors } = await launchSeeded(makeSave({ currentSetIndex: 0 }), { route: "/record-match/" });
+const { browser, page, errors } = await launchSeeded(makeSave({ currentSetIndex: 0 }), { route: "/record-match/?record=1" });
 let failed = 0;
 const check = (ok, what) => { console.log(`${ok ? "PASS" : "FAIL"} ${what}`); if (!ok) failed++; };
 

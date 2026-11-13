@@ -109,7 +109,7 @@ export default function Timeline() {
                 <TimelineRoad sets={sets} currentSetIndex={currentSetIndex} matchFor={matchFor} />
                 <nav className="road-dock" aria-label="Stage actions">
                     <CartoucheButton href={`/packs?set=${currentSetIndex}`} onClick={() => launchFlight(currentSetIndex)}>Open Packs</CartoucheButton>
-                    <CartoucheButton href="/record-match">Record Match</CartoucheButton>
+                    <CartoucheButton href="/record-match">Play / Record</CartoucheButton>
                     <div className="road-dock__small">
                         <Link href="/deck-builder">Prepare deck</Link>
                     </div>
@@ -171,7 +171,7 @@ export default function Timeline() {
                         Open Packs
                     </CartoucheButton>
                     <CartoucheButton href="/record-match" className="w-[clamp(11rem,min(16vw,24vh),15rem)]">
-                        Record Match
+                        Play / Record
                     </CartoucheButton>
                 </div>
 

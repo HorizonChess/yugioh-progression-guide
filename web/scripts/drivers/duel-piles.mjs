@@ -32,7 +32,7 @@ if (process.env.DEBUG) page.on("console", (m) => m.type() === "error" && console
 try {
     await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }), "ygo-guide": "off" });
     await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: /Duel in the app/i }).click();
+    // (Playing here is what the board opens on.)
     const old = page.getByRole("button", { name: "End it, start a new one" });
     if (await old.count()) await old.click();
     await page.getByRole("button", { name: "Practice against the bot" }).click();

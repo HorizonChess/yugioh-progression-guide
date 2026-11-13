@@ -84,7 +84,7 @@ try {
     await page.waitForTimeout(800);
     check(dialogs.some((d) => /already opened/.test(d)), "a second opening of the same set is refused");
 
-    await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}/record-match/?record=1`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: /victory/i }).click();
     await page.getByRole("button", { name: "I won" }).click();
     await page.getByRole("button", { name: "Spin the wheel" }).click();

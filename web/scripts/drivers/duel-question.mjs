@@ -39,7 +39,7 @@ try {
     let got = false;
     for (let attempt = 0; attempt < 10 && !got; attempt++) {
         await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-        await page.getByRole("button", { name: /Duel in the app/i }).click();
+        // (Playing here is what the board opens on.)
         const old = page.getByRole("button", { name: "End it, start a new one" });
         const practice = page.getByRole("button", { name: "Practice against the bot" });
         await old.or(practice).first().waitFor({ timeout: 15000 });
