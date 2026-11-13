@@ -20,6 +20,12 @@ keep the rules they started with.
 | One mandatory effect (Ekibyo Drakmord destroying its monster) | It activates | "Must" is no choice | 2 |
 | Several copies of **the same** mandatory effect at once (two Masks of the Accursed in a Standby Phase) | Chained in any order | Every order comes to the same thing | 3 |
 | Several **different** mandatory effects at once | **The player picks the order**, told that all of them happen | The order can matter (the rules let the player choose) | — |
+| One mandatory effect listed with cards that could be activated first (Imperial Order's upkeep in a Standby Phase, with Waboku Set) | **The page** lets the effect happen, unless the player asked to be stopped at every chance; the Set cards are offered again right after | The engine asks both as one forced question, but only the upkeep must happen. Acting before it is a real (rare) choice, so it's kept for "at every chance" | — |
+
+In a forced question the server marks what must happen (`must` on a chain option): never a Set card
+or a card in the hand (those are activations), nor a face-up card whose script has only optional
+effects for a phase (`mandatoryInPhase` in engine.ts). When that would leave nothing marked, the
+whole list is taken as the engine gave it.
 
 ## When a player is asked to respond (server, `SELECT_CHAIN` in `ask`)
 

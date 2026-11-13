@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import type { DuelAnswer, DuelEvent, DuelFrame, DuelServerMessage, DuelState, DuelView, Side } from "@ygo/shared";
+import { loneMust, type DuelAnswer, type DuelEvent, type DuelFrame, type DuelServerMessage, type DuelState, type DuelView, type Side } from "@ygo/shared";
 import { connectDuel, getDuel, type DuelConnection } from "@/lib/duel-client";
 import { duelPrefs } from "./duel-prefs";
 import { CARD_BACK } from "./parts";
@@ -384,6 +384,13 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
             // A chain window that doesn't need you: pass it without asking.
             if (p?.kind === "chain" && p.quiet && p.pass !== null && duelPrefs().chain === "auto") {
                 conn.current?.answer(next.seq, { kind: "choice", id: p.pass });
+                next = { ...next, prompt: null };
+            }
+            // One effect that must happen now (an upkeep), listed with cards you could use first: it
+            // just happens. Those cards are offered again right after, like any other moment.
+            const lone = p?.kind === "chain" && p.forced && duelPrefs().chain === "auto" ? loneMust(p) : null;
+            if (lone !== null) {
+                conn.current?.answer(next.seq, { kind: "choice", id: lone });
                 next = { ...next, prompt: null };
             }
             latest.current = next;

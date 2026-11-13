@@ -138,7 +138,11 @@ export type DuelPrompt =
     | {
           kind: 'chain';
           forced: boolean;
-          options: { id: number; uid?: string; code: number; where: Zone; text?: string }[];
+          /**
+           * `must`: in a forced list, an effect that has to happen now (a Standby Phase upkeep). The
+           * engine lists it with the cards you could activate at that moment, which stay optional.
+           */
+          options: { id: number; uid?: string; code: number; where: Zone; text?: string; must?: boolean }[];
           pass: number | null;
           /**
            * Nothing calls for a response: no chain to answer, no trigger, and no card whose script
@@ -162,6 +166,16 @@ export type DuelPrompt =
     | { kind: 'card-name'; title: string }
     /** Choose zones on the field: where to put a card, or (`disable`) which zones an effect shuts. */
     | { kind: 'place'; title: string; count: number; disable: boolean; zones: PlaceZone[]; back?: boolean };
+
+/**
+ * In a forced chain question, the one effect that has to happen (copies of one effect count as
+ * one): its option id. Null when several different effects must happen, so their order is a choice.
+ */
+export const loneMust = (p: Extract<DuelPrompt, { kind: 'chain' }>): number | null => {
+    const musts = p.options.filter((o) => o.must);
+    const first = musts[0];
+    return p.forced && first && musts.every((o) => o.code === first.code && o.text === first.text) ? first.id : null;
+};
 
 /** A zone a `place` question offers. `index` is the owner's left-to-right position (as in the side's arrays). */
 export interface PlaceZone {

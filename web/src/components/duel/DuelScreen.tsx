@@ -2,7 +2,7 @@
 
 import { isValidElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import { zoneKey, type ActionVerb, type DuelCardView, type DuelEvent, type DuelPrompt, type DuelView, type Phase, type PlaceZone, type PromptCard, type Side, type Zone } from "@ygo/shared";
+import { loneMust, zoneKey, type ActionVerb, type DuelCardView, type DuelEvent, type DuelPrompt, type DuelView, type Phase, type PlaceZone, type PromptCard, type Side, type Zone } from "@ygo/shared";
 import { CardCloseUp, CardPlate } from "@/components/card/CardPlate";
 import { printedIn, type StageCard } from "@/components/packs/stage/plate";
 import { fetchCardsByIds, type Card } from "@/lib/api";
@@ -470,7 +470,14 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 // on your own turn (its details a tap away). Forced effects (several that must happen at
                 // once) skip the yes or no: only their order is yours.
                 // On top of a card of your own (your rival let it be): another card of yours can join the chain.
-                const title = prompt.forced ? "These all happen: which goes on the chain first?" : !last ? (prompt.ask ?? "Activate a card?") : last.side === "me" ? "Chain another card?" : `Respond to ${name(last.code)}?`;
+                // One effect that must happen, with cards you could use before it (seen only when you
+                // asked to be stopped at every chance): say which one it is, and that the rest can wait.
+                const musts = [...new Set(prompt.options.filter((o) => o.must).map((o) => name(o.code)))];
+                const lone = loneMust(prompt) !== null, extras = prompt.forced && prompt.options.some((o) => !o.must);
+                const forcedHint = lone ? "Tap it to go on, or use another glowing card first"
+                    : extras ? `${musts.join(" and ")} can't be skipped; the one you pick first resolves last. Your other glowing cards are optional`
+                    : "None can be skipped; the one you pick first resolves last. Tap a glowing card";
+                const title = prompt.forced ? (lone ? `${musts[0]}'s effect happens now` : "These all happen: which goes on the chain first?") : !last ? (prompt.ask ?? "Activate a card?") : last.side === "me" ? "Chain another card?" : `Respond to ${name(last.code)}?`;
                 const said = last ? `${last.side === "me" ? "You" : view.opp.name} activated it as chain link ${view.chain.length}.` : undefined;
                 if (!choosing && !prompt.forced) {
                     question = sheet(title, (
@@ -490,7 +497,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 });
                 question = sheet(title, (
                     <div className="df-sheet__bar">
-                        <span>{prompt.forced ? "None can be skipped; the one you pick first resolves last. Tap a glowing card" : "Tap a glowing card to use it"}</span>
+                        <span>{prompt.forced ? forcedHint : "Tap a glowing card to use it"}</span>
                         {offBoard.map((o) => option(name(o.code), () => answer({ kind: "choice", id: o.id }), { note: o.text }))}
                         {!prompt.forced && option("Back", () => (setHeld(null), setChoosing(false)), { quiet: true })}
                     </div>
