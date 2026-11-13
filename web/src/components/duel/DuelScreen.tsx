@@ -10,11 +10,16 @@ import { useIsPhone } from "@/lib/useIsPhone";
 import { DesktopBoard, PhoneBoard } from "./Boards";
 import { NameDeclare } from "./NameDeclare";
 import { cardImage, type CardMarks, type Pose } from "./parts";
-import { setDuelPrefs, useDuelPrefs } from "./duel-prefs";
+import { DUEL_MATS, setDuelPrefs, useDuelPrefs } from "./duel-prefs";
+import { asset } from "@/lib/utils";
 import { sfx } from "./sfx";
 import { useDuel } from "./useDuel";
 import { useSteady } from "./useSteady";
 import "./duel-field.css";
+import "./duel-mats.css";
+
+/** The art the mats' looks use, handed to their CSS through asset() (which knows the base path). */
+const MAT_ART = { "--mat-stone": `url('${asset("/ui/record-match/stone.webp")}')`, "--mat-eye": `url('${asset("/ui/millennium-eye.webp")}')` } as React.CSSProperties;
 
 const PHASES: Phase[] = ["DP", "SP", "M1", "BP", "M2", "EP"];
 const PHASE_NAME: Record<Phase, string> = { DP: "Draw", SP: "Standby", M1: "Main 1", BP: "Battle", M2: "Main 2", EP: "End" };
@@ -470,6 +475,11 @@ export default function DuelScreen({ duelId, onLeave, onNext }: {
             {option(prefs.chain === "auto" ? "Ask me to respond: when it matters" : "Ask me to respond: at every chance", () => setDuelPrefs({ chain: prefs.chain === "auto" ? "always" : "auto" }), {
                 note: prefs.chain === "auto" ? "Only when your rival plays something, or a card of yours is made for the moment" : "Stops at every point where a card of yours could be activated",
             })}
+            {/* The mat's look: each tap steps to the next, and the board behind the menu changes at once. */}
+            {(() => {
+                const at = Math.max(0, DUEL_MATS.findIndex((m) => m.id === prefs.mat));
+                return option(`Mat: ${DUEL_MATS[at]!.name}`, () => setDuelPrefs({ mat: DUEL_MATS[(at + 1) % DUEL_MATS.length]!.id }), { note: `${DUEL_MATS[at]!.note}. Tap for the next` });
+            })()}
             {isPhone && option("What happened", () => setDuelMenu("log"), { note: "The duel so far, move by move" })}
             {/* Against a rival, stopping without a winner takes both players. */}
             {!state.rival.bot && (state.callOff === "asked"
@@ -735,6 +745,8 @@ export default function DuelScreen({ duelId, onLeave, onNext }: {
     return (
         <div
             className={`df-arena ${duel.answered ? "is-sent" : ""}`}
+            data-mat={prefs.mat}
+            style={MAT_ART}
             // A tap anywhere else puts a picked-up card back down.
             onClick={(e) => {
                 if ((e.target as Element).closest(".df-pop, [data-uid], .df-zone__pick")) return;
