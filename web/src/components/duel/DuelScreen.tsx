@@ -8,6 +8,7 @@ import { printedIn, type StageCard } from "@/components/packs/stage/plate";
 import { fetchCardsByIds, type Card } from "@/lib/api";
 import { useIsPhone } from "@/lib/useIsPhone";
 import { DesktopBoard, PhoneBoard } from "./Boards";
+import { NameDeclare } from "./NameDeclare";
 import { cardImage, type CardMarks, type Pose } from "./parts";
 import { setDuelPrefs, useDuelPrefs } from "./duel-prefs";
 import { sfx } from "./sfx";
@@ -114,7 +115,6 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     const [picked, setPicked] = useState<number[]>([]);
     /** "Yes" to "Activate a card?": the cards you can use now glow; tap one to use it. */
     const [choosing, setChoosing] = useState(false);
-    const [nameGuess, setNameGuess] = useState("");
     /** The duel menu (⋯): closed, open, or asking to confirm a surrender. */
     const [duelMenu, setDuelMenu] = useState<"closed" | "open" | "surrender" | "log">("closed");
     /** A short note about the card you tapped (why it can't attack), for a few seconds. */
@@ -311,6 +311,8 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
 
     const onPile = (side: Side, zone: "grave" | "banished" | "extra") => {
         if (!view) return;
+        // Question: its first monster is named from memory, so the Graveyard stays shut meanwhile.
+        if (zone === "grave" && view[side].graveHidden) return setNotice({ uid: `${side}:grave`, text: `You can't look at ${view.opp.name}'s Graveyard while Question is being resolved.` });
         // Only your own Extra Deck can be looked through (the server sends no one else's).
         const list = zone === "extra" ? view[side].extraCards ?? [] : view[side][zone];
         const what = zone === "grave" ? "Graveyard" : zone === "banished" ? "banished cards" : "Extra Deck";
@@ -406,6 +408,12 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
         </div>
     );
 
+    // The card that's asking, when one is: the chain link being activated or resolved.
+    const askingLink = view.chain[view.chain.length - 1];
+    const askedBy = askingLink ? { code: askingLink.code, text: `For ${name(askingLink.code)}` } : {};
+    // While the rival's Question is being resolved their Graveyard is shut, and so is the list of what went there.
+    const logShut = !!view.opp.graveHidden;
+
     let question: ReactNode = null;
     // The card you've picked up: what you can do with it, in the bar above your hand.
     const heldActions = held && prompt?.kind === "actions" ? prompt.actions.filter((a) => a.uid === held.card.uid) : [];
@@ -446,7 +454,8 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
     } else if (duelMenu === "log") {
         // Phones have no room for the log beside the board: it's here, the latest first.
         question = sheet("What happened", <>
-            <ol className="df-log__list df-log__list--sheet" onPointerDown={(e) => e.stopPropagation() /* scrolls; doesn't drag the sheet */}>{[...log].reverse().map((l) => <li key={l.key} className={l.side ? `is-${l.side}` : ""}>{l.say(name)}</li>)}</ol>
+            {logShut ? <p className="df-sheet__text">Closed while Question is being resolved: its answer is in here.</p>
+                : <ol className="df-log__list df-log__list--sheet" onPointerDown={(e) => e.stopPropagation() /* scrolls; doesn't drag the sheet */}>{[...log].reverse().map((l) => <li key={l.key} className={l.side ? `is-${l.side}` : ""}>{l.say(name)}</li>)}</ol>}
             <div className="df-sheet__options">{option("Back to the duel", () => setDuelMenu("closed"), { quiet: true })}</div>
         </>, { onSwipe: () => setDuelMenu("closed") });
     } else if (duelMenu === "open") {
@@ -509,20 +518,19 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 const confirm = !prompt.step && !(prompt.max === 1 && prompt.min === 1) && option(`Confirm (${picked.length}/${prompt.max})`, () => answer({ kind: "many", ids: picked }), { disabled: !ready });
                 const finish = prompt.step?.canFinish && option("Done", () => answer({ kind: "done" }));
                 const cancel = prompt.cancel ? option("Cancel", () => answer({ kind: "cancel" }), { quiet: true }) : backOption(prompt);
-                // The card that's asking, when one is: the chain link being activated or resolved.
-                const asking = !prompt.tribute ? view.chain[view.chain.length - 1] : undefined;
-                const about = asking ? { code: asking.code, text: `For ${name(asking.code)}` } : {};
+                const asking = !prompt.tribute ? askingLink : undefined;
+                const about = asking ? askedBy : {};
                 question = boardPick && prompt.attack ? null : boardPick
                     ? sheet(prompt.title, <div className="df-sheet__bar"><span>{asking ? `For ${name(asking.code)}: tap` : "Tap"} the glowing cards{prompt.sum ? ` (total ${prompt.sum})` : ""}</span>{confirm}{finish}{cancel}</div>, { compact: true })
                     : sheet(prompt.title, <>{listPick(prompt.cards, prompt.step ? prompt.step.chosen.map((c) => c.id) : picked, (id) => togglePick(id, prompt.max, prompt.min), prompt.ordered)}<div className="df-sheet__options df-sheet__options--row">{confirm}{finish}{cancel}</div></>, about);
                 break;
             }
             case "yesno":
-                question = sheet(prompt.title, <div className="df-sheet__options df-sheet__options--row">{option("Yes", () => answer({ kind: "choice", id: 1 }))}{option("No", () => answer({ kind: "choice", id: 0 }), { quiet: true })}</div>, { code: prompt.code });
+                question = sheet(prompt.title, <div className="df-sheet__options df-sheet__options--row">{option("Yes", () => answer({ kind: "choice", id: 1 }))}{option("No", () => answer({ kind: "choice", id: 0 }), { quiet: true })}</div>, prompt.code ? { code: prompt.code } : askedBy);
                 break;
             case "option":
             case "number":
-                question = sheet(prompt.title, <div className="df-sheet__options">{prompt.options.map((o) => option("text" in o ? o.text : o.label, () => answer({ kind: "choice", id: o.id })))}</div>);
+                question = sheet(prompt.title, <div className="df-sheet__options">{prompt.options.map((o) => option("text" in o ? o.text : o.label, () => answer({ kind: "choice", id: o.id })))}</div>, askedBy);
                 break;
             case "position":
                 question = sheet(`${name(prompt.code)}: which position?`, <div className="df-sheet__options">{prompt.options.map((o) => option(o.label, () => answer({ kind: "choice", id: o.id })))}{backOption(prompt)}</div>, { code: prompt.code });
@@ -533,7 +541,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                         <button key={o.id} type="button" className={`df-chip ${picked.includes(o.id) ? "is-on" : ""}`} onClick={() => setPicked((p) => (p.includes(o.id) ? p.filter((x) => x !== o.id) : p.length < prompt.count ? [...p, o.id] : p))}>{o.label}</button>
                     ))}</div>
                     <div className="df-sheet__options">{option("Declare", () => answer({ kind: "many", ids: picked }), { disabled: picked.length !== prompt.count })}</div>
-                </>);
+                </>, askedBy);
                 break;
             case "place": {
                 // The zones glow, and a tap on one puts the card there. For one zone that's all
@@ -549,10 +557,11 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
                 break;
             }
             case "card-name":
-                question = sheet(prompt.title, <form className="df-sheet__form" onSubmit={(e) => (e.preventDefault(), answer({ kind: "name", name: nameGuess }))}>
-                    <input className="df-input" value={nameGuess} onChange={(e) => setNameGuess(e.target.value)} placeholder="Exact card name, e.g. Dark Magician" autoFocus />
-                    {option("Declare", () => answer({ kind: "name", name: nameGuess }), { disabled: !nameGuess.trim() })}
-                </form>);
+                // Typed, then picked from the matches. For Question the rival's Graveyard is shut: say so.
+                question = sheet(prompt.title, <NameDeclare key={promptKey} only={prompt.only} disabled={duel.answered} onDeclare={(text, code) => answer({ kind: "name", name: text, ...(code ? { code } : {}) })} />, {
+                    code: askingLink?.code,
+                    text: view.opp.graveHidden ? `For ${name(askingLink?.code ?? 0)}: name the first monster in ${view.opp.name}'s Graveyard (the one at the bottom). You can't look.` : askedBy.text,
+                });
                 break;
         }
     } else if (waiting && slow) {
@@ -673,7 +682,7 @@ export default function DuelScreen({ duelId, onLeave }: { duelId: string; onLeav
             <CardPlate card={printedIn(detailCard, "", 0, "In this duel")} className="df-detail__plate" />
         </div>
     ) : <p className="df-detail__empty">Point at a card to read it.</p>;
-    const logPanel = (
+    const logPanel = logShut ? <p className="df-detail__empty">Closed while Question is being resolved.</p> : (
         <ol className="df-log__list">
             {log.map((l) => <li key={l.key} className={l.side ? `is-${l.side}` : ""}>{l.say(name)}</li>)}
         </ol>
@@ -723,6 +732,7 @@ function describe(e: DuelEvent, view: DuelView, name: (code: number) => string):
     switch (e.k) {
         case "turn": return `Turn ${e.turn}: ${e.side === "me" ? "your" : `${view.opp.name}'s`} turn`;
         case "draw": return `${who(e.side)} drew ${e.count === 1 ? "a card" : `${e.count} cards`}`;
+        case "hand-shuffle": return `${e.side === "me" ? "Your" : `${view.opp.name}'s`} hand was shuffled`;
         case "summon": return `${who(e.side)} ${e.how === "normal" ? "Normal" : e.how === "flip" ? "Flip" : "Special"} Summoned ${name(e.code)}`;
         case "set": return `${who(e.side)} Set a card`;
         case "activate": return `${who(e.side)} activated ${name(e.code)} (chain link ${e.link})`;
@@ -757,6 +767,7 @@ function describe(e: DuelEvent, view: DuelView, name: (code: number) => string):
         case "damage": return `${who(e.side)} took ${e.amount} damage`;
         case "pay": return `${who(e.side)} paid ${e.amount} LP`;
         case "recover": return `${who(e.side)} gained ${e.amount} LP`;
+        case "lp": return `${e.side === "me" ? "Your" : `${view.opp.name}'s`} Life Points became ${e.lp} (from ${e.was})`;
         case "win": return e.side ? `${who(e.side)} won: ${e.reason}` : `A draw: ${e.reason}`;
         default: return null;
     }

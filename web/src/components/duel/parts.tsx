@@ -163,13 +163,15 @@ export function Zone({ card, label, marks, onTap, onHover, side, className = "",
 }
 
 /** Deck, Extra Deck, Graveyard or banished cards: the top card (or a back) and how many. */
-export function Pile({ label, count, top, back, onTap, onHover, small, pile }: {
+export function Pile({ label, count, top, back, face, onTap, onHover, small, pile }: {
     label: string;
     /** Which pile this is ("me:deck"), for cards dealt from it to fly out of. */
     pile?: string;
     count: number;
     top?: DuelCardView;
     back?: boolean;
+    /** The pile is turned over (Convulsion of Nature): this card shows on top instead of a back. */
+    face?: number;
     onTap?: () => void;
     onHover?: (code: number) => void;
     small?: boolean;
@@ -182,10 +184,10 @@ export function Pile({ label, count, top, back, onTap, onHover, small, pile }: {
             data-pile={pile}
             onClick={onTap}
             disabled={!onTap || !count}
-            onPointerEnter={(e) => e.pointerType === "mouse" && top?.code && onHover?.(top.code)}
-            aria-label={`${label}: ${count}`}
+            onPointerEnter={(e) => e.pointerType === "mouse" && (top?.code || face) && onHover?.(top?.code || face!)}
+            aria-label={`${label}: ${count}${face ? ", turned over" : ""}`}
         >
-            {back && count > 0 && <img className="df-pile__back" src={CARD_BACK} alt="" />}
+            {back && count > 0 && <img className="df-pile__back" src={face ? cardImage(face) : CARD_BACK} alt="" />}
             {top && (
                 <motion.span layoutId={top.uid} className="df-pile__top" data-uid={top.uid} transition={FLIGHT}>
                     <img src={top.code ? cardImage(top.code) : CARD_BACK} alt="" />

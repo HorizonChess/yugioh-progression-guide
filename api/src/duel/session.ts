@@ -59,6 +59,15 @@ const LINK_FLAGS = (Q.CODE | Q.POSITION | Q.EQUIP_CARD | Q.TARGET_CARD | Q.COUNT
 /** ocgcore's STATUS_DISABLED: the card's effects are negated. */
 const STATUS_DISABLED = 0x0001;
 type MessageOf<T extends M> = Extract<OcgMessage, { type: T }>;
+/**
+ * Question: "your opponent declares the first monster in your Graveyard" from memory. While one is
+ * on the chain, its controller's Graveyard is closed to the rival.
+ */
+const QUESTION = 38723936;
+/** ANNOUNCE_CARD's filter "a card of this type": the type, then this opcode. */
+const OPCODE_ISTYPE = 0x4000010200000000n;
+/** Hints that say what a choice between options is for (the engine's strings 554-556 and 566). */
+const OPTION_HINTS: ReadonlySet<number> = new Set([554, 555, 556, 566]);
 /** Messages that start something new: what was sent to the Graveyard before them is no longer "just now". */
 const NEW_MOMENT: ReadonlySet<M> = new Set([M.NEW_TURN, M.NEW_PHASE, M.SUMMONING, M.SPSUMMONING, M.FLIPSUMMONING, M.SET, M.ATTACK, M.CHAINING]);
 
@@ -242,6 +251,13 @@ export class DuelSession {
      * Zones in bits 0-4 and Spell & Trap Zones in 8-12, player 1's 16 higher. A set bit is locked.
      */
     private locked = 0;
+    /**
+     * The Decks are turned over (Convulsion of Nature), so both players see each Deck's top card.
+     * The engine names the top card, and before a draw the card under it (the next top).
+     */
+    private reversed = false;
+    private deckTop: [number | null, number | null] = [null, null];
+    private deckNext: [number | null, number | null] = [null, null];
     /** What effects wrote on cards (by uid, one line per kind of note) and on players. */
     private cardNotes = new Map<string, Map<string, string>>();
     private playerNotes: [Set<string>, Set<string>] = [new Set(), new Set()];
@@ -691,9 +707,28 @@ export class DuelSession {
                     out.push({ k: 'dice', team: m.player as Team, results: m.results });
                     break;
                 case M.SHUFFLE_DECK:
+                    this.deckTop[m.player as Team] = this.deckNext[m.player as Team] = null;
                     out.push({ k: 'shuffle', team: m.player as Team });
                     break;
+                case M.SHUFFLE_HAND:
+                    out.push({ k: 'hand-shuffle', team: m.player as Team });
+                    break;
+                case M.REVERSE_DECK:
+                    this.reversed = !this.reversed;
+                    this.deckTop = [null, null];
+                    this.deckNext = [null, null];
+                    break;
+                case M.DECK_TOP:
+                    // `count` cards from the top: 0 is the top card, 1 the one that's next once it's drawn.
+                    if (m.player === 0 || m.player === 1) {
+                        if (m.count === 0) this.deckTop[m.player] = m.code;
+                        else if (m.count === 1) this.deckNext[m.player] = m.code;
+                    }
+                    break;
                 case M.DRAW:
+                    // One card drawn: the card under it is the top now, if the engine named it.
+                    this.deckTop[m.player as Team] = m.drawn.length === 1 ? this.deckNext[m.player as Team] : null;
+                    this.deckNext[m.player as Team] = null;
                     this.tracker.draw(m.player, m.drawn.length);
                     out.push({ k: 'draw', team: m.player as Team, count: m.drawn.length });
                     break;
@@ -769,6 +804,9 @@ export class DuelSession {
                     // A monster leaving the field for the Graveyard breaks; a spell that just resolved doesn't.
                     if (uidBefore && m.to.location === L.GRAVE && (m.from.location === L.MZONE || !(this.chain.some((c) => c.uid === uidBefore) || this.resolved.has(uidBefore))))
                         out.push({ k: 'destroyed', uid: uidBefore, code: m.card });
+                    // A card leaving a Deck any other way: its top isn't known until the engine names it again.
+                    if (m.from.location === L.DECK) this.deckTop[m.from.controller as Team] = this.deckNext[m.from.controller as Team] = null;
+                    if (m.to.location === L.DECK) this.deckTop[m.to.controller as Team] = this.deckNext[m.to.controller as Team] = null;
                     if (m.from.location === L.MZONE && m.to.location === L.GRAVE) this.lastSent = { team: m.from.controller as Team, code: m.card };
                     const uid = this.tracker.move(m.from, m.to);
                     out.push({
@@ -823,6 +861,8 @@ export class DuelSession {
                     out.push({ k: 'recover', team: m.player as Team, amount: m.amount });
                     break;
                 case M.LPUPDATE:
+                    // Set outright by an effect (Reversal Quiz): no damage or gain to show, so it's its own event.
+                    if (this.lp[m.player as Team] !== m.lp) out.push({ k: 'lp', team: m.player as Team, lp: m.lp, was: this.lp[m.player as Team] });
                     this.lp[m.player as Team] = m.lp;
                     break;
                 case M.WIN:
@@ -848,6 +888,7 @@ export class DuelSession {
                 case 'turn': return { k: 'turn', side: side(e.team), turn: e.turn };
                 case 'draw': return { k: 'draw', side: side(e.team), count: e.count };
                 case 'shuffle': return { k: 'shuffle', side: side(e.team) };
+                case 'hand-shuffle': return { k: 'hand-shuffle', side: side(e.team) };
                 case 'coin': return { k: 'coin', side: side(e.team), results: e.results.map((h) => (h ? 'heads' : 'tails')), ...(e.call ? { call: { side: side(e.call.team), heads: e.call.heads } } : {}) };
                 case 'dice': return { k: 'dice', side: side(e.team), results: e.results };
                 case 'summon': return { k: 'summon', side: side(e.team), code: this.show(e.code), how: e.how };
@@ -864,6 +905,7 @@ export class DuelSession {
                 case 'move': return { k: 'move', uid: e.uid, code: e.public || e.team === team ? this.show(e.code) : 0, side: side(e.team), from: e.from, to: e.to };
                 case 'reposition': return { k: 'reposition', uid: e.uid, code: e.public ? this.show(e.code) : 0 };
                 case 'damage': case 'pay': case 'recover': return { k: e.k, side: side(e.team), amount: e.amount };
+                case 'lp': return { k: 'lp', side: side(e.team), lp: e.lp, was: e.was };
                 case 'win': return { k: 'win', side: e.team === null ? null : side(e.team), reason: e.reason };
                 case 'destroyed': return { k: 'destroyed', uid: e.uid, code: this.show(e.code) };
                 default: return e;
@@ -901,6 +943,11 @@ export class DuelSession {
         };
     }
 
+    /** Whether `owner`'s Graveyard is closed to `viewer`: the owner's Question is on the chain. */
+    private graveClosed(owner: Team, viewer: Team): boolean {
+        return owner !== viewer && this.chain.some((c) => c.team === owner && this.show(c.code) === QUESTION);
+    }
+
     private sideView(t: Team, viewer: Team): DuelSideView {
         const empty: DuelSideView = { name: this.setup.names[t], lp: this.lp[t], hand: [], monsters: Array(5).fill(null), spells: Array(5).fill(null), field: null, pendulum: [null, null], grave: [], banished: [], deck: 0, extra: 0 };
         if (!this.handle) return empty;
@@ -920,9 +967,11 @@ export class DuelSession {
             spells: [0, 1, 2, 3, 4].map((s) => slot(sz, L.SZONE, s)),
             field: slot(sz, L.SZONE, 5),
             pendulum: [slot(sz, L.SZONE, 6), slot(sz, L.SZONE, 7)],
-            grave: pile(L.GRAVE),
+            // Closed to the rival while this player's Question resolves: the cards are there, unnamed.
+            ...(this.graveClosed(t, viewer) ? { grave: pile(L.GRAVE).map((c) => ({ uid: c.uid, code: 0, faceUp: false, defense: false })), graveHidden: true } : { grave: pile(L.GRAVE) }),
             banished: pile(L.REMOVED),
             deck: core.duelQueryCount(this.handle, t, L.DECK),
+            ...(this.reversed && this.deckTop[t] ? { deckTop: this.show(this.deckTop[t]!) } : {}),
             extra: core.duelQueryCount(this.handle, t, L.EXTRA),
             // Your own Extra Deck is yours to look through; the rival's stays a face-down count.
             ...(t === viewer ? { extraCards: pile(L.EXTRA) } : {}),
@@ -991,7 +1040,7 @@ export class DuelSession {
         const uid = c.location !== L.DECK ? this.tracker.uidAt(c.controller, c.location, c.sequence) : undefined;
         // The rival's hidden cards (their Deck, their hand, their Set cards) stay hidden in a question,
         // unless a card showed them to you (Confiscation: "look at your opponent's hand").
-        const hidden = c.controller !== asker && (c.location === L.DECK || c.location === L.HAND || (FIELD_LOCATIONS.has(c.location) && !faceUp(this.positionOf(c))));
+        const hidden = c.controller !== asker && (c.location === L.DECK || c.location === L.HAND || (FIELD_LOCATIONS.has(c.location) && !faceUp(this.positionOf(c))) || (c.location === L.GRAVE && this.graveClosed(c.controller as Team, asker)));
         return {
             id, code: hidden && !(uid && this.revealed[asker].has(uid)) ? 0 : this.show(c.code), side: c.controller === asker ? 'me' : 'opp',
             where: zoneOf(c.location, c.sequence),
@@ -1143,7 +1192,11 @@ export class DuelSession {
                 const heads = options.findIndex((o) => o.text === 'Heads');
                 const coin = heads >= 0 && options.some((o) => o.text === 'Tails');
                 this.calling = coin ? { team: m.player as Team, heads } : null;
-                return q({ kind: 'option', title: coin ? 'Call the coin toss' : 'Choose an effect', options }, (a) => {
+                // What the choice is for, when the card said ("Declare 1 card type": Reversal Quiz).
+                const hinted = OPTION_HINTS.has(this.selectHintCode[team]) ? this.selectHint[team].replace(/^Select /, 'Choose ') : '';
+                this.selectHint[team] = '';
+                this.selectHintCode[team] = 0;
+                return q({ kind: 'option', title: coin ? 'Call the coin toss' : hinted || 'Choose one', options }, (a) => {
                     const id = choice(a);
                     return id !== null && id >= 0 && id < options.length ? { type: R.SELECT_OPTION, index: id } : null;
                 });
@@ -1214,12 +1267,17 @@ export class DuelSession {
                     return disable ? { type: R.SELECT_DISFIELD, places } : { type: R.SELECT_PLACE, places };
                 });
             }
-            case M.ANNOUNCE_CARD:
-                return q({ kind: 'card-name', title: 'Declare a card name' }, (a) => {
+            case M.ANNOUNCE_CARD: {
+                // The usual filter is one type of card (Question: a monster): the page can say so.
+                const [type, op] = m.opcodes.map((o) => BigInt(o));
+                const only = m.opcodes.length === 2 && op === OPCODE_ISTYPE ? (type === 1n ? 'monster' : type === 2n ? 'spell' : type === 4n ? 'trap' : undefined) : undefined;
+                return q({ kind: 'card-name', title: only ? `Declare a ${only === 'monster' ? 'monster' : only === 'spell' ? 'Spell' : 'Trap'}'s name` : 'Declare a card name', ...(only ? { only } : {}) }, (a) => {
                     if (a.kind !== 'name') return null;
-                    const code = this.engine.codeByName(a.name);
+                    // By passcode when the page picked the card from a list (one the engine knows), else by its exact name.
+                    const code = (a.code && this.engine.cardData(a.code) ? a.code : null) ?? this.engine.codeByName(a.name);
                     return code ? { type: R.ANNOUNCE_CARD, card: code } : null;
                 });
+            }
             default:
                 return null;
         }
@@ -1291,6 +1349,7 @@ type TeamEvent =
     | { k: 'phase'; phase: Phase }
     | { k: 'draw'; team: Team; count: number }
     | { k: 'shuffle'; team: Team }
+    | { k: 'hand-shuffle'; team: Team }
     | { k: 'coin'; team: Team; results: boolean[]; call: { team: Team; heads: boolean } | null }
     | { k: 'dice'; team: Team; results: number[] }
     | { k: 'summon'; team: Team; code: number; how: 'normal' | 'special' | 'flip' }
@@ -1308,6 +1367,7 @@ type TeamEvent =
     | { k: 'move'; uid: string; code: number; team: Team; from: Zone; to: Zone; public: boolean }
     | { k: 'reposition'; uid: string; code: number; public: boolean }
     | { k: 'damage' | 'pay' | 'recover'; team: Team; amount: number }
+    | { k: 'lp'; team: Team; lp: number; was: number }
     | { k: 'win'; team: Team | null; reason: string };
 
 /** The zones a placement mask leaves open (a set bit is a blocked zone), as bit numbers. */
