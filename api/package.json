@@ -23,6 +23,7 @@
     "@fastify/static": "^10.1.7",
     "@fastify/websocket": "^11.3.7",
     "@node-rs/argon2": "^2.2.2",
+    "@ygo/duel": "*",
     "@ygo/shared": "*",
     "fastify": "^5.12.7",
     "mongodb": "^7.7.0",

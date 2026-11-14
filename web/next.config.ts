@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   basePath,
   trailingSlash: true,
   // Game logic shared with the API ships as TypeScript source from the npm workspace
-  transpilePackages: ['@ygo/shared'],
+  transpilePackages: ['@ygo/shared', '@ygo/duel'],
   turbopack: {
     root: path.join(__dirname, '..'),
   },
