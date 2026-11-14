@@ -34,7 +34,7 @@ for (let p = from; p < from + Number(pairs); p++) {
             const r = now ? botAnswer(m, d, t) : prevAnswer(m, d, t);
             think[now ? 'now' : 'prev'].push(performance.now() - t0);
             last = `${now ? 'now' : 'prev'} t${d.view(t).turn} ${JSON.stringify(m, (k, v) => (typeof v === 'bigint' ? String(v) : v)).slice(0, 900)}
-  => ${JSON.stringify(r)}`;
+  => ${JSON.stringify(r, (k, v) => (typeof v === 'bigint' ? String(v) : v))}`;
             return r;
         };
         const names: [string, string] = nowSeat === 0 ? [`now ${a.key}`, `prev ${b.key}`] : [`prev ${a.key}`, `now ${b.key}`];
