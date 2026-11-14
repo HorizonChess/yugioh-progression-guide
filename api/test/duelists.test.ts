@@ -3,7 +3,7 @@ import { DUELISTS, duelistDeck, type DuelAnswer, type DuelPrompt } from '@ygo/sh
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
 import { DuelSession } from '@ygo/duel/session';
 
-// Every duelist's deck, in every era, is one the engine plays: a few turns of the bot with it
+// Every duelist's deck, in every era (and its competitive build), is one the engine plays: a few turns of the bot with it
 // against a player summoning from a copy of it, without the engine refusing a move or failing.
 
 function playerAnswer(p: DuelPrompt): DuelAnswer {
@@ -29,10 +29,11 @@ function playerAnswer(p: DuelPrompt): DuelAnswer {
 
 describe.skipIf(!engineDataAvailable())('the duelists from the anime', () => {
     for (const duelist of DUELISTS) {
-        for (const era of duelist.eras) {
-            it(`${duelist.name} (${era.label}) plays their deck`, async () => {
+        // each era's deck, and its competitive build
+        for (const [id, label] of duelist.eras.flatMap((e) => [[e.id, e.label], ...(e.competitive ? [[`${e.id}+`, `${e.label}, competitive`]] : [])])) {
+            it(`${duelist.name} (${label}) plays their deck`, async () => {
                 const engine = await loadEngine();
-                const { deck } = duelistDeck(duelist, era.id);
+                const { deck } = duelistDeck(duelist, id);
                 const duel = new DuelSession(engine, {
                     seed: ['5', '11400714819323198485', '77', '2685821657736338717'], mode: 'MR3',
                     decks: [deck, deck], names: ['Player', duelist.name], bots: [false, true], rules: 4, botLevel: 'plain',
@@ -43,7 +44,8 @@ describe.skipIf(!engineDataAvailable())('the duelists from the anime', () => {
                     if (s.view.turn > 6) break;
                     expect(duel.answer(0, s.seq, playerAnswer(s.prompt!))).toBe(true);
                 }
-                expect(duel.state(0, 'd').view.turn).toBeGreaterThan(2);
+                // (a duel may be won early; otherwise it gets past the first turns)
+                if (!duel.result) expect(duel.state(0, 'd').view.turn).toBeGreaterThan(2);
                 duel.destroy();
             }, 60_000);
         }

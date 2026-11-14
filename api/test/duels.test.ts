@@ -478,8 +478,10 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
     it('practices against a duelist from the anime: their name, their level and their deck of that era', async () => {
         const post = (payload: object) => app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot', ...payload } });
         // Only one of the roster, an era of theirs, and only against the bot.
-        expect((await post({ duelist: { id: 'kaiba' } })).statusCode).toBe(400);
+        expect((await post({ duelist: { id: 'jaden' } })).statusCode).toBe(400);
         expect((await post({ duelist: { id: 'joey', era: 'gx' } })).statusCode).toBe(400);
+        // (a competitive build only where the era has one)
+        expect((await post({ duelist: { id: 'joey', era: 'bc+' } })).statusCode).toBe(400);
         expect((await post({ against: 'solo', duelist: { id: 'joey' } })).statusCode).toBe(400);
 
         const started = await post({ duelist: { id: 'joey', era: 'bc' } });
@@ -503,6 +505,18 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(setup.botLevel).toBe('normal');
         // Its summary says who the bot is.
         expect(started.json().duel.players).toContainEqual({ name: 'Joey Wheeler', bot: true, duelist: 'joey', era: 'bc' });
+    });
+
+    it("practices against a duelist's competitive build of an era", async () => {
+        const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot', duelist: { id: 'kaiba', era: 'bc+' } } });
+        expect(started.statusCode).toBe(201);
+        const stored = await app.db.collection('duels').findOne({ _id: new ObjectId(started.json().duel.id) });
+        const botSeat = (stored!.players as { bot: boolean }[]).findIndex((p) => p.bot);
+        expect(stored!.players[botSeat]).toMatchObject({ name: 'Seto Kaiba', level: 'hard', duelist: 'kaiba', era: 'bc+' });
+        const built = duelistDeck(duelistById('kaiba')!, 'bc+');
+        expect(built.competitive).toBe(true);
+        expect(built.deck).not.toEqual(duelistDeck(duelistById('kaiba')!, 'bc').deck);
+        expect(stored!.match.registered[botSeat]).toEqual({ main: built.deck.main, extra: built.deck.extra, side: [] });
     });
 
     it('lets the rival accept a challenge, plays it out, and records the result on the series', async () => {

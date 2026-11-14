@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { BOT_LEVELS, DUELISTS, duelistById, duelistDeck, ruleEraFor, type BotLevel, type Duelist } from "@ygo/shared";
+import { BOT_LEVELS, DUELISTS, duelistById, duelistDeck, duelistHasEra, ruleEraFor, type BotLevel, type Duelist } from "@ygo/shared";
 import { alertRepoError } from "@/context/ProgressionContext";
 import type { SavedDeck } from "@/lib/storage";
 import {
@@ -70,7 +70,7 @@ const recordText = (r?: BotRecord[string]) => (r && r.won + r.lost + r.drawn ? `
 function savedOpponent(): Opponent {
     try {
         const o = JSON.parse(localStorage.getItem(OPPONENT_KEY) ?? "null") as Opponent | null;
-        if (o?.kind === "duelist" && duelistById(o.id)?.eras.some((e) => e.id === o.era)) return o;
+        if (o?.kind === "duelist" && duelistById(o.id) && duelistHasEra(duelistById(o.id)!, o.era)) return o;
         if (o?.kind === "bot" && (BOT_LEVELS as readonly string[]).includes(o.level)) return o;
         if (o?.kind === "solo") return o;
     } catch {
@@ -298,12 +298,18 @@ export default function BotsArena({ seriesId, guest, setName, setDate, decks }: 
                                           ? "Draw and play out your own deck, to see how it runs."
                                           : "A mirror match: learn your own deck from both sides of the table."}
                                 </p>
-                                {duelist && duelist.eras.length > 1 && chips(`${firstName(duelist)}'s deck`, duelist.eras.map((e) => ({ id: e.id, text: e.label, on: era?.era.id === e.id, pick: () => choose({ kind: "duelist", id: duelist.id, era: e.id }) })))}
+                                {/* The era (a competitive build kept when the next era has one too), then anime or competitive. */}
+                                {duelist && duelist.eras.length > 1 && chips(`${firstName(duelist)}'s deck`, duelist.eras.map((e) => ({ id: e.id, text: e.label, on: era?.era.id === e.id, pick: () => choose({ kind: "duelist", id: duelist.id, era: `${e.id}${era?.competitive && e.competitive ? "+" : ""}` }) })))}
                                 {duelist && duelist.eras.length === 1 && <span className="op-era">{duelist.eras[0]!.label}</span>}
+                                {duelist && era?.era.competitive && chips(`How ${firstName(duelist)}'s deck is built`, [
+                                    { id: "anime", text: "As in the anime", on: !era.competitive, pick: () => choose({ kind: "duelist", id: duelist.id, era: era.era.id }) },
+                                    { id: "comp", text: "Competitive", on: era.competitive, pick: () => choose({ kind: "duelist", id: duelist.id, era: `${era.era.id}+` }) },
+                                ])}
                                 {choice.kind === "bot" && chips("How well the bot plays", BOT_LEVELS.map((l) => ({ id: l, text: LEVEL_NAMES[l], on: choice.level === l, pick: () => choose({ kind: "bot", level: l }) })))}
                                 {era && (
                                     <small className="op-credit">
-                                        Deck: <a href={encodeURI(era.deck.url)} target="_blank" rel="noreferrer">{era.era.source.name}</a> by {era.era.source.author}
+                                        Deck: <a href={encodeURI(era.deck.url)} target="_blank" rel="noreferrer">{era.source.name}</a> by {era.source.author}
+                                        {era.competitive && era.era.competitive && <>, as played in {era.era.competitive.played}</>}
                                     </small>
                                 )}
                             </div>
@@ -359,7 +365,7 @@ export default function BotsArena({ seriesId, guest, setName, setDate, decks }: 
                                             <span className="op-face" style={{ backgroundImage: `url('${sprite(d)}')`, backgroundPositionX: FACE_X[d.id] ?? "50%" }} />,
                                             String(d.rating),
                                             recordText(record[d.id]),
-                                            () => choose({ kind: "duelist", id: d.id, era: duelist?.id === d.id && era ? era.era.id : d.eras[0]!.id }),
+                                            () => choose({ kind: "duelist", id: d.id, era: duelist?.id === d.id && era ? era.id : d.eras[0]!.id }),
                                         ),
                                     )}
                                 </div>

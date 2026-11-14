@@ -8,15 +8,23 @@ import decks from './duelist-decks.json';
  * from cards printed before the progression's cutoff: anime cards were mostly printed years later,
  * so a duelist plays their deck whatever set the series has reached.
  *
+ * Some eras also have a competitive build of the duelist's theme, as the real game played it
+ * around then (2002's Yugi-Kaiba format for Duelist Kingdom, 2005's Goat format for Battle City,
+ * 2016's meta for The Dark Side of Dimensions): chosen as the era's id with a `+` (`bc+`).
+ *
  * The lists are fetched and checked by `api/scripts/build-duelists.ts` into duelist-decks.json.
  */
+
+/** Where a list comes from: a YGOPRODeck deck, found by its name and number (in its format: Anime Decks unless said). */
+export interface DeckSource { deckNum: number; name: string; author: string; format?: string }
 
 export interface DuelistEra {
     /** Key within the duelist (`dk`, `bc`, ...). */
     id: string;
     label: string;
-    /** Where the list comes from: a YGOPRODeck deck, found by its name and number. */
-    source: { deckNum: number; name: string; author: string };
+    source: DeckSource;
+    /** A competitive build of their theme, as played in the real game around the era; `played`: when and how ("Goat format, 2005"). */
+    competitive?: DeckSource & { played: string };
 }
 
 export interface Duelist {
@@ -32,8 +40,10 @@ export interface Duelist {
     eras: DuelistEra[];
 }
 
-const DK = 'Duelist Kingdom', BC = 'Battle City', WTD = 'Waking the Dragons', VW = 'Virtual World';
-const era = (id: string, label: string, deckNum: number, name: string, author: string): DuelistEra => ({ id, label, source: { deckNum, name, author } });
+const DK = 'Duelist Kingdom', BC = 'Battle City', WTD = 'Waking the Dragons', VW = 'Virtual World', CD = 'Ceremonial Duel', DSOD = 'Dark Side of Dimensions';
+const era = (id: string, label: string, deckNum: number, name: string, author: string, competitive?: DuelistEra['competitive']): DuelistEra => ({ id, label, source: { deckNum, name, author }, ...(competitive ? { competitive } : {}) });
+const META = 'Meta Decks', GOAT = 'Goat Format Decks';
+const comp = (deckNum: number, name: string, author: string, format: string, played: string): DuelistEra['competitive'] => ({ deckNum, name, author, format, played });
 
 /** Weakest first. */
 export const DUELISTS: readonly Duelist[] = [
@@ -137,6 +147,42 @@ export const DUELISTS: readonly Duelist[] = [
         blurb: 'The Winged Dragon of Ra, and pain for the loser.',
         eras: [era('bc', BC, 24569, 'Yami Marik - Battle City', 'AkaiRosé')],
     },
+    {
+        id: 'yugi', name: 'Yugi Muto', sprite: 'yugi_neutral_v2_transparent', rating: 1950, level: 'hard',
+        blurb: 'Dark Magician Girl and the heart of the cards, dueling as himself.',
+        eras: [
+            era('cd', CD, 65296, 'Yugi Muto Ceremonial Character Deck ( Rivals of The Pharaoh)', 'meecho96',
+                comp(625114, 'Dark Magician Girl', 'ThousandStareDragon', GOAT, 'Goat format, 2005')),
+            era('dsod', DSOD, 191057, 'Yugi Muto The Dark Side of Dimensions', 'Silent Strike',
+                comp(22639, 'Buster Mage', 'Spartanlicious', META, 'the 2016 meta')),
+        ],
+    },
+    {
+        id: 'kaiba', name: 'Seto Kaiba', sprite: 'kaiba_neutral_transparent', rating: 2000, level: 'hard',
+        blurb: 'Three Blue-Eyes White Dragons, and no patience for friendship speeches.',
+        eras: [
+            era('dk', DK, 22678, 'Seto Kaiba (Duelist Kingdom) Deck', 'kale115',
+                comp(424299, 'Yugi/Kaiba Dragon Turbo', 'Mr.Bones', META, 'Yugi-Kaiba format, 2002')),
+            era('bc', BC, 22950, 'Seto Kaiba (Battle city) Deck', 'kale115',
+                comp(276001, 'Blue-Eyes White Dragon GOAT', 'DoesMachines', GOAT, 'Goat format, 2005')),
+            era('wtd', WTD, 23267, 'Kaiba (Waking The Dragons) Deck', 'kale115',
+                comp(621845, 'Blue-Eyes White Dragon OCG September 2005', 'thegamedreamer', META, 'the OCG, September 2005')),
+            era('dsod', DSOD, 107253, "Seto Kaiba's character deck (Dark Side Of Dimensions version)", 'zcgreenprofile',
+                comp(622, 'Dragons with Eyes of Blue (via 7kolt) V0.3', 'YGOPRODeck Bot', META, 'the 2016 meta')),
+        ],
+    },
+    {
+        id: 'yami_yugi', name: 'Yami Yugi', sprite: 'yami_yugi_neutral_transparent', rating: 2100, level: 'hard',
+        blurb: 'The King of Games. He believes in his deck, and his deck answers.',
+        eras: [
+            era('dk', DK, 22693, 'Yugi Muto (Duelist Kingdom) Deck', 'kale115',
+                comp(424302, 'Yugi/Kaiba Summoned Skull Exchange', 'Mr.Bones', META, 'Yugi-Kaiba format, 2002')),
+            era('bc', BC, 22714, 'Yugi Muto (Battle City) Deck', 'kale115',
+                comp(302453, 'Dark Magicians - GOAT', 'Beta464', GOAT, 'Goat format, 2005')),
+            era('wtd', WTD, 22966, 'Yugi (Waking the Dragons) Deck', 'kale115',
+                comp(512812, 'Dark Magician GOAT', 'bpogor', GOAT, 'Goat format, 2005')),
+        ],
+    },
 ];
 
 /** `url`: the list's page on YGOPRODeck. */
@@ -147,10 +193,23 @@ export function duelistById(id: string): Duelist | undefined {
     return DUELISTS.find((d) => d.id === id);
 }
 
-/** A duelist's deck in one of their eras (their first when `era` is missing or unknown). */
-export function duelistDeck(duelist: Duelist, era?: string): { era: DuelistEra; deck: DuelistDeck } {
-    const chosen = duelist.eras.find((e) => e.id === era) ?? duelist.eras[0]!;
-    const deck = DECKS[`${duelist.id}:${chosen.id}`];
-    if (!deck) throw new Error(`No deck built for ${duelist.id}:${chosen.id}: run api/scripts/build-duelists.ts`);
-    return { era: chosen, deck };
+/** Whether `era` names one of the duelist's decks (an era, or an era's competitive build: `bc+`). */
+export function duelistHasEra(duelist: Duelist, era: string): boolean {
+    const competitive = era.endsWith('+');
+    const found = duelist.eras.find((e) => e.id === (competitive ? era.slice(0, -1) : era));
+    return !!found && (!competitive || !!found.competitive);
+}
+
+/**
+ * A duelist's deck in one of their eras, or its competitive build (`bc+`); their first era's
+ * when `era` is missing or unknown. `id`: the deck's own id (`bc`, `bc+`), `source`: where it's from.
+ */
+export function duelistDeck(duelist: Duelist, era?: string): { era: DuelistEra; id: string; competitive: boolean; source: DeckSource; deck: DuelistDeck } {
+    const wantsCompetitive = !!era?.endsWith('+');
+    const chosen = duelist.eras.find((e) => e.id === (wantsCompetitive ? era!.slice(0, -1) : era)) ?? duelist.eras[0]!;
+    const competitive = wantsCompetitive && !!chosen.competitive;
+    const id = `${chosen.id}${competitive ? '+' : ''}`;
+    const deck = DECKS[`${duelist.id}:${id}`];
+    if (!deck) throw new Error(`No deck built for ${duelist.id}:${id}: run api/scripts/build-duelists.ts`);
+    return { era: chosen, id, competitive, source: competitive ? chosen.competitive! : chosen.source, deck };
 }

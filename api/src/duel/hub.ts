@@ -550,8 +550,8 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
     async function practice(id: ObjectId, me: DuelPlayer, deck: Deck, date: string | undefined, mode: DuelModeId, against: Opponent, level: BotLevel = 'normal', chosen?: PracticeDuelist, games: MatchGames = 3): Promise<Partial<DuelDoc>> {
         const duelist = against === 'bot' && chosen ? duelistById(chosen.id) : undefined;
         if (duelist) {
-            const { era, deck: theirs } = duelistDeck(duelist, chosen?.era);
-            const bot: DuelPlayer = { userId: null, name: duelist.name, deckId: null, bot: true, level: duelist.level, duelist: duelist.id, era: era.id };
+            const { id: era, deck: theirs } = duelistDeck(duelist, chosen?.era);
+            const bot: DuelPlayer = { userId: null, name: duelist.name, deckId: null, bot: true, level: duelist.level, duelist: duelist.id, era };
             return openMatch(id, [me, bot], [deck, { main: theirs.main, extra: theirs.extra, side: [] }], games);
         }
         const bot: DuelPlayer = against === 'solo'

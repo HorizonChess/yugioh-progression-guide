@@ -589,7 +589,7 @@ export class DuelSession {
                 // The last answer wasn't allowed: take it back and ask the same question again.
                 this.answers.pop();
                 this.retry = true;
-                const asked = [...messages].reverse().find((m: OcgMessage) => m.type !== M.RETRY && 'player' in m);
+                const asked = [...messages].reverse().find((m: OcgMessage) => m.type !== M.RETRY && 'player' in m) ?? this.lastAsked;
                 this.question = asked ? this.ask(asked) : this.lastQuestion;
                 if (this.question?.team !== undefined && this.setup.bots[this.question.team]) {
                     throw new Error('The bot gave an answer the engine refused');
@@ -605,6 +605,7 @@ export class DuelSession {
             }
             const question = this.ask(last);
             if (!question) throw new Error(`The duel server can't ask engine message ${last.type}`);
+            this.lastAsked = last;
             if (this.setup.bots[question.team]) {
                 if (this.replayQueue.length && !this.repairing) {
                     this.feed(this.replayQueue.shift()!);
@@ -670,6 +671,8 @@ export class DuelSession {
         this.core.duelSetResponse(this.handle!, forEngine(response));
     }
     private lastQuestion: Question | null = null;
+    /** The engine's last question, the bot's or a player's: asked again when its answer is refused. */
+    private lastAsked: OcgMessage | null = null;
 
     private pushFrame(events: DuelEvent[], team: Team) {
         if (!events.length) return;

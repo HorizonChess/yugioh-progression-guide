@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { BOT_LEVELS, CardIdSchema, DeviceAnswersSchema, PregameActionSchema, deckProblem, duelistById, ownedCountsById } from '@ygo/shared';
+import { BOT_LEVELS, CardIdSchema, DeviceAnswersSchema, PregameActionSchema, deckProblem, duelistById, duelistHasEra, ownedCountsById } from '@ygo/shared';
 import { z } from 'zod';
 import { duelsCollection, type Deck, type DuelDoc, type DuelProblem, type Seat } from '../duel/hub';
 import type { Team } from '@ygo/duel/session';
@@ -11,7 +11,7 @@ import { requireSeriesMember } from '../middleware/requireSeriesMember';
 /** A duelist from the anime to practice against (only against the bot): one of the roster. */
 const DuelistSchema = z
     .strictObject({ id: z.string().max(40), era: z.string().max(12).optional() })
-    .refine((d) => !!duelistById(d.id) && (!d.era || duelistById(d.id)!.eras.some((e) => e.id === d.era)));
+    .refine((d) => !!duelistById(d.id) && (!d.era || duelistHasEra(duelistById(d.id)!, d.era)));
 /** Against the bot, the match is best of 3 or a single game (against the rival, always best of 3). */
 const GamesSchema = z.union([z.literal(1), z.literal(3)]);
 const StartBodySchema = z

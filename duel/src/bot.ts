@@ -210,14 +210,12 @@ export function heuristicAnswer(m: OcgMessage, duel: DuelSession, team: Team, ru
             return { type: R.SELECT_UNSELECT_CARD, index: order[0]! };
         }
         case M.SELECT_SUM: {
-            let total = 0;
-            const picked: number[] = range(m.selects_must.length);
-            for (const c of m.selects_must) total += c.amount & 0xffff;
-            for (let i = 0; i < m.selects.length && total < m.amount; i++) {
-                picked.push(m.selects_must.length + i);
-                total += m.selects[i]!.amount & 0xffff;
-            }
-            return { type: R.SELECT_SUM, indicies: picked };
+            // Cards whose levels (or other amounts) add up to the number: exactly, or (select_max set) at
+            // least, with none to spare. The fewest, and the ones it can best do without.
+            const must = range(m.selects_must.length);
+            const rank = new Map(pickOrder(duel, team, m.selects, 'cost', rules.hiddenGuess).map((i, r) => [i, r]));
+            const picked = sumPick(m.selects_must.map((c) => c.amount), m.selects.map((c) => c.amount), m.amount, m.select_max !== 0, m.min, m.max, (i) => rank.get(i) ?? i);
+            return { type: R.SELECT_SUM, indicies: [...must, ...(picked ?? []).map((i) => m.selects_must.length + i)] };
         }
         case M.SELECT_EFFECTYN:
             return { type: R.SELECT_EFFECTYN, yes: true };
@@ -252,6 +250,34 @@ type BattleMsg = Extract<OcgMessage, { type: M.SELECT_BATTLECMD }>;
 type ChainMsg = Extract<OcgMessage, { type: M.SELECT_CHAIN }>;
 
 /** The strongest monster worth summoning (a Tribute Summon only for one stronger than what it gives up). */
+/** A card's amounts: the low half, and the high half when it has a second (a level it can also count as). */
+const amounts = (a: number) => (a >>> 16 ? [a & 0xffff, a >>> 16] : [a & 0xffff]);
+
+/**
+ * The cards of `free` to pick, with the `must` ones, so their amounts add up to `target` (or, `atLeast`,
+ * reach it with no card to spare), counting min..max cards in all; the cheapest by `cost` among the
+ * fewest. Null when no set works.
+ */
+export function sumPick(must: number[], free: number[], target: number, atLeast: boolean, min: number, max: number, cost: (i: number) => number): number[] | null {
+    const totals = (list: number[]): number[][] => list.reduce<number[][]>((acc, a) => acc.flatMap((t) => amounts(a).map((v) => [...t, v])), [[]]);
+    const fits = (vals: number[]): boolean => {
+        const sum = vals.reduce((a, b) => a + b, 0);
+        return atLeast ? sum >= target && vals.every((v) => sum - v < target) : sum === target;
+    };
+    const lo = Math.max(min || 1, must.length), hi = Math.min(max || must.length + free.length, must.length + free.length);
+    const n = Math.min(free.length, 16);
+    let best: number[] | null = null, bestScore = Infinity;
+    for (let mask = 0; mask < 1 << n; mask++) {
+        const chosen = range(n).filter((i) => mask & (1 << i));
+        const count = must.length + chosen.length;
+        if (count < lo || count > hi) continue;
+        const score = count * 1000 + chosen.reduce((a, i) => a + cost(i), 0);
+        if (score >= bestScore) continue;
+        if (totals([...must, ...chosen.map((i) => free[i]!)]).some(fits)) { best = chosen; bestScore = score; }
+    }
+    return best;
+}
+
 function bestSummon(m: IdleMsg, duel: DuelSession, team: Team): number | null {
     const mine = duel.monstersOf(team).map((x) => x.atk).sort((x, y) => x - y);
     const worthIt = (code: number, atk: number) => {

@@ -34,18 +34,18 @@ try {
     await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }), "ygo-guide": "off" });
     await openBotsArena(page);
 
-    // The roster: the practice bot and solo, then sixteen duelists in three groups, weakest first.
+    // The roster: the practice bot and solo, then nineteen duelists in three groups, weakest first.
     const roster = page.getByRole("radiogroup", { name: "Opponents" });
     await roster.waitFor({ timeout: 5000 });
     const names = await roster.getByRole("radio").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")));
-    check(names.length === 18 && names[0] === "Practice Bot" && names[1] === "Solo", `the roster has the practice bot, solo and 16 duelists (${names.length})`);
+    check(names.length === 21 && names[0] === "Practice Bot" && names[1] === "Solo", `the roster has the practice bot, solo and 19 duelists (${names.length})`);
     const groups = await page.locator(".op-group h4").allTextContents();
     check(groups.join(",") === "Practice,Beginner,Intermediate,Advanced", `grouped by strength (${groups.join(", ")})`);
     const ratings = await page.locator(".op-tile small").allTextContents();
     const numbers = ratings.slice(2).map(Number);
     check(numbers.every((n, i) => i === 0 || n >= numbers[i - 1]), `weakest first (${numbers.join(" ")})`);
     const faces = await page.locator(".op-face:not(.op-face--bot)").evaluateAll((els) => els.filter((e) => /sprites\//.test(getComputedStyle(e).backgroundImage)).length);
-    check(faces === 16, `each duelist shows their face (${faces})`);
+    check(faces === 19, `each duelist shows their face (${faces})`);
     await page.waitForTimeout(600); // (the faces fade in)
     await shot("roster");
 
@@ -63,6 +63,28 @@ try {
     check(/Joey Wheeler \(Battle City\) Deck/.test((await page.locator(".op-credit").textContent()) ?? ""), "the deck's source is credited");
     await page.waitForTimeout(600); // (his figure steps in)
     await shot("joey");
+    check((await page.getByRole("radiogroup", { name: "How Joey's deck is built" }).count()) === 0, "Joey's decks are only the anime's");
+
+    // Kaiba: his Battle City deck as in the anime, or as Goat format played Blue-Eyes; the build is kept across eras.
+    await radio("Seto Kaiba").click();
+    await page.locator(".op-name", { hasText: "Seto Kaiba" }).waitFor();
+    check(/kaiba_neutral_transparent/.test((await figure.getAttribute("src")) ?? ""), "Kaiba takes the stage, with his sprite");
+    await radio("Battle City").click();
+    const build = page.getByRole("radiogroup", { name: "How Seto's deck is built" }).getByRole("radio");
+    check((await build.allTextContents()).join(",") === "As in the anime,Competitive", "his deck can be the anime's or competitive");
+    await radio("Competitive").click();
+    const credit = async () => (await page.locator(".op-credit").textContent()) ?? "";
+    check(/Blue-Eyes White Dragon GOAT/.test(await credit()) && /as played in Goat format, 2005/.test(await credit()), `the competitive build is credited (${await credit()})`);
+    await radio("Waking the Dragons").click();
+    check((await radio("Competitive").getAttribute("aria-checked")) === "true" && /as played in the OCG, September 2005/.test(await credit()), "another era keeps the competitive build");
+    await page.waitForTimeout(500); // (the chips light up)
+    await shot("kaiba-competitive");
+    await radio("As in the anime").click();
+    check(/Kaiba \(Waking The Dragons\) Deck/.test(await credit()), "and back to the anime's");
+
+    await radio("Joey Wheeler").click();
+    await page.locator(".op-name", { hasText: "Joey Wheeler" }).waitFor();
+    await radio("Battle City").click();
 
     // Remembered on the next visit.
     await page.reload({ waitUntil: "networkidle" });
