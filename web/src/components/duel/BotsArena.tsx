@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode, type TouchEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BOT_LEVELS, DUELISTS, duelistById, duelistDeck, ruleEraFor, type BotLevel, type Duelist } from "@ygo/shared";
 import { alertRepoError } from "@/context/ProgressionContext";
@@ -107,18 +107,79 @@ export default function BotsArena({ seriesId, guest, setName, setDate, decks }: 
         setGames(n);
         localStorage.setItem(GAMES_KEY, String(n));
     };
-    // On a phone the stage is a door over the roster: shut at first, opened by picking someone,
-    // and swiped (or tapped) open and shut. (On a wider screen it's always open.)
+    // On a phone the stage is a door over the roster: shut at first, opened by picking someone.
+    // Dragged (by its lintel, or anywhere on it once open) it follows the finger, as the deck
+    // builder's drawer does; let go, it settles open or shut, and a quick flick carries on.
+    // (On a wider screen it's always open.)
     const [door, setDoor] = useState(false);
-    const swipeFrom = useRef<number | null>(null);
-    const swipe = {
-        onTouchStart: (e: TouchEvent) => { swipeFrom.current = e.touches[0]?.clientY ?? null; },
-        onTouchEnd: (e: TouchEvent) => {
-            const from = swipeFrom.current, to = e.changedTouches[0]?.clientY;
-            swipeFrom.current = null;
-            if (from === null || to === undefined || Math.abs(to - from) < 40) return;
-            setDoor(to > from);
+    const doorEl = useRef<HTMLDivElement>(null);
+    const drag = useRef<{ y: number; h: number; lastY: number; lastT: number; v: number; moved: boolean } | null>(null);
+    const settling = useRef(0);
+    const noClick = useRef(false);
+    // A drag's touches are the door's, not a scroll: with no fling started, the next tap isn't eaten.
+    const sideEl = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const el = sideEl.current;
+        if (!el) return;
+        const hold = (e: globalThis.TouchEvent) => { if (drag.current?.moved) e.preventDefault(); };
+        el.addEventListener("touchmove", hold, { passive: false });
+        return () => el.removeEventListener("touchmove", hold);
+    }, []);
+    const doorDrag = {
+        onPointerDown: (e: ReactPointerEvent) => {
+            const el = doorEl.current;
+            if (!el || !window.matchMedia("(max-width: 760px)").matches || (e.pointerType === "mouse" && e.button !== 0)) return;
+            drag.current = { y: e.clientY, h: el.getBoundingClientRect().height, lastY: e.clientY, lastT: e.timeStamp, v: 0, moved: false };
         },
+        onPointerMove: (e: ReactPointerEvent) => {
+            const d = drag.current, el = doorEl.current, body = el?.firstElementChild as HTMLElement | null;
+            if (!d || !el || !body) return;
+            const dy = e.clientY - d.y;
+            if (!d.moved) {
+                if (Math.abs(dy) < 8) return;
+                d.moved = true;
+                settling.current++;
+                (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                el.style.transition = "none";
+                el.style.display = "block";
+            }
+            const full = body.scrollHeight;
+            const h = Math.max(0, Math.min(full * 1.04, d.h + dy));
+            el.style.height = `${h}px`;
+            body.style.opacity = String(Math.min(1, h / 140));
+            // the finger's speed (px/ms, down is positive), smoothed over the last moves
+            const dt = Math.max(1, e.timeStamp - d.lastT);
+            d.v = d.v * 0.4 + ((e.clientY - d.lastY) / dt) * 0.6;
+            d.lastY = e.clientY; d.lastT = e.timeStamp;
+        },
+        onPointerUp: (e: ReactPointerEvent) => {
+            const d = drag.current, el = doorEl.current, body = el?.firstElementChild as HTMLElement | null;
+            drag.current = null;
+            if (!d?.moved || !el || !body) return;
+            noClick.current = true;
+            setTimeout(() => { noClick.current = false; }, 0);
+            const full = body.scrollHeight;
+            // a finger held still before letting go carries no speed
+            const v = e.timeStamp - d.lastT > 120 ? 0 : d.v;
+            const open = el.getBoundingClientRect().height + v * 180 > full / 2;
+            const me = ++settling.current;
+            el.style.transition = "height 0.3s cubic-bezier(0.2, 0.9, 0.3, 1)";
+            el.style.height = `${open ? full : 0}px`;
+            body.style.opacity = "";
+            setDoor(open);
+            const done = () => { if (settling.current === me) el.style.transition = el.style.height = el.style.display = ""; };
+            el.addEventListener("transitionend", done, { once: true });
+            setTimeout(done, 400);
+        },
+        onPointerCancel: () => {
+            drag.current = null;
+            const el = doorEl.current;
+            if (!el) return;
+            el.style.transition = el.style.height = el.style.display = "";
+            (el.firstElementChild as HTMLElement | null)?.style.removeProperty("opacity");
+        },
+        // (a drag that ends over a button isn't a tap on it)
+        onClickCapture: (e: ReactMouseEvent) => { if (noClick.current) { e.preventDefault(); e.stopPropagation(); } },
     };
     /** The practice match still going (one at a time), once looked for. */
     const [open, setOpen] = useState<DuelSummary | null | undefined>(undefined);
@@ -197,7 +258,7 @@ export default function BotsArena({ seriesId, guest, setName, setDate, decks }: 
     return (
         <div className="ba-screen" data-theme={THEME} style={themeStyle(THEME)}>
             <div className="op" aria-label="Bots Arena">
-                <div className={`op-side ${door ? "is-open" : ""}`} {...swipe}>
+                <div ref={sideEl} className={`op-side ${door ? "is-open" : ""}`} {...doorDrag}>
                     {/* A match still going comes first: one at a time. */}
                     {open && (
                         <div className="ba-open" role="status">
@@ -216,11 +277,11 @@ export default function BotsArena({ seriesId, guest, setName, setDate, decks }: 
                         {faceOf(choice, duelist)}
                         <span className="op-door__who">
                             <b>{duelist ? duelist.name : choice.kind === "solo" ? "Solo" : "Practice Bot"}</b>
-                            <small>Tap someone, or swipe down</small>
+                            <small>Tap someone, or pull down</small>
                         </span>
                         <i className="op-door__chev" aria-hidden="true" />
                     </button>
-                    <div className="op-door" id="op-door">
+                    <div className="op-door" id="op-door" ref={doorEl}>
                         <div className="op-door__body">
                         <div className="op-stage">
                             <div className={`op-figure ${duelist ? "" : "op-figure--bot"}`}>{duelist ? <img key={duelist.id} src={sprite(duelist)} alt="" /> : choice.kind === "solo" ? <HandGlyph /> : <BotGlyph />}</div>
