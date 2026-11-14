@@ -704,6 +704,12 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
                                         {effects.banner.codes.map((c, i) => <img key={i} src={cardImage(c)} alt={name(c)} style={{ animationDelay: `${i * 0.08}s` }} />)}
                                     </div>
                                 )}
+                                {/* Up until you've had a look. */}
+                                {effects.banner.ack && (
+                                    <button type="button" className="df-reveal__ok" autoFocus onClick={duel.acknowledge}>
+                                        Got it
+                                    </button>
+                                )}
                             </div>
                         )}
                         {effects.banner.kind === "dice" && (

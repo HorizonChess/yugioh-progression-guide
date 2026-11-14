@@ -1,10 +1,11 @@
 // A card shown by an effect: you play Reinforcement of the Army against the bot, pick the Warrior,
 // and the board says you showed it to the rival, with the card face up in the banner and the log.
+// Your own card passes by itself (the rival's, which waits for "Got it": duel-reveal-rival.mjs).
 //
 //   npm run test-server -w @ygo/api   (WEB_DIST serves the built web on the same port)
 //   node web/scripts/drivers/duel-reveal.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame } from "./_lib.mjs";
+import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame, practiceAgainstBot } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 let failures = 0;
@@ -44,7 +45,7 @@ try {
             throw new Error(`stuck before the duel: ${(await page.locator(".gd").textContent().catch(() => null)) ?? "?"}`);
         });
         if (await old.count()) await old.click();
-        await practice.click();
+        await practiceAgainstBot(page);
         await page.waitForURL(/duel/, { timeout: 30000 }).catch(async (e) => {
             throw new Error(`no duel: ${(await page.locator(".gd").textContent().catch(() => null)) ?? e.message}`);
         });
@@ -106,6 +107,17 @@ try {
     await page.screenshot({ path: outPath(`duel-reveal-${phone ? "phone" : "desktop"}.png`) });
     check(/(You show .+|shows you) 1 card/.test(words), `the banner says who showed it (${words})`);
     check((await page.locator(`.df-reveal img[alt]`).count()) === 1, "the shown card is in the banner");
+    // Your own card, shown to the rival, passes by itself. (The rival's waiting for a "Got it" is
+    // duel-reveal-rival's, with a rival that plays its search for sure.)
+    const gotIt = page.getByRole("button", { name: "Got it" });
+    if (/shows you/.test(words)) {
+        check((await gotIt.count()) === 1, "the rival's card waits for a Got it");
+        await gotIt.click();
+    } else {
+        check((await gotIt.count()) === 0, "your own card shown asks nothing of you");
+        await banner.waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+        check((await banner.count()) === 0, "and passes by itself");
+    }
     check(errors.length === 0, `no page errors ${errors.join(" | ")}`);
 } finally {
     await browser.close();

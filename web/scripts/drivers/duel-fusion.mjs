@@ -83,11 +83,11 @@ try {
     const hit = box && await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest(".df-hand__card") !== null, [box.x + box.width / 2, box.y + Math.min(box.height / 2, 30)]);
     check(!!hit, "nothing covers the hand card");
     await target.click({ timeout: 3000 }).catch(() => {});
-    // Then the one on the field (once the next step of the pick is up).
+    // Then the other (once the next step of the pick is up): on the field, or in hand too.
     for (let i = 0; i < 10 && (await page.locator(".df-sheet__title", { hasText: /Fusion Material/ }).count()); i++) {
         await page.waitForTimeout(700);
-        const fieldMat = page.locator(".df-card.is-glow").first();
-        if (await fieldMat.count()) await fieldMat.click({ force: true }).catch(() => {});
+        const other = page.locator(".df-card.is-glow:not(.is-picked), .df-hand__card.is-glow:not(.is-picked)").first();
+        if (await other.count()) await other.click({ force: true }).catch(() => {});
     }
     await page.waitForTimeout(2500);
     await page.screenshot({ path: outPath(`duel-fusion-after-${phone ? "phone" : "desktop"}.png`) });

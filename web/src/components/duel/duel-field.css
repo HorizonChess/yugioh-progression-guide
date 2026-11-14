@@ -642,6 +642,15 @@
 .df-reveal p { margin: 0; }
 .df-reveal__cards { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; max-width: min(92vw, 640px); }
 .df-reveal__cards img { width: clamp(64px, 11vw, 112px); aspect-ratio: 59 / 86; border-radius: 4px; box-shadow: 0 6px 16px #000, 0 0 0 1px #d4af37; animation: df-reveal-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+/* Cards you didn't know stay up until you've seen them: the banner takes taps, and says so. */
+.df-banner--reveal:has(.df-reveal__ok) { pointer-events: auto; }
+.df-reveal__ok {
+    padding: 8px 22px; border: 1px solid #f5c542; border-radius: 4px; cursor: pointer; background: linear-gradient(#f3d98a, #c99a3a); color: #2a1a04;
+    font: 800 12px/1 var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); animation: df-ok-in 0.3s 0.3s both;
+}
+.df-reveal__ok:hover { filter: brightness(1.08); }
+@keyframes df-ok-in { from { opacity: 0; translate: 0 6px; } }
+.df-reveal__ok:focus-visible { outline: 2px solid #fff1bf; outline-offset: 2px; }
 @keyframes df-reveal-in { from { opacity: 0; transform: translateY(16px) rotateY(90deg); } }
 
 /* A declaration: what was named, large, under who named it. */

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { loneMust, type DuelAnswer, type DuelEvent, type DuelFrame, type DuelMatchView, type DuelOnDevice, type DuelServerMessage, type DuelState, type DuelView, type Side } from "@ygo/shared";
+import { loneMust, type DuelAnswer, type DuelEvent, type DuelFrame, type DuelMatchView, type DuelOnDevice, type DuelPrompt, type DuelServerMessage, type DuelState, type DuelView, type Side } from "@ygo/shared";
 import { connectDuel, getDuel, type DuelConnection } from "@/lib/duel-client";
 import { connectLocalDuel } from "@/lib/duel/local-duel";
 import { duelPrefs } from "./duel-prefs";
@@ -27,7 +27,8 @@ export type Banner =
     | { key: number; kind: "coin"; side: Side; results: ("heads" | "tails")[]; call?: { side: Side; heads: boolean } }
     | { key: number; kind: "dice"; side: Side; results: number[] }
     | { key: number; kind: "declare"; side: Side; what: string; text: string; code?: number }
-    | { key: number; kind: "reveal"; side: Side; by: Side | null; from: string; codes: number[]; count: number };
+    /** `ack`: it stays up until you say you've seen it (cards you didn't know: the rival's, a Deck's). */
+    | { key: number; kind: "reveal"; side: Side; by: Side | null; from: string; codes: number[]; count: number; ack?: boolean };
 export type Float = { key: number; side?: Side; uid?: string; text: string; tone: "up" | "down" };
 export interface Effects {
     destroying: string[];
@@ -50,6 +51,13 @@ let key = 0;
 const HOLD: Partial<Record<DuelEvent["k"], number>> = {
     activate: 1050, turn: 900, coin: 2400, dice: 2000, reveal: 2200, random: 700, declare: 1600, destroyed: 120, damage: 700, pay: 500, recover: 500, lp: 900, "hand-shuffle": 540, summon: 520, move: 300, draw: 260, set: 300, reposition: 340, win: 500, resolved: 220, negated: 600,
 };
+/**
+ * Cards shown only to be picked from straight after (Confiscation's look at the hand): the pick
+ * shows them all, so a banner first would only say it twice.
+ */
+function inThePick(e: Extract<DuelEvent, { k: "reveal" }>, p: DuelPrompt | null | undefined): boolean {
+    return p?.kind === "cards" && e.codes.length > 0 && e.codes.every((c) => p.cards.some((x) => x.code === c && x.side === e.side && x.where === e.from));
+}
 const FIELD = new Set(["monster", "spell", "field", "pendulum", "extra-monster"]);
 
 /** Plays a keyframe animation on an element and waits for it. */
@@ -183,6 +191,8 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
     /** The field last put on screen: what's new in a frame is measured against it. */
     const shownRef = useRef<DuelView | null>(null);
     const busy = useRef(false);
+    /** A reveal waiting for you to say you've seen it: this lets the frames go on. */
+    const seen = useRef<(() => void) | null>(null);
     const latest = useRef<DuelState | null>(null);
     const conn = useRef<DuelConnection | null>(null);
     const onEventRef = useRef(onEvent);
@@ -273,6 +283,7 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
             const pace = queue.current.length > 90 ? 0.25 : 1;
             const loud = pace === 1;
             let hold = 0;
+            let waitForYou = false;
             for (const e of frame.events) {
                 if (e.k === "attack") await attack(e.attacker, e.target, e.side, pace);
                 if (e.k === "destroyed") {
@@ -379,7 +390,12 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
                     }
                 }
                 if (e.k === "declare") setEffects((x) => ({ ...x, banner: { key: ++key, kind: "declare", side: e.side, what: e.what, text: e.text, code: e.code } }));
-                if (e.k === "reveal") setEffects((x) => ({ ...x, banner: { key: ++key, kind: "reveal", side: e.side, by: e.by, from: e.from, codes: e.codes, count: e.count } }));
+                if (e.k === "reveal" && !inThePick(e, latest.current?.prompt)) {
+                    // Cards you didn't know (the rival's, a Deck's) stay up until you've seen them; your own hand shown to the rival just passes.
+                    const ack = loud && e.codes.length > 0 && !(e.side === "me" && e.from === "hand");
+                    waitForYou ||= ack;
+                    setEffects((x) => ({ ...x, banner: { key: ++key, kind: "reveal", side: e.side, by: e.by, from: e.from, codes: e.codes, count: e.count, ack } }));
+                }
                 if (e.k === "recover") float({ side: e.side, text: `+${e.amount}`, tone: "up" });
                 // Life Points set outright (Reversal Quiz swaps them): the new total rises from the counter.
                 if (e.k === "lp") {
@@ -392,7 +408,8 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
             }
             // Each play of the rival's gets a beat of its own, so you can follow what it did.
             if (frame.events.some((e) => "side" in e && e.side === "opp" && (e.k === "summon" || e.k === "set" || e.k === "activate" || e.k === "attack"))) hold += 450;
-            await sleep(hold * pace);
+            if (waitForYou) await new Promise<void>((r) => (seen.current = r));
+            else await sleep(hold * pace);
             setEffects((x) => (x.banner && x.banner.kind !== "end" ? { ...x, banner: null } : x));
         }
         busy.current = false;
@@ -469,6 +486,12 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         }, 8000);
     }, [duelId]);
 
+    /** You've seen the cards shown: the duel goes on. */
+    const acknowledge = useCallback(() => {
+        seen.current?.();
+        seen.current = null;
+    }, []);
+
     const concede = useCallback(() => conn.current?.concede(), []);
     const callOff = useCallback((agree: boolean) => conn.current?.callOff(agree), []);
 
@@ -496,6 +519,7 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         failure,
         effects,
         answer,
+        acknowledge,
         concede,
         callOff,
         back,
