@@ -97,9 +97,10 @@
   .op-side { padding: 0; border-right: 0; border-bottom: 1px solid rgba(255, 224, 138, 0.16); overflow: visible; gap: 0; touch-action: none; user-select: none; }
   .op-side > .ba-open { margin: 12px 14px 0; }
   /* The door: shut, only its lintel (who's chosen); open, the stage slides down under it, a handle at its foot. */
-  .op-door { flex: none; display: grid; grid-template-rows: 0fr; overflow: hidden; transition: grid-template-rows 0.3s cubic-bezier(0.2, 0.9, 0.3, 1); }
+  /* (One column the door's own width: a long deck name in the dropdown can't widen it past the screen.) */
+  .op-door { flex: none; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 0fr; overflow: hidden; transition: grid-template-rows 0.3s cubic-bezier(0.2, 0.9, 0.3, 1); }
   .op-side.is-open .op-door { grid-template-rows: 1fr; }
-  .op-door__body { min-height: 0; gap: 10px; padding: 0 14px; opacity: 0; transition: opacity 0.25s; }
+  .op-door__body { min-height: 0; min-width: 0; gap: 10px; padding: 0 14px; opacity: 0; transition: opacity 0.25s; }
   .op-door__body > :first-child { margin-top: 14px; }
   .op-door__body > :last-child { margin-bottom: 2px; }
   .op-side.is-open .op-door__body { opacity: 1; }
