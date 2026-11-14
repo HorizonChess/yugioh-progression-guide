@@ -51,11 +51,33 @@ function pressure(atk: number, battleAhead: boolean, open: boolean): number {
     return Math.max(0, atk) * (battleAhead && open ? 0.45 : 0.08);
 }
 
-function stats(c: DuelCardView, mine: boolean, engine: Engine, battleAhead = false, open = false): Stats {
+const lastingCache = new Map<number, boolean>();
+/**
+ * Whether a card's script changes ATK or DEF for good, not just for the turn (no RESET_PHASE): Ra's
+ * ATK from its Tributes, Dark Magician Girl's from the Dark Magicians in the Graveyard, a Field Spell.
+ */
+function changesStatsForGood(engine: Engine, code: number): boolean {
+    let v = lastingCache.get(code);
+    if (v === undefined) {
+        const script = engine.readScript(`c${code}.lua`) ?? '';
+        v = /EFFECT_(UPDATE|SET|SET_BASE)_(ATTACK|DEFENSE)/.test(script) && !/RESET_PHASE/.test(script);
+        lastingCache.set(code, v);
+    }
+    return v;
+}
+
+/** Whether a face-up card on the field changes stats for good: then a monster's ATK as it stands is its lasting power. */
+function lastingAura(view: DuelView, engine: Engine): boolean {
+    const cards = [view.me, view.opp].flatMap((s) => [...s.monsters, ...s.spells, s.field]);
+    return cards.some((c) => !!c?.faceUp && !!c.code && changesStatsForGood(engine, c.code));
+}
+
+function stats(c: DuelCardView, mine: boolean, engine: Engine, battleAhead = false, open = false, aura = false): Stats {
     let atk: number, def: number;
     if (c.faceUp && c.atk !== undefined) {
-        // Its lasting power: its own stats unless something lasting acts on it (an Equip Spell).
-        const lasting = (c.by?.length ?? 0) > 0;
+        // Its lasting power: its own stats unless something lasting acts on it (an Equip Spell, its own
+        // effect, a Field Spell); a boost for the turn only counts in the battle it's for.
+        const lasting = aura || (c.by?.length ?? 0) > 0;
         atk = lasting ? c.atk : (c.baseAtk ?? c.atk);
         def = lasting ? (c.def ?? 0) : (c.baseDef ?? c.def ?? 0);
     } else if (mine && c.code) {
@@ -71,8 +93,8 @@ function stats(c: DuelCardView, mine: boolean, engine: Engine, battleAhead = fal
     return { atk, def, attack: c.faceUp && !c.defense, faceUp: c.faceUp, value };
 }
 
-function monsterValue(c: DuelCardView, mine: boolean, engine: Engine): number {
-    return stats(c, mine, engine).value;
+function monsterValue(c: DuelCardView, mine: boolean, engine: Engine, aura: boolean): number {
+    return stats(c, mine, engine, false, false, aura).value;
 }
 
 /**
@@ -92,29 +114,33 @@ function atRisk(defenders: Stats[], attackers: Stats[], mine: boolean): number {
     return risk;
 }
 
-function sideValue(side: DuelSideView, mine: boolean, engine: Engine, battleAhead: boolean, open: boolean): number {
+function sideValue(side: DuelSideView, mine: boolean, engine: Engine, battleAhead: boolean, open: boolean, aura: boolean): number {
     let v = lifeValue(side.lp) + HAND * side.hand.length;
-    for (const m of side.monsters) if (m) v += stats(m, mine, engine, battleAhead, open).value;
+    for (const m of side.monsters) if (m) v += stats(m, mine, engine, battleAhead, open, aura).value;
     for (const s of [...side.spells, side.field]) if (s) v += s.faceUp ? FACE_UP : SET;
     return v;
 }
 
-/** The position's worth to the viewer: theirs minus the rival's. */
-export function evaluate(view: DuelView, engine: Engine): number {
+/**
+ * The position's worth to the viewer: theirs minus the rival's. `turnEnd`: scored as a turn ends
+ * (no Battle Phase still to come for either side), so positions at different points compare.
+ */
+export function evaluate(view: DuelView, engine: Engine, turnEnd = false): number {
     // The Battle Phase still to come this turn, for whoever's turn it is.
-    const battleAhead = view.phase === 'DP' || view.phase === 'SP' || view.phase === 'M1';
+    const battleAhead = !turnEnd && (view.phase === 'DP' || view.phase === 'SP' || view.phase === 'M1');
     const empty = (s: DuelSideView) => s.monsters.every((c) => !c);
     const myTurn = view.turnPlayer === 'me';
-    let v = sideValue(view.me, true, engine, myTurn && battleAhead, empty(view.opp)) - sideValue(view.opp, false, engine, !myTurn && battleAhead, empty(view.me));
-    const mine = view.me.monsters.flatMap((c) => (c ? [stats(c, true, engine)] : []));
-    const theirs = view.opp.monsters.flatMap((c) => (c ? [stats(c, false, engine)] : []));
+    const aura = lastingAura(view, engine);
+    let v = sideValue(view.me, true, engine, myTurn && battleAhead, empty(view.opp), aura) - sideValue(view.opp, false, engine, !myTurn && battleAhead, empty(view.me), aura);
+    const mine = view.me.monsters.flatMap((c) => (c ? [stats(c, true, engine, false, false, aura)] : []));
+    const theirs = view.opp.monsters.flatMap((c) => (c ? [stats(c, false, engine, false, false, aura)] : []));
     v -= RISK.mine * atRisk(mine, theirs, true);
     v += RISK.theirs * atRisk(theirs, mine, false);
     // What the rival could summon next turn (from their hand and the card they'll draw), against
     // the bot's face-up Attack Position monsters.
     const likely = LATENT_RISK * Math.min(1, (view.opp.hand.length + 1) / 3);
     for (const d of mine) if (d.attack && d.atk < EXPECTED_ATTACKER) v -= likely * (d.value + 0.45 * (EXPECTED_ATTACKER - d.atk));
-    for (const x of view.extraMonsters) if (x) v += (x.side === 'me' ? 1 : -1) * monsterValue(x.card, x.side === 'me', engine);
+    for (const x of view.extraMonsters) if (x) v += (x.side === 'me' ? 1 : -1) * monsterValue(x.card, x.side === 'me', engine, aura);
     return v;
 }
 

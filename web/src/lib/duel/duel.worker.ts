@@ -4,6 +4,12 @@ import { decodeAnswer as decode, encodeAnswer as encode } from "@ygo/duel/answer
 import type { DeviceAnswers, DuelAnswer, DuelFrame, DuelOnDevice, DuelState } from "@ygo/shared";
 import { createEngine, type CardRow, type Engine } from "@ygo/duel/engine";
 import { DuelSession, type DuelSetup, type Team } from "@ygo/duel/session";
+import { botTuning } from "@ygo/duel/bot";
+
+/** On the device the bot thinks beside the game's sound and animation: each decision at most this long (ms)... */
+botTuning.budgetMs = 300;
+/** ...and a frame's rest between decisions. */
+const BREATHER_MS = 16;
 
 /*
  * A practice game against the bot, played on this device: EDOPro's engine (WebAssembly) and the
@@ -137,7 +143,8 @@ function report(frames: DuelFrame[]) {
 async function think() {
     while (session?.botToThink) {
         // A message come in meanwhile (the game left, a concession) goes first; it thinks on after.
-        await new Promise((r) => setTimeout(r));
+        // (A frame's rest between decisions, so a phone's sound and animation keep up.)
+        await new Promise((r) => setTimeout(r, BREATHER_MS));
         if (inbox) return;
         await play(() => session!.botThink());
         report(session!.takeFrames(team));

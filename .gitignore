@@ -27,3 +27,5 @@ coverage/
 
 # Duel engine data, downloaded by npm run fetch-engine -w @ygo/api
 api/engine-data/
+api/scripts/bot-lab/prev/
+api/scripts/bot-lab/prev0/

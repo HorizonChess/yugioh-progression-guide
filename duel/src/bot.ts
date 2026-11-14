@@ -49,8 +49,13 @@ interface LevelRules {
     weighChoices: boolean;
     /** Holds an attack into a face-down monster when the rival has Set cards to spring. */
     wary: boolean;
-    /** Looks past each play to the end of its Main Phase (bot-sim.ts). */
+    /** Looks past each play to the end of its turn (bot-sim.ts). */
     through: boolean;
+    /**
+     * Attacks face-down monsters. Not in the copies it looks ahead in: they hold the rival's real
+     * cards, and an attack there would show it what a face-down monster is.
+     */
+    attacksHidden?: boolean;
 }
 
 const LEVELS: Record<PlayableLevel, LevelRules> = {
@@ -58,6 +63,18 @@ const LEVELS: Record<PlayableLevel, LevelRules> = {
     normal: { hiddenGuess: 1400, idleMargin: 20, chainMargin: 60, firstSound: false, overlook: 0, weighChoices: true, wary: false, through: false },
     hard: { hiddenGuess: 1500, idleMargin: 20, chainMargin: 300, firstSound: false, overlook: 0, weighChoices: true, wary: true, through: true },
 };
+
+/**
+ * How long one decision may take to think, in ms: once it's up, the plays not yet tried are left out
+ * (the first one, and doing nothing, are always weighed). Set on a player's device, where the bot
+ * thinks beside the game's sound and animation; unlimited on the server and in tests.
+ */
+export const botTuning = { budgetMs: Infinity };
+let deadline = Infinity;
+const timeUp = () => performance.now() > deadline;
+
+/** Plain play in the copies: never attacking a face-down monster (see `attacksHidden`). */
+const IN_COPIES: LevelRules = { hiddenGuess: 1400, idleMargin: 0, chainMargin: 0, firstSound: false, overlook: 0, weighChoices: false, wary: false, through: false, attacksHidden: false };
 
 const MAX_ACTIONS_PER_TURN = 12;
 /** At most this many different cards tried at one chance to respond (and the pass). */
@@ -193,7 +210,8 @@ export function heuristicAnswer(m: OcgMessage, duel: DuelSession, team: Team, ru
             const attackerAtk = duel.botAttacker;
             duel.botAttacker = null;
             if (m.type === M.SELECT_CARD && attackerAtk !== null && m.selects.every((c) => c.controller !== team && c.location === L.MZONE)) {
-                const value = (c: (typeof m.selects)[number]) => toBeat(seenBy(team, c.controller, duel.stats(c), rules.hiddenGuess));
+                const hidden = (c: (typeof m.selects)[number]) => !(duel.stats(c).position & P.FACEUP);
+                const value = (c: (typeof m.selects)[number]) => (rules.attacksHidden === false && hidden(c) ? Infinity : toBeat(seenBy(team, c.controller, duel.stats(c), rules.hiddenGuess)));
                 const order = range(m.selects.length).sort((a, b) => value(m.selects[a]!) - value(m.selects[b]!));
                 const beaten = order.filter((i) => value(m.selects[i]!) < attackerAtk);
                 return { type: R.SELECT_CARD, indicies: [beaten.length ? beaten[beaten.length - 1]! : order[0]!] };
@@ -304,7 +322,7 @@ function spellToSet(m: IdleMsg, duel: DuelSession): number | null {
  */
 function battle(m: BattleMsg, duel: DuelSession, team: Team, rules: LevelRules): OcgResponse {
     const rival = (1 - team) as Team;
-    const theirs = duel.monstersOf(rival).map((t) => seenBy(team, rival, t, rules.hiddenGuess));
+    const theirs = duel.monstersOf(rival).map((t) => seenBy(team, rival, t, rules.attacksHidden === false && !(t.position & P.FACEUP) ? Infinity : rules.hiddenGuess));
     const hidden = duel.monstersOf(rival).filter((t) => !(t.position & P.FACEUP)).length;
     const setCards = rules.wary ? duel.view(team).opp.spells.filter((s) => s && !s.faceUp).length : 0;
     const attackers = range(m.attacks.length)
@@ -317,6 +335,8 @@ function battle(m: BattleMsg, duel: DuelSession, team: Team, rules: LevelRules):
         const onlyHidden = beatable.length > 0 && beatable.length <= hidden && beatable.every((t) => !(t.position & P.FACEUP));
         if (beatable.length && !(rules.wary && onlyHidden && setCards >= 2 && a.atk < rules.hiddenGuess + 400)) return attackWith(m, duel, a.i, a.atk);
     }
+    // An attack it must make (an effect forces it: no way on to Main Phase 2 or the End Phase): its strongest.
+    if (!m.to_m2 && !m.to_ep && attackers.length) return attackWith(m, duel, attackers[0]!.i, attackers[0]!.atk);
     return { type: R.SELECT_BATTLECMD, action: m.to_m2 ? B.TO_M2 : B.TO_EP, index: null };
 }
 
@@ -362,7 +382,7 @@ function worthUsing(code: number, duel: DuelSession, team: Team, responding = fa
 /** In the copies the bot plays on in: its plain play, and nobody responds unless they must. */
 function simPolicy(m: OcgMessage, duel: DuelSession, team: Team): OcgResponse {
     if (m.type === M.SELECT_CHAIN && !m.forced) return { type: R.SELECT_CHAIN, index: null };
-    return heuristicAnswer(m, duel, team);
+    return heuristicAnswer(m, duel, team, IN_COPIES);
 }
 
 /** A number in [0, 1) from the duel's seed and how far it's gone: the same every time it's asked. */
@@ -377,7 +397,8 @@ type Try = { response: OcgResponse; using?: number; /** For the lab's debug outp
 /** Of the plays to try, the one to make (or null for none better than doing nothing). */
 function choose(duel: DuelSession, team: Team, tries: Try[], baseline: number, margin: number, firstSound: boolean, through = false): Try | null {
     let best: Try | null = null, bestScore = baseline + margin;
-    for (const t of tries) {
+    for (const [i, t] of tries.entries()) {
+        if (i > 0 && timeUp()) break;
         const score = simulate(duel, team, t.response, simPolicy, through);
         if (debugging) console.log(`      t${duel.view(team).turn} try ${t.label ?? JSON.stringify(t.response)}: ${score?.toFixed(0)} (pass ${baseline.toFixed(0)})`);
         if (score === null) continue;
@@ -450,7 +471,8 @@ function chain(m: ChainMsg, duel: DuelSession, team: Team, rules: LevelRules): O
 /** Of a few answers, the one whose outcome scores best (the first on a tie), or null if none could be tried. */
 function weigh(duel: DuelSession, team: Team, answers: OcgResponse[]): OcgResponse | null {
     let best: OcgResponse | null = null, bestScore = -Infinity;
-    for (const a of answers) {
+    for (const [i, a] of answers.entries()) {
+        if (i > 0 && timeUp()) break;
         const score = simulate(duel, team, a, simPolicy);
         if (score !== null && score > bestScore) [best, bestScore] = [a, score];
     }
@@ -468,6 +490,7 @@ export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = f
         return heuristicAnswer(m, duel, team);
     }
     if (duel.setup.botLevel === 'plain') return heuristicAnswer(m, duel, team);
+    deadline = performance.now() + botTuning.budgetMs;
     const rules = LEVELS[duel.setup.botLevel ?? 'normal'];
     switch (m.type) {
         case M.SELECT_IDLECMD:
