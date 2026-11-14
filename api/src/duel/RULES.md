@@ -112,16 +112,43 @@ each Graveyard (each checks whether the other could be activated, without end, u
 stack runs out). The server then starts a new core, drops the duels in memory and rebuilds each
 from storage as its players act; the move that set it off isn't made, and its player is told so.
 
-## The practice bot (bot.ts)
+## The practice bot (bot.ts, bot-sim.ts, bot-eval.ts)
 
-The bot plays legally but by rules of thumb, and reads a card's script to guess what it does:
-`buff` (raises ATK/DEF, or an Equip with no harm), `wipe` (destroys monsters on both sides), or
-anything else. It uses a buff only on its own face-up monster (as a response, only in a battle), a
-wipe only when the rival has more on the field, a Continuous Trap only on the rival's turn while
-they have a face-up monster, and always says yes to optional effects. These are guesses: a card the
-guess gets wrong plays badly, never illegally.
+The player picks how well the bot plays: **Easy**, **Normal** (the default) or **Hard**. Under every
+level is the same plain play: summon the strongest monster, attack what it can beat, and point an
+effect at the side it's meant for, read from the engine's hint for the pick ("select a card to
+destroy" picks the rival's cards; a cost, the bot's own least).
 
-It plays from what a player at the table could see. The rival's face-down monsters count as unknown (guessed at 1400 ATK and DEF) for its attacks, its targets and whether a wipe is worth it; it never reads the rival's hand, deck or set Spells and Traps.
+Before each play, chance to respond, "use this effect?" and choice of target, the bot tries it in a
+copy of the duel (rebuilt from the seed and answers, about 15-20 ms) and scores the board that comes
+of it. It never makes a play that scores worse than doing nothing, at any level: Mystical Space
+Typhoon with only its own Set cards to hit, Dark Hole while it's ahead on the field, a Flip of
+Man-Eater Bug with no rival monster for it to destroy. A mandatory effect it can't avoid (its
+Man-Eater Bug flipped by the rival's attack, with no rival monster) still hits its own card.
+
+Always, at every level:
+- **Flip monsters are Set**, never Normal Summoned (their effect comes when flipped).
+- **Walls are Set** (low ATK, DEF well above it, no effect wanting it face-up: Mystical Elf, Giant
+  Soldier of Stone), unless its attack would end the duel.
+
+The score (bot-eval.ts) counts cards in hand, Set cards, monsters (their own ATK and DEF, plus Equip
+Spells and lasting effects: a boost until the end of the turn counts only in battle), and Life
+Points (the last 2000 twice). A monster the rival's face-up monsters beat counts as partly lost, and
+so does a weak face-up Attack Position monster, for what the rival may summon next turn.
+
+| Level | Plays | Responds | Face-down monsters taken as | Else |
+|---|---|---|---|---|
+| Easy | the first sound play, and half its turns overlooks the cards in its hand | with what plain play would use, if sound | 1000 | says yes to every effect |
+| Normal | the best-scoring play | when it pays (by 60) | 1400 | weighs "use it?", options and single targets |
+| Hard | the best, looking on to the end of its Main Phase (Change of Heart, then a Tribute) | when it pays well (by 300: traps kept for a better moment) | 1500, and holds back from them while 2+ Set cards wait | as Normal |
+
+It plays from what a player at the table could see. The copy of the duel holds what it can't know,
+so in the copy the rival never responds, and the score only reads the bot's view of the board: the
+rival's hand, deck and Set cards stay hidden. (A draw in the copy, or a flip it causes, shows the
+card the copy turns up: a small leak, not used to aim at hidden cards.)
+
+`plain` (no copies) is for tests of the duel server only. `scripts/bot-lab` plays bots against
+each other headless (`match.ts`, `trace.ts`) and flags any harmful pick of the bot's own card.
 
 ## Ordering cards and removing counters (rules 4)
 

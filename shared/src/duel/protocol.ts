@@ -259,6 +259,12 @@ export interface DuelMatchView {
 export type RpsHand = 'rock' | 'paper' | 'scissors';
 
 /** A deck as registered for a match: what's played, and the side deck to swap with between games. */
+/** How well the practice bot plays (api/src/duel/bot.ts), weakest first. */
+export const BOT_LEVELS = ['easy', 'normal', 'hard'] as const;
+export type BotLevel = (typeof BOT_LEVELS)[number];
+/** The bot's name at each level. */
+export const BOT_NAMES: Record<BotLevel, string> = { easy: 'Practice Bot (Easy)', normal: 'Practice Bot', hard: 'Practice Bot (Hard)' };
+
 export const MatchDeckSchema = z.strictObject({
     main: z.array(z.number().int().positive()).min(40).max(60),
     extra: z.array(z.number().int().positive()).max(15),

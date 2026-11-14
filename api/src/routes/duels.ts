@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { CardIdSchema, PregameActionSchema, deckProblem, ownedCountsById } from '@ygo/shared';
+import { BOT_LEVELS, CardIdSchema, PregameActionSchema, deckProblem, ownedCountsById } from '@ygo/shared';
 import { z } from 'zod';
 import { duelsCollection, type Deck, type DuelDoc, type DuelProblem, type Seat } from '../duel/hub';
 import type { Team } from '../duel/session';
@@ -8,12 +8,13 @@ import { findPlayer, findSeries } from '../game/series';
 import { loadUser, requireAuth } from '../middleware/requireAuth';
 import { requireSeriesMember } from '../middleware/requireSeriesMember';
 
-const StartBodySchema = z.strictObject({ deckId: z.string().regex(/^[\w-]{1,64}$/), against: z.enum(['bot', 'solo', 'rival']) });
+const StartBodySchema = z.strictObject({ deckId: z.string().regex(/^[\w-]{1,64}$/), against: z.enum(['bot', 'solo', 'rival']), level: z.enum(BOT_LEVELS).optional() });
 /** A guest's practice duel: the deck comes from the browser (guests keep their campaign there). */
 const GuestBodySchema = z.strictObject({
     deck: z.strictObject({ main: z.array(CardIdSchema).min(40).max(60), extra: z.array(CardIdSchema).max(15), side: z.array(CardIdSchema).max(15).optional() }),
     setName: z.string().min(1).max(200),
     against: z.enum(['bot', 'solo']),
+    level: z.enum(BOT_LEVELS).optional(),
 });
 /** A guest's duel is opened with its token: a header, or (WebSocket, which can't send headers) the query. */
 const guestToken = (request: FastifyRequest) => {
@@ -59,8 +60,8 @@ const summary = (d: DuelDoc) => ({
 
 /**
  * Duels, played on the server's rules engine:
- *   POST /series/:seriesId/duels         { deckId, against: bot | solo | rival }: practice now, or challenge the rival
- *   POST /duels/practice                  { deck, setName, against: bot | solo }: a guest's practice duel; returns its token
+ *   POST /series/:seriesId/duels         { deckId, against: bot | solo | rival, level? }: practice now, or challenge the rival
+ *   POST /duels/practice                  { deck, setName, against: bot | solo, level? }: a guest's practice duel; returns its token
  *   GET  /series/:seriesId/duels/open     the open duel you can play or answer, if any
  *   GET  /duels/:duelId                   its summary, and your state once it's on
  *   POST /duels/:duelId/accept            { deckId }: the rival takes the challenge
@@ -109,7 +110,7 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         const user = request.user!, series = request.series!;
         const deck = await deckFor(series._id, user._id, body.data.deckId);
         if (typeof deck === 'string') return fail(reply, deck);
-        const duel = await app.duels.create({ seriesId: series._id, userId: user._id, name: user.duelistName, deck, deckId: body.data.deckId, against: body.data.against });
+        const duel = await app.duels.create({ seriesId: series._id, userId: user._id, name: user.duelistName, deck, deckId: body.data.deckId, against: body.data.against, level: body.data.level });
         if (typeof duel === 'string') return fail(reply, duel);
         if (duel.kind === 'rival') {
             const rivalId = series.memberIds.find((m) => !m.equals(user._id))!;
@@ -121,14 +122,14 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
     app.post('/duels/practice', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
         const body = GuestBodySchema.safeParse(request.body);
         if (!body.success) return reply.code(400).send({ error: 'Invalid input' });
-        const { deck, setName, against } = body.data;
+        const { deck, setName, against, level } = body.data;
         // Practice only, so no collection or banlist check: just real cards, at most 3 of each.
         const ids = [...deck.main, ...deck.extra, ...(deck.side ?? [])];
         const counts = new Map<number, number>();
         for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
         const known = await app.catalog.cardsByIds([...counts.keys()]);
         if (known.length !== counts.size || [...counts.values()].some((n) => n > 3)) return reply.code(409).send({ error: 'That deck is not legal' });
-        const created = await app.duels.createGuest({ deck: { ...deck, side: deck.side ?? [] }, setName, against });
+        const created = await app.duels.createGuest({ deck: { ...deck, side: deck.side ?? [] }, setName, against, level });
         if (typeof created === 'string') return fail(reply, created);
         return reply.code(201).send({ duel: summary(created.duel), token: created.token });
     });

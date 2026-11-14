@@ -21,6 +21,17 @@
 .dl-deck select option { background: #120d08; color: #f1e7cc; }
 /* raised slabs of the board's stone, words and glyph carved in, gold-rimmed (as "Duel in the app") */
 .dl-slabs { display: flex; gap: 12px; justify-content: center; }
+/* How well the bot plays: three stone tabs under the slabs. */
+.dl-level { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 10px; }
+.dl-level > span { font: 800 9.5px/1 var(--font-display); letter-spacing: 0.26em; text-transform: uppercase; color: var(--rm-ink-gold, #f5c542); text-shadow: var(--rm-ink-shadow, none); margin-right: 4px; }
+.dl-level__opt {
+    min-width: 64px; padding: 7px 10px; border: 1px solid rgba(201, 188, 154, 0.35); border-radius: 4px; cursor: pointer;
+    background: linear-gradient(#3a3226, #231d15); color: #d8ccae; font: 800 11px/1 var(--font-display); letter-spacing: 0.12em; text-transform: uppercase;
+    transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.dl-level__opt:hover:not(:disabled) { border-color: rgba(245, 197, 66, 0.7); color: #f3e6c4; }
+.dl-level__opt.is-on { border-color: #f5c542; color: #ffe08a; box-shadow: 0 0 0 1px rgba(245, 197, 66, 0.4), 0 0 10px rgba(245, 197, 66, 0.35); }
+.dl-level__opt:disabled { opacity: 0.5; cursor: default; }
 .dl-slab, .dl-btn {
   position: relative; border: 0; border-radius: 6px; cursor: pointer; color: var(--rm-ink, #f0e6d2);
   background: linear-gradient(rgba(255, 245, 225, 0.14), rgba(0, 0, 0, 0.12)), var(--rm-stone, none) 37% 61% / 1024px, #7a766c;
