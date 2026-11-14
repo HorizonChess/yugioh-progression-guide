@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ruleEraFor } from "@ygo/shared";
+import { BOT_LEVELS, ruleEraFor, type BotLevel } from "@ygo/shared";
 import type { SavedDeck } from "@/lib/storage";
 import { acceptDuel, carryGuestToken, concedeDuel, declineDuel, duelPath, getDuel, lastGuestDuel, openDuels, startDuel, startGuestDuel, type DuelSummary, type PracticeOpponent } from "@/lib/duel-client";
 import { alertRepoError } from "@/context/ProgressionContext";
@@ -14,6 +14,9 @@ import "./duel-launcher.css";
  * the rival (duo), answer the rival's challenge, or go back to a duel in progress. A guest only
  * practices: their decks live in this browser, so the deck itself goes to the server.
  */
+const LEVEL_KEY = "ygo-bot-level";
+const LEVEL_NAMES: Record<BotLevel, string> = { easy: "Easy", normal: "Normal", hard: "Hard" };
+
 export default function DuelLauncher({ seriesId, guest, setName, duo, rival, decks, setDate, onBack, onOpenChange }: {
     seriesId: string;
     /** Playing as a guest: practice only, with the deck sent along. */
@@ -34,6 +37,16 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
     const [deckId, setDeckId] = useState(legal[0]?.id ?? "");
     const [open, setOpen] = useState<DuelSummary[] | null>(null);
     const [busy, setBusy] = useState(false);
+    const [level, setLevel] = useState<BotLevel>("normal");
+    // The level last chosen, in this browser.
+    useEffect(() => {
+        const saved = localStorage.getItem(LEVEL_KEY);
+        if (saved && (BOT_LEVELS as readonly string[]).includes(saved)) setLevel(saved as BotLevel);
+    }, []);
+    const chooseLevel = (l: BotLevel) => {
+        setLevel(l);
+        localStorage.setItem(LEVEL_KEY, l);
+    };
     const era = ruleEraFor(setDate);
 
     const load = useCallback(async () => {
@@ -85,7 +98,7 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
     const practise = (against: PracticeOpponent) => run(async () => {
         const deck = legal.find((d) => d.id === deckId);
         if (!deck) return;
-        go(guest ? await startGuestDuel({ main: deck.mainDeck, extra: deck.extraDeck, side: deck.sideDeck ?? [] }, setName ?? "", against) : await startDuel(seriesId, deckId, against));
+        go(guest ? await startGuestDuel({ main: deck.mainDeck, extra: deck.extraDeck, side: deck.sideDeck ?? [] }, setName ?? "", against, level) : await startDuel(seriesId, deckId, against, level));
     });
 
     const deckPicker = legal.length ? (
@@ -109,6 +122,17 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
                 <HandGlyph /><span>Solo</span><small>Test your deck</small>
             </button>
         </>
+    );
+
+    const levelPicker = !practice && (
+        <div className="dl-level" role="radiogroup" aria-label="How well the bot plays">
+            <span>Bot</span>
+            {BOT_LEVELS.map((l) => (
+                <button key={l} type="button" role="radio" aria-checked={level === l} className={`dl-level__opt ${level === l ? "is-on" : ""}`} disabled={busy} onClick={() => chooseLevel(l)}>
+                    {LEVEL_NAMES[l]}
+                </button>
+            ))}
+        </div>
     );
 
     return (
@@ -145,6 +169,7 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
                         <p className="dl-note">Meanwhile, you can practice:</p>
                         {deckPicker}
                         <div className="dl-slabs">{practiceSlabs}</div>
+                        {levelPicker}
                     </>}
                 </div>
             )}
@@ -161,6 +186,7 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
                         )}
                         {practiceSlabs}
                     </div>
+                    {levelPicker}
                     <p className="dl-note">
                         {duo ? "The match against your rival counts for the series. Practice doesn't." : "Practice doesn't count for the series: a duel played for real is recorded below."}
                         {" "}In solo the opponent only passes its turns, so you can draw and play out your own.

@@ -6,7 +6,7 @@ import {
 import type {
     ActionVerb, DuelAnswer, DuelCardView, PlaceZone, DuelEvent, DuelFrame, DuelModeId, DuelPrompt, DuelSideView, DuelState, DuelView, Phase, PromptCard, Side, Zone,
 } from '@ygo/shared';
-import { botAnswer } from './bot';
+import { botAnswer, type BotLevel } from './bot';
 import type { Engine } from './engine';
 
 /*
@@ -15,6 +15,14 @@ import type { Engine } from './engine';
  */
 
 export type Team = 0 | 1;
+
+export interface SessionOptions {
+    /**
+     * Answers the bot's questions in place of the bot (the bot's look-ahead: a copy of the duel
+     * replayed from its answers, played on by this). It may throw to stop the copy where it is.
+     */
+    answerer?: (m: OcgMessage, duel: DuelSession, team: Team, solo?: boolean) => OcgResponse;
+}
 
 export interface DuelSetup {
     /** Xoshiro256** seed, as decimal strings (stored as-is). */
@@ -26,6 +34,8 @@ export interface DuelSetup {
     bots: [boolean, boolean];
     /** Solo practice: the bot never plays, it only passes its turns (a goldfish to test your deck on). */
     solo?: boolean;
+    /** How well the bot plays (bot.ts). Missing: `normal`. */
+    botLevel?: BotLevel;
     /** Older versions played in place of a deck card (engine code → the card's own code), shown as the card itself. */
     shown?: Record<string, number>;
     /**
@@ -295,7 +305,7 @@ export class DuelSession {
      */
     private readonly core: OcgCoreSync;
 
-    constructor(private readonly engine: Engine, readonly setup: DuelSetup) {
+    constructor(readonly engine: Engine, readonly setup: DuelSetup, private readonly options: SessionOptions = {}) {
         this.core = engine.core;
     }
 
@@ -537,6 +547,7 @@ export class DuelSession {
     // ---- the engine loop ------------------------------------------------------------------
 
     private respond(response: OcgResponse) {
+        this.pickHint = [0, 0];
         this.noteCall(response);
         this.answers.push(response);
         this.seq++;
@@ -585,7 +596,7 @@ export class DuelSession {
             if (!question) throw new Error(`The duel server can't ask engine message ${last.type}`);
             if (this.setup.bots[question.team]) {
                 // (When repairing, the bot's answer is worked out to compare it with the stored one.)
-                this.feed(this.replayQueue.length && !this.repairing ? this.replayQueue.shift()! : this.storedOr(botAnswer(last, this, question.team, this.setup.solo)));
+                this.feed(this.replayQueue.length && !this.repairing ? this.replayQueue.shift()! : this.storedOr((this.options.answerer ?? botAnswer)(last, this, question.team, this.setup.solo)));
                 continue;
             }
             const replayed = this.replayQueue.shift();
@@ -615,6 +626,7 @@ export class DuelSession {
     }
 
     private feed(response: OcgResponse) {
+        this.pickHint = [0, 0];
         this.noteCall(response);
         this.answers.push(response);
         this.core.duelSetResponse(this.handle!, forEngine(response));
@@ -715,6 +727,7 @@ export class DuelSession {
                     if (m.hint_type === 3 && (m.player === 0 || m.player === 1)) {
                         this.selectHint[m.player] = this.engine.describe(m.hint);
                         this.selectHintCode[m.player] = Number(m.hint);
+                        this.pickHint[m.player] = Number(m.hint);
                     }
                     // A declaration (Type, Attribute, card, number): the one who declared is whoever was
                     // last asked to (the engine's own hint names them; a script's may name the rival).
@@ -1362,6 +1375,20 @@ export class DuelSession {
     botAttacker: number | null = null;
     /** The card the bot is activating (its targets are picked to suit what it does). */
     botUsing: number | null = null;
+
+    /** A copy of a duel the bot plays on in to look ahead (not a duel anyone plays). */
+    get isCopy(): boolean {
+        return !!this.options.answerer;
+    }
+
+    /**
+     * For the bot: the engine's code for what the pick it's asked is for (HINTMSG_DESTROY,
+     * HINTMSG_SPSUMMON…), kept until the pick is answered (the question's title uses it up).
+     */
+    private pickHint: [number, number] = [0, 0];
+    selectHintOf(team: Team): number {
+        return this.pickHint[team];
+    }
 
     get currentPhase(): Phase {
         return this.phase;

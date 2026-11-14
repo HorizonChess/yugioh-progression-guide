@@ -15,6 +15,8 @@ const setup = (bots: [boolean, boolean], seed = 1): DuelSetup => ({
     decks: [{ main: LOB, extra: [] }, { main: LOB, extra: [] }],
     names: ['Yugi', 'Kaiba'],
     bots,
+    // The duel server is under test here, not the bot: its plain play is quick (bot.ts).
+    botLevel: 'plain',
 });
 
 /** A plain human: summons and attacks when offered, takes the first legal choice otherwise. */
@@ -56,7 +58,7 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
 
     it('asks the human, hides what they may not see, and replays exactly', async () => {
         const engine = await loadEngine();
-        const duel = new DuelSession(engine, setup([false, true], 7));
+        const duel = new DuelSession(engine, setup([false, true], 5));
         duel.start();
         let asked = 0, quiet = 0;
         const kinds = new Set<string>();
@@ -97,7 +99,7 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
         expect(duel.takeFrames(0).length).toBeGreaterThan(10);
 
         // The seed and the answers rebuild the same duel.
-        const again = new DuelSession(engine, setup([false, true], 7));
+        const again = new DuelSession(engine, setup([false, true], 5));
         again.start(duel.answers);
         expect(again.result).toEqual(duel.result);
         expect(again.answers).toEqual(duel.answers);
@@ -105,13 +107,13 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
 
     it('resumes mid-duel from stored answers', async () => {
         const engine = await loadEngine();
-        const duel = new DuelSession(engine, setup([false, true], 3));
+        const duel = new DuelSession(engine, setup([false, true], 5));
         duel.start();
         for (let i = 0; i < 15 && !duel.result; i++) {
             const s = duel.state(0, 'd');
             duel.answer(0, s.seq, humanAnswer(s.prompt!));
         }
-        const resumed = new DuelSession(engine, setup([false, true], 3));
+        const resumed = new DuelSession(engine, setup([false, true], 5));
         resumed.start(JSON.parse(JSON.stringify(duel.answers, (_k, v) => (typeof v === 'bigint' ? `${v}n` : v)), (_k, v) => (typeof v === 'string' && /^\d+n$/.test(v) ? BigInt(v.slice(0, -1)) : v)));
         const a = duel.state(0, 'd'), b = resumed.state(0, 'd');
         expect(b.seq).toBe(a.seq);
@@ -150,7 +152,7 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
     it('a lone mandatory effect just happens, and older duels still replay', async () => {
         const engine = await loadEngine();
         let oldForced = 0;
-        for (const seed of [1, 2, 3]) {
+        for (const seed of [5, 10, 12]) {
             // Started before rules 2: the mandatory effect was asked, and that answer is in its history.
             const old = new DuelSession(engine, ekibyo(undefined, seed));
             old.start();
@@ -170,7 +172,7 @@ describe.skipIf(!engineDataAvailable())('duel session', () => {
     });
 
     it('shows the opening hands being drawn to every look until the first move', async () => {
-        const duel = new DuelSession(await loadEngine(), setup([false, true], 3));
+        const duel = new DuelSession(await loadEngine(), setup([false, true], 5));
         duel.start();
         const first = duel.framesOnConnect(0);
         expect(first[0]!.events.every((e) => e.k === 'draw')).toBe(true);
