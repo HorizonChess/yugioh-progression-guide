@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { ObjectId } from 'mongodb';
 import type { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { cardVersionAt, collectionKey, type DuelAnswer, type DuelMatchView, type DuelOnDevice, type DuelPrompt, type DuelServerMessage, type DuelState } from '@ygo/shared';
+import { cardVersionAt, collectionKey, duelistById, duelistDeck, type DuelAnswer, type DuelMatchView, type DuelOnDevice, type DuelPrompt, type DuelServerMessage, type DuelState } from '@ygo/shared';
 import { cardSetsCollection, cardsCollection } from '../src/cards/sync';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
 import { decode, encode } from '../src/duel/hub';
@@ -404,6 +404,34 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect((await post({ deck: { main: [...DECK.slice(4), 46986414, 46986414, 46986414, 46986414], extra: [] } })).statusCode).toBe(409);
         expect((await post({ setName: 'Nope' })).statusCode).toBe(404);
         expect((await post({})).statusCode).toBe(201);
+    });
+
+    it('practices against a duelist from the anime: their name, their level and their deck of that era', async () => {
+        const post = (payload: object) => app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot', ...payload } });
+        // Only one of the roster, an era of theirs, and only against the bot.
+        expect((await post({ duelist: { id: 'kaiba' } })).statusCode).toBe(400);
+        expect((await post({ duelist: { id: 'joey', era: 'gx' } })).statusCode).toBe(400);
+        expect((await post({ against: 'solo', duelist: { id: 'joey' } })).statusCode).toBe(400);
+
+        const started = await post({ duelist: { id: 'joey', era: 'bc' } });
+        expect(started.statusCode).toBe(201);
+        const { duel, token } = started.json();
+        const stored = await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) });
+        const botSeat = (stored!.players as { bot: boolean }[]).findIndex((p) => p.bot);
+        expect(stored!.players[botSeat]).toMatchObject({ name: 'Joey Wheeler', bot: true, level: 'normal', duelist: 'joey', era: 'bc' });
+        const joey = duelistDeck(duelistById('joey')!, 'bc').deck;
+        expect(stored!.match.registered[botSeat]).toEqual({ main: joey.main, extra: joey.extra, side: [] });
+        expect(stored!.match.registered[1 - botSeat]).toMatchObject({ main: DECK });
+
+        // The game is dealt with Joey's deck on his side, and the board names him.
+        await ready(duel.id, [{ 'x-duel-token': token }]);
+        const device = (await app.inject({ method: 'GET', url: `/api/duels/${duel.id}`, headers: { 'x-duel-token': token } })).json().device as DuelOnDevice;
+        const setup = device.setup as DuelSetup;
+        const his = 1 - device.team;
+        expect(setup.names[his]).toBe('Joey Wheeler');
+        expect(setup.decks[his]!.main.length).toBe(joey.main.length);
+        expect(setup.decks[his]!.extra.length).toBe(joey.extra.length);
+        expect(setup.botLevel).toBe('normal');
     });
 
     it('lets the rival accept a challenge, plays it out, and records the result on the series', async () => {

@@ -4,7 +4,7 @@
 //   npm run test-server -w @ygo/api   (WEB_DIST serves the built web on the same port)
 //   node web/scripts/drivers/duel-declare.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame } from "./_lib.mjs";
+import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame, practiceAgainstBot } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 let failures = 0;
@@ -39,7 +39,7 @@ try {
         const practice = page.getByRole("button", { name: "Practice against the bot" });
         await old.or(practice).first().waitFor({ timeout: 15000 });
         if (await old.count()) await old.click();
-        await practice.click();
+        await practiceAgainstBot(page);
         await page.waitForURL(/duel/, { timeout: 30000 });
         await throughPregame(page);
         const end = page.locator('[role="tab"][aria-label="End"]:not([disabled])');

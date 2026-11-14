@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BOT_LEVELS, ruleEraFor, type BotLevel } from "@ygo/shared";
+import { BOT_LEVELS, duelistById, ruleEraFor, type BotLevel } from "@ygo/shared";
 import type { SavedDeck } from "@/lib/storage";
-import { acceptDuel, carryGuestToken, concedeDuel, declineDuel, duelPath, getDuel, lastGuestDuel, openDuels, startDuel, startGuestDuel, type DuelSummary, type PracticeOpponent } from "@/lib/duel-client";
+import { acceptDuel, carryGuestToken, concedeDuel, declineDuel, duelPath, getDuel, lastGuestDuel, openDuels, startDuel, startGuestDuel, type BotChoice, type DuelSummary, type PracticeOpponent } from "@/lib/duel-client";
 import { alertRepoError } from "@/context/ProgressionContext";
 import { BotGlyph, HandGlyph, SwordsGlyph } from "./DuelGlyphs";
+import OpponentPicker, { opponentName, type Opponent } from "./OpponentPicker";
 import "./duel-launcher.css";
 
 /**
@@ -14,8 +15,22 @@ import "./duel-launcher.css";
  * the rival (duo), answer the rival's challenge, or go back to a duel in progress. A guest only
  * practices: their decks live in this browser, so the deck itself goes to the server.
  */
+const OPPONENT_KEY = "ygo-opponent";
+/** Before duelists, only the bot's level was kept. */
 const LEVEL_KEY = "ygo-bot-level";
-const LEVEL_NAMES: Record<BotLevel, string> = { easy: "Easy", normal: "Normal", hard: "Hard" };
+
+/** The opponent last chosen in this browser (one still on the roster), or the practice bot. */
+function savedOpponent(): Opponent {
+    try {
+        const o = JSON.parse(localStorage.getItem(OPPONENT_KEY) ?? "null") as Opponent | null;
+        if (o?.kind === "duelist" && duelistById(o.id)?.eras.some((e) => e.id === o.era)) return o;
+        if (o?.kind === "bot" && (BOT_LEVELS as readonly string[]).includes(o.level)) return o;
+    } catch {
+        // (Unreadable: start over.)
+    }
+    const level = localStorage.getItem(LEVEL_KEY);
+    return { kind: "bot", level: level && (BOT_LEVELS as readonly string[]).includes(level) ? (level as BotLevel) : "normal" };
+}
 
 export default function DuelLauncher({ seriesId, guest, setName, duo, rival, decks, setDate, onBack, onOpenChange }: {
     seriesId: string;
@@ -37,15 +52,13 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
     const [deckId, setDeckId] = useState(legal[0]?.id ?? "");
     const [open, setOpen] = useState<DuelSummary[] | null>(null);
     const [busy, setBusy] = useState(false);
-    const [level, setLevel] = useState<BotLevel>("normal");
-    // The level last chosen, in this browser.
-    useEffect(() => {
-        const saved = localStorage.getItem(LEVEL_KEY);
-        if (saved && (BOT_LEVELS as readonly string[]).includes(saved)) setLevel(saved as BotLevel);
-    }, []);
-    const chooseLevel = (l: BotLevel) => {
-        setLevel(l);
-        localStorage.setItem(LEVEL_KEY, l);
+    const [opponent, setOpponent] = useState<Opponent>({ kind: "bot", level: "normal" });
+    // Choosing who to practice against, and who was chosen last (in this browser).
+    const [picking, setPicking] = useState(false);
+    useEffect(() => setOpponent(savedOpponent()), []);
+    const choose = (o: Opponent) => {
+        setOpponent(o);
+        localStorage.setItem(OPPONENT_KEY, JSON.stringify(o));
     };
     const era = ruleEraFor(setDate);
 
@@ -98,7 +111,8 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
     const practise = (against: PracticeOpponent) => run(async () => {
         const deck = legal.find((d) => d.id === deckId);
         if (!deck) return;
-        go(guest ? await startGuestDuel({ main: deck.mainDeck, extra: deck.extraDeck, side: deck.sideDeck ?? [] }, setName ?? "", against, level) : await startDuel(seriesId, deckId, against, level));
+        const bot: BotChoice = opponent.kind === "bot" ? { level: opponent.level } : { duelist: { id: opponent.id, era: opponent.era } };
+        go(guest ? await startGuestDuel({ main: deck.mainDeck, extra: deck.extraDeck, side: deck.sideDeck ?? [] }, setName ?? "", against, bot) : await startDuel(seriesId, deckId, against, bot));
     });
 
     const deckPicker = legal.length ? (
@@ -115,8 +129,8 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
     // Practice is always there (one at a time), also while your challenge waits for the rival.
     const practiceSlabs = !practice && (
         <>
-            <button type="button" className={`dl-slab ${duo ? "" : "dl-slab--main"}`} disabled={!deckId || busy} onClick={() => practise("bot")} aria-label="Practice against the bot">
-                <BotGlyph /><span>Duel the bot</span><small>Practice · best of 3</small>
+            <button type="button" className={`dl-slab ${duo ? "" : "dl-slab--main"}`} disabled={!deckId || busy} onClick={() => setPicking(true)} aria-label="Practice against the bot">
+                <BotGlyph /><span>Duel the bot</span><small>Choose your opponent</small>
             </button>
             <button type="button" className="dl-slab" disabled={!deckId || busy} onClick={() => practise("solo")} aria-label="Solo: test your deck">
                 <HandGlyph /><span>Solo</span><small>Test your deck</small>
@@ -124,15 +138,21 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
         </>
     );
 
-    const levelPicker = !practice && (
-        <div className="dl-level" role="radiogroup" aria-label="How well the bot plays">
-            <span>Bot</span>
-            {BOT_LEVELS.map((l) => (
-                <button key={l} type="button" role="radio" aria-checked={level === l} className={`dl-level__opt ${level === l ? "is-on" : ""}`} disabled={busy} onClick={() => chooseLevel(l)}>
-                    {LEVEL_NAMES[l]}
-                </button>
-            ))}
-        </div>
+    // Who to practice against, over the whole screen: the match starts from there.
+    const picker = picking && !practice && open && (
+        <OpponentPicker
+            choice={opponent}
+            onChoose={choose}
+            onClose={() => setPicking(false)}
+            disabled={busy}
+            deckPicker={deckPicker}
+            action={
+                <div className="dl-row">
+                    <button type="button" className="dl-btn dl-btn--main" disabled={!deckId || busy} onClick={() => practise("bot")}>Duel {opponentName(opponent)} · best of 3</button>
+                    <button type="button" className="dl-btn dl-btn--quiet" disabled={busy} onClick={() => setPicking(false)}>Back</button>
+                </div>
+            }
+        />
     );
 
     return (
@@ -169,10 +189,10 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
                         <p className="dl-note">Meanwhile, you can practice:</p>
                         {deckPicker}
                         <div className="dl-slabs">{practiceSlabs}</div>
-                        {levelPicker}
                     </>}
                 </div>
             )}
+            {picker}
 
             {open && !challenge && (
                 <div className="dl-card">
@@ -186,7 +206,6 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
                         )}
                         {practiceSlabs}
                     </div>
-                    {levelPicker}
                     <p className="dl-note">
                         {duo ? "The match against your rival counts for the series. Practice doesn't." : "Practice doesn't count for the series: a duel played for real is recorded below."}
                         {" "}In solo the opponent only passes its turns, so you can draw and play out your own.

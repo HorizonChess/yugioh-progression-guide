@@ -6,7 +6,7 @@
 //   NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web
 //   node web/scripts/drivers/play-record.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY } from "./_lib.mjs";
+import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, practiceAgainstBot } from "./_lib.mjs";
 
 const API = process.env.API_BASE || "http://localhost:4100";
 const phone = process.env.PHONE === "1";
@@ -95,7 +95,7 @@ try {
     const meanwhile = yugi.page.getByRole("button", { name: "Practice against the bot" });
     check((await meanwhile.count()) === 1, "with the challenge sent, practice against the bot is still offered");
     await yugi.page.screenshot({ path: outPath(`play-record-waiting-${tag}.png`) });
-    await meanwhile.click();
+    await practiceAgainstBot(yugi.page);
     await yugi.page.waitForURL(/duel/, { timeout: 30000 }).catch(() => {});
     check(/duel/.test(yugi.page.url()), "and it starts while the challenge waits");
     check((await kaiba.api("GET", `/api/series/${seriesId}/duels/open`)).duels.some((d) => d.kind === "rival" && d.status === "waiting"), "the challenge is still waiting for the rival");

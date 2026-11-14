@@ -165,6 +165,18 @@ card the copy turns up: a small leak, not used to aim at hidden cards.)
 `plain` (no copies) is for tests of the duel server only. `scripts/bot-lab` plays bots against
 each other headless (`match.ts`, `trace.ts`) and flags any harmful pick of the bot's own card.
 
+## Duelists from the anime (shared/src/duel/duelists.ts; page, `OpponentPicker`)
+
+Besides the practice bot (a mirror of your deck at the level you pick), you can practice against
+the anime's duelists, chosen as on chess.com: each has a sprite, a rating, a level of their own
+(Easy, Normal or Hard, the bot underneath) and their deck in one or more eras of the show. The
+decks are fans' rebuilds from YGOPRODeck's "Anime Decks", picked for being faithful and made only
+of cards out in the TCG before the cutoff; `api/scripts/build-duelists.ts` fetches and checks them
+(every card one the engine plays, under its one id; at most three copies) into
+`duelist-decks.json`. Anime cards were mostly printed years after the show, so a duelist always
+plays their deck as listed, whatever set the series has reached: the level is what makes them
+easier or harder. The bot never side-decks.
+
 ## Ordering cards and removing counters (rules 4)
 
 - **Ordering cards** (`SORT_CARD`, Spellbook Organization: "place them on top of the Deck in any

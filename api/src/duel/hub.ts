@@ -3,7 +3,7 @@ import { MongoServerError, ObjectId, type Db } from 'mongodb';
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import {
-    BOT_NAMES, DuelClientMessageSchema, cardVersionAt, ruleEraFor, resolveSetIndex,
+    BOT_NAMES, DuelClientMessageSchema, cardVersionAt, duelistById, duelistDeck, ruleEraFor, resolveSetIndex,
     type BotLevel, type DeviceAnswers, type DuelMatchView, type DuelOnDevice, type DuelModeId, type DuelPregameView, type DuelServerMessage, type DuelState, type MatchDeck, type PregameAction, type RpsHand,
 } from '@ygo/shared';
 import { confirmReport, reportDuoMatch } from '../game/matches';
@@ -74,6 +74,9 @@ export interface DuelPlayer {
     bot: boolean;
     /** The bot's: how well it plays (missing: normal). */
     level?: BotLevel;
+    /** The bot as a duelist from the anime (shared/src/duel/duelists.ts), and the era of their deck. */
+    duelist?: string;
+    era?: string;
 }
 
 export interface DuelDoc {
@@ -141,14 +144,16 @@ const GUEST_DUEL_MS = 24 * 60 * 60_000;
 
 export type Deck = MatchDeck;
 export type Opponent = 'bot' | 'solo';
+/** Practice against a duelist from the anime: who, and the era of their deck (their first if missing). */
+export interface PracticeDuelist { id: string; era?: string }
 
 export type DuelProblem = 'no-set' | 'no-deck' | 'deck-illegal' | 'unknown-card' | 'busy' | 'finished' | 'no-rival' | 'not-yours' | 'not-waiting' | 'not-now' | 'bad-side';
 
 export interface DuelHub {
     /** Starts a practice duel or challenges the rival. */
-    create(input: { seriesId: ObjectId; userId: ObjectId; name: string; deck: Deck; deckId: string; against: Opponent | 'rival'; level?: BotLevel }): Promise<DuelDoc | DuelProblem>;
+    create(input: { seriesId: ObjectId; userId: ObjectId; name: string; deck: Deck; deckId: string; against: Opponent | 'rival'; level?: BotLevel; duelist?: PracticeDuelist }): Promise<DuelDoc | DuelProblem>;
     /** A guest's practice duel at a set of the timeline, opened later with the returned token. */
-    createGuest(input: { deck: Deck; setName: string; against: Opponent; level?: BotLevel }): Promise<{ duel: DuelDoc; token: string } | DuelProblem>;
+    createGuest(input: { deck: Deck; setName: string; against: Opponent; level?: BotLevel; duelist?: PracticeDuelist }): Promise<{ duel: DuelDoc; token: string } | DuelProblem>;
     accept(input: { duel: DuelDoc; userId: ObjectId; name: string; deck: Deck; deckId: string }): Promise<DuelDoc | DuelProblem>;
     /** Before a game: a hand thrown, who goes first chosen, or a side-decked deck handed in. */
     pregame(duel: DuelDoc, seat: Seat, action: PregameAction): Promise<DuelDoc | DuelProblem>;
@@ -529,11 +534,18 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
     const setDate = async (duel: Pick<DuelDoc, 'setName'>) => (await app.catalog.timeline()).find((s) => s.set_name === duel.setName)?.tcg_date;
 
     /**
-     * A practice duel. Against the bot (which plays a mirror of your deck) it's a match like any
-     * other, opening on its pregame. Solo, where the opponent only passes, is one game: it's set up
-     * here, and a coin decides who goes first.
+     * A practice duel. Against the bot it's a match like any other, opening on its pregame: the bot
+     * plays a mirror of your deck, or as a duelist from the anime, their deck at their own level.
+     * Solo, where the opponent only passes, is one game: it's set up here, and a coin decides who
+     * goes first.
      */
-    async function practice(id: ObjectId, me: DuelPlayer, deck: Deck, date: string | undefined, mode: DuelModeId, against: Opponent, level: BotLevel = 'normal'): Promise<Partial<DuelDoc>> {
+    async function practice(id: ObjectId, me: DuelPlayer, deck: Deck, date: string | undefined, mode: DuelModeId, against: Opponent, level: BotLevel = 'normal', chosen?: PracticeDuelist): Promise<Partial<DuelDoc>> {
+        const duelist = against === 'bot' && chosen ? duelistById(chosen.id) : undefined;
+        if (duelist) {
+            const { era, deck: theirs } = duelistDeck(duelist, chosen?.era);
+            const bot: DuelPlayer = { userId: null, name: duelist.name, deckId: null, bot: true, level: duelist.level, duelist: duelist.id, era: era.id };
+            return openMatch(id, [me, bot], [deck, { main: theirs.main, extra: theirs.extra, side: [] }]);
+        }
         const bot: DuelPlayer = against === 'solo'
             ? { userId: null, name: 'Solo Practice', deckId: null, bot: true }
             : { userId: null, name: BOT_NAMES[level], deckId: null, bot: true, level };
@@ -588,7 +600,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 return (await duels().findOne({ _id: duel._id })) ?? duel;
             });
         },
-        async create({ seriesId, userId, name, deck, deckId, against, level }) {
+        async create({ seriesId, userId, name, deck, deckId, against, level, duelist }) {
             const at = await setOf(seriesId);
             if (!at) return 'finished';
             if ((await unknownCards([...deck.main, ...deck.extra, ...deck.side])).length) return 'unknown-card';
@@ -619,7 +631,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 updatedAt: now,
             };
             if (solo) {
-                Object.assign(doc, await practice(doc._id, me, deck, at.set.tcg_date, mode, against, level));
+                Object.assign(doc, await practice(doc._id, me, deck, at.set.tcg_date, mode, against, level, duelist));
             } else {
                 doc.challengerDeck = deck;
             }
@@ -632,7 +644,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             if (doc.status === 'active') await start(doc);
             return doc;
         },
-        async createGuest({ deck, setName, against, level }) {
+        async createGuest({ deck, setName, against, level, duelist }) {
             const timeline = await app.catalog.timeline();
             const setIndex = timeline.findIndex((s) => s.set_name === setName);
             const set = timeline[setIndex];
@@ -653,7 +665,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 status: 'active',
                 players: [],
                 setup: null,
-                ...(await practice(_id, me, deck, set.tcg_date, mode, against, level)),
+                ...(await practice(_id, me, deck, set.tcg_date, mode, against, level, duelist)),
                 challengerId: null,
                 guestTokenHash: hashGuestToken(token),
                 expiresAt: new Date(now.getTime() + GUEST_DUEL_MS),

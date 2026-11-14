@@ -105,3 +105,4 @@
 .pg-card { padding: 0; border: 0; background: none; cursor: pointer; border-radius: 3px; transition: transform 0.12s; }
 .pg-card img { display: block; width: 100%; border-radius: 3px; box-shadow: 0 1px 3px #000; }
 .pg-card:hover { transform: translateY(-3px) scale(1.06); }
+

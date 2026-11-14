@@ -6,7 +6,7 @@
 //   npm run test-server -w @ygo/api   (WEB_DIST serves the built web on the same port)
 //   node web/scripts/drivers/duel-rps.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY } from "./_lib.mjs";
+import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, practiceAgainstBot } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 let failures = 0;
@@ -33,7 +33,7 @@ try {
         const old = btn("End it, start a new one"), practice = btn("Practice against the bot");
         await old.or(practice).first().waitFor({ timeout: 15000 });
         if (await old.count()) await old.click();
-        await practice.click();
+        await practiceAgainstBot(page);
         await page.waitForURL(/duel/, { timeout: 30000 });
         for (let i = 0; i < 12; i++) {
             const rock = page.locator(".pg-rps[aria-label='Rock']");
