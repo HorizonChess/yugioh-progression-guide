@@ -10,6 +10,7 @@ import { useProgression } from "@/context/ProgressionContext";
 import { fetchAllSets } from "@/lib/api";
 import { acceptDuel, carryGuestToken, concedeDuel, declineDuel, duelPath, getDuel, getDuelRecord, guestDuelToken, pregameAct, type DuelSummary } from "@/lib/duel-client";
 import type { DuelPregameView, PregameAction } from "@ygo/shared";
+import type { LocalGame } from "@/components/duel/useDuel";
 import PreGame from "@/components/duel/PreGame";
 import { gameConfirm } from "@/components/ui/GameDialog";
 import { ruleLines } from "@/lib/guide/lines";
@@ -36,6 +37,8 @@ function DuelPageContent() {
     /** Before a game of a match: what's still to be done, and whether a step of mine is on its way. */
     const [pregame, setPregame] = useState<DuelPregameView | null>(null);
     const [acting, setActing] = useState(false);
+    /** Once the game is on: whether it's played on this device (a practice game against the bot), and how. */
+    const [local, setLocal] = useState<{ id: string; game?: LocalGame } | undefined>(undefined);
     // A guest's practice duel opens with the token this browser kept. The server can't see it, so
     // the page renders as loading until the browser has looked (no mismatch, no "Sign in" flash).
     const hasToken = useSyncExternalStore(noSubscribe, () => !!id && !!guestDuelToken(id), () => null);
@@ -44,8 +47,10 @@ function DuelPageContent() {
     useEffect(() => {
         if (!id || !allowed) return;
         let live = true;
-        const load = () => getDuel(id).then(({ duel: d, broken: b, pregame: p }) => {
+        const load = () => getDuel(id).then(({ duel: d, broken: b, pregame: p, device, match }) => {
             if (!live) return;
+            // (Once: from there on the game is played on the device, or over the live socket.)
+            if (d.status === "active" || d.status === "finished") setLocal((had) => (had?.id === id ? had : { id, ...(device ? { game: { device, ...(match ? { match } : {}) } } : {}) }));
             setDuel(d);
             setBroken(b ?? null);
             setPregame(p ?? null);
@@ -157,12 +162,14 @@ function DuelPageContent() {
     if (duel.status === "pregame") return <Message text="Shuffling the decks…" />;
     if (duel.status === "cancelled") return <Message text="That duel was called off. Nothing was recorded, and a new challenge can be sent." onBack={() => router.push("/record-match")} />;
     if (duel.status === "declined") return <Message text="That challenge was turned down." onBack={() => router.push("/record-match")} />;
+    if (local?.id !== duel.id) return <Message text="Shuffling the decks…" />;
 
     return (
         <>
             <DuelScreen
                 key={duel.id}
                 duelId={duel.id}
+                local={local.game}
                 // The match's next game: its page, which opens on side decking.
                 onNext={(next) => {
                     carryGuestToken(duel.id, next);

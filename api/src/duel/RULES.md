@@ -112,7 +112,17 @@ each Graveyard (each checks whether the other could be activated, without end, u
 stack runs out). The server then starts a new core, drops the duels in memory and rebuilds each
 from storage as its players act; the move that set it off isn't made, and its player is told so.
 
-## The practice bot (bot.ts, bot-sim.ts, bot-eval.ts)
+## Practice games on the device (hub.ts `record`; web/src/lib/duel)
+
+A practice game (against the bot, or solo) is played in the player's browser: the engine and the
+bot run in a Web Worker (`duel.worker.ts`), with the same card scripts the server has, fetched from
+R2 (`engine/<data id>/`, see `web/scripts/engine/upload-engine.mjs`). The server sets the game up
+(the decks as played at the set's date, the seed), then only keeps what the page sends: the answers
+as they're given, so a reload or a bug report has the whole game, and at the end how it ended, which
+it books as told (practice is never booked on the series, so it's taken on trust). Rival duels, and
+practice games begun before this, are played on the server.
+
+## The practice bot (duel/src: bot.ts, bot-sim.ts, bot-eval.ts)
 
 The player picks how well the bot plays: **Easy**, **Normal** (the default) or **Hard**. Under every
 level is the same plain play: summon the strongest monster, attack what it can beat, and point an

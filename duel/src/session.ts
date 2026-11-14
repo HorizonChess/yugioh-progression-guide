@@ -36,6 +36,11 @@ export interface DuelSetup {
     solo?: boolean;
     /** How well the bot plays (bot.ts). Missing: `normal`. */
     botLevel?: BotLevel;
+    /**
+     * Played on the player's device (practice against the bot): the engine and the bot run in their
+     * browser, which sends the answers to the server to keep. The server only plays them back.
+     */
+    onDevice?: boolean;
     /** Older versions played in place of a deck card (engine code → the card's own code), shown as the card itself. */
     shown?: Record<string, number>;
     /**

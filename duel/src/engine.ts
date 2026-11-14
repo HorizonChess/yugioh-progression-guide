@@ -31,9 +31,11 @@ export interface EngineData {
     strings: { system: Record<string, string>; victory: Record<string, string> };
     /**
      * A script by its plain name: a library (utility.lua) or a card's (c12345.lua), or null when
-     * there's none (Normal Monsters have no script; the engine asks anyway).
+     * there's none (Normal Monsters have no script; the engine asks anyway). Undefined: not at hand
+     * yet (a browser fetches scripts as needed), so the engine is told there's none, but it's
+     * asked again next time.
      */
-    readFile: (name: string) => string | null;
+    readFile: (name: string) => string | null | undefined;
 }
 
 export interface Engine {
@@ -157,6 +159,7 @@ export function createEngine(source: EngineData): Engine {
             const base = alt && learned.get(Number(alt[1]));
             if (base) return engine.readScript(`c${base}.lua`);
             const text = source.readFile(name);
+            if (text === undefined) return null;
             scripts.set(name, text);
             return text;
         },
@@ -216,4 +219,13 @@ export function createEngine(source: EngineData): Engine {
         },
     };
     return engine;
+}
+
+/**
+ * A short name for a version of the engine data (version.json's pinned commits): the folder the
+ * data is kept under in storage, for a browser to fetch the same scripts the server plays.
+ */
+export function engineDataId(version: string): string {
+    const v = JSON.parse(version) as { format?: number; scripts?: string; cards?: string; strings?: string };
+    return [v.format ?? 1, v.scripts, v.cards, v.strings].map((p) => String(p ?? '').slice(0, 10)).join('-');
 }

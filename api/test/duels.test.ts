@@ -2,9 +2,11 @@ import type { FastifyInstance } from 'fastify';
 import { ObjectId } from 'mongodb';
 import type { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { cardVersionAt, collectionKey, type DuelAnswer, type DuelPrompt, type DuelServerMessage } from '@ygo/shared';
+import { cardVersionAt, collectionKey, type DuelAnswer, type DuelMatchView, type DuelOnDevice, type DuelPrompt, type DuelServerMessage, type DuelState } from '@ygo/shared';
 import { cardSetsCollection, cardsCollection } from '../src/cards/sync';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
+import { decode, encode } from '../src/duel/hub';
+import { DuelSession, type DuelSetup, type Team } from '../src/duel/session';
 import { packSessions } from '../src/game/packs';
 import { seriesCollection, seriesPlayersCollection } from '../src/game/series';
 import { startMongo, testApp } from './helpers';
@@ -79,8 +81,62 @@ function humanAnswer(p: DuelPrompt): DuelAnswer {
     }
 }
 
-/** Plays a duel over its socket, answering every question, until it's over (or after `moves` answers). Resolves with the last state. */
-async function play(p: Pick<Player, 'name'> & { cookie?: string }, duelId: string, token?: string, moves = Infinity) {
+
+/** A practice game, as the page's worker plays it on the device: the duel rebuilt from the answers kept, the bot's moves made. */
+async function onDevice(duelId: string, headers: Headers) {
+    const look = await lookAt(duelId, headers);
+    expect(look.state).toBeNull();
+    const device = look.device as DuelOnDevice;
+    const engine = await loadEngine();
+    for (const [code, base] of Object.entries(device.learned)) engine.learnAs(Number(code), base);
+    const session = new DuelSession(engine, device.setup as DuelSetup);
+    session.start(device.answers.map(decode));
+    return { session, team: device.team as Team, kept: device.answers.length, match: look.match as DuelMatchView | undefined };
+}
+/** A practice game's state now, as the device shows it. */
+async function deviceState(duelId: string, headers: Headers): Promise<DuelState> {
+    const { session, team, match } = await onDevice(duelId, headers);
+    const state = session.state(team, duelId);
+    session.destroy();
+    return { ...state, ...(match ? { match } : {}) };
+}
+
+/** Plays a practice game on the device, its answers sent to the server as they're given and its result at the end (or after `moves` answers). */
+async function playOnDevice(duelId: string, headers: Headers, moves = Infinity) {
+    const { session, team, kept, match } = await onDevice(duelId, headers);
+    let sent = kept, frames = session.framesOnConnect(team).length, answered = 0;
+    const upload = async (end?: object) => {
+        const res = await app.inject({ method: 'POST', url: `/api/duels/${duelId}/answers`, headers, payload: { from: sent, answers: session.answers.slice(sent).map(encode), ...(end ? { end } : {}) } });
+        expect(res.statusCode).toBe(200);
+        sent = session.answers.length;
+        return res.json() as { match?: DuelMatchView };
+    };
+    try {
+        for (let i = 0; i < 5000; i++) {
+            const state = session.state(team, duelId);
+            if (state.result) return { ...state, frames, match: (await upload({ winner: state.result.winner, reason: state.result.reason })).match };
+            if (answered >= moves) return { ...state, frames, match: (await upload()).match ?? match };
+            answered++;
+            expect(session.answer(team, state.seq, humanAnswer(state.prompt!))).toBe(true);
+            frames += session.takeFrames(team).length;
+            await upload();
+        }
+        throw new Error('the game never ended');
+    } finally {
+        session.destroy();
+    }
+}
+
+/** Plays it as one of the practice games begun before games moved to the device: on the server. */
+const onServer = (duelId: string) => app.db.collection('duels').updateOne({ _id: new ObjectId(duelId) }, { $unset: { 'setup.onDevice': '' } });
+
+/**
+ * Plays a duel until it's over (or after `moves` answers), answering every question: a practice
+ * game on the device, anything else over its socket. Resolves with the last state.
+ */
+async function play(p: Pick<Player, 'name'> & { cookie?: string }, duelId: string, token?: string, moves = Infinity): Promise<DuelState & { frames: number }> {
+    const headers: Headers = p.cookie ? { cookie: p.cookie } : { 'x-duel-token': token! };
+    if ((await lookAt(duelId, headers)).device) return playOnDevice(duelId, headers, moves);
     // The injected upgrade has no socket of its own; the rate limiter needs an address.
     const url = `/api/duels/${duelId}/live${token ? `?token=${token}` : ''}`;
     const socket = await app.injectWS(url, { headers: p.cookie ? { cookie: p.cookie } : {}, socket: { remoteAddress: '127.0.0.1' } } as never);
@@ -146,7 +202,7 @@ async function playMatch(players: (Pick<Player, 'name'> & { cookie?: string; tok
 }
 
 describe.skipIf(!engineDataAvailable())('duels', () => {
-    it('plays a practice duel against the bot over the live socket', async () => {
+    it('plays a practice match against the bot on the device, the server only keeping its answers', async () => {
         const yugi = await player('Yugi');
         const id = (await yugi.call('POST', '/api/series', { name: 'Solo', mode: 'solo', startSetIndex: 0, packsPerSet: 12 })).json().series.id;
         await withDeck(yugi, id);
@@ -160,7 +216,8 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect((await yugi.call('POST', `/api/series/${id}/duels`, { deckId: 'main', against: 'bot' })).statusCode).toBe(409);
         await ready(duel.id, [{ cookie: yugi.cookie }]);
 
-        const { state } = (await yugi.call('GET', `/api/duels/${duel.id}`)).json();
+        // The game is played on the device: the server sends what it takes, not a board.
+        const state = await deviceState(duel.id, { cookie: yugi.cookie });
         expect(state.rival).toEqual({ name: 'Practice Bot', bot: true });
         expect(state.view.me.deck + state.view.me.hand.length).toBe(40 - (state.view.me.monsters.filter(Boolean).length + state.view.me.spells.filter(Boolean).length + state.view.me.grave.length));
 
@@ -176,6 +233,7 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(end.match!.winner).toBe(end.match!.score[0] === end.match!.score[1] ? null : end.match!.score[0] > end.match!.score[1] ? 'me' : 'opp');
         const stored = await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) });
         expect(stored).toMatchObject({ status: 'finished' });
+        expect(stored!.answers.length).toBeGreaterThan(20);
         // No game is left open, so a new practice match can start.
         expect(await app.db.collection('duels').countDocuments({ openKey: { $exists: true } })).toBe(0);
         // A 2002 series plays Sangan as first printed (its errata came in 2016), and shows it as the player's own Sangan.
@@ -198,7 +256,7 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         // Without the token (or with another), it's no one's duel.
         expect((await app.inject({ method: 'GET', url: `/api/duels/${duel.id}` })).statusCode).toBe(404);
         expect((await app.inject({ method: 'GET', url: `/api/duels/${duel.id}`, headers: { 'x-duel-token': 'nope' } })).statusCode).toBe(404);
-        const { state } = (await app.inject({ method: 'GET', url: `/api/duels/${duel.id}`, headers: { 'x-duel-token': token } })).json();
+        const state = await deviceState(duel.id, { 'x-duel-token': token });
         expect(state.rival).toEqual({ name: 'Solo Practice', bot: true, solo: true });
 
         const end = await play({ name: 'Guest' }, duel.id, token);
@@ -215,6 +273,7 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
     it('takes back a summon while its zone is being chosen', async () => {
         const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'solo' } });
         const { duel, token } = started.json();
+        await onServer(duel.id);
         const socket = await app.injectWS(`/api/duels/${duel.id}/live?token=${token}`, { socket: { remoteAddress: '127.0.0.1' } } as never);
         const steps: string[] = [];
         const done = new Promise<void>((resolve, reject) => {
@@ -258,6 +317,7 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
             const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot' } });
             const { duel, token } = started.json();
             await ready(duel.id, [{ 'x-duel-token': token }]);
+            await onServer(duel.id);
             await play({ name: 'Guest' }, duel.id, token, 6);
             // A restart: a fresh server on the same database rebuilds the duel from storage.
             const db = app.db.databaseName;
@@ -273,7 +333,8 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
     it('starts a new engine when the engine itself fails, and the duel goes on from what was stored', async () => {
         const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot' } });
         const { duel, token } = started.json();
-            await ready(duel.id, [{ 'x-duel-token': token }]);
+        await ready(duel.id, [{ 'x-duel-token': token }]);
+        await onServer(duel.id);
         await play({ name: 'Guest' }, duel.id, token, 4);
         const before = (await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) }))!.answers.length;
         // The engine faults on the next step (as it does when its stack runs out), for every duel on it.
@@ -312,7 +373,8 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
     it('can always give up a duel, even one that can no longer be rebuilt', async () => {
         const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot' } });
         const { duel, token } = started.json();
-            await ready(duel.id, [{ 'x-duel-token': token }]);
+        await ready(duel.id, [{ 'x-duel-token': token }]);
+        await onServer(duel.id);
         // A stored copy whose answers no longer fit the duel (as when the rules changed under it).
         const original = await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) });
         const broken = { ...original!, _id: new ObjectId(), openKey: `broken:${duel.id}`, answers: Array(30).fill({ t: 'bogus' }) };
@@ -463,19 +525,19 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         if (view) {
             expect(view.chooser).toMatchObject({ side: 'me', why: 'rps', hands: { mine: 'paper', theirs: 'rock' }, chosen: false });
             expect((await pregame(duel.id, mine, { first: false })).json().duel.status).toBe('active');
-            const { state } = await lookAt(duel.id, mine);
+            const state = await deviceState(duel.id, mine);
             // The bot went first: it's on its turn 1, or has finished it and you're on turn 2.
             expect(state.view.turn === 1 ? state.view.turnPlayer : state.view.turn).toBe(state.view.turn === 1 ? 'opp' : 2);
         }
         expect((await lookAt(duel.id, mine)).duel.status).toBe('active');
         // Either way the board is told how it went, for its showdown: you threw paper.
-        expect((await lookAt(duel.id, mine)).state.match.rps).toEqual(view ? { mine: 'paper', theirs: 'rock', won: true } : { mine: 'paper', theirs: 'scissors', won: false });
+        expect((await lookAt(duel.id, mine)).match.rps).toEqual(view ? { mine: 'paper', theirs: 'rock', won: true } : { mine: 'paper', theirs: 'scissors', won: false });
         // Lose game 1 (a surrender): the loser side decks and chooses who goes first in game 2.
         await app.inject({ method: 'POST', url: `/api/duels/${duel.id}/concede`, headers: mine });
         const after = await lookAt(duel.id, mine);
         expect(after.duel).toMatchObject({ status: 'finished', match: { game: 1, over: false } });
-        expect(after.state.match).toMatchObject({ game: 1, score: [0, 1], over: false, next: expect.any(String) });
-        const next: string = after.state.match.next;
+        expect(after.match).toMatchObject({ game: 1, score: [0, 1], over: false, next: expect.any(String) });
+        const next: string = after.match.next;
         view = (await lookAt(next, mine)).pregame;
         expect(view).toMatchObject({ game: 2, score: [0, 1], chooser: { side: 'me', why: 'lost', chosen: false }, siding: { done: false, rivalDone: true } });
         expect(view.siding.deck).toEqual({ main: DECK, extra: [], side: [SANGAN, SANGAN] });
@@ -488,16 +550,16 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect((await pregame(next, mine, { deck: swapped })).statusCode).toBe(409);
         expect((await pregame(next, mine, { first: true })).json().duel.status).toBe('active');
         // Game 2 had no rock-paper-scissors.
-        expect((await lookAt(next, mine)).state.match.rps).toBeUndefined();
-        const second = await lookAt(next, mine);
-        expect([second.state.view.turn, second.state.view.turnPlayer]).toEqual([1, 'me']);
-        expect(second.state.match).toMatchObject({ game: 2, score: [0, 1], over: false });
+        expect((await lookAt(next, mine)).match.rps).toBeUndefined();
+        const second = await deviceState(next, mine);
+        expect([second.view.turn, second.view.turnPlayer]).toEqual([1, 'me']);
+        expect(second.match).toMatchObject({ game: 2, score: [0, 1], over: false });
         // The side-decked deck is the one dealt: 40 cards between the hand and the Deck.
-        expect(second.state.view.me.deck + second.state.view.me.hand.length).toBe(40);
+        expect(second.view.me.deck + second.view.me.hand.length).toBe(40);
         const stored = await app.db.collection('duels').findOne({ _id: new ObjectId(next) });
         expect(stored!.match.current.find((d: { side: number[] }) => d.side.includes(DECK[0]!))).toMatchObject(swapped);
         // Losing again loses the match, 0-2: no third game.
         await app.inject({ method: 'POST', url: `/api/duels/${next}/concede`, headers: mine });
-        expect((await lookAt(next, mine)).state.match).toEqual({ game: 2, score: [0, 2], over: true, winner: 'opp' });
+        expect((await lookAt(next, mine)).match).toEqual({ game: 2, score: [0, 2], over: true, winner: 'opp' });
     });
 });

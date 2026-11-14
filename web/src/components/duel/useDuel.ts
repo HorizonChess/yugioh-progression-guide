@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { loneMust, type DuelAnswer, type DuelEvent, type DuelFrame, type DuelServerMessage, type DuelState, type DuelView, type Side } from "@ygo/shared";
+import { loneMust, type DuelAnswer, type DuelEvent, type DuelFrame, type DuelMatchView, type DuelOnDevice, type DuelServerMessage, type DuelState, type DuelView, type Side } from "@ygo/shared";
 import { connectDuel, getDuel, type DuelConnection } from "@/lib/duel-client";
+import { connectLocalDuel } from "@/lib/duel/local-duel";
 import { duelPrefs } from "./duel-prefs";
 import { CARD_BACK } from "./parts";
 import { sfx, unlockSound } from "./sfx";
@@ -14,7 +15,8 @@ import { sfx, unlockSound } from "./sfx";
  * at the end only appears once the board has caught up.
  *
  * An answered question stays on screen (inert) until the server replies, so nothing blinks
- * between one question and the next. Chain windows nobody needs (the server marks them quiet)
+ * between one question and the next. A practice game against the bot is played on this device
+ * instead (`local`): the same, with the engine in a worker in place of the server. Chain windows nobody needs (the server marks them quiet)
  * are passed straight away unless the player asked to be stopped at every one.
  */
 
@@ -158,7 +160,13 @@ function quake(strength: number) {
     ], { duration: 320, easing: "ease-out" });
 }
 
-export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: DuelView) => void) {
+/** A game played on this device: what it takes to play it, and the match it's a game of. */
+export interface LocalGame {
+    device: DuelOnDevice;
+    match?: DuelMatchView;
+}
+
+export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: DuelView) => void, local?: LocalGame) {
     const [state, setState] = useState<DuelState | null>(null);
     const [shown, setShown] = useState<DuelView | null>(null);
     const [playing, setPlaying] = useState(false);
@@ -167,6 +175,9 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
     /** What kind of question was answered last (a card's pop-over only stays up for its own answer). */
     const [answeredKind, setAnsweredKind] = useState<string | null>(null);
     const [connected, setConnected] = useState(true);
+    /** A game on this device that can't go on (its engine didn't load, its answers can't be saved): why. */
+    const [failure, setFailure] = useState<string | null>(null);
+    const localRef = useRef(local);
     const [effects, setEffects] = useState<Effects>({ destroying: [], landing: [], flaring: [], banner: null, floats: [], hit: null, dealing: [] });
     const queue = useRef<DuelFrame[]>([]);
     /** The field last put on screen: what's new in a frame is measured against it. */
@@ -426,7 +437,8 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
             }
             void play();
         };
-        conn.current = connectDuel(duelId, onMessage, setConnected, () => cursor.current);
+        const game = localRef.current;
+        conn.current = game ? connectLocalDuel(duelId, game.device, game.match, onMessage, setFailure) : connectDuel(duelId, onMessage, setConnected, () => cursor.current);
         recv.current = onMessage;
         return () => {
             clearTimeout(watchdog.current);
@@ -448,6 +460,7 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         // If no reply comes (a step that failed on the server), fetch the duel as it stands
         // rather than leave the answered question up, inert, for good.
         clearTimeout(watchdog.current);
+        if (localRef.current) return;
         watchdog.current = setTimeout(() => {
             if (!duelId) return;
             getDuel(duelId).then(({ state }) => {
@@ -480,6 +493,7 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         answeredKind: answered ? answeredKind : null,
         playing,
         connected,
+        failure,
         effects,
         answer,
         concede,

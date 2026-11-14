@@ -32,6 +32,7 @@ const config = loadConfig({
     ALLOWED_ORIGINS: webOrigin,
     // A built web app (WEB_DIST=../web/out) is served from this origin too, as in production.
     ...(process.env.WEB_DIST ? { WEB_DIST: process.env.WEB_DIST } : {}),
+    ...(process.env.IMAGE_HOST ? { IMAGE_HOST: process.env.IMAGE_HOST } : {}),
 });
 
 const app = await buildApp({

@@ -1,6 +1,8 @@
 // The bot's level: the launcher offers Easy, Normal and Hard (Normal by default), remembers the
 // choice, and a practice match started at Hard is played against "Practice Bot (Hard)". Then a few
-// turns are played (the bot thinking ahead), to see it answers in good time.
+// turns are played (the bot thinking ahead), to see it answers in good time. The game is played on
+// this device (the engine and the bot in a Web Worker): no live socket, the answers are sent to the
+// server to keep, and a reload picks the game up where it was.
 //
 //   npm run test-server -w @ygo/api
 //   node web/scripts/drivers/duel-bot-level.mjs          (PHONE=1 for a phone)
@@ -22,6 +24,18 @@ const browser = await launchBrowser();
 const page = await browser.newPage(phone ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1440, height: 900 } });
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
+const consoleLines = [];
+page.on("console", (m) => consoleLines.push(`[${m.type()}] ${m.text()}`));
+page.on("worker", (w) => {
+    consoleLines.push(`[worker] started ${w.url()}`);
+    w.on("console", (m) => consoleLines.push(`[worker ${m.type()}] ${m.text()}`));
+});
+// What goes to the server: a live socket for the duel (there should be none), and the answers kept.
+const sockets = [], uploads = [];
+page.on("websocket", (ws) => sockets.push(ws.url()));
+page.on("request", (r) => {
+    if (r.method() === "POST" && /\/answers$/.test(r.url())) uploads.push(r.postDataJSON());
+});
 const btn = (name) => page.getByRole("button", { name, exact: true });
 const shot = (n) => page.screenshot({ path: outPath(`duel-bot-level-${n}-${phone ? "phone" : "desktop"}.png`) });
 try {
@@ -55,19 +69,44 @@ try {
 
     // A few turns: end each of ours at once, and time how long the bot takes with its own.
     let slowest = 0;
-    for (let turn = 0; turn < 4; turn++) {
-        const end = page.getByRole("tab", { name: "End", exact: true }).and(page.locator(":enabled"));
-        const pass = page.getByRole("button", { name: /^(Pass|No|Don't)/ }).first();
-        const t0 = Date.now();
-        await end.or(pass).first().waitFor({ timeout: 60000 });
-        slowest = Math.max(slowest, Date.now() - t0);
-        if (await pass.count()) await pass.click();
-        else await end.click();
-        await page.waitForTimeout(600);
+    const turnLabel = page.getByText(/^Turn \d+/).first();
+    const turnNo = async () => Number((/Turn (\d+)/.exec((await turnLabel.textContent().catch(() => "")) ?? "") ?? [])[1] ?? 0);
+    const end = page.getByRole("tab", { name: "End", exact: true }).and(page.locator(":enabled"));
+    const pass = page.getByRole("button", { name: /^(Pass|No|Don't)/ }).first();
+    let waitFrom = Date.now();
+    for (let step = 0; step < 40 && (await turnNo()) < 7; step++) {
+        // (A card to discard at the end of the turn: the first that glows.)
+        const discard = page.locator(".df-hand__card.is-glow").first();
+        await end.or(pass).or(discard).first().waitFor({ timeout: 60000 });
+        slowest = Math.max(slowest, Date.now() - waitFrom);
+        // Let the board's animations settle, then answer.
+        await page.waitForTimeout(800);
+        if ((await discard.count()) && !(await end.count())) await discard.click({ force: true }).catch(() => {});
+        else if (await pass.count()) await pass.click().catch(() => {});
+        else await end.click().catch(() => {});
+        await page.waitForTimeout(400);
+        waitFrom = Date.now();
     }
+    check((await turnNo()) >= 5, `a few turns were played (turn ${await turnNo()})`);
     await shot("board");
-    check(slowest < 20000, `the bot answers in good time (slowest wait ${slowest} ms)`);
+    check(slowest < 8000, `the bot answers in good time (slowest wait for my turn ${slowest} ms)`);
+    check(!sockets.some((u) => u.includes("/api/duels/")), `the game has no live socket (${sockets.join(", ") || "none"})`);
+    const kept = uploads.reduce((n, u) => u.from + u.answers.length, 0);
+    check(uploads.length > 0 && kept > 10, `the answers are sent to the server to keep (${uploads.length} uploads, ${kept} answers)`);
+
+    // A reload picks the game up from what the server kept.
+    const turnBefore = await turnNo();
+    await page.reload({ waitUntil: "load" });
+    await turnLabel.waitFor({ timeout: 30000 });
+    await page.waitForTimeout(1500);
+    check((await turnNo()) === turnBefore, `a reload picks the game up where it was (turn ${turnBefore} → ${await turnNo()})`);
     check(errors.length === 0, `no page errors ${errors.join(" | ")}`);
+} catch (error) {
+    failures++;
+    console.log(`FAIL  ${error.message.split("\n")[0]}`);
+    console.log(`  uploads: ${uploads.length}, sockets: ${sockets.join(", ")}`);
+    console.log(consoleLines.slice(-25).join("\n"));
+    await shot("failed").catch(() => {});
 } finally {
     await browser.close();
 }

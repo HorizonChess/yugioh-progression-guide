@@ -1,4 +1,4 @@
-import type { BotLevel, DuelAnswer, DuelMatchView, DuelModeId, DuelPregameView, DuelServerMessage, DuelState, PregameAction } from "@ygo/shared";
+import type { BotLevel, DeviceAnswers, DuelAnswer, DuelMatchView, DuelModeId, DuelOnDevice, DuelPregameView, DuelServerMessage, DuelState, PregameAction } from "@ygo/shared";
 import { API_BASE } from "@/lib/auth-client";
 import { apiRequest } from "@/lib/repo/remote";
 
@@ -70,9 +70,13 @@ export async function startGuestDuel(deck: { main: number[]; extra: number[]; si
 
 export const openDuels = async (seriesId: string) => (await apiRequest<{ duels: DuelSummary[] }>("GET", `/api/series/${seriesId}/duels/open`)).duels;
 
-/** `broken`: the server couldn't rebuild the duel, and why. */
+/** `broken`: the server couldn't rebuild the duel, and why. `device`: a game played on this device (against the bot). */
 export const getDuel = (duelId: string) =>
-    apiRequest<{ duel: DuelSummary; state: DuelState | null; broken?: string; pregame?: DuelPregameView; match?: DuelMatchView }>("GET", `/api/duels/${duelId}`, undefined, tokenHeader(duelId));
+    apiRequest<{ duel: DuelSummary; state: DuelState | null; broken?: string; pregame?: DuelPregameView; match?: DuelMatchView; device?: DuelOnDevice }>("GET", `/api/duels/${duelId}`, undefined, tokenHeader(duelId));
+
+/** The answers of a game played on this device, for the server to keep; with its result at the end. */
+export const recordDeviceAnswers = (duelId: string, body: DeviceAnswers) =>
+    apiRequest<{ duel: DuelSummary; match?: DuelMatchView }>("POST", `/api/duels/${duelId}/answers`, body, tokenHeader(duelId));
 
 /** A step before a game of a match: a hand thrown, who goes first, or the side-decked deck. */
 export const pregameAct = (duelId: string, action: PregameAction) =>
