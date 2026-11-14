@@ -12,9 +12,11 @@ import { requireSeriesMember } from '../middleware/requireSeriesMember';
 const DuelistSchema = z
     .strictObject({ id: z.string().max(40), era: z.string().max(12).optional() })
     .refine((d) => !!duelistById(d.id) && (!d.era || duelistById(d.id)!.eras.some((e) => e.id === d.era)));
+/** Against the bot, the match is best of 3 or a single game (against the rival, always best of 3). */
+const GamesSchema = z.union([z.literal(1), z.literal(3)]);
 const StartBodySchema = z
-    .strictObject({ deckId: z.string().regex(/^[\w-]{1,64}$/), against: z.enum(['bot', 'solo', 'rival']), level: z.enum(BOT_LEVELS).optional(), duelist: DuelistSchema.optional() })
-    .refine((b) => !b.duelist || b.against === 'bot');
+    .strictObject({ deckId: z.string().regex(/^[\w-]{1,64}$/), against: z.enum(['bot', 'solo', 'rival']), level: z.enum(BOT_LEVELS).optional(), duelist: DuelistSchema.optional(), games: GamesSchema.optional() })
+    .refine((b) => (!b.duelist && !b.games) || b.against === 'bot');
 /** A guest's practice duel: the deck comes from the browser (guests keep their campaign there). */
 const GuestBodySchema = z.strictObject({
     deck: z.strictObject({ main: z.array(CardIdSchema).min(40).max(60), extra: z.array(CardIdSchema).max(15), side: z.array(CardIdSchema).max(15).optional() }),
@@ -22,7 +24,8 @@ const GuestBodySchema = z.strictObject({
     against: z.enum(['bot', 'solo']),
     level: z.enum(BOT_LEVELS).optional(),
     duelist: DuelistSchema.optional(),
-}).refine((b) => !b.duelist || b.against === 'bot');
+    games: GamesSchema.optional(),
+}).refine((b) => (!b.duelist && !b.games) || b.against === 'bot');
 /** A guest's duel is opened with its token: a header, or (WebSocket, which can't send headers) the query. */
 const guestToken = (request: FastifyRequest) => {
     const header = request.headers['x-duel-token'];
@@ -56,21 +59,35 @@ const summary = (d: DuelDoc) => ({
     status: d.status,
     setName: d.setName,
     mode: d.mode,
-    // A game of a best-of-3 match: which one, and the games won by each player (in `players` order).
-    ...(d.match ? { match: { game: d.match.game, wins: d.players.map((_p, i) => d.match!.wins[d.seats ? d.seats[i]! : i]!), over: !!d.match.over } } : {}),
+    // A game of a match (best of 3, or a single game): which one, and the games won by each player (in `players` order).
+    // Once it's over, `winner`: who won it (an index in `players`; null: drawn or called off).
+    ...(d.match ? { match: { game: d.match.game, games: d.match.games ?? 3, wins: d.players.map((_p, i) => d.match!.wins[seatOf(d, i)]!), over: !!d.match.over, ...(d.match.over ? { winner: matchWinner(d) } : {}) } } : {}),
     ...(d.next ? { next: d.next.toHexString() } : {}),
     challenger: d.players.find((p) => !p.bot && (!d.challengerId || p.userId?.equals(d.challengerId)))?.name ?? '',
     challengerId: d.challengerId?.toHexString() ?? null,
-    players: d.players.map((p) => ({ name: p.name, bot: p.bot })),
+    // A bot from the anime says who it is (`duelist`, in the deck of `era`).
+    players: d.players.map((p) => ({ name: p.name, bot: p.bot, ...(p.duelist ? { duelist: p.duelist, era: p.era } : {}) })),
     winner: d.winner,
 });
+/** The seat of the player at `index` in `players` (they're by team once it's on). */
+const seatOf = (d: DuelDoc, index: number) => (d.seats ? d.seats[index]! : index);
+/** Who won the match, as an index in `players` (null: drawn, or called off). */
+const matchWinner = (d: DuelDoc): number | null => {
+    const won = d.match?.winner;
+    return won === null || won === undefined ? null : d.players.findIndex((_p, i) => seatOf(d, i) === won);
+};
+
+/** Who a practice match was against, for the record: the duelist from the anime, or the practice bot. */
+const opponentKey = (d: DuelDoc) => d.players.find((p) => p.bot)?.duelist ?? 'bot';
 
 /**
  * Duels, played on the server's rules engine:
- *   POST /series/:seriesId/duels         { deckId, against: bot | solo | rival, level?, duelist? }: practice now, or challenge the rival
- *   POST /duels/practice                  { deck, setName, against: bot | solo, level?, duelist? }: a guest's practice duel; returns its token
+ *   POST /series/:seriesId/duels         { deckId, against: bot | solo | rival, level?, duelist?, games? }: practice now, or challenge the rival
+ *   POST /duels/practice                  { deck, setName, against: bot | solo, level?, duelist?, games? }: a guest's practice duel; returns its token
  *                                         (duelist { id, era? }: the bot is that duelist from the anime, with their deck and level)
+ *                                         (games: 3, best of 3, the default; or 1, a single game: against the bot only)
  *   GET  /series/:seriesId/duels/open     the open duel you can play or answer, if any
+ *   GET  /duels/practice/record           your practice matches won, lost and drawn, by bot (all series)
  *   GET  /duels/:duelId                   its summary, and your state once it's on
  *   POST /duels/:duelId/accept            { deckId }: the rival takes the challenge
  *   POST /duels/:duelId/decline           the rival turns it down (or the challenger withdraws it)
@@ -119,7 +136,7 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         const user = request.user!, series = request.series!;
         const deck = await deckFor(series._id, user._id, body.data.deckId);
         if (typeof deck === 'string') return fail(reply, deck);
-        const duel = await app.duels.create({ seriesId: series._id, userId: user._id, name: user.duelistName, deck, deckId: body.data.deckId, against: body.data.against, level: body.data.level, duelist: body.data.duelist });
+        const duel = await app.duels.create({ seriesId: series._id, userId: user._id, name: user.duelistName, deck, deckId: body.data.deckId, against: body.data.against, level: body.data.level, duelist: body.data.duelist, games: body.data.games });
         if (typeof duel === 'string') return fail(reply, duel);
         if (duel.kind === 'rival') {
             const rivalId = series.memberIds.find((m) => !m.equals(user._id))!;
@@ -131,14 +148,14 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
     app.post('/duels/practice', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
         const body = GuestBodySchema.safeParse(request.body);
         if (!body.success) return reply.code(400).send({ error: 'Invalid input' });
-        const { deck, setName, against, level, duelist } = body.data;
+        const { deck, setName, against, level, duelist, games } = body.data;
         // Practice only, so no collection or banlist check: just real cards, at most 3 of each.
         const ids = [...deck.main, ...deck.extra, ...(deck.side ?? [])];
         const counts = new Map<number, number>();
         for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
         const known = await app.catalog.cardsByIds([...counts.keys()]);
         if (known.length !== counts.size || [...counts.values()].some((n) => n > 3)) return reply.code(409).send({ error: 'That deck is not legal' });
-        const created = await app.duels.createGuest({ deck: { ...deck, side: deck.side ?? [] }, setName, against, level, duelist });
+        const created = await app.duels.createGuest({ deck: { ...deck, side: deck.side ?? [] }, setName, against, level, duelist, games });
         if (typeof created === 'string') return fail(reply, created);
         return reply.code(201).send({ duel: summary(created.duel), token: created.token });
     });
@@ -150,6 +167,24 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
             .sort({ createdAt: -1 })
             .toArray();
         return { duels: open.map(summary) };
+    });
+
+    // Your practice matches against the bots, all series together: by opponent (a duelist's id, or
+    // `bot` for the practice bot), the matches won, lost and drawn.
+    app.get('/duels/practice/record', { preHandler: requireAuth }, async (request) => {
+        const userId = request.user!._id;
+        const over = await duelsCollection(app.db)
+            .find({ kind: 'practice', challengerId: userId, 'match.over': true }, { projection: { players: 1, seats: 1, match: 1 } })
+            .toArray();
+        const record: Record<string, { won: number; lost: number; drawn: number }> = {};
+        for (const d of over) {
+            const r = (record[opponentKey(d)] ??= { won: 0, lost: 0, drawn: 0 });
+            const winner = matchWinner(d);
+            if (winner === null) r.drawn++;
+            else if (d.players[winner]!.bot) r.lost++;
+            else r.won++;
+        }
+        return { record };
     });
 
     app.get('/duels/:duelId', { preHandler: loadUser }, async (request, reply) => {

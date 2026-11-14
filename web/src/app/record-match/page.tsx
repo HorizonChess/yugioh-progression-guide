@@ -35,7 +35,7 @@ const ART = {
  * The Play / Record screen (route: /record-match): one temple-stone board. The opponent's pack
  * sits in a niche on the left; on the right the acts take turns:
  *
- *   play   → the duel, played here (the default): challenge the rival, the bot, or a solo test
+ *   play   → in duo, the rival's match played here (the default): challenge them, or answer theirs
  *   record → the two stone tablets (Victory / Defeat), for a duel played somewhere else
  *   WIN    → the Winner's Wheel; its prize takes the pack's place → Claim → /rewards
  *   LOSS   → the bowed tablet lit and 3 Pity Packs dealt → Claim → /rewards
@@ -49,8 +49,8 @@ type Stage = "board" | "wheel" | "defeat";
 export default function RecordMatchPage() {
     const { matchHistory, reportMatch, confirmReport, rejectReport, spin, currentSetIndex, series, savedDecks } = useProgression();
     const userId = useAuth().user?.id;
-    // Anyone can duel here; a guest only practices (rival duels need accounts on both sides).
-    const canDuel = !!series && !series.finished;
+    // The rival's match can be played here (duo: accounts on both sides); practice is the Bots Arena's.
+    const canDuel = !!series && !series.finished && !!userId && series.mode === "duo";
     const router = useRouter();
     const reduceMotion = useReducedMotion();
     const [sets, setSets] = useState<CardSet[]>([]);
@@ -196,7 +196,7 @@ export default function RecordMatchPage() {
                             {/* Playing here comes first; a duel played somewhere else is recorded from the link under it. */}
                             {stage === "board" && !pending && currentSet && series && canDuel && act === "play" && (
                                 <motion.div key="duel" className="rm-act rm-act--scroll" {...motionProps}>
-                                    <DuelLauncher seriesId={series.id} guest={!userId} setName={currentSet.set_name} duo={!!userId && series.mode === "duo"} rival={rival} decks={savedDecks} setDate={currentSet.tcg_date} onBack={() => setAct("record")} />
+                                    <DuelLauncher seriesId={series.id} rival={rival} decks={savedDecks} setDate={currentSet.tcg_date} onBack={() => setAct("record")} />
                                 </motion.div>
                             )}
                             {stage === "board" && !pending && currentSet && !(canDuel && act === "play") && (

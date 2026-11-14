@@ -5,7 +5,7 @@
 //   NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web
 //   node web/scripts/drivers/duel-piles.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame, practiceAgainstBot } from "./_lib.mjs";
+import { launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame, practiceAgainstBot, openBotsArena } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 let failures = 0;
@@ -31,10 +31,7 @@ page.on("pageerror", (e) => errors.push(e.message));
 if (process.env.DEBUG) page.on("console", (m) => m.type() === "error" && console.log("console:", m.text().slice(0, 300)));
 try {
     await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }), "ygo-guide": "off" });
-    await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-    // (Playing here is what the board opens on.)
-    const old = page.getByRole("button", { name: "End it, start a new one" });
-    if (await old.count()) await old.click();
+    await openBotsArena(page);
     await practiceAgainstBot(page);
     await page.waitForURL(/duel/, { timeout: 30000 }).catch(async (e) => {
         // A refusal shows in the game's dialog: say what it was.

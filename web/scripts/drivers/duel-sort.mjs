@@ -4,7 +4,7 @@
 //   npm run test-server -w @ygo/api   (WEB_DIST serves the built web on the same port)
 //   node web/scripts/drivers/duel-sort.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame, practiceAgainstBot } from "./_lib.mjs";
+import { launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame, practiceAgainstBot, openBotsArena } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 let failures = 0;
@@ -33,16 +33,7 @@ try {
     // Spellbook Organization is played again (up to twelve times).
     let played = false;
     for (let attempt = 0; attempt < 12 && !played; attempt++) {
-        await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-        // (Playing here is what the board opens on.)
-        // A duel from an earlier attempt may still be open: end it first.
-        const old = page.getByRole("button", { name: "End it, start a new one" });
-        const practice = page.getByRole("button", { name: "Practice against the bot" });
-        await old.or(practice).first().waitFor({ timeout: 15000 }).catch(async () => {
-            await page.screenshot({ path: outPath("duel-reveal-stuck.png") });
-            throw new Error(`stuck before the duel: ${(await page.locator(".gd").textContent().catch(() => null)) ?? "?"}`);
-        });
-        if (await old.count()) await old.click();
+        await openBotsArena(page);
         await practiceAgainstBot(page);
         await page.waitForURL(/duel/, { timeout: 30000 }).catch(async (e) => {
             throw new Error(`no duel: ${(await page.locator(".gd").textContent().catch(() => null)) ?? e.message}`);

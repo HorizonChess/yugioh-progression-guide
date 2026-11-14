@@ -237,10 +237,12 @@ export interface DuelState {
     callOff?: 'asked' | 'asking';
 }
 
-/** A best-of-3 match, as one of its players sees it. */
+/** A match (best of 3, or against the bot a single game), as one of its players sees it. */
 export interface DuelMatchView {
     /** Which game this duel is: 1, 2 or 3. */
     game: number;
+    /** How many games the match is at most: 3, or 1 for a single game. */
+    games: number;
     /** Games won so far: yours, then your rival's. */
     score: [number, number];
     /** The match is decided (or was called off). */
@@ -279,6 +281,8 @@ export type MatchDeck = z.infer<typeof MatchDeckSchema>;
  */
 export interface DuelPregameView {
     game: number;
+    /** How many games the match is at most: 3, or 1 for a single game. */
+    games: number;
     score: [number, number];
     rival: { name: string; bot: boolean };
     /** Rock-paper-scissors is still to be decided; `mine` is your hand once thrown, `tied` the hand both threw last. */

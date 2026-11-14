@@ -4,7 +4,7 @@
 //   npm run test-server -w @ygo/api   (WEB_DIST serves the built web on the same port)
 //   node web/scripts/drivers/duel-fusion.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY } from "./_lib.mjs";
+import { launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, openBotsArena, soloDuel } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 let failures = 0;
@@ -32,12 +32,8 @@ try {
     await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }), "ygo-guide": "off" });
     let asked = false;
     for (let attempt = 0; attempt < 12 && !asked; attempt++) {
-        await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-        // (Playing here is what the board opens on.)
-        const old = btn("End it, start a new one"), practice = btn("Solo: test your deck"); // the opponent only passes: the duel lasts
-        await old.or(practice).first().waitFor({ timeout: 15000 });
-        if (await old.count()) await old.click();
-        await practice.click();
+        await openBotsArena(page);
+        await soloDuel(page); // the opponent only passes: the duel lasts
         await page.waitForURL(/duel/, { timeout: 30000 });
         const end = page.locator('[role="tab"][aria-label="End"]:not([disabled])');
         if (process.env.DEBUG) console.log("attempt", attempt);

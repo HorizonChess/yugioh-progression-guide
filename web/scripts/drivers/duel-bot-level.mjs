@@ -8,7 +8,7 @@
 //   npm run test-server -w @ygo/api
 //   node web/scripts/drivers/duel-bot-level.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame } from "./_lib.mjs";
+import { launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame, openBotsArena } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 let failures = 0;
@@ -70,12 +70,8 @@ const btn = (name) => page.getByRole("button", { name, exact: true });
 const shot = (n) => page.screenshot({ path: outPath(`duel-bot-level-${n}-${phone ? "phone" : "desktop"}.png`) });
 try {
     await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }), "ygo-guide": "off" });
-    await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-    const old = btn("End it, start a new one"), practice = btn("Practice against the bot");
-    await old.or(practice).first().waitFor({ timeout: 15000 });
-    if (await old.count()) await old.click();
-    // "Duel the bot" opens the choice of opponent: the practice bot is the first, at a level.
-    await practice.click();
+    await openBotsArena(page);
+    // The practice bot is the first opponent, at a level.
     await page.getByRole("radio", { name: "Practice Bot", exact: true }).click();
 
     const levels = page.getByRole("radiogroup", { name: "How well the bot plays" }).getByRole("radio");
@@ -87,7 +83,7 @@ try {
 
     // Remembered on the next visit.
     await page.reload({ waitUntil: "networkidle" });
-    await practice.click();
+    await page.getByRole("radiogroup", { name: "Opponents" }).waitFor({ timeout: 15000 });
     check((await page.getByRole("radio", { name: "Hard" }).getAttribute("aria-checked")) === "true", "the choice is remembered");
 
     await page.getByRole("button", { name: /^Duel the bot/ }).click();

@@ -18,30 +18,32 @@ import NotificationBell from "@/components/layout/NotificationBell";
 
    It's a client component, so it can vary itself per route via `usePathname()`
    (e.g. the active-link highlight below) without breaking that persistence. */
-export const NAV_ROUTES = new Set(["/timeline", "/collection", "/deck-builder", "/packs", "/record-match", "/rewards"]);
+export const NAV_ROUTES = new Set(["/timeline", "/collection", "/deck-builder", "/bots-arena", "/packs", "/record-match", "/rewards"]);
 
 const NAV_LINKS = [
     { href: "/timeline", label: "Campaign" },
     { href: "/collection", label: "Collection" },
     { href: "/deck-builder", label: "Deck Builder" },
+    { href: "/bots-arena", label: "Bots Arena" },
     { href: "/rewards", label: "Rewards" },
     { href: "/menu", label: "Menu" },
 ];
 
-/** The section icons, drawn as filled glyphs with dark carved lines: a pyramid, a binder, a card fan, a chest and the Millennium Eye. */
+/** The section icons, drawn as filled glyphs with dark carved lines: a pyramid, a binder, a card fan, a robot, a chest and the Millennium Eye. */
 const CUT = { fill: "none", stroke: "#0b0810", strokeWidth: 1.3, strokeLinejoin: "round", strokeLinecap: "round" } as const;
 const LINE = { fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" } as const;
 const NAV_ICONS: Record<string, React.ReactNode> = {
     "/timeline": <><circle cx="18.5" cy="5" r="2.2" /><path d="M10 5.5 20.5 21H1.5Z" /><path {...CUT} d="M10 5.5 12.5 21M6 14.5h8.6M3.8 18h12.9" /></>,
     "/collection": <><path d="M6 2.5h12.5a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H6Z" /><path d="M4 3.5h1.2v17H4z" /><path {...CUT} d="M9.5 6.5h7v4.5h-7zM9.5 13.5h7v4.5h-7z" /><path {...LINE} d="M3 7h3.5M3 12h3.5M3 17h3.5" /></>,
     "/deck-builder": <><rect x="3" y="5" width="9" height="13" rx="1" transform="rotate(-16 7.5 11.5)" /><rect x="12" y="5" width="9" height="13" rx="1" transform="rotate(16 16.5 11.5)" /><rect x="7.5" y="3" width="9" height="13.5" rx="1" stroke="#0b0810" strokeWidth="1.2" /><circle {...CUT} cx="12" cy="9.75" r="2.4" /></>,
+    "/bots-arena": <><circle cx="12" cy="2.8" r="1.7" /><path {...LINE} d="M12 4.4V7" /><rect x="4" y="7" width="16" height="12.5" rx="2.6" /><path d="M1.6 11h2.4v4.5H1.6zM20 11h2.4v4.5H20z" /><circle {...CUT} cx="8.8" cy="12.2" r="1.9" /><circle {...CUT} cx="15.2" cy="12.2" r="1.9" /><path {...CUT} d="M8.5 16.3h7" /></>,
     "/rewards": <><path d="M3 11h18v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z" /><path d="M3 10a9 5.5 0 0 1 18 0v.5H3Z" /><path {...CUT} d="M3 13.5h18M12 10.5v5" /><rect x="10.4" y="12.4" width="3.2" height="3.6" rx=".5" stroke="#0b0810" strokeWidth="1.1" /></>,
     "/menu": <><path d="M1.5 10.5Q12 1 22.5 10.5Q12 20 1.5 10.5Z" /><circle cx="12" cy="10.5" r="3.4" fill="#0b0810" /><circle cx="12" cy="10.5" r="1.6" /><path {...LINE} d="M12 16.6v5M8.5 15.8 6.5 20M15.5 15.8l2 4.2" /></>,
 };
 const NavIcon = ({ href }: { href: string }) => (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{NAV_ICONS[href]}</svg>
 );
-const TAB_LABELS: Record<string, string> = { "/deck-builder": "Deck" };
+const TAB_LABELS: Record<string, string> = { "/collection": "Cards", "/deck-builder": "Deck", "/bots-arena": "Arena" };
 
 /** "Stage 3 · Solo", or "Stage 3 · vs Kaiba" in duo, under the duelist's name in both bars. */
 const stageLine = (series: { currentSetIndex: number; mode?: string; members?: { id: string; duelistName: string }[] } | null | undefined, userId?: string | null) => {

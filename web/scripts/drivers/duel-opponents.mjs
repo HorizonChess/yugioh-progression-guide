@@ -1,12 +1,12 @@
-// Choosing who to practice against, chess.com style: "Duel the bot" opens the roster (the practice
-// bot, then the duelists from the anime, weakest first, each with their face and rating). Picking
+// Choosing who to practice against, chess.com style: the Bots Arena's roster (the practice
+// bot and solo, then the duelists from the anime, weakest first, each with their face and rating). Picking
 // one puts them on the stage, with their eras to choose from; the match is against them, by name,
 // and the choice is remembered for next time. A guest practice match.
 //
 //   npm run test-server -w @ygo/api
 //   node web/scripts/drivers/duel-opponents.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame } from "./_lib.mjs";
+import { launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, throughPregame, openBotsArena } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 let failures = 0;
@@ -32,21 +32,17 @@ const btn = (name) => page.getByRole("button", { name, exact: true });
 const radio = (name) => page.getByRole("radio", { name, exact: true });
 try {
     await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }), "ygo-guide": "off" });
-    await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-    const old = btn("End it, start a new one"), practice = btn("Practice against the bot");
-    await old.or(practice).first().waitFor({ timeout: 15000 });
-    if (await old.count()) await old.click();
-    await practice.click();
+    await openBotsArena(page);
 
-    // The roster: the practice bot, then sixteen duelists in three groups, weakest first.
+    // The roster: the practice bot and solo, then sixteen duelists in three groups, weakest first.
     const roster = page.getByRole("radiogroup", { name: "Opponents" });
     await roster.waitFor({ timeout: 5000 });
     const names = await roster.getByRole("radio").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")));
-    check(names.length === 17 && names[0] === "Practice Bot", `the roster has the practice bot and 16 duelists (${names.length})`);
+    check(names.length === 18 && names[0] === "Practice Bot" && names[1] === "Solo", `the roster has the practice bot, solo and 16 duelists (${names.length})`);
     const groups = await page.locator(".op-group h4").allTextContents();
     check(groups.join(",") === "Practice,Beginner,Intermediate,Advanced", `grouped by strength (${groups.join(", ")})`);
     const ratings = await page.locator(".op-tile small").allTextContents();
-    const numbers = ratings.slice(1).map(Number);
+    const numbers = ratings.slice(2).map(Number);
     check(numbers.every((n, i) => i === 0 || n >= numbers[i - 1]), `weakest first (${numbers.join(" ")})`);
     const faces = await page.locator(".op-face:not(.op-face--bot)").evaluateAll((els) => els.filter((e) => /sprites\//.test(getComputedStyle(e).backgroundImage)).length);
     check(faces === 16, `each duelist shows their face (${faces})`);
@@ -70,7 +66,7 @@ try {
 
     // Remembered on the next visit.
     await page.reload({ waitUntil: "networkidle" });
-    await practice.click();
+    await page.getByRole("radiogroup", { name: "Opponents" }).waitFor({ timeout: 15000 });
     check((await page.locator(".op-name").textContent()) === "Joey Wheeler" && (await radio("Battle City").getAttribute("aria-checked")) === "true", "the choice is remembered");
 
     // The match is against him.

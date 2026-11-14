@@ -249,8 +249,33 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(stored!.setup.shown).toMatchObject({ [sangan.code]: 26202165 });
         // Reinforcements has a 2005 GOAT version, which a 2002 set plays too.
         expect(Object.values(stored!.setup.shown)).toContain(17814387);
-        // Practice records nothing on the series.
+        // Practice records nothing on the series; the match goes on your record against the bots.
         expect((await seriesCollection(app.db).findOne({ _id: new ObjectId(id) }))!.matchHistory).toEqual([]);
+        const won = end.match!.winner;
+        expect((await yugi.call('GET', '/api/duels/practice/record')).json().record).toEqual({ bot: { won: won === 'me' ? 1 : 0, lost: won === 'opp' ? 1 : 0, drawn: won === null ? 1 : 0 } });
+        // The last game's summary says who won the match (by `players`).
+        const last = (await lookAt(games.at(-1)!, { cookie: yugi.cookie })).duel;
+        expect(last.match.winner).toBe(won === null ? null : last.players.findIndex((p: { bot: boolean }) => p.bot === (won === 'opp')));
+    });
+
+    it('plays a single game against the bot when asked: the match is decided by that one game', async () => {
+        const body = { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot', games: 1 };
+        // Only against the bot: solo is one game anyway, and a match has 1 or 3 games.
+        expect((await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { ...body, against: 'solo' } })).statusCode).toBe(400);
+        expect((await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { ...body, games: 2 } })).statusCode).toBe(400);
+        const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: body });
+        expect(started.statusCode).toBe(201);
+        const { duel, token } = started.json();
+        expect(duel).toMatchObject({ status: 'pregame', match: { game: 1, games: 1, wins: [0, 0] } });
+        expect((await lookAt(duel.id, { 'x-duel-token': token })).pregame).toMatchObject({ game: 1, games: 1 });
+
+        const { ends, games } = await playMatch([{ name: 'Guest', token }], duel.id);
+        expect(games).toHaveLength(1);
+        const end = ends[0]!;
+        expect(end.match).toMatchObject({ game: 1, games: 1, over: true });
+        expect(end.match!.next).toBeUndefined();
+        // The game's winner is the match's.
+        expect(end.match!.winner).toBe(end.result!.winner);
     });
 
     it('lets a guest practice solo: the duel opens only with its token, and the opponent never plays', async () => {
@@ -476,6 +501,8 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(setup.decks[his]!.main.length).toBe(joey.main.length);
         expect(setup.decks[his]!.extra.length).toBe(joey.extra.length);
         expect(setup.botLevel).toBe('normal');
+        // Its summary says who the bot is.
+        expect(started.json().duel.players).toContainEqual({ name: 'Joey Wheeler', bot: true, duelist: 'joey', era: 'bc' });
     });
 
     it('lets the rival accept a challenge, plays it out, and records the result on the series', async () => {
@@ -632,6 +659,6 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(stored!.match.current.find((d: { side: number[] }) => d.side.includes(DECK[0]!))).toMatchObject(swapped);
         // Losing again loses the match, 0-2: no third game.
         await app.inject({ method: 'POST', url: `/api/duels/${next}/concede`, headers: mine });
-        expect((await lookAt(next, mine)).match).toEqual({ game: 2, score: [0, 2], over: true, winner: 'opp' });
+        expect((await lookAt(next, mine)).match).toEqual({ game: 2, games: 3, score: [0, 2], over: true, winner: 'opp' });
     });
 });

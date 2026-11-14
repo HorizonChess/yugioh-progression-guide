@@ -1,12 +1,12 @@
-// The Play / Record board: it opens on playing the duel here, with one main way to play; a duel
-// played somewhere else is recorded from the link under it. In a duo series, practice stays on
-// offer while your challenge waits for the rival.
+// The Play / Record board: solo, it records a result (practice is the Bots Arena's); in a duo
+// series it opens on challenging the rival, and practice in the arena still starts while your
+// challenge waits.
 //
 //   npm run test-server -w @ygo/api
 //   NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web
 //   node web/scripts/drivers/play-record.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, practiceAgainstBot } from "./_lib.mjs";
+import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, practiceAgainstBot, openBotsArena } from "./_lib.mjs";
 
 const API = process.env.API_BASE || "http://localhost:4100";
 const phone = process.env.PHONE === "1";
@@ -25,26 +25,23 @@ const save = makeSave({ currentSetIndex: 0, collection: Object.fromEntries(MAIN.
 const browser = await launchBrowser();
 const errors = [];
 try {
-    // 1. A guest: the board opens on playing here.
+    // 1. A guest (solo): the board is for recording a result; practice is the Bots Arena's.
     const page = await browser.newPage(size);
     page.on("pageerror", (e) => errors.push(e.message));
     await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }), "ygo-guide": "off" });
     await page.goto(`${BASE}/timeline/`, { waitUntil: "networkidle" });
     check((await page.getByRole("link", { name: "Play / Record" }).count()) > 0, "the campaign button reads Play / Record");
     await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-    const bot = page.getByRole("button", { name: "Practice against the bot" });
-    await bot.waitFor({ timeout: 15000 });
-    check((await page.getByText("Play the duel").count()) > 0, "the board is headed Play the duel");
-    check(await bot.evaluate((el) => el.classList.contains("dl-slab--main")), "solo: dueling the bot is the main way to play");
-    check((await page.getByRole("button", { name: "Record a victory" }).count()) === 0, "the result tablets aren't up yet");
-    await page.screenshot({ path: outPath(`play-record-play-${tag}.png`) });
-    await page.getByRole("button", { name: /Record the result/ }).click();
-    await page.getByRole("button", { name: "Record a victory" }).waitFor({ timeout: 8000 });
-    check((await page.getByText("Record the duel").count()) > 0, "the link under it opens the result tablets");
+    await page.getByRole("button", { name: "Record a victory" }).waitFor({ timeout: 15000 });
+    check((await page.getByText("Record the duel").count()) > 0, "solo: the board opens on the result tablets");
+    check((await page.getByRole("button", { name: /Practice against the bot|Duel the bot/ }).count()) === 0, "with no practice on it");
     await page.screenshot({ path: outPath(`play-record-record-${tag}.png`) });
-    await page.getByRole("button", { name: /Play it here instead/ }).click();
-    await bot.waitFor({ timeout: 8000 });
-    check(true, "and back to playing here");
+    const arena = page.locator('nav[aria-label="Main"] a[href*="bots-arena"]:visible').first();
+    check((await arena.count()) > 0, "the Bots Arena is in the nav");
+    await arena.click();
+    await page.waitForURL(/bots-arena/, { timeout: 15000 });
+    await page.getByRole("radiogroup", { name: "Opponents" }).waitFor({ timeout: 15000 });
+    check(true, "and it opens the arena");
     await page.close();
 
     // 2. A duo series: the challenge is the main way; with it sent, practice is still on offer.
@@ -92,9 +89,9 @@ try {
     await yugi.page.screenshot({ path: outPath(`play-record-duo-${tag}.png`) });
     await challenge.click();
     await yugi.page.getByText(/Waiting for .* to accept your challenge/).waitFor({ timeout: 10000 }).catch(() => {});
-    const meanwhile = yugi.page.getByRole("button", { name: "Practice against the bot" });
-    check((await meanwhile.count()) === 1, "with the challenge sent, practice against the bot is still offered");
     await yugi.page.screenshot({ path: outPath(`play-record-waiting-${tag}.png`) });
+    // With the challenge sent, practice in the Bots Arena still starts.
+    await openBotsArena(yugi.page);
     await practiceAgainstBot(yugi.page);
     await yugi.page.waitForURL(/duel/, { timeout: 30000 }).catch(() => {});
     check(/duel/.test(yugi.page.url()), "and it starts while the challenge waits");

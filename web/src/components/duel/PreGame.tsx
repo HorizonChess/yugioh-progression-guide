@@ -8,7 +8,7 @@ import RpsShowdown, { RPS_HANDS, RpsCard, handLabel } from "./RpsShowdown";
 import "./duel-launcher.css";
 
 /*
- * Before a game of a match (best of 3). Game 1: rock-paper-scissors, and its winner chooses who
+ * Before a game of a match (best of 3, or against the bot a single game). Game 1: rock-paper-scissors, and its winner chooses who
  * goes first. Games 2 and 3: both players may swap cards with their side deck, and the loser of
  * the last game chooses who goes first. The server keeps what each player has done; this shows it
  * and sends the next step.
@@ -54,10 +54,10 @@ export default function PreGame({ duelId, view, busy, onAct, onGiveUp }: {
     return (
         <div className="df-arena">
             <div className="df-waiting dl pg">
-                <b className="rm-ask">Game {view.game} of 3</b>
-                <div className="pg-score" aria-label={`You ${view.score[0]}, ${rival} ${view.score[1]}`}>
+                <b className="rm-ask">{view.games === 1 ? "A single game" : `Game ${view.game} of ${view.games}`}</b>
+                {view.games > 1 && <div className="pg-score" aria-label={`You ${view.score[0]}, ${rival} ${view.score[1]}`}>
                     <span>You</span><b>{view.score[0]}</b><i>–</i><b>{view.score[1]}</b><span>{rival}</span>
-                </div>
+                </div>}
 
                 {rps && (tie ? (
                     <div className="dl-card"><RpsShowdown key={`tie-${tie}`} mine={tie} theirs={tie} rival={rival} compact /></div>

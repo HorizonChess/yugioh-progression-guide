@@ -16,15 +16,16 @@ export interface DuelSummary {
     kind: "practice" | "rival";
     /** `pregame`: a game of a match about to start (rock-paper-scissors, who goes first, side decking). */
     status: "waiting" | "pregame" | "active" | "finished" | "declined" | "cancelled";
-    /** A game of a best-of-3 match: which one, and the games won by each of `players`. */
-    match?: { game: number; wins: number[]; over: boolean };
+    /** A game of a match (best of 3, or a single game): which one, of how many, the games won by each of `players`, and once it's over who won it (null: drawn or called off). */
+    match?: { game: number; games: number; wins: number[]; over: boolean; winner?: number | null };
     /** The match's next game, once this one is over. */
     next?: string;
     setName: string;
     mode: DuelModeId;
     challenger: string;
     challengerId: string | null;
-    players: { name: string; bot: boolean }[];
+    /** A bot from the anime says who it is (`duelist`), in the deck of `era`. */
+    players: { name: string; bot: boolean; duelist?: string; era?: string }[];
     winner: 0 | 1 | null;
 }
 
@@ -36,10 +37,12 @@ export type PracticeOpponent = "bot" | "solo";
  * (their deck, at their own level), in one of their eras.
  */
 export type BotChoice = { level: BotLevel } | { duelist: { id: string; era?: string } };
-const botBody = (against: string, bot?: BotChoice) => (against === "bot" && bot ? bot : {});
+/** A match against the bot: best of 3, or a single game. */
+export type MatchGames = 1 | 3;
+const botBody = (against: string, bot?: BotChoice, games?: MatchGames) => (against === "bot" ? { ...bot, ...(games ? { games } : {}) } : {});
 
-export const startDuel = async (seriesId: string, deckId: string, against: PracticeOpponent | "rival", bot?: BotChoice) =>
-    (await apiRequest<{ duel: DuelSummary }>("POST", `/api/series/${seriesId}/duels`, { deckId, against, ...botBody(against, bot) })).duel;
+export const startDuel = async (seriesId: string, deckId: string, against: PracticeOpponent | "rival", bot?: BotChoice, games?: MatchGames) =>
+    (await apiRequest<{ duel: DuelSummary }>("POST", `/api/series/${seriesId}/duels`, { deckId, against, ...botBody(against, bot, games) })).duel;
 
 const TOKENS_KEY = "guestDuelTokens";
 const TOKEN_MS = 24 * 60 * 60_000;
@@ -68,10 +71,45 @@ const tokenHeader = (duelId: string): Record<string, string> | undefined => {
 };
 
 /** A guest's practice duel with a deck from this browser, at a set of the timeline. */
-export async function startGuestDuel(deck: { main: number[]; extra: number[]; side?: number[] }, setName: string, against: PracticeOpponent, bot?: BotChoice) {
-    const { duel, token } = await apiRequest<{ duel: DuelSummary; token: string }>("POST", "/api/duels/practice", { deck, setName, against, ...botBody(against, bot) });
+export async function startGuestDuel(deck: { main: number[]; extra: number[]; side?: number[] }, setName: string, against: PracticeOpponent, bot?: BotChoice, games?: MatchGames) {
+    const { duel, token } = await apiRequest<{ duel: DuelSummary; token: string }>("POST", "/api/duels/practice", { deck, setName, against, ...botBody(against, bot, games) });
     localStorage.setItem(TOKENS_KEY, JSON.stringify({ ...readTokens(), [duel.id]: { token, at: Date.now() } }));
     return duel;
+}
+
+/** Practice matches won, lost and drawn against each bot: by a duelist's id, or `bot` for the practice bot. */
+export type BotRecord = Record<string, { won: number; lost: number; drawn: number }>;
+export const practiceRecord = async () => (await apiRequest<{ record: BotRecord }>("GET", "/api/duels/practice/record")).record;
+
+const GUEST_RECORD_KEY = "ygo-bot-record";
+/**
+ * A guest's record against the bots, kept in this browser: their last practice match (followed to
+ * its last game) is counted once it's over, the first time it's looked at here.
+ */
+export async function guestPracticeRecord(): Promise<BotRecord> {
+    let kept: { record: BotRecord; counted: string[] } = { record: {}, counted: [] };
+    try {
+        kept = { ...kept, ...(JSON.parse(localStorage.getItem(GUEST_RECORD_KEY) ?? "{}") as Partial<typeof kept>) };
+    } catch {
+        // (Unreadable: start over.)
+    }
+    const last = lastGuestDuel();
+    let duel = last ? (await getDuel(last).catch(() => null))?.duel : null;
+    while (duel?.status === "finished" && duel.next) {
+        carryGuestToken(duel.id, duel.next);
+        duel = (await getDuel(duel.next).catch(() => null))?.duel;
+    }
+    const m = duel?.match;
+    if (duel && m?.over && m.winner !== undefined && !kept.counted.includes(duel.id)) {
+        const key = duel.players.find((p) => p.bot)?.duelist ?? "bot";
+        const r = (kept.record[key] ??= { won: 0, lost: 0, drawn: 0 });
+        if (m.winner === null) r.drawn++;
+        else if (duel.players[m.winner]?.bot) r.lost++;
+        else r.won++;
+        kept.counted = [...kept.counted, duel.id].slice(-50);
+        localStorage.setItem(GUEST_RECORD_KEY, JSON.stringify(kept));
+    }
+    return kept.record;
 }
 
 export const openDuels = async (seriesId: string) => (await apiRequest<{ duels: DuelSummary[] }>("GET", `/api/series/${seriesId}/duels/open`)).duels;

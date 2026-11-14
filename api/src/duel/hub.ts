@@ -33,6 +33,8 @@ import { DUEL_RULES, DuelSession, type DuelSetup, type Team } from '@ygo/duel/se
  * goes first (a coin, after a drawn game). The series is booked once, when the match is decided.
  */
 
+export type MatchGames = 1 | 3;
+
 /** A player's place in a match: fixed for all its games (the team, who goes first, changes). */
 export type Seat = 0 | 1;
 
@@ -40,6 +42,8 @@ export interface MatchInfo {
     /** The match's id: its first game's. */
     id: ObjectId;
     game: number;
+    /** The most games it's played over: 3 (best of 3), or 1 (a single game, against the bot). Absent: 3. */
+    games?: MatchGames;
     /** Games won, by seat. */
     wins: [number, number];
     /** The decks as registered for the match, by seat: side decking only moves cards within one. */
@@ -128,6 +132,8 @@ export const duelsCollection = (db: Db) => db.collection<DuelDoc>('duels');
 export async function ensureDuelIndexes(db: Db): Promise<void> {
     await duelsCollection(db).createIndex({ openKey: 1 }, { unique: true, partialFilterExpression: { openKey: { $exists: true } } });
     await duelsCollection(db).createIndex({ seriesId: 1, createdAt: -1 });
+    // A player's practice record (GET /duels/practice/record).
+    await duelsCollection(db).createIndex({ challengerId: 1, kind: 1 });
     await duelsCollection(db).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 }
 
@@ -151,9 +157,9 @@ export type DuelProblem = 'no-set' | 'no-deck' | 'deck-illegal' | 'unknown-card'
 
 export interface DuelHub {
     /** Starts a practice duel or challenges the rival. */
-    create(input: { seriesId: ObjectId; userId: ObjectId; name: string; deck: Deck; deckId: string; against: Opponent | 'rival'; level?: BotLevel; duelist?: PracticeDuelist }): Promise<DuelDoc | DuelProblem>;
+    create(input: { seriesId: ObjectId; userId: ObjectId; name: string; deck: Deck; deckId: string; against: Opponent | 'rival'; level?: BotLevel; duelist?: PracticeDuelist; games?: MatchGames }): Promise<DuelDoc | DuelProblem>;
     /** A guest's practice duel at a set of the timeline, opened later with the returned token. */
-    createGuest(input: { deck: Deck; setName: string; against: Opponent; level?: BotLevel; duelist?: PracticeDuelist }): Promise<{ duel: DuelDoc; token: string } | DuelProblem>;
+    createGuest(input: { deck: Deck; setName: string; against: Opponent; level?: BotLevel; duelist?: PracticeDuelist; games?: MatchGames }): Promise<{ duel: DuelDoc; token: string } | DuelProblem>;
     accept(input: { duel: DuelDoc; userId: ObjectId; name: string; deck: Deck; deckId: string }): Promise<DuelDoc | DuelProblem>;
     /** Before a game: a hand thrown, who goes first chosen, or a side-decked deck handed in. */
     pregame(duel: DuelDoc, seat: Seat, action: PregameAction): Promise<DuelDoc | DuelProblem>;
@@ -356,6 +362,7 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
         const mine = seatOfTeam(duel, team), theirs = (1 - mine) as Seat;
         return {
             game: m.game,
+            games: m.games ?? 3,
             score: [m.wins[mine], m.wins[theirs]],
             over: !!m.over,
             ...(m.over ? { winner: m.winner === undefined || m.winner === null ? null : m.winner === mine ? ('me' as const) : ('opp' as const) } : {}),
@@ -410,11 +417,11 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
     }
 
     /** The first pregame of a match between two seated players, with the decks they registered. */
-    function openMatch(id: ObjectId, players: DuelPlayer[], decks: [MatchDeck, MatchDeck]): Pick<DuelDoc, 'status' | 'players' | 'match' | 'pre'> {
+    function openMatch(id: ObjectId, players: DuelPlayer[], decks: [MatchDeck, MatchDeck], games: MatchGames = 3): Pick<DuelDoc, 'status' | 'players' | 'match' | 'pre'> {
         const duel = {
             status: 'pregame' as const,
             players,
-            match: { id, game: 1, wins: [0, 0] as [number, number], registered: decks, current: decks },
+            match: { id, game: 1, ...(games !== 3 ? { games } : {}), wins: [0, 0] as [number, number], registered: decks, current: decks },
             // Game 1 is played with the decks as registered.
             pre: { rps: [null, null], chooser: null, why: 'rps', first: null, decks: [decks[0], decks[1]] } as PreGame,
         };
@@ -455,8 +462,8 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
     }
 
     /**
-     * A game is over: the match's score moves, and either the match is decided (two wins, or three
-     * games played) and booked on the series, or the next game's pregame is opened.
+     * A game is over: the match's score moves, and either the match is decided (a majority of its
+     * games won, or all of them played) and booked on the series, or the next game's pregame is opened.
      */
     async function closeGame(duel: DuelDoc, winner: Team | null, calledOff: boolean) {
         const m = duel.match!;
@@ -472,7 +479,8 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
             m.winner = wonSeat;
         } else {
             if (wonSeat !== null) m.wins[wonSeat]++;
-            if (m.wins[0] >= 2 || m.wins[1] >= 2 || m.game >= 3) {
+            const games = m.games ?? 3, needed = Math.floor(games / 2) + 1;
+            if (m.wins[0] >= needed || m.wins[1] >= needed || m.game >= games) {
                 m.over = true;
                 m.winner = m.wins[0] === m.wins[1] ? null : m.wins[0] > m.wins[1] ? 0 : 1;
             }
@@ -534,22 +542,22 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
     const setDate = async (duel: Pick<DuelDoc, 'setName'>) => (await app.catalog.timeline()).find((s) => s.set_name === duel.setName)?.tcg_date;
 
     /**
-     * A practice duel. Against the bot it's a match like any other, opening on its pregame: the bot
+     * A practice duel. Against the bot it's a match like any other (best of 3, or a single game), opening on its pregame: the bot
      * plays a mirror of your deck, or as a duelist from the anime, their deck at their own level.
      * Solo, where the opponent only passes, is one game: it's set up here, and a coin decides who
      * goes first.
      */
-    async function practice(id: ObjectId, me: DuelPlayer, deck: Deck, date: string | undefined, mode: DuelModeId, against: Opponent, level: BotLevel = 'normal', chosen?: PracticeDuelist): Promise<Partial<DuelDoc>> {
+    async function practice(id: ObjectId, me: DuelPlayer, deck: Deck, date: string | undefined, mode: DuelModeId, against: Opponent, level: BotLevel = 'normal', chosen?: PracticeDuelist, games: MatchGames = 3): Promise<Partial<DuelDoc>> {
         const duelist = against === 'bot' && chosen ? duelistById(chosen.id) : undefined;
         if (duelist) {
             const { era, deck: theirs } = duelistDeck(duelist, chosen?.era);
             const bot: DuelPlayer = { userId: null, name: duelist.name, deckId: null, bot: true, level: duelist.level, duelist: duelist.id, era: era.id };
-            return openMatch(id, [me, bot], [deck, { main: theirs.main, extra: theirs.extra, side: [] }]);
+            return openMatch(id, [me, bot], [deck, { main: theirs.main, extra: theirs.extra, side: [] }], games);
         }
         const bot: DuelPlayer = against === 'solo'
             ? { userId: null, name: 'Solo Practice', deckId: null, bot: true }
             : { userId: null, name: BOT_NAMES[level], deckId: null, bot: true, level };
-        if (against === 'bot') return openMatch(id, [me, bot], [deck, deck]);
+        if (against === 'bot') return openMatch(id, [me, bot], [deck, deck], games);
         const players = randomBytes(1)[0]! & 1 ? [me, bot] : [bot, me];
         const shown: Record<string, number> = {};
         const played = await playedAt(deck, date, shown);
@@ -627,7 +635,7 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
                 return (await duels().findOne({ _id: duel._id })) ?? duel;
             });
         },
-        async create({ seriesId, userId, name, deck, deckId, against, level, duelist }) {
+        async create({ seriesId, userId, name, deck, deckId, against, level, duelist, games }) {
             const at = await setOf(seriesId);
             if (!at) return 'finished';
             if ((await unknownCards([...deck.main, ...deck.extra, ...deck.side])).length) return 'unknown-card';
@@ -658,7 +666,7 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
                 updatedAt: now,
             };
             if (solo) {
-                Object.assign(doc, await practice(doc._id, me, deck, at.set.tcg_date, mode, against, level, duelist));
+                Object.assign(doc, await practice(doc._id, me, deck, at.set.tcg_date, mode, against, level, duelist, games));
             } else {
                 doc.challengerDeck = deck;
             }
@@ -671,7 +679,7 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
             if (doc.status === 'active') await start(doc);
             return doc;
         },
-        async createGuest({ deck, setName, against, level, duelist }) {
+        async createGuest({ deck, setName, against, level, duelist, games }) {
             const timeline = await app.catalog.timeline();
             const setIndex = timeline.findIndex((s) => s.set_name === setName);
             const set = timeline[setIndex];
@@ -692,7 +700,7 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
                 status: 'active',
                 players: [],
                 setup: null,
-                ...(await practice(_id, me, deck, set.tcg_date, mode, against, level, duelist)),
+                ...(await practice(_id, me, deck, set.tcg_date, mode, against, level, duelist, games)),
                 challengerId: null,
                 guestTokenHash: hashGuestToken(token),
                 expiresAt: new Date(now.getTime() + GUEST_DUEL_MS),
@@ -759,6 +767,7 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
             const side = (s: Seat) => (s === seat ? ('me' as const) : ('opp' as const));
             return {
                 game: m.game,
+                games: m.games ?? 3,
                 score: [m.wins[seat], m.wins[other]],
                 rival: { name: rival.name, bot: rival.bot },
                 ...(pre.chooser === null ? { rps: { mine: pre.rps[seat], ...(pre.tied ? { tied: pre.tied } : {}) } } : {

@@ -102,13 +102,34 @@ export function reward(overrides = {}) {
 }
 
 /**
- * Starts a practice match against the practice bot (it plays a mirror of your deck): "Duel the bot"
- * opens the choice of opponent, where the practice bot is picked and the match is started.
+ * Opens the Bots Arena (/bots-arena/), ending a practice match still open from an earlier run
+ * (its banner's "End it"), so a new one can start.
+ */
+export async function openBotsArena(page) {
+    await page.goto(`${BASE}/bots-arena/`, { waitUntil: "networkidle" });
+    await page.getByRole("radiogroup", { name: "Opponents" }).waitFor({ timeout: 15000 });
+    const end = page.getByRole("button", { name: "End it", exact: true });
+    // (The open match is looked up after the page draws.)
+    await end.waitFor({ timeout: 2500 }).catch(() => {});
+    if (await end.count()) {
+        await end.click();
+        await end.waitFor({ state: "detached", timeout: 15000 });
+    }
+}
+
+/**
+ * Starts a practice match against the practice bot (it plays a mirror of your deck), in the Bots
+ * Arena (open it first): the practice bot is picked and the match is started.
  */
 export async function practiceAgainstBot(page) {
-    await page.getByRole("button", { name: "Practice against the bot", exact: true }).click();
     await page.getByRole("radio", { name: "Practice Bot", exact: true }).click();
     await page.getByRole("button", { name: /^Duel the bot/ }).click();
+}
+
+/** Starts a solo duel (the opponent only passes its turns), in the Bots Arena (open it first). */
+export async function soloDuel(page) {
+    await page.getByRole("radio", { name: "Solo", exact: true }).click();
+    await page.getByRole("button", { name: "Start a solo duel", exact: true }).click();
 }
 
 /**

@@ -13,6 +13,7 @@ import type { DuelPregameView, PregameAction } from "@ygo/shared";
 import type { LocalGame } from "@/components/duel/useDuel";
 import PreGame from "@/components/duel/PreGame";
 import { gameConfirm } from "@/components/ui/GameDialog";
+import { latestDeck, markDeckUsed } from "@/lib/deck-choice";
 import { ruleLines } from "@/lib/guide/lines";
 import { guide } from "@/lib/guide/store";
 import "@/components/duel/duel-field.css";
@@ -87,14 +88,16 @@ function DuelPageContent() {
         // eslint-disable-next-line react-hooks/exhaustive-deps -- once per duel
     }, [active, duel?.id]);
 
+    // Where leaving goes: practice back to the Bots Arena, a duel with the rival to Play / Record.
+    const home = duel?.kind === "rival" ? "/record-match" : "/bots-arena";
     if (hasToken === null && !user) return <Message text="Shuffling the decks…" />;
-    if (!allowed) return <Message text="Sign in to duel." onBack={() => router.push("/record-match")} />;
-    if (error) return <Message text={error} onBack={() => router.push("/record-match")} />;
+    if (!allowed) return <Message text="Sign in to duel." onBack={() => router.push(home)} />;
+    if (error) return <Message text={error} onBack={() => router.push(home)} />;
     // (Also between a match's games: the next game's page, while its duel loads.)
     if (!id || !duel || duel.id !== id) return <Message text="Shuffling the decks…" />;
     if (broken && duel.status === "active") {
         const rival = duel.kind === "rival";
-        const end = () => void concedeDuel(id).then(() => router.push("/record-match")).catch((e: Error) => setError(e.message));
+        const end = () => void concedeDuel(id).then(() => router.push(home)).catch((e: Error) => setError(e.message));
         // The duel as stored, saved as a file: sent with a bug report, it replays the duel exactly.
         const save = () => void getDuelRecord(id).then((record) => {
             const a = document.createElement("a");
@@ -111,7 +114,7 @@ function DuelPageContent() {
                         <p><small>{broken}</small></p>
                         <button type="button" className="dl-btn" onClick={save}>Download the duel record</button>
                         <button type="button" className="dl-btn" onClick={end}>{rival ? "End it (it counts as a loss)" : "End this duel"}</button>
-                        <button type="button" className="dl-btn" onClick={() => router.push("/record-match")}>Back</button>
+                        <button type="button" className="dl-btn" onClick={() => router.push(home)}>Back</button>
                     </div>
                 </div>
             </div>
@@ -121,7 +124,7 @@ function DuelPageContent() {
     if (duel.status === "waiting" && user) {
         const mine = duel.challengerId === user.id;
         const legal = savedDecks.filter((d) => d.mainDeck.length >= 40 && d.mainDeck.length <= 60);
-        const chosen = deckId || legal[0]?.id || "";
+        const chosen = deckId || latestDeck(legal)?.id || "";
         return (
             <div className="df-arena">
                 <div className="df-waiting dl">
@@ -134,7 +137,7 @@ function DuelPageContent() {
                             </label>
                         ) : <p className="dl-note">Build a deck of 40 to 60 cards first.</p>)}
                         <div className="dl-row">
-                            {!mine && <button type="button" className="dl-btn dl-btn--main" disabled={!chosen} onClick={() => acceptDuel(duel.id, chosen).then(setDuel, (e: Error) => setError(e.message))}>Accept</button>}
+                            {!mine && <button type="button" className="dl-btn dl-btn--main" disabled={!chosen} onClick={() => { markDeckUsed(chosen); acceptDuel(duel.id, chosen).then(setDuel, (e: Error) => setError(e.message)); }}>Accept</button>}
                             <button type="button" className="dl-btn dl-btn--quiet" onClick={() => declineDuel(duel.id).finally(() => router.push("/record-match"))}>{mine ? "Withdraw" : "Decline"}</button>
                         </div>
                     </div>
@@ -155,13 +158,13 @@ function DuelPageContent() {
             if (!(await gameConfirm(rival ? <>Give the match up? It counts as a loss for the series.</> : <>End this practice match?</>, { title: "Give up?", confirmLabel: "Give up", cancelLabel: "Keep playing" }))) return;
             await concedeDuel(id).catch((e: Error) => setError(e.message));
             if (duel.seriesId) await refresh(duel.seriesId);
-            router.push(rival ? "/rewards" : "/record-match");
+            router.push(rival ? "/rewards" : home);
         };
         return <PreGame duelId={id} view={pregame} busy={acting} onAct={act} onGiveUp={() => void giveUp()} />;
     }
     if (duel.status === "pregame") return <Message text="Shuffling the decks…" />;
-    if (duel.status === "cancelled") return <Message text="That duel was called off. Nothing was recorded, and a new challenge can be sent." onBack={() => router.push("/record-match")} />;
-    if (duel.status === "declined") return <Message text="That challenge was turned down." onBack={() => router.push("/record-match")} />;
+    if (duel.status === "cancelled") return <Message text="That duel was called off. Nothing was recorded, and a new challenge can be sent." onBack={() => router.push(home)} />;
+    if (duel.status === "declined") return <Message text="That challenge was turned down." onBack={() => router.push(home)} />;
     if (local?.id !== duel.id) return <Message text="Shuffling the decks…" />;
 
     return (
@@ -178,7 +181,7 @@ function DuelPageContent() {
                 onLeave={async (outcome) => {
                     if (duel.seriesId) await refresh(duel.seriesId);
                     // A duel called off has no reward to go to.
-                    router.push(duel.kind === "practice" || outcome === null ? "/record-match" : "/rewards");
+                    router.push(duel.kind === "practice" || outcome === null ? home : "/rewards");
                 }}
             />
             {series && <GuideSprite />}

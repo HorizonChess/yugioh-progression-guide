@@ -6,7 +6,7 @@
 //   NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web
 //   node web/scripts/drivers/duel-match.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, practiceAgainstBot } from "./_lib.mjs";
+import { launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, practiceAgainstBot, openBotsArena } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 const tag = phone ? "phone" : "desktop";
@@ -36,11 +36,7 @@ const surrender = async () => {
 };
 try {
     await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }), "ygo-guide": "off" });
-    await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-    const old = page.getByRole("button", { name: "End it, start a new one" });
-    const practice = page.getByRole("button", { name: "Practice against the bot" });
-    await old.or(practice).first().waitFor({ timeout: 15000 });
-    if (await old.count()) await old.click();
+    await openBotsArena(page);
     await practiceAgainstBot(page);
     await page.waitForURL(/duel/, { timeout: 30000 });
 
@@ -94,9 +90,10 @@ try {
     check(((await page.locator(".df-result__score").textContent()) ?? "").replace(/\s/g, "") === "You0–2PracticeBot", "two games lost lose the match, 0–2");
     await page.screenshot({ path: outPath(`duel-match-over-${tag}.png`) });
     await button("Back to the board").click();
-    await page.waitForURL(/record-match/, { timeout: 15000 });
-    await practice.waitFor({ timeout: 15000 });
-    check((await old.count()) === 0, "no match is left open: a new one can start");
+    await page.waitForURL(/bots-arena/, { timeout: 15000 });
+    await page.getByRole("radiogroup", { name: "Opponents" }).waitFor({ timeout: 15000 });
+    await page.waitForTimeout(2500);
+    check((await page.getByRole("button", { name: "End it", exact: true }).count()) === 0, "no match is left open: a new one can start");
     check(errors.length === 0, `no page errors ${errors.join(" | ")}`);
 } finally {
     await browser.close();

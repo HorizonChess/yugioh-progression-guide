@@ -395,7 +395,7 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
     const phaseBar = (
         <div className="df-phases">
             <span className="df-turn">
-                <b>Turn {view.turn}{state.match ? ` · G${state.match.game} ${state.match.score[0]}–${state.match.score[1]}` : ""}</b>
+                <b>Turn {view.turn}{state.match && state.match.games > 1 ? ` · G${state.match.game} ${state.match.score[0]}–${state.match.score[1]}` : ""}</b>
                 <span>{view.turnPlayer === "me" ? "Your turn" : `${view.opp.name}'s turn`}</span>
             </span>
             <div className="df-phases__pills" role="tablist" aria-label="Phases">
@@ -512,7 +512,7 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
             <button key={c.uid} type="button" className="df-listcard" onClick={() => look(c.code)}><img src={cardImage(c.code)} alt="" /><span>{name(c.code)}</span></button>
         ))}</div>{option("Close", () => setBrowse(null), { quiet: true })}</>, { onSwipe: () => setBrowse(null) });
     } else if (duelMenu === "surrender") {
-        question = sheet("Surrender this duel?", <div className="df-sheet__options">{option("Surrender", () => (setDuelMenu("closed"), duel.concede()))}{option("Keep dueling", () => setDuelMenu("closed"), { quiet: true })}</div>, { text: state.match ? `${state.rival.name} takes game ${state.match.game} of the match${state.rival.bot ? ". It's only practice." : ", which counts for the series."}` : state.rival.bot ? "It's only practice." : `${state.rival.name} wins the duel, and the result counts for the series.`, onSwipe: () => setDuelMenu("closed") });
+        question = sheet("Surrender this duel?", <div className="df-sheet__options">{option("Surrender", () => (setDuelMenu("closed"), duel.concede()))}{option("Keep dueling", () => setDuelMenu("closed"), { quiet: true })}</div>, { text: state.match && state.match.games > 1 ? `${state.rival.name} takes game ${state.match.game} of the match${state.rival.bot ? ". It's only practice." : ", which counts for the series."}` : state.rival.bot ? "It's only practice." : `${state.rival.name} wins the duel, and the result counts for the series.`, onSwipe: () => setDuelMenu("closed") });
     } else if (duelMenu === "log") {
         // Phones have no room for the log beside the board: it's here, the latest first.
         question = sheet("What happened", <>
@@ -757,7 +757,8 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
                 <motion.div className="df-result" {...STEADY} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <div className={`df-result__card df-result__card--${result.winner ?? "draw"}`}>
                         {(() => {
-                            const m = result.calledOff ? undefined : state.match;
+                            // (A single game against the bot is a match of one: it reads as a plain duel.)
+                            const m = result.calledOff || state.match?.games === 1 ? undefined : state.match;
                             const rival = view.opp.name;
                             // A game of a match that isn't decided yet: on to the next. Otherwise it's over, and the match's winner counts.
                             const going = m && !m.over && m.next;

@@ -1,0 +1,185 @@
+/* The Bots Arena (BotsArena), as chess.com's bots: the one chosen on a stage at the side, everyone
+   else as faces in a roster, weakest first. The panel is the game's lacquer tablet with a gold
+   edge (as its dialogs, game-dialog.css). */
+.ba-screen { height: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.op {
+  position: relative; display: grid; grid-template-columns: minmax(300px, 380px) 1fr; width: min(100%, 1040px); height: min(100%, 720px);
+  border-radius: 4px; color: #f1e7cc; overflow: hidden;
+  background: radial-gradient(120% 90% at 30% 0%, rgba(120, 80, 20, 0.42), transparent 62%), linear-gradient(170deg, rgba(40, 28, 14, 0.98), rgba(14, 10, 6, 0.97));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 224, 138, 0.55), inset 0 0 0 5px rgba(14, 10, 6, 0.9), inset 0 0 0 6px rgba(255, 224, 138, 0.22),
+    0 0 34px rgba(212, 175, 55, 0.28), 0 22px 50px rgba(0, 0, 0, 0.7);
+}
+/* the gold rule across the top */
+.op::before {
+  content: ""; position: absolute; left: 18px; right: 18px; top: 0; height: 3px; border-radius: 0 0 3px 3px; z-index: 1;
+  background: linear-gradient(90deg, transparent, #ffe08a 20%, #fff1bf 50%, #ffe08a 80%, transparent);
+}
+
+/* ---- the stage: the one chosen, then your deck and the button */
+/* (Nothing in a column may push it wider than the screen: large system text included.) */
+.op-side, .op-list, .op-tile { min-width: 0; }
+.op .dl-deck select { min-width: 0; max-width: 100%; }
+.op .dl-row { flex-wrap: wrap; }
+.op-side { display: flex; flex-direction: column; gap: 12px; min-height: 0; padding: 22px 22px 20px; overflow-y: auto; border-right: 1px solid rgba(255, 224, 138, 0.16); }
+.op-stage { display: flex; flex-direction: column; gap: 12px; }
+.op-figure {
+  height: clamp(200px, 40vh, 340px); display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 6px;
+  background: radial-gradient(ellipse 60% 50% at 50% 78%, rgba(245, 197, 66, 0.3), transparent 70%), rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(224, 181, 79, 0.35), inset 0 -20px 26px rgba(0, 0, 0, 0.45);
+}
+.op-figure img { height: 100%; width: auto; max-width: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.65)); animation: op-step 0.35s ease-out; }
+.op-figure--bot { align-items: center; }
+.op-figure--bot svg { width: 96px; color: #ffe08a; filter: drop-shadow(0 0 10px rgba(255, 200, 90, 0.6)); }
+@keyframes op-step { from { opacity: 0; translate: 12px 0; } }
+.op-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; text-align: left; }
+.op-name { font: 900 24px/1.1 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; color: #f5c542; text-shadow: 0 2px 8px #000; }
+.op-rating { font: 800 11px/1.2 var(--font-display); letter-spacing: 0.2em; text-transform: uppercase; color: #c9bc9a; }
+.op-rating i { font: 400 17px/1 var(--font-techno); font-style: normal; letter-spacing: 0.04em; color: #ffe08a; }
+.op-blurb { margin: 0; font: 600 14px/1.45 var(--font-main); color: #e6d9b8; }
+.op-era { font: 800 10px/1 var(--font-display); letter-spacing: 0.22em; text-transform: uppercase; color: #f5c542; }
+.op-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.op-chip {
+  padding: 7px 10px; border: 1px solid rgba(201, 188, 154, 0.35); border-radius: 4px; cursor: pointer;
+  background: linear-gradient(#3a3226, #231d15); color: #d8ccae; font: 800 10.5px/1 var(--font-display); letter-spacing: 0.1em; text-transform: uppercase;
+  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.op-chip:hover:not(:disabled) { color: #f3e6c4; }
+.op-chip.is-on { border-color: #f5c542; color: #ffe08a; box-shadow: 0 0 0 1px rgba(245, 197, 66, 0.4), 0 0 10px rgba(245, 197, 66, 0.35); }
+.op-chip:disabled { opacity: 0.5; cursor: default; }
+.op-record { font: 700 12px/1.3 var(--font-main); color: #c9bc9a; }
+.op-record b { font: 400 15px/1 var(--font-techno); color: #ffe08a; }
+/* A match still going: it comes first. */
+.ba-open { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid rgba(245, 197, 66, 0.55); border-radius: 6px; background: rgba(245, 197, 66, 0.08); }
+.ba-open p { margin: 0; font: 600 13px/1.4 var(--font-main); }
+.op-credit { font: 600 11px/1.4 var(--font-main); color: #a89a7a; }
+.op-credit a { color: #e0b54f; text-decoration: underline; text-underline-offset: 2px; }
+.op-side .dl-deck { justify-content: space-between; }
+.op-side .dl-row { margin-top: auto; }
+.op .dl-btn { background: linear-gradient(#3a2c17, #21180c); }
+.op .dl-btn--main { background: linear-gradient(#f3d98a, #c99a3a); }
+.op .dl-btn--quiet { background: transparent; }
+
+/* ---- the roster */
+.op-list { display: flex; flex-direction: column; min-height: 0; padding: 22px 20px 16px; }
+.op-title { margin: 0 0 12px; font: 900 13px/1 var(--font-display); letter-spacing: 0.3em; text-transform: uppercase; color: #f5c542; text-align: left; }
+.op-roster { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; padding: 2px 6px 6px 2px; text-align: left; }
+.op-group h4 { margin: 0 0 8px; font: 800 10px/1 var(--font-display); letter-spacing: 0.26em; text-transform: uppercase; color: #c9bc9a; }
+.op-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.op-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 9px 4px 8px; border: 1px solid rgba(201, 188, 154, 0.25); border-radius: 6px; cursor: pointer;
+  background: linear-gradient(#3a3226, #231d15); color: #d8ccae; transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.op-tile:hover:not(:disabled) { border-color: rgba(245, 197, 66, 0.6); transform: translateY(-2px); }
+.op-tile.is-on { border-color: #f5c542; box-shadow: 0 0 0 1px rgba(245, 197, 66, 0.45), 0 0 14px rgba(245, 197, 66, 0.4); }
+.op-tile:disabled { opacity: 0.55; cursor: default; }
+/* the face: the top of the sprite (head and shoulders), in a round frame */
+.op-face {
+  width: 68px; height: 68px; border-radius: 50%; background-color: rgba(0, 0, 0, 0.35); background-repeat: no-repeat; background-size: auto 330%; background-position-y: 1%;
+  box-shadow: inset 0 0 0 2px rgba(224, 181, 79, 0.55), 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.op-tile.is-on .op-face { box-shadow: inset 0 0 0 2px #ffd76a, 0 0 12px rgba(255, 200, 90, 0.6); }
+.op-face--bot { display: grid; place-items: center; }
+.op-face--bot svg { width: 40px; color: #ffe08a; }
+.op-tile__name { max-width: 100%; font: 800 10px/1.15 var(--font-display); letter-spacing: 0.04em; text-transform: uppercase; text-align: center; overflow-wrap: break-word; hyphens: auto; }
+.op-tile small { font: 400 11px/1 var(--font-techno); color: #f5c542; }
+/* Your record against them, once you've played them. */
+.op-tile__record { font: 700 10px/1 var(--font-main); font-style: normal; letter-spacing: 0.04em; color: #9fe39f; }
+
+/* ---- a phone: the stage at the top (the figure beside what's said), the roster under it */
+@media (max-width: 760px) {
+  .ba-screen { padding: 0; align-items: stretch; }
+  .op { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); width: 100%; height: 100%; border-radius: 0; }
+  .op-side { padding: 16px 14px 12px; border-right: 0; border-bottom: 1px solid rgba(255, 224, 138, 0.16); overflow: visible; gap: 10px; }
+  .op-stage { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: center; }
+  .op-figure { height: 150px; }
+  .op-name { font-size: 18px; }
+  .op-blurb { font-size: 12.5px; }
+  .op-list { padding: 12px 12px 10px; }
+  .op-title { display: none; }
+  .op-tiles { grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+  .op-face { width: 56px; height: 56px; }
+}
+
+/* ==== The themes: stone cut from generated textures (public/ui/bots-arena, passed in as --ba-wall,
+   --ba-tile and --ba-stage). The wall is behind it all; each face in the roster is a tablet of the
+   stone; the one chosen stands on the stage slab. */
+.ba-screen[data-theme] { background: radial-gradient(90% 80% at 50% 45%, transparent 30%, rgba(0, 0, 0, 0.7)), var(--ba-wall) center / cover no-repeat #0b0805; }
+.ba-screen[data-theme] .op { backdrop-filter: blur(2px); }
+.ba-screen[data-theme] .op-tiles { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 12px; }
+.ba-screen[data-theme] .op-figure { height: clamp(180px, 33vh, 300px); }
+.ba-screen[data-theme] .op-figure {
+  position: relative; border-radius: 0; border: solid transparent; border-width: var(--ba-stage-w);
+  border-image: var(--ba-stage) var(--ba-stage-slice) fill / var(--ba-stage-w) round;
+  background: none; box-shadow: 0 12px 26px rgba(0, 0, 0, 0.65);
+}
+/* the light the one chosen stands in */
+.ba-screen[data-theme] .op-figure::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 55% 42% at 50% 92%, var(--ba-glow), transparent 70%);
+}
+.ba-screen[data-theme] .op-figure > * { position: relative; }
+.ba-screen[data-theme] .op-tile {
+  border: 0; border-radius: 0; padding: 17px 13px 16px; color: var(--ba-ink);
+  background: var(--ba-tile) center / 100% 100% no-repeat; filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.6));
+  transition: filter 0.15s, transform 0.15s;
+}
+.ba-screen[data-theme] .op-tile:hover:not(:disabled) { filter: drop-shadow(0 7px 8px rgba(0, 0, 0, 0.7)) brightness(1.08); }
+.ba-screen[data-theme] .op-tile.is-on { transform: translateY(-3px); box-shadow: none; filter: drop-shadow(0 0 1.5px #fff1bf) drop-shadow(0 0 9px rgba(245, 197, 66, 0.85)); }
+.ba-screen[data-theme] .op-tile__name { text-shadow: var(--ba-ink-shadow); }
+.ba-screen[data-theme] .op-tile small { color: var(--ba-ink-accent); font-weight: 700; }
+.ba-screen[data-theme] .op-tile__record { color: var(--ba-ink-good); }
+.ba-screen[data-theme] .op-face { box-shadow: inset 0 0 0 2px var(--ba-ring), 0 2px 5px rgba(0, 0, 0, 0.55); background-color: var(--ba-face); }
+.ba-screen[data-theme] .op-face--bot svg { color: var(--ba-ink-accent); }
+.ba-screen[data-theme] .op-chip { border-radius: 2px; background: var(--ba-chip); color: var(--ba-chip-ink); border-color: var(--ba-chip-edge); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 3px rgba(0, 0, 0, 0.45); }
+.ba-screen[data-theme] .op-chip.is-on { border-color: #f5c542; color: var(--ba-chip-on); box-shadow: inset 0 0 0 1px #f5c542, 0 0 10px rgba(245, 197, 66, 0.55); }
+
+/* Sandstone (in use): sandstone tablets on the hieroglyph wall; the chosen stands on obsidian. */
+.ba-screen[data-theme="sandstone"] {
+  --ba-stage-slice: 14; --ba-stage-w: 6px; --ba-glow: rgba(255, 170, 70, 0.32);
+  --ba-ink: #3a200c; --ba-ink-shadow: 0 1px 0 rgba(255, 230, 190, 0.45); --ba-ink-accent: #8c3510; --ba-ink-good: #1f6a2c;
+  --ba-ring: #6b4a1f; --ba-face: rgba(70, 40, 15, 0.35);
+  --ba-chip: linear-gradient(#d2a676, #a8784c); --ba-chip-ink: #3a200c; --ba-chip-edge: #6b4a1f; --ba-chip-on: #2a1606;
+}
+/* (Sandstone stands on the app's own wall.) */
+.ba-screen[data-theme="sandstone"] { background: none; }
+.ba-screen[data-theme="sandstone"] .op { background: radial-gradient(120% 90% at 30% 0%, rgba(150, 80, 20, 0.35), transparent 62%), rgba(24, 13, 5, 0.8); }
+
+/* Basalt and gold (kept for reference), a tomb at night. Dark basalt tablets with gold lotus borders; the chosen
+   stands on pale limestone in a gold scarab frame. */
+.ba-screen[data-theme="basalt"] {
+  --ba-stage-slice: 54; --ba-stage-w: 22px; --ba-glow: rgba(255, 255, 255, 0);
+  --ba-ink: #f1e2b4; --ba-ink-shadow: 0 1px 3px #000; --ba-ink-accent: #ffd76a; --ba-ink-good: #9fe39f;
+  --ba-ring: #d9b05a; --ba-face: rgba(255, 255, 255, 0.06);
+  --ba-chip: linear-gradient(#34343a, #17171b); --ba-chip-ink: #e2d3a8; --ba-chip-edge: rgba(217, 176, 90, 0.5); --ba-chip-on: #ffe08a;
+}
+.ba-screen[data-theme="basalt"] .op { background: radial-gradient(120% 90% at 30% 0%, rgba(60, 80, 140, 0.25), transparent 62%), rgba(6, 8, 16, 0.82); }
+.ba-screen[data-theme="basalt"] .op-figure img { filter: drop-shadow(0 6px 8px rgba(40, 25, 5, 0.55)); }
+
+/* Painted fresco (kept for reference). Cracked plaster tablets banded in ochre, turquoise and lapis on a painted
+   tomb wall; the chosen stands on lapis lazuli. */
+.ba-screen[data-theme="fresco"] {
+  --ba-stage-slice: 12; --ba-stage-w: 5px; --ba-glow: rgba(120, 200, 255, 0.28);
+  --ba-ink: #2c1a0c; --ba-ink-shadow: none; --ba-ink-accent: #1d3f9a; --ba-ink-good: #1d6b3a;
+  --ba-ring: #2b5fae; --ba-face: rgba(43, 95, 174, 0.15);
+  --ba-chip: linear-gradient(#f0e6cc, #d6c59c); --ba-chip-ink: #2c1a0c; --ba-chip-edge: #c27a2c; --ba-chip-on: #10307e;
+}
+.ba-screen[data-theme="fresco"] .op { background: radial-gradient(120% 90% at 30% 0%, rgba(40, 150, 140, 0.22), transparent 62%), rgba(10, 16, 38, 0.84); }
+.ba-screen[data-theme="fresco"] .op-name, .ba-screen[data-theme="fresco"] .op-title { color: #f0c24a; }
+/* (its painted bands are wide: what's said sits inside them) */
+.ba-screen[data-theme="fresco"] .op-tile { padding: 20px 15px 21px; }
+.ba-screen[data-theme="fresco"] .op-era, .ba-screen[data-theme="fresco"] .op-group h4 { color: #5fd0c0; }
+
+@media (max-width: 760px) {
+  .ba-screen[data-theme] { --ba-stage-w: 4px; }
+  .ba-screen[data-theme="basalt"] { --ba-stage-w: 10px; }
+  .ba-screen[data-theme] .op-tiles { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
+  .ba-screen[data-theme] .op-figure { height: 140px; }
+  .ba-screen[data-theme] .op-tile { padding: 12px 8px 11px; }
+  .ba-screen[data-theme] .op-face { width: 50px; height: 50px; }
+  .ba-screen[data-theme="fresco"] .op-tile { padding: 15px 11px 16px; }
+  .ba-screen[data-theme] .op-tile__name { font-size: 9px; }
+  /* the stage kept short, so the roster shows under it */
+  .ba-screen[data-theme] .op-chip { padding: 5px 7px; font-size: 9.5px; }
+  .ba-screen[data-theme] .op-side > .dl-note { display: none; }
+}

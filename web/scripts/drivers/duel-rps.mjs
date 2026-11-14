@@ -6,7 +6,7 @@
 //   npm run test-server -w @ygo/api   (WEB_DIST serves the built web on the same port)
 //   node web/scripts/drivers/duel-rps.mjs          (PHONE=1 for a phone)
 
-import { BASE, launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, practiceAgainstBot } from "./_lib.mjs";
+import { launchBrowser, makeSave, outPath, seedStorage, STORE_KEY, practiceAgainstBot, openBotsArena } from "./_lib.mjs";
 
 const phone = process.env.PHONE === "1";
 let failures = 0;
@@ -29,10 +29,7 @@ const seen = { win: false, lose: false, tie: false };
 try {
     await seedStorage(page, { [STORE_KEY]: JSON.stringify({ saves: [save], activeSaveId: save.id }), "ygo-guide": "off" });
     for (let attempt = 0; attempt < 12 && !(seen.win && seen.lose); attempt++) {
-        await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
-        const old = btn("End it, start a new one"), practice = btn("Practice against the bot");
-        await old.or(practice).first().waitFor({ timeout: 15000 });
-        if (await old.count()) await old.click();
+        await openBotsArena(page);
         await practiceAgainstBot(page);
         await page.waitForURL(/duel/, { timeout: 30000 });
         for (let i = 0; i < 12; i++) {
