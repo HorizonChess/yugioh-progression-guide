@@ -6,6 +6,7 @@ import { BOT_LEVELS, duelistById, ruleEraFor, type BotLevel } from "@ygo/shared"
 import type { SavedDeck } from "@/lib/storage";
 import { acceptDuel, carryGuestToken, concedeDuel, declineDuel, duelPath, getDuel, lastGuestDuel, openDuels, startDuel, startGuestDuel, type BotChoice, type DuelSummary, type PracticeOpponent } from "@/lib/duel-client";
 import { alertRepoError } from "@/context/ProgressionContext";
+import { latestDeck, markDeckUsed } from "@/lib/deck-choice";
 import { BotGlyph, HandGlyph, SwordsGlyph } from "./DuelGlyphs";
 import OpponentPicker, { opponentName, type Opponent } from "./OpponentPicker";
 import "./duel-launcher.css";
@@ -49,7 +50,10 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
 }) {
     const router = useRouter();
     const legal = decks.filter((d) => d.mainDeck.length >= 40 && d.mainDeck.length <= 60);
-    const [deckId, setDeckId] = useState(legal[0]?.id ?? "");
+    const [deckId, setDeckId] = useState("");
+    // The deck saved or used last, once the decks are in.
+    const offered = latestDeck(legal)?.id ?? "";
+    useEffect(() => setDeckId((d) => (legal.some((x) => x.id === d) ? d : offered)), [offered]); // eslint-disable-line react-hooks/exhaustive-deps -- `legal` follows `decks`
     const [open, setOpen] = useState<DuelSummary[] | null>(null);
     const [busy, setBusy] = useState(false);
     const [opponent, setOpponent] = useState<Opponent>({ kind: "bot", level: "normal" });
@@ -111,6 +115,7 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
     const practise = (against: PracticeOpponent) => run(async () => {
         const deck = legal.find((d) => d.id === deckId);
         if (!deck) return;
+        markDeckUsed(deck.id);
         const bot: BotChoice = opponent.kind === "bot" ? { level: opponent.level } : { duelist: { id: opponent.id, era: opponent.era } };
         go(guest ? await startGuestDuel({ main: deck.mainDeck, extra: deck.extraDeck, side: deck.sideDeck ?? [] }, setName ?? "", against, bot) : await startDuel(seriesId, deckId, against, bot));
     });
@@ -175,7 +180,7 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
                     <p><b>{rival}</b> challenges you to a duel on {challenge.setName}!</p>
                     {deckPicker}
                     <div className="dl-row">
-                        <button type="button" className="dl-btn dl-btn--main" disabled={!deckId || busy} onClick={() => run(async () => go(await acceptDuel(challenge.id, deckId)))}>Accept</button>
+                        <button type="button" className="dl-btn dl-btn--main" disabled={!deckId || busy} onClick={() => run(async () => { markDeckUsed(deckId); go(await acceptDuel(challenge.id, deckId)); })}>Accept</button>
                         <button type="button" className="dl-btn dl-btn--quiet" disabled={busy} onClick={() => run(() => declineDuel(challenge.id))}>Decline</button>
                     </div>
                 </div>
@@ -200,7 +205,7 @@ export default function DuelLauncher({ seriesId, guest, setName, duo, rival, dec
                     {/* The ways to duel, as slabs of the board's stone: the one that counts is the wide one on top. */}
                     <div className="dl-slabs">
                         {duo && (
-                            <button type="button" className="dl-slab dl-slab--main" disabled={!deckId || busy} onClick={() => run(() => startDuel(seriesId, deckId, "rival"))}>
+                            <button type="button" className="dl-slab dl-slab--main" disabled={!deckId || busy} onClick={() => run(() => { markDeckUsed(deckId); return startDuel(seriesId, deckId, "rival"); })}>
                                 <SwordsGlyph /><span>Challenge {rival}</span><small>Best of 3 · counts for the series</small>
                             </button>
                         )}

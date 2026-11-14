@@ -13,6 +13,7 @@ import type { DuelPregameView, PregameAction } from "@ygo/shared";
 import type { LocalGame } from "@/components/duel/useDuel";
 import PreGame from "@/components/duel/PreGame";
 import { gameConfirm } from "@/components/ui/GameDialog";
+import { latestDeck, markDeckUsed } from "@/lib/deck-choice";
 import { ruleLines } from "@/lib/guide/lines";
 import { guide } from "@/lib/guide/store";
 import "@/components/duel/duel-field.css";
@@ -121,7 +122,7 @@ function DuelPageContent() {
     if (duel.status === "waiting" && user) {
         const mine = duel.challengerId === user.id;
         const legal = savedDecks.filter((d) => d.mainDeck.length >= 40 && d.mainDeck.length <= 60);
-        const chosen = deckId || legal[0]?.id || "";
+        const chosen = deckId || latestDeck(legal)?.id || "";
         return (
             <div className="df-arena">
                 <div className="df-waiting dl">
@@ -134,7 +135,7 @@ function DuelPageContent() {
                             </label>
                         ) : <p className="dl-note">Build a deck of 40 to 60 cards first.</p>)}
                         <div className="dl-row">
-                            {!mine && <button type="button" className="dl-btn dl-btn--main" disabled={!chosen} onClick={() => acceptDuel(duel.id, chosen).then(setDuel, (e: Error) => setError(e.message))}>Accept</button>}
+                            {!mine && <button type="button" className="dl-btn dl-btn--main" disabled={!chosen} onClick={() => { markDeckUsed(chosen); acceptDuel(duel.id, chosen).then(setDuel, (e: Error) => setError(e.message)); }}>Accept</button>}
                             <button type="button" className="dl-btn dl-btn--quiet" onClick={() => declineDuel(duel.id).finally(() => router.push("/record-match"))}>{mine ? "Withdraw" : "Decline"}</button>
                         </div>
                     </div>
