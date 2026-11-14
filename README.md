@@ -104,11 +104,11 @@ npx tsx api/scripts/build-card-ids.ts
 
 Practice games against the bot are played in the browser (the engine and the bot in a Web
 Worker, from [duel/](duel/)), with the same engine data, which the browser fetches from R2. After
-the engine data changes (a new pinned version in `fetch-engine`), upload it before deploying, or
-practice games can't start:
+the engine data changes (a new pinned version in `fetch-engine`), upload it before deploying;
+until it's there, the server plays practice games itself (slower), and logs that it's missing:
 
 ```bash
-node web/scripts/engine/upload-engine.mjs
+npx tsx web/scripts/engine/upload-engine.mjs
 ```
 
 More detail on the architecture, pack logic and design system is in

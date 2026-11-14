@@ -101,7 +101,7 @@ try {
         }
         // Otherwise turns pass: a discard at the End Phase, the first card of any pick, End.
         if (await page.getByText("Choose the card to discard").count()) {
-            await page.locator(".df-hand__card.is-glow").first().click({ force: true }).catch(() => {});
+            await page.locator(".df-hand__card.is-glow").first().dispatchEvent("click").catch(() => {});
             continue;
         }
         if (await end.count()) { await end.click().catch(() => {}); continue; }

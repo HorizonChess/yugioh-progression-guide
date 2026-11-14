@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DuelAnswer, DuelEvent, DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DuelSession } from '../src/duel/session';
+import { DuelSession } from '@ygo/duel/session';
 
 // Confiscation: look at your opponent's hand, pick a card from it. The pick names their cards
 // (they were shown to you); anywhere else, the rival's hand stays hidden in a question. The look

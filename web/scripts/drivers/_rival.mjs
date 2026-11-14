@@ -22,6 +22,8 @@ export function plainAnswer(p) {
     if (p.kind === "cards") return p.step ? (p.step.canFinish && p.step.chosen.length >= p.min ? { kind: "done" } : { kind: "choice", id: p.cards.find((c) => !p.step.chosen.some((x) => x.id === c.id)).id }) : { kind: "many", ids: p.cards.slice(0, Math.max(p.min, 1)).map((c) => c.id) };
     if (p.kind === "place") return { kind: "many", ids: p.zones.slice(0, p.count).map((z) => z.id) };
     if (p.kind === "yesno") return { kind: "choice", id: 1 };
+    if (p.kind === "declare") return { kind: "many", ids: p.options.slice(0, p.count).map((o) => o.id) };
+    if (p.kind === "card-name") return { kind: "name", name: "Celtic Guardian", code: 91152256 };
     return { kind: "choice", id: p.options[0].id };
 }
 
@@ -29,6 +31,18 @@ export function plainAnswer(p) {
 export function activate(p, code) {
     const a = p.kind === "actions" && p.actions.find((x) => x.verb === "activate" && x.code === code);
     return a ? { kind: "choice", id: a.id } : null;
+}
+
+/** In an `actions` question: Set this Spell or Trap if it can be (else null). */
+export function setCard(p, code) {
+    const a = p.kind === "actions" && p.actions.find((x) => x.verb === "set-spell" && x.code === code);
+    return a ? { kind: "choice", id: a.id } : null;
+}
+
+/** In a `chain` question: activate this card if it's offered (else null). */
+export function chainWith(p, code) {
+    const o = p.kind === "chain" && p.options.find((x) => x.code === code);
+    return o ? { kind: "choice", id: o.id } : null;
 }
 
 /** A signed-up player in a browser context of their own, who can call the API. */
@@ -55,12 +69,14 @@ export async function signUp(browser, name, viewport = { width: 1440, height: 90
             socket = new WebSocket(`${API.replace(/^http/, "ws")}/api/duels/${duelId}/live`, { headers: { cookie, origin: BASE } });
             socket.on("message", (data) => {
                 const m = JSON.parse(String(data));
+                if (process.env.RIVAL_DEBUG) console.log("rival <-", m.type, m.type === "state" ? JSON.stringify(m.state?.prompt)?.slice(0, 300) : JSON.stringify(m));
                 if (m.type !== "state") return;
                 for (const f of m.frames) events.push(...f.events);
                 const p = m.state?.prompt;
                 if (!p || m.state.seq === answered) return;
                 answered = m.state.seq;
                 const answer = choose(p, m.state) ?? plainAnswer(p);
+                if (process.env.RIVAL_DEBUG) console.log("rival ->", JSON.stringify(answer));
                 socket.send(JSON.stringify({ type: "answer", seq: m.state.seq, answer }));
             });
             socket.on("close", () => !stopped && setTimeout(connect, 500));

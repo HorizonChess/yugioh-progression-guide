@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { loadEngine } from '../src/duel/engine';
 import { decode } from '../src/duel/hub';
-import { DuelSession, type DuelSetup } from '../src/duel/session';
+import { DuelSession, type DuelSetup } from '@ygo/duel/session';
 
 const file = process.argv[2];
 if (!file) throw new Error('Usage: tsx scripts/replay-duel.ts <record.json>');
@@ -13,11 +13,14 @@ const record = JSON.parse(readFileSync(file, 'utf-8')) as { setup: DuelSetup; an
 const answers = record.answers.map(decode);
 const engine = await loadEngine();
 const fits = (n: number) => {
+    const session = new DuelSession(engine, record.setup);
     try {
-        new DuelSession(engine, record.setup).start(answers.slice(0, n));
+        session.start(answers.slice(0, n));
         return true;
     } catch {
         return false;
+    } finally {
+        session.destroy();
     }
 };
 console.log(`${answers.length} answers, rules ${record.setup.rules ?? 1}, bots ${JSON.stringify(record.setup.bots)}`);
@@ -42,3 +45,4 @@ if (team !== null) console.log('Question:', show(session.state(team, 'replay').p
 console.log('Stored answer:', show(answers[lo]));
 console.log('Next answers:', answers.slice(lo + 1, lo + 6).map(show).join(' | '));
 console.log('Answers before:', answers.slice(Math.max(0, lo - 5), lo).map(show).join(' | '));
+session.destroy();

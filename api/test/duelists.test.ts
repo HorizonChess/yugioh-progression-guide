@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DUELISTS, duelistDeck, type DuelAnswer, type DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DuelSession } from '../src/duel/session';
+import { DuelSession } from '@ygo/duel/session';
 
 // Every duelist's deck, in every era, is one the engine plays: a few turns of the bot with it
 // against a player summoning from a copy of it, without the engine refusing a move or failing.

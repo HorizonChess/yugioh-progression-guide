@@ -6,7 +6,7 @@ import { cardVersionAt, collectionKey, duelistById, duelistDeck, type DuelAnswer
 import { cardSetsCollection, cardsCollection } from '../src/cards/sync';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
 import { decode, encode } from '../src/duel/hub';
-import { DuelSession, type DuelSetup, type Team } from '../src/duel/session';
+import { DuelSession, type DuelSetup, type Team } from '@ygo/duel/session';
 import { packSessions } from '../src/game/packs';
 import { seriesCollection, seriesPlayersCollection } from '../src/game/series';
 import { startMongo, testApp } from './helpers';
@@ -33,16 +33,22 @@ afterAll(async () => {
     await mongo.stop();
 });
 beforeEach(async () => {
-    ({ app } = await testApp(mongo));
+    app = await appWithCards();
+});
+afterEach(async () => {
+    await app.close();
+});
+
+/** The API, with the sets and cards the duels here play. */
+async function appWithCards(env: Record<string, string> = {}) {
+    const { app } = await testApp(mongo, env);
     await cardSetsCollection(app.db).insertMany(TIMELINE.map((set_name, i) => ({ _id: set_name, set_name, set_code: `S${i}`, num_of_cards: 100, tcg_date: `2002-0${i + 3}-08` })));
     await cardsCollection(app.db).insertMany(CARDS.map(([id, name, type]) => ({
         _id: id, id, name, type, frameType: type.startsWith('Spell') ? 'spell' : type.startsWith('Trap') ? 'trap' : 'normal', desc: '', race: 'Warrior',
         card_sets: [{ set_name: TIMELINE[0]!, set_code: 'LOB-EN001', set_rarity: 'Common', set_rarity_code: '', set_price: '0' }], card_images: [],
     })) as never);
-});
-afterEach(async () => {
-    await app.close();
-});
+    return app;
+}
 
 async function player(name: string) {
     const res = await app.inject({ method: 'POST', url: '/api/auth/signup', payload: { email: `${name.toLowerCase()}@example.com`, password: 'heart of the cards', duelistName: name } });
@@ -268,6 +274,44 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         // Storage drops a guest's duel after a day; the token itself is never stored.
         expect(stored!.expiresAt.getTime()).toBeGreaterThan(Date.now());
         expect(JSON.stringify(stored)).not.toContain(token);
+    });
+
+    it('keeps a device game\'s answers: added at the end, replaced from where a move was taken back, never past the end', async () => {
+        const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'solo' } });
+        const { duel, token } = started.json();
+        const headers = { 'x-duel-token': token };
+        const send = (from: number, answers: string[]) => app.inject({ method: 'POST', url: `/api/duels/${duel.id}/answers`, headers, payload: { from, answers } });
+        const kept = async () => (await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) }))!.answers as string[];
+        await playOnDevice(duel.id, headers, 6);
+        const six = await kept();
+        expect(six.length).toBeGreaterThanOrEqual(6);
+
+        // Past the end: refused, nothing kept changes.
+        expect((await send(six.length + 1, [six[0]!])).statusCode).toBe(409);
+        expect(await kept()).toEqual(six);
+        // From the end: added.
+        expect((await send(six.length, [])).statusCode).toBe(200);
+        expect(await kept()).toEqual(six);
+        // From earlier (taken back on the device): what was kept from there is replaced.
+        expect((await send(2, [six[3]!, six[2]!])).statusCode).toBe(200);
+        expect(await kept()).toEqual([six[0], six[1], six[3], six[2]]);
+        // From the start.
+        expect((await send(0, six.slice(0, 3))).statusCode).toBe(200);
+        expect(await kept()).toEqual(six.slice(0, 3));
+        expect((await send(3, six.slice(3))).statusCode).toBe(200);
+        expect(await kept()).toEqual(six);
+    });
+
+    it("plays practice games on the server while the engine data isn't uploaded for browsers", async () => {
+        await app.close();
+        // (Nothing answers there: as if the upload never happened.)
+        app = await appWithCards({ IMAGE_HOST: 'http://127.0.0.1:9' });
+        const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'solo' } });
+        expect(started.statusCode).toBe(201);
+        const { duel, token } = started.json();
+        const look = await lookAt(duel.id, { 'x-duel-token': token });
+        expect(look.device).toBeUndefined();
+        expect(look.state).toMatchObject({ rival: { name: 'Solo Practice' } });
     });
 
     it('takes back a summon while its zone is being chosen', async () => {

@@ -120,7 +120,10 @@ R2 (`engine/<data id>/`, see `web/scripts/engine/upload-engine.mjs`). The server
 (the decks as played at the set's date, the seed), then only keeps what the page sends: the answers
 as they're given, so a reload or a bug report has the whole game, and at the end how it ended, which
 it books as told (practice is never booked on the series, so it's taken on trust). Rival duels, and
-practice games begun before this, are played on the server.
+practice games begun before this, are played on the server. So are practice games while the engine
+data of the server's version isn't on R2 (its `done.json`, checked with a HEAD request; once found
+it's kept, else asked again a minute later): a deploy before the upload slows practice down rather
+than breaking it.
 
 The worker's duel stops before each decision the bot has to think about (`pauseForBot`): what has
 happened is shown first, then the bot thinks. So a player's move shows at once, and the bot's turn

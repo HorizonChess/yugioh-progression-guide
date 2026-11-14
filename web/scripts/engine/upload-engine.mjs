@@ -2,9 +2,11 @@
 // (a Web Worker running the same engine), and fetches the data the server plays from.
 //
 //   npm run fetch-engine -w @ygo/api                 (api/engine-data, the pinned version)
-//   node web/scripts/engine/upload-engine.mjs        (needs web/.env.local; FORCE=1 uploads again)
+//   npx tsx web/scripts/engine/upload-engine.mjs     (needs web/.env.local; FORCE=1 uploads again)
 //
-// Under engine/<data id>/ (the id names the pinned commits, see engineDataId in duel/src/engine.ts):
+// Until it's run for the pinned version, the server plays practice games itself (hub.ts, onDevice).
+//
+// Under engine/<data id>/ (the id names the pinned commits: engineDataId, duel/src/engine-id.ts):
 //   cards.json, strings.json   as the server has them (gzipped)
 //   libs.json                  every library script (utility.lua, proc_*.lua…): name → text (gzipped)
 //   scripts/c<code>.lua        each card's script: official/, else pre-errata/, else goat/ (as the server reads them)
@@ -17,6 +19,7 @@ import { fileURLToPath } from "url";
 import { gzipSync } from "zlib";
 import dotenv from "dotenv";
 import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { engineDataId } from "../../../duel/src/engine-id.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DATA = process.env.ENGINE_DATA ?? join(ROOT, "api/engine-data");
@@ -33,11 +36,9 @@ const s3 = new S3Client({
     credentials: { accessKeyId: CLOUDFLARE_ACCESS_KEY_ID, secretAccessKey: CLOUDFLARE_SECRET_ACCESS_KEY },
 });
 
-// The same id as engineDataId (duel/src/engine.ts).
 const version = readFileSync(join(DATA, "version.json"), "utf-8");
 const v = JSON.parse(version);
-const id = [v.format ?? 1, v.scripts, v.cards, v.strings].map((p) => String(p ?? "").slice(0, 10)).join("-");
-const prefix = `engine/${id}`;
+const prefix = `engine/${engineDataId(version)}`;
 const CACHE = "public, max-age=31536000, immutable";
 
 async function exists(key) {

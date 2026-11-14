@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DuelAnswer, DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DuelSession } from '../src/duel/session';
+import { DuelSession } from '@ygo/duel/session';
 
 const LILY = 79575620;
 const MON = [91152256, 76184692, 90357090, 15025844, 4206964, 17814387, 74677422];

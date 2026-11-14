@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lockedOf } from '../src/duel/session';
+import { lockedOf } from '@ygo/duel/session';
 
 // The engine's FIELD_DISABLED mask: player 0's Monster Zones in bits 0-4, Spell & Trap Zones in
 // 8-12; player 1's 16 bits higher.

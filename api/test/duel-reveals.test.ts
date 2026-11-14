@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DuelAnswer, DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DuelSession } from '../src/duel/session';
+import { DuelSession } from '@ygo/duel/session';
 
 const REINFORCEMENT = 32807846, CELTIC_GUARDIAN = 91152256, GEMINI_ELF = 69140098;
 const generic = (p: DuelPrompt): DuelAnswer => {

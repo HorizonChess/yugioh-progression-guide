@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { BOT_LEVELS, CardIdSchema, DeviceAnswersSchema, PregameActionSchema, deckProblem, duelistById, ownedCountsById } from '@ygo/shared';
 import { z } from 'zod';
 import { duelsCollection, type Deck, type DuelDoc, type DuelProblem, type Seat } from '../duel/hub';
-import type { Team } from '../duel/session';
+import type { Team } from '@ygo/duel/session';
 import { findPlayer, findSeries } from '../game/series';
 import { loadUser, requireAuth } from '../middleware/requireAuth';
 import { requireSeriesMember } from '../middleware/requireSeriesMember';

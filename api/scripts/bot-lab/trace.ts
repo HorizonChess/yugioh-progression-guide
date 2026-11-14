@@ -1,9 +1,9 @@
 // Bot lab: one bot-vs-bot duel told play by play. npx tsx scripts/bot-lab/trace.ts <a> <b> [seed]
 import { OcgMessageType as M, OcgResponseType as R, type OcgMessage } from 'ocgcore-wasm';
 import type { DuelEvent } from '@ygo/shared';
-import { botAnswer, type BotLevel } from '../../src/duel/bot';
+import { botAnswer, type BotLevel } from '@ygo/duel/bot';
 import { loadEngine } from '../../src/duel/engine';
-import { DuelSession, type Team } from '../../src/duel/session';
+import { DuelSession, type Team } from '@ygo/duel/session';
 import { BEATDOWN, LOB, TRICKS } from './decks';
 import { botAnswer as oldBot } from './old-bot';
 

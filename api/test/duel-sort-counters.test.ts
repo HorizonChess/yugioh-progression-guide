@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DuelAnswer, DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { counterSplits, DuelSession } from '../src/duel/session';
+import { counterSplits, DuelSession } from '@ygo/duel/session';
 
 const SPELLBOOK_ORGANIZATION = 96677818, GEMINI_ELF = 69140098;
 // Normal Monsters, all different, so the top of the Deck can be read off the next draw.

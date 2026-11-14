@@ -1,5 +1,5 @@
 import { loadEngine } from '../../src/duel/engine';
-import { DuelSession } from '../../src/duel/session';
+import { DuelSession } from '@ygo/duel/session';
 import { BEATDOWN, TRICKS } from './decks';
 const engine = await loadEngine();
 for (let i = 0; i < 5; i++) {

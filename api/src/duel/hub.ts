@@ -10,7 +10,7 @@ import { confirmReport, reportDuoMatch } from '../game/matches';
 import { findSeries } from '../game/series';
 import { engineDataId } from '@ygo/duel/engine';
 import { engineFaulted, loadEngine } from './engine';
-import { DUEL_RULES, DuelSession, type DuelSetup, type Team } from './session';
+import { DUEL_RULES, DuelSession, type DuelSetup, type Team } from '@ygo/duel/session';
 
 /*
  * Duels: stored in Mongo as their setup and every answer (enough to rebuild one exactly),
@@ -183,7 +183,7 @@ export interface DuelHub {
 
 const IDLE_MS = 30 * 60_000;
 
-export function createDuelHub(app: FastifyInstance): DuelHub {
+export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where browsers fetch the engine data from (IMAGE_HOST). */ engineHost?: string } = {}): DuelHub {
     const duels = () => duelsCollection(app.db);
     const live = new Map<string, { session: DuelSession; stored: number; touched: number }>();
     const sockets = new Map<string, Set<{ socket: WebSocket; team: Team }>>();
@@ -433,7 +433,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const decks = [await playedAt(pre.decks[seats[0]]!, date, shown), await playedAt(pre.decks[seats[1]]!, date, shown)] as DuelSetup['decks'];
         const botLevel = players.find((p) => p.bot)?.level;
         // Against the bot, the game is played on the player's device: the server only keeps its answers.
-        const onDevice = players.some((p) => p.bot);
+        const onDevice = players.some((p) => p.bot) && (await deviceReady());
         const setup: DuelSetup = {
             seed: newSeed(), mode: duel.mode, decks, names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown, rules: DUEL_RULES,
             ...(botLevel ? { botLevel } : {}),
@@ -556,9 +556,26 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const setup: DuelSetup = {
             seed: newSeed(), mode, decks: [played, played], names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown, rules: DUEL_RULES,
             ...(against === 'solo' ? { solo: true } : {}),
-            onDevice: true,
+            ...((await deviceReady()) ? { onDevice: true } : {}),
         };
         return { players, setup };
+    }
+
+    /**
+     * Whether a browser can play a practice game: the engine data of this version is on the image
+     * host (upload-engine.mjs writes done.json last). Until it is, the server plays them itself, and
+     * says why. Found: kept for good; missing: asked again a minute later. (No host: the data is
+     * served with the web app.)
+     */
+    let uploaded: { ok: boolean; at: number } | null = null;
+    async function deviceReady(): Promise<boolean> {
+        if (!engineHost) return true;
+        if (uploaded && (uploaded.ok || Date.now() - uploaded.at < 60_000)) return uploaded.ok;
+        const id = engineDataId((await loadEngine()).version);
+        const ok = await fetch(`${engineHost}/engine/${id}/done.json`, { method: 'HEAD', signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
+        if (!ok) app.log.error({ engine: id }, 'engine data not uploaded, so practice games are played on the server: npx tsx web/scripts/engine/upload-engine.mjs');
+        uploaded = { ok, at: Date.now() };
+        return ok;
     }
 
     /** A game played on the device is over: booked as it's told, and the match moves on. */
@@ -588,12 +605,22 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         record(duel, team, { from, answers, end }) {
             const id = duel._id.toHexString();
             return serial(id, async () => {
-                const fresh = await duels().findOne({ _id: duel._id });
-                if (!fresh || fresh.status !== 'active' || !fresh.setup?.onDevice || from > fresh.answers.length) return 'not-now' as const;
-                // Answers from `from` on replace what was kept there (a move taken back on the device).
-                const all = [...fresh.answers.slice(0, from), ...answers];
-                await duels().updateOne({ _id: duel._id, status: 'active' }, { $set: { answers: all, updatedAt: new Date() } });
-                Object.assign(duel, fresh, { answers: all });
+                // The duel as it is now, with how many answers it keeps (not the answers: a long game has many).
+                const [fresh] = await duels()
+                    .aggregate<Omit<DuelDoc, 'answers'> & { kept: number }>([{ $match: { _id: duel._id } }, { $set: { kept: { $size: '$answers' } } }, { $unset: 'answers' }])
+                    .toArray();
+                if (!fresh || fresh.status !== 'active' || !fresh.setup?.onDevice || from > fresh.kept) return 'not-now' as const;
+                // Usually the answers carry on from the end, and are added to it. From earlier, they
+                // replace what was kept from there on (a move taken back on the device).
+                const kept = { _id: duel._id, status: 'active' as const, answers: { $size: fresh.kept } };
+                const now = new Date();
+                const stored =
+                    from === fresh.kept
+                        ? await duels().updateOne(kept, { $push: { answers: { $each: answers } }, $set: { updatedAt: now } })
+                        : await duels().updateOne(kept, [{ $set: { answers: from ? { $concatArrays: [{ $slice: ['$answers', from] }, { $literal: answers }] } : { $literal: answers }, updatedAt: now } }]);
+                if (!stored.matchedCount) return 'not-now' as const;
+                const { kept: _, ...rest } = fresh;
+                Object.assign(duel, rest, { answers: [...duel.answers.slice(0, from), ...answers] });
                 if (!end) return duel;
                 const winner = end.winner === null ? null : ((end.winner === 'me' ? team : 1 - team) as Team);
                 await finishOnDevice(duel, winner, end.reason);

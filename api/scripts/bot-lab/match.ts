@@ -1,10 +1,10 @@
 // Bot lab: bots play each other headless. node: npx tsx scripts/bot-lab/match.ts <a> <b> [games]
 // where a and b are levels (easy, normal, hard) or "old" (the bot before levels).
 import { OcgMessageType as M, OcgResponseType as R, type OcgMessage } from 'ocgcore-wasm';
-import { botAnswer, HARM_HINTS, type BotLevel } from '../../src/duel/bot';
-import { simStats } from '../../src/duel/bot-sim';
+import { botAnswer, HARM_HINTS, type BotLevel } from '@ygo/duel/bot';
+import { simStats } from '@ygo/duel/bot-sim';
 import { loadEngine } from '../../src/duel/engine';
-import { DuelSession, type Team } from '../../src/duel/session';
+import { DuelSession, type Team } from '@ygo/duel/session';
 import { BEATDOWN, TRICKS } from './decks';
 import { botAnswer as oldBot } from './old-bot';
 

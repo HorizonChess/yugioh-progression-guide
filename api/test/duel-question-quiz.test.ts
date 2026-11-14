@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DuelAnswer, DuelEvent, DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DUEL_RULES, DuelSession } from '../src/duel/session';
+import { DUEL_RULES, DuelSession } from '@ygo/duel/session';
 
 const QUESTION = 38723936, REVERSAL_QUIZ = 5990062, OOKAZI = 19523799, GEMINI_ELF = 69140098, CELTIC_GUARDIAN = 91152256;
 const first = (p: DuelPrompt): DuelAnswer => {
