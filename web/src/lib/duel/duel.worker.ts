@@ -10,21 +10,29 @@ import { DuelSession, type DuelSetup, type Team } from "@ygo/duel/session";
  * bot run here, off the page's thread, with the same card scripts the server has (fetched from
  * storage). The page sends the player's answers and gets back what happened; the answers given
  * (the bot's too) go to the server to keep, so the game can be picked up again after a reload.
+ *
+ * One worker serves a tab's games one after another (a match's games, the next match): the engine
+ * is loaded once, and each WASM engine is hundreds of MB, so a tab must never start a worker a game.
  */
 
 export type ToWorker =
     | { type: "open"; base: string; duelId: string; device: DuelOnDevice }
     | { type: "answer"; seq: number; answer: DuelAnswer }
     | { type: "back"; seq: number }
-    | { type: "concede" };
+    | { type: "concede" }
+    /** The game is left: its duel is let go. */
+    | { type: "close" };
 
-export type FromWorker =
+/** Each names the game it's about (`duelId`): one left may still have a message on its way. */
+export type FromWorker = { duelId: string } & (
     | { type: "state"; frames: DuelFrame[]; state: DuelState }
     /** The game's answers from `from` on (earlier ones past `from` are taken back), and how it ended once it's over. */
     | ({ type: "answers" } & DeviceAnswers)
-    | { type: "error"; message: string };
+    | { type: "error"; message: string }
+);
 
-const post = (m: FromWorker) => self.postMessage(m);
+type Unnamed<T> = T extends unknown ? Omit<T, "duelId"> : never;
+const post = (m: Unnamed<FromWorker>) => self.postMessage({ ...m, duelId });
 
 async function json<T>(url: string): Promise<T> {
     const res = await fetch(url);
@@ -32,15 +40,18 @@ async function json<T>(url: string): Promise<T> {
     return (await res.json()) as T;
 }
 
-let engine: Engine;
+let engine: Engine | null = null;
 let root = "";
 /** Scripts at hand: name → text, or null for a card with none. */
 const scripts = new Map<string, string | null>();
 /** Card scripts the engine asked for that aren't at hand yet. */
 const misses = new Set<string>();
 
-async function loadEngine(base: string, id: string) {
+/** The engine for a version of its data, loaded once (a game of another version loads that one). */
+async function loadEngine(base: string, id: string): Promise<Engine> {
+    if (engine && root === `${base}/engine/${id}`) return engine;
     root = `${base}/engine/${id}`;
+    scripts.clear();
     const [rows, strings, libs, core] = await Promise.all([
         json<Record<string, CardRow>>(`${root}/cards.json`),
         json<{ system: Record<string, string>; victory: Record<string, string> }>(`${root}/strings.json`),
@@ -58,6 +69,7 @@ async function loadEngine(base: string, id: string) {
             return undefined;
         },
     });
+    return engine;
 }
 
 /** Fetches card scripts not at hand (a card with none is a 404). */
@@ -82,7 +94,7 @@ let sent = 0;
 
 function build(answers: readonly OcgResponse[]) {
     session?.destroy();
-    session = new DuelSession(engine, setup);
+    session = new DuelSession(engine!, setup, { pauseForBot: true });
     session.start(answers);
 }
 
@@ -118,53 +130,85 @@ function report(frames: DuelFrame[]) {
     booked = !!end;
 }
 
+/**
+ * The bot's decisions, one at a time, each shown as it's made: what came before (the player's
+ * move) is already on the board while the bot thinks, and its turn plays out as it goes.
+ */
+async function think() {
+    while (session?.botToThink) {
+        // A message come in meanwhile (the game left, a concession) goes first; it thinks on after.
+        await new Promise((r) => setTimeout(r));
+        if (inbox) return;
+        await play(() => session!.botThink());
+        report(session!.takeFrames(team));
+    }
+}
+
 async function handle(m: ToWorker) {
     switch (m.type) {
         case "open": {
+            session?.destroy();
+            session = null;
             duelId = m.duelId;
             setup = m.device.setup as DuelSetup;
             team = m.device.team;
             booked = m.device.over;
-            await loadEngine(m.base, m.device.engine);
-            for (const [code, base] of Object.entries(m.device.learned)) engine.learnAs(Number(code), base);
+            const e = await loadEngine(m.base, m.device.engine);
+            for (const [code, base] of Object.entries(m.device.learned)) e.learnAs(Number(code), base);
             const codes = [...setup.decks.flatMap((d) => [...d.main, ...d.extra]), ...Object.values(m.device.learned)];
             await fetchScripts(codes.map((c) => `c${c}.lua`));
             const answers = m.device.answers.map(decode);
             sent = answers.length;
             await play(() => build(answers));
             report(session!.framesOnConnect(team));
+            await think();
             return;
         }
+        case "close":
+            session?.destroy();
+            session = null;
+            return;
         case "answer": {
-            const s = session!;
+            if (!session) return;
+            const s = session;
             let ok = false;
             await play(() => {
                 ok = session!.answer(team, m.seq, m.answer);
             });
             report(ok || s !== session ? session!.takeFrames(team) : []);
+            await think();
             return;
         }
         case "back": {
-            const s = session!;
+            if (!session) return;
+            const s = session;
             const answers = s.state(team, duelId).seq === m.seq ? s.backAnswers(team) : null;
             if (answers) {
                 await play(() => build(answers));
                 sent = Math.min(sent, answers.length);
             }
             report([]);
+            await think();
             return;
         }
         case "concede":
-            session!.concede(team);
-            report(session!.takeFrames(team));
+            if (!session) return;
+            session.concede(team);
+            report(session.takeFrames(team));
             return;
     }
 }
 
 // One message at a time, in order.
 let queue: Promise<unknown> = Promise.resolve();
+/** Messages come in and not yet handled. */
+let inbox = 0;
 self.onmessage = (event: MessageEvent<ToWorker>) => {
-    queue = queue.then(() => handle(event.data)).catch((error: unknown) => {
+    inbox++;
+    queue = queue.then(() => {
+        inbox--;
+        return handle(event.data);
+    }).catch((error: unknown) => {
         post({ type: "error", message: error instanceof Error ? error.message : String(error) });
     });
 };

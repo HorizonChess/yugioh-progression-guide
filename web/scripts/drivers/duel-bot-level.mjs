@@ -1,6 +1,7 @@
 // The bot's level: the launcher offers Easy, Normal and Hard (Normal by default), remembers the
 // choice, and a practice match started at Hard is played against "Practice Bot (Hard)". Then a few
-// turns are played (the bot thinking ahead), to see it answers in good time. The game is played on
+// turns are played (the bot thinking ahead), to see it answers in good time and that each of your
+// answers shows at once (before the bot thinks about its reply). The game is played on
 // this device (the engine and the bot in a Web Worker): no live socket, the answers are sent to the
 // server to keep, and a reload picks the game up where it was.
 //
@@ -35,6 +36,35 @@ const sockets = [], uploads = [];
 page.on("websocket", (ws) => sockets.push(ws.url()));
 page.on("request", (r) => {
     if (r.method() === "POST" && /\/answers$/.test(r.url())) uploads.push(r.postDataJSON());
+});
+// How long each answer takes to show (from the page handing it to the worker to its first word back),
+// and how long the worker takes to have the next question for you (the bot's thinking).
+await page.addInitScript(() => {
+    const Real = window.Worker;
+    window.__lags = [];
+    window.__thinks = [];
+    window.Worker = class extends Real {
+        constructor(...args) {
+            super(...args);
+            // When the last answer went, and whether its first word back has come (`__lags`); then
+            // how long until the next question for you (`__thinks`: the bot's turn worked out).
+            let sentAt = 0, heard = false;
+            const post = this.postMessage.bind(this);
+            this.postMessage = (m, ...rest) => {
+                if (m?.type === "answer") (sentAt = performance.now()), (heard = false);
+                return post(m, ...rest);
+            };
+            this.addEventListener("message", (e) => {
+                if (!sentAt || e.data?.type !== "state") return;
+                const ms = Math.round(performance.now() - sentAt);
+                if (!heard) window.__lags.push(ms);
+                heard = true;
+                if (!e.data.state.prompt) return;
+                window.__thinks.push(ms);
+                sentAt = 0;
+            });
+        }
+    };
 });
 const btn = (name) => page.getByRole("button", { name, exact: true });
 const shot = (n) => page.screenshot({ path: outPath(`duel-bot-level-${n}-${phone ? "phone" : "desktop"}.png`) });
@@ -78,7 +108,8 @@ try {
         // (A card to discard at the end of the turn: the first that glows.)
         const discard = page.locator(".df-hand__card.is-glow").first();
         await end.or(pass).or(discard).first().waitFor({ timeout: 60000 });
-        slowest = Math.max(slowest, Date.now() - waitFrom);
+        // (Not the first: that's the game's opening, shuffling and all.)
+        if (step > 0) slowest = Math.max(slowest, Date.now() - waitFrom);
         // Let the board's animations settle, then answer.
         await page.waitForTimeout(800);
         if ((await discard.count()) && !(await end.count())) await discard.click({ force: true }).catch(() => {});
@@ -89,12 +120,18 @@ try {
     }
     check((await turnNo()) >= 5, `a few turns were played (turn ${await turnNo()})`);
     await shot("board");
-    check(slowest < 8000, `the bot answers in good time (slowest wait for my turn ${slowest} ms)`);
+    check(slowest < 8000, `your turn comes back in good time (slowest wait, the bot's turn played out: ${slowest} ms)`);
+    const { lags, thinks } = await page.evaluate(() => ({ lags: window.__lags, thinks: window.__thinks }));
+    const sorted = [...lags].sort((a, b) => a - b);
+    check(lags.length > 3 && sorted.at(-1) < 1000, `each answer shows at once, before the bot thinks (${lags.length} answers: median ${sorted[sorted.length >> 1]} ms, slowest ${sorted.at(-1)} ms)`);
+    // The rest of a wait for your turn is the board playing out what the bot did.
+    check(thinks.length > 0 && Math.max(...thinks) < 2000, `the bot's thinking is quick (until your next question: ${thinks.join(", ")} ms)`);
     check(!sockets.some((u) => u.includes("/api/duels/")), `the game has no live socket (${sockets.join(", ") || "none"})`);
     const kept = uploads.reduce((n, u) => u.from + u.answers.length, 0);
     check(uploads.length > 0 && kept > 10, `the answers are sent to the server to keep (${uploads.length} uploads, ${kept} answers)`);
 
-    // A reload picks the game up from what the server kept.
+    // A reload picks the game up from what the server kept (once the board has caught up: your turn).
+    await end.or(pass).first().waitFor({ timeout: 60000 });
     const turnBefore = await turnNo();
     await page.reload({ waitUntil: "load" });
     await turnLabel.waitFor({ timeout: 30000 });

@@ -22,6 +22,11 @@ export interface SessionOptions {
      * replayed from its answers, played on by this). It may throw to stop the copy where it is.
      */
     answerer?: (m: OcgMessage, duel: DuelSession, team: Team, solo?: boolean) => OcgResponse;
+    /**
+     * Stops before each decision the bot has to think about (`botToThink`; `botThink()` makes it),
+     * so what has happened so far can be shown first: a move shows at once, and the bot's turn as it plays.
+     */
+    pauseForBot?: boolean;
 }
 
 export interface DuelSetup {
@@ -327,6 +332,7 @@ export class DuelSession {
      */
     start(answers: readonly OcgResponse[] = [], options: { repair?: boolean } = {}): void {
         this.repairing = !!options.repair;
+        this.botWaiting = null;
         const core = this.core;
         const seed = this.setup.seed.map(BigInt) as [bigint, bigint, bigint, bigint];
         const team = { startingLP: START_LP, startingDrawCount: 5, drawCountPerTurn: 1 };
@@ -600,8 +606,16 @@ export class DuelSession {
             const question = this.ask(last);
             if (!question) throw new Error(`The duel server can't ask engine message ${last.type}`);
             if (this.setup.bots[question.team]) {
+                if (this.replayQueue.length && !this.repairing) {
+                    this.feed(this.replayQueue.shift()!);
+                    continue;
+                }
+                if (this.options.pauseForBot && !this.replayQueue.length) {
+                    this.botWaiting = { m: last, team: question.team };
+                    return;
+                }
                 // (When repairing, the bot's answer is worked out to compare it with the stored one.)
-                this.feed(this.replayQueue.length && !this.repairing ? this.replayQueue.shift()! : this.storedOr((this.options.answerer ?? botAnswer)(last, this, question.team, this.setup.solo)));
+                this.feed(this.storedOr(this.botDecides(last, question.team)));
                 continue;
             }
             const replayed = this.replayQueue.shift();
@@ -628,6 +642,25 @@ export class DuelSession {
     private noteCall(response: OcgResponse) {
         if (this.calling && response.type === R.SELECT_OPTION) this.call = { team: this.calling.team, heads: response.index === this.calling.heads };
         this.calling = null;
+    }
+
+    private botDecides(m: OcgMessage, team: Team): OcgResponse {
+        return (this.options.answerer ?? botAnswer)(m, this, team, this.setup.solo);
+    }
+
+    /** The bot's question the duel stopped at (`pauseForBot`), for `botThink()`. */
+    private botWaiting: { m: OcgMessage; team: Team } | null = null;
+    /** Whether the duel waits on the bot to decide (`pauseForBot`). */
+    get botToThink(): boolean {
+        return !!this.botWaiting && !!this.handle;
+    }
+    /** The bot makes the decision the duel stopped at, and the duel goes on to the next stop. */
+    botThink(): void {
+        const waiting = this.botWaiting;
+        if (!waiting || !this.handle) return;
+        this.botWaiting = null;
+        this.feed(this.botDecides(waiting.m, waiting.team));
+        this.run();
     }
 
     private feed(response: OcgResponse) {

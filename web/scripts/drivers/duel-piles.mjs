@@ -37,10 +37,10 @@ try {
     if (await old.count()) await old.click();
     await page.getByRole("button", { name: "Practice against the bot" }).click();
     await page.waitForURL(/duel/, { timeout: 30000 }).catch(async (e) => {
-    await throughPregame(page);
         // A refusal shows in the game's dialog: say what it was.
         throw new Error(`no duel: ${(await page.locator(".gd").textContent().catch(() => null)) ?? e.message}`);
     });
+    await throughPregame(page);
     await page.locator(".df-pile").first().waitFor({ timeout: 20000 });
     await page.waitForTimeout(2500);
 

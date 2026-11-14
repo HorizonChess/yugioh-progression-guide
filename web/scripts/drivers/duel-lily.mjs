@@ -41,7 +41,7 @@ try {
         const lilyHand = page.locator(`[aria-label="Card in hand ${LILY}"]`).first();
         for (let i = 0; i < 160 && !asked; i++) {
             await page.waitForTimeout(600);
-            if (await page.getByText(/ wins$/).count()) break;
+            if (await page.getByText(/ wins( game \d+)?$/).count()) break;
             if (await page.getByText(/^Damage calculation/).count()) { asked = true; break; }
             const discard = page.locator(".df-hand__card.is-glow").first();
             if (await discard.count()) { await discard.click({ force: true }).catch(() => {}); continue; }

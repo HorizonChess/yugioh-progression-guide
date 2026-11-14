@@ -47,7 +47,7 @@ try {
         const pass = page.getByRole("button", { name: /^(Pass|No|Don't)/ });
         for (let i = 0; i < 200; i++) {
             await page.waitForTimeout(500);
-            if (await page.getByText(/ wins$/).count()) break;
+            if (await page.getByText(/ wins( game \d+)?$/).count()) break;
             if (await page.locator(".df-declare").count()) {
                 banner = (await page.locator(".df-declare").textContent()) ?? "";
                 await page.screenshot({ path: outPath(`duel-declare-banner-${phone ? "phone" : "desktop"}.png`) });
@@ -56,7 +56,8 @@ try {
                 break;
             }
             // Your side does nothing: it passes, ends turns and discards what it must.
-            const discard = page.locator(".df-hand__card.is-glow").first();
+            // (On your turn the cards you can play glow too: only a discard is clicked.)
+            const discard = (await page.getByText("Choose the card to discard").count()) ? page.locator(".df-hand__card.is-glow").first() : page.locator("#none");
             if (await discard.count()) await discard.click({ force: true }).catch(() => {});
             else if (await pass.count()) await pass.first().click().catch(() => {});
             else if (await end.count()) await end.click().catch(() => {});

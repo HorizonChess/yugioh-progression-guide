@@ -11,6 +11,21 @@ import type { FromWorker, ToWorker } from "./duel.worker";
 const BASE = process.env.NEXT_PUBLIC_IMAGE_HOST ?? "";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * The tab's one duel worker, for all its games: each holds a WASM engine of hundreds of MB, and a
+ * tab that started one a game ran out of memory within a few games.
+ */
+let shared: Worker | null = null;
+function duelWorker(): Worker {
+    if (shared) return shared;
+    const w = new Worker(new URL("./duel.worker.ts", import.meta.url), { type: "module" });
+    // A worker that failed outright is replaced for the next game.
+    w.addEventListener("error", () => {
+        if (shared === w) shared = null;
+    });
+    return (shared = w);
+}
+
 export function connectLocalDuel(
     duelId: string,
     device: DuelOnDevice,
@@ -18,7 +33,7 @@ export function connectLocalDuel(
     onMessage: (m: DuelServerMessage) => void,
     onError: (message: string) => void,
 ): DuelConnection {
-    const worker = new Worker(new URL("./duel.worker.ts", import.meta.url), { type: "module" });
+    const worker = duelWorker();
     const send = (m: ToWorker) => worker.postMessage(m);
     let last: DuelState | null = null;
     const show = (state: DuelState, frames: DuelServerMessage["frames"] = []) => onMessage({ type: "state", frames, state: match ? { ...state, match } : state });
@@ -59,8 +74,10 @@ export function connectLocalDuel(
         }
     }
 
-    worker.onmessage = (event: MessageEvent<FromWorker>) => {
+    const onWorker = (event: MessageEvent<FromWorker>) => {
         const m = event.data;
+        // (A message about the game before this one, still on its way.)
+        if (m.duelId !== duelId) return;
         if (m.type === "state") {
             last = m.state;
             show(m.state, m.frames);
@@ -71,7 +88,9 @@ export function connectLocalDuel(
             void upload();
         } else onError(m.message);
     };
-    worker.onerror = (event) => onError(event.message || "The duel engine failed to start");
+    const onFailure = (event: ErrorEvent) => onError(event.message || "The duel engine failed to start");
+    worker.addEventListener("message", onWorker);
+    worker.addEventListener("error", onFailure);
     send({ type: "open", base: BASE, duelId, device });
 
     return {
@@ -80,6 +99,10 @@ export function connectLocalDuel(
         concede: () => send({ type: "concede" }),
         // Only against a rival.
         callOff: () => undefined,
-        close: () => worker.terminate(),
+        close() {
+            worker.removeEventListener("message", onWorker);
+            worker.removeEventListener("error", onFailure);
+            send({ type: "close" });
+        },
     };
 }

@@ -122,6 +122,11 @@ as they're given, so a reload or a bug report has the whole game, and at the end
 it books as told (practice is never booked on the series, so it's taken on trust). Rival duels, and
 practice games begun before this, are played on the server.
 
+The worker's duel stops before each decision the bot has to think about (`pauseForBot`): what has
+happened is shown first, then the bot thinks. So a player's move shows at once, and the bot's turn
+plays out as it goes rather than all at the end. (On the server the bot decides inline, before
+anything is sent.)
+
 ## The practice bot (duel/src: bot.ts, bot-sim.ts, bot-eval.ts)
 
 The player picks how well the bot plays: **Easy**, **Normal** (the default) or **Hard**. Under every
