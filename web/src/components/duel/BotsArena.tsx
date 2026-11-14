@@ -49,14 +49,16 @@ const GROUPS: { level: BotLevel; title: string }[] = [
     { level: "normal", title: "Intermediate" },
     { level: "hard", title: "Advanced" },
 ];
-/** Where a sprite's face is across (most are centred). */
+/** Where a sprite's face is across (most are centred), and down (most near the top; little Yugi's hair stands tall). */
 const FACE_X: Record<string, string> = { mai: "58%" };
+const FACE_Y: Record<string, string> = { yugi: "6%" };
+const faceStyle = (d: Duelist) => ({ backgroundImage: `url('${sprite(d)}')`, backgroundPositionX: FACE_X[d.id] ?? "50%", ...(FACE_Y[d.id] ? { backgroundPositionY: FACE_Y[d.id] } : {}) });
 
 const sprite = (d: Duelist) => asset(`/sprites/${d.sprite}.webp`);
 const firstName = (d: Duelist) => (d.id === "pegasus" ? "Pegasus" : d.name.split(" ")[0]!);
 /** Their face, as on their tablet in the roster. */
 const faceOf = (o: Opponent, d: Duelist | undefined) =>
-    d ? <span className="op-face" style={{ backgroundImage: `url('${sprite(d)}')`, backgroundPositionX: FACE_X[d.id] ?? "50%" }} /> : <span className="op-face op-face--bot">{o.kind === "solo" ? <HandGlyph /> : <BotGlyph />}</span>;
+    d ? <span className="op-face" style={faceStyle(d)} /> : <span className="op-face op-face--bot">{o.kind === "solo" ? <HandGlyph /> : <BotGlyph />}</span>;
 const duelistOf = (o: Opponent) => (o.kind === "duelist" ? duelistById(o.id) : undefined);
 /** Who you'd be dueling, by name, for the button. */
 const opponentName = (o: Opponent) => {
@@ -362,7 +364,7 @@ export default function BotsArena({ seriesId, guest, setName, setDate, decks }: 
                                             d.id,
                                             duelist?.id === d.id,
                                             d.name,
-                                            <span className="op-face" style={{ backgroundImage: `url('${sprite(d)}')`, backgroundPositionX: FACE_X[d.id] ?? "50%" }} />,
+                                            <span className="op-face" style={faceStyle(d)} />,
                                             String(d.rating),
                                             recordText(record[d.id]),
                                             () => choose({ kind: "duelist", id: d.id, era: duelist?.id === d.id && era ? era.id : d.eras[0]!.id }),

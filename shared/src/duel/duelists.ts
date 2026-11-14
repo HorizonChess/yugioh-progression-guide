@@ -148,7 +148,7 @@ export const DUELISTS: readonly Duelist[] = [
         eras: [era('bc', BC, 24569, 'Yami Marik - Battle City', 'AkaiRosé')],
     },
     {
-        id: 'yugi', name: 'Yugi Muto', sprite: 'yugi_neutral_v2_transparent', rating: 1950, level: 'hard',
+        id: 'yugi', name: 'Yugi Muto', sprite: 'yugi_muto_neutral_transparent', rating: 1950, level: 'hard',
         blurb: 'Dark Magician Girl and the heart of the cards, dueling as himself.',
         eras: [
             era('cd', CD, 65296, 'Yugi Muto Ceremonial Character Deck ( Rivals of The Pharaoh)', 'meecho96',
