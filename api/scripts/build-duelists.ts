@@ -91,3 +91,28 @@ if (problems.length) {
 }
 writeFileSync(path.join(root, 'shared/src/duel/duelist-decks.json'), `${JSON.stringify(out, null, 1)}\n`);
 console.log(`\nWrote ${Object.keys(out).length} decks.`);
+
+// Every card needs its image on the image host (cards/<id>.jpg and its _md size): the first uploads
+// stopped at 2016, so a later card a deck plays may have none. Upload any missing with
+// web/scripts/images/upload_card_images.js.
+const host = process.env.NEXT_PUBLIC_IMAGE_HOST
+    ?? readFileSync(path.join(root, 'web/.env.local'), 'utf-8').match(/^NEXT_PUBLIC_IMAGE_HOST=(.+)$/m)?.[1]?.trim();
+if (host) {
+    const codes = [...new Set(Object.values(out).flatMap((d) => [...d.main, ...d.extra]))];
+    const missing: number[] = [];
+    const has = async (file: string): Promise<boolean> => {
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const res = await fetch(`${host}/cards/${file}`, { method: 'HEAD' });
+            if (res.status !== 429) return res.ok;
+            await sleep(1000 * (attempt + 1));
+        }
+        return false;
+    };
+    for (let i = 0; i < codes.length; i += 4) {
+        await Promise.all(codes.slice(i, i + 4).map(async (code) => {
+            if (!(await has(`${code}.jpg`)) || !(await has(`${code}_md.jpg`))) missing.push(code);
+        }));
+    }
+    if (missing.length) console.warn(`\nNo image for ${missing.length} cards: ${missing.map((c) => `${c} (${engine[c]?.name})`).join(', ')}\n  node web/scripts/images/upload_card_images.js ${missing.join(' ')}`);
+    else console.log(`All ${codes.length} cards have their images.`);
+}
