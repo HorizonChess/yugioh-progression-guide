@@ -44,7 +44,7 @@ try {
         for (let i = 0; i < 160 && !asked; i++) {
             if (process.env.DEBUG && i % 10 === 0) console.log("  step", i, await page.locator(".df-sheet__title").first().textContent({ timeout: 200 }).catch(() => "-"), await page.locator('[role="tab"][aria-selected="true"]').getAttribute("aria-label", { timeout: 200 }).catch(() => "-"), "hand", await page.locator(".df-hand__card").count(), "poly", await inHand(POLY).count(), "manip", await inHand(MANIP).count(), await onField(MANIP).count(), "masaki", await inHand(MASAKI).count(), await onField(MASAKI).count());
             await page.waitForTimeout(600);
-            if (await page.getByText(/ wins$/).count()) break;
+            if (await page.getByText(/ wins( game \d+)?$/).count()) break;
             // The question asking for materials (a card's text in the detail panel can say it too).
             if (await page.locator(".df-sheet__title", { hasText: /Fusion Material/ }).count()) { asked = true; break; }
             if (await page.getByText("Choose the card to discard").count()) { await page.locator(".df-hand__card.is-glow").first().click({ force: true }).catch(() => {}); continue; }

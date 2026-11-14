@@ -18,7 +18,7 @@ import { cardImage, type CardMarks, type Pose } from "./parts";
 import { DUEL_MATS, setDuelPrefs, useDuelPrefs } from "./duel-prefs";
 import { asset } from "@/lib/utils";
 import { sfx } from "./sfx";
-import { useDuel } from "./useDuel";
+import { useDuel, type LocalGame } from "./useDuel";
 import { useSteady } from "./useSteady";
 import "./duel-field.css";
 import "./duel-mats.css";
@@ -106,8 +106,10 @@ const PLACES: ReadonlySet<ActionVerb> = new Set(["summon", "special", "set", "se
  */
 const STEADY = { onUpdate: () => {} };
 
-export default function DuelScreen({ duelId, onLeave, onNext }: {
+export default function DuelScreen({ duelId, local, onLeave, onNext }: {
     duelId: string;
+    /** A practice game against the bot, played on this device. */
+    local?: LocalGame;
     /** Leaving once it's all over, with how it went (null: nothing was recorded). */
     onLeave: (result: "win" | "loss" | "draw" | null) => void;
     /** On to the next game of the match (its duel id). */
@@ -127,7 +129,7 @@ export default function DuelScreen({ duelId, onLeave, onNext }: {
         const say = (name: (code: number) => string) => describe(e, view, name) ?? "";
         setLog((l) => [...l.slice(-199), { key: Math.random(), say, side: "side" in e ? (e.side ?? undefined) : undefined }]);
     }, []);
-    const duel = useDuel(duelId, onEvent);
+    const duel = useDuel(duelId, onEvent, local);
     const { state, view, prompt, effects } = duel;
     const cards = useCards([...codesOf(view, prompt), ...shown]);
     // Tokens aren't in the card catalog: their names come with them, and are kept once seen (a
@@ -729,6 +731,7 @@ export default function DuelScreen({ duelId, onLeave, onNext }: {
                 )}
             </AnimatePresence>
             {!duel.connected && !result && <div className="df-offline">Reconnecting…</div>}
+            {duel.failure && <div className="df-offline">{duel.failure}</div>}
             {state.retry && prompt && <div className="df-retry">That isn&apos;t allowed right now. Try another choice.</div>}
             {state.callOff && !result && (
                 <div className="df-calloff" role="status">

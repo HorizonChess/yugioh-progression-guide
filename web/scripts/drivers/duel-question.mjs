@@ -53,7 +53,7 @@ try {
         for (let i = 0; i < 220 && !got; i++) {
             await page.waitForTimeout(500);
             if (await asked.count()) { got = true; break; }
-            if (await page.getByText(/ wins$/).count()) break;
+            if (await page.getByText(/ wins( game \d+)?$/).count()) break;
             // Your side does nothing: it passes, ends its turns and discards what it must.
             const discard = (await page.getByText("Choose the card to discard").count()) ? page.locator(".df-hand__card.is-glow").first() : page.locator("#none");
             if (await discard.count()) await discard.click({ force: true }).catch(() => {});

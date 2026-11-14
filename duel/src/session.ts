@@ -1,0 +1,1500 @@
+import {
+    OcgDuelMode, OcgLocation as L, OcgMessageType as M, OcgPhase, OcgPosition as P, OcgProcessResult, OcgQueryFlags as Q, OcgResponseType as R, type OcgQueryFlags,
+    SelectBattleCMDAction as B, SelectIdleCMDAction as I,
+    type OcgCardLoc, type OcgCoreSync, type OcgDuelHandle, type OcgMessage, type OcgResponse,
+} from 'ocgcore-wasm';
+import type {
+    ActionVerb, DuelAnswer, DuelCardView, PlaceZone, DuelEvent, DuelFrame, DuelModeId, DuelPrompt, DuelSideView, DuelState, DuelView, Phase, PromptCard, Side, Zone,
+} from '@ygo/shared';
+import { botAnswer, type BotLevel } from './bot';
+import type { Engine } from './engine';
+
+/*
+ * One duel: the engine instance, the answers given so far (the duel is rebuilt from its seed and
+ * these), and what each player may see. Players are teams 0 and 1; team 0 goes first.
+ */
+
+export type Team = 0 | 1;
+
+export interface SessionOptions {
+    /**
+     * Answers the bot's questions in place of the bot (the bot's look-ahead: a copy of the duel
+     * replayed from its answers, played on by this). It may throw to stop the copy where it is.
+     */
+    answerer?: (m: OcgMessage, duel: DuelSession, team: Team, solo?: boolean) => OcgResponse;
+    /**
+     * Stops before each decision the bot has to think about (`botToThink`; `botThink()` makes it),
+     * so what has happened so far can be shown first: a move shows at once, and the bot's turn as it plays.
+     */
+    pauseForBot?: boolean;
+}
+
+export interface DuelSetup {
+    /** Xoshiro256** seed, as decimal strings (stored as-is). */
+    seed: [string, string, string, string];
+    mode: DuelModeId;
+    /** By team. */
+    decks: [{ main: number[]; extra: number[] }, { main: number[]; extra: number[] }];
+    names: [string, string];
+    bots: [boolean, boolean];
+    /** Solo practice: the bot never plays, it only passes its turns (a goldfish to test your deck on). */
+    solo?: boolean;
+    /** How well the bot plays (bot.ts). Missing: `normal`. */
+    botLevel?: BotLevel;
+    /**
+     * Played on the player's device (practice against the bot): the engine and the bot run in their
+     * browser, which sends the answers to the server to keep. The server only plays them back.
+     */
+    onDevice?: boolean;
+    /** Older versions played in place of a deck card (engine code → the card's own code), shown as the card itself. */
+    shown?: Record<string, number>;
+    /**
+     * The rules the duel was started under. A duel is rebuilt by replaying its answers, so a change
+     * to what the server answers by itself must not apply to duels already underway: their stored
+     * answers would land on the wrong questions. Missing means 1.
+     *   2: a lone mandatory effect resolves without asking.
+     *   3: so do several copies of one mandatory effect at once (two Masks of the Accursed): the
+     *      order they go on the chain changes nothing. (See RULES.md.)
+     *   4: a player is asked to order cards (Spellbook Organization) and which cards lose counters.
+     */
+    rules?: number;
+}
+
+/** The rules new duels start under (see DuelSetup.rules). */
+export const DUEL_RULES = 4;
+
+export const MODE_FLAGS: Record<DuelModeId, bigint> = {
+    MR1: OcgDuelMode.MODE_MR1,
+    MR2: OcgDuelMode.MODE_MR2,
+    MR3: OcgDuelMode.MODE_MR3,
+    MR4: OcgDuelMode.MODE_MR4,
+};
+
+const FRAME_CAP = 300;
+const START_LP = 8000;
+const CARD_FLAGS = (Q.CODE | Q.POSITION | Q.ATTACK | Q.DEFENSE | Q.BASE_ATTACK | Q.BASE_DEFENSE) as OcgQueryFlags;
+const STAT_FLAGS = (Q.ATTACK | Q.DEFENSE | Q.POSITION | Q.CODE) as OcgQueryFlags;
+/** What acts on a card on the field: what it's equipped to, what it targets, its counters and status. */
+const LINK_FLAGS = (Q.CODE | Q.POSITION | Q.EQUIP_CARD | Q.TARGET_CARD | Q.COUNTERS | Q.STATUS) as OcgQueryFlags;
+/** ocgcore's STATUS_DISABLED: the card's effects are negated. */
+const STATUS_DISABLED = 0x0001;
+type MessageOf<T extends M> = Extract<OcgMessage, { type: T }>;
+/**
+ * Question: "your opponent declares the first monster in your Graveyard" from memory. While one is
+ * on the chain, its controller's Graveyard is closed to the rival.
+ */
+const QUESTION = 38723936;
+/** ANNOUNCE_CARD's filter "a card of this type": the type, then this opcode. */
+const OPCODE_ISTYPE = 0x4000010200000000n;
+/** Hints that say what a choice between options is for (the engine's strings 554-556 and 566). */
+const OPTION_HINTS: ReadonlySet<number> = new Set([554, 555, 556, 566]);
+/** Messages that start something new: what was sent to the Graveyard before them is no longer "just now". */
+const NEW_MOMENT: ReadonlySet<M> = new Set([M.NEW_TURN, M.NEW_PHASE, M.SUMMONING, M.SPSUMMONING, M.FLIPSUMMONING, M.SET, M.ATTACK, M.CHAINING]);
+
+/** A seeded Fisher-Yates shuffle (mulberry32), so a replay deals the same cards. */
+export function shuffled<T>(list: readonly T[], seed: bigint): T[] {
+    let a = Number(seed % 4294967296n);
+    const rand = () => {
+        a = (a + 0x6d2b79f5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const out = [...list];
+    for (let i = out.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [out[i], out[j]] = [out[j]!, out[i]!];
+    }
+    return out;
+}
+
+const PILES = [L.HAND, L.GRAVE, L.REMOVED, L.EXTRA] as const;
+
+/** Follows cards between zones, so a card keeps one uid as it moves (the board animates by it). */
+class Tracker {
+    private n = 0;
+    private slots = new Map<string, string>();
+    private piles = new Map<string, string[]>();
+    fresh = () => `u${++this.n}`;
+    private isPile = (location: number) => (PILES as readonly number[]).includes(location);
+    private pile(controller: number, location: number) {
+        const key = `${controller}:${location}`;
+        let p = this.piles.get(key);
+        if (!p) this.piles.set(key, (p = []));
+        return p;
+    }
+    uidAt(controller: number, location: number, sequence: number): string {
+        if (location === L.DECK) return this.fresh();
+        if (this.isPile(location)) {
+            const p = this.pile(controller, location);
+            while (p.length <= sequence) p.push(this.fresh());
+            return p[sequence]!;
+        }
+        const key = `${controller}:${location}:${sequence}`;
+        let uid = this.slots.get(key);
+        if (!uid) this.slots.set(key, (uid = this.fresh()));
+        return uid;
+    }
+    private take(controller: number, location: number, sequence: number): string {
+        if (location === L.DECK || !location) return this.fresh();
+        if (this.isPile(location)) {
+            const p = this.pile(controller, location);
+            return p.splice(sequence, 1)[0] ?? this.fresh();
+        }
+        const key = `${controller}:${location}:${sequence}`;
+        const uid = this.slots.get(key) ?? this.fresh();
+        this.slots.delete(key);
+        return uid;
+    }
+    private put(controller: number, location: number, sequence: number, uid: string) {
+        if (location === L.DECK || !location) return;
+        if (this.isPile(location)) this.pile(controller, location).splice(Math.min(sequence, this.pile(controller, location).length), 0, uid);
+        else this.slots.set(`${controller}:${location}:${sequence}`, uid);
+    }
+    move(from: { controller: number; location: number; sequence: number }, to: { controller: number; location: number; sequence: number }): string {
+        const uid = this.take(from.controller, from.location, from.sequence);
+        this.put(to.controller, to.location, to.sequence, uid);
+        return uid;
+    }
+    draw(controller: number, count: number) {
+        const p = this.pile(controller, L.HAND);
+        for (let i = 0; i < count; i++) p.push(this.fresh());
+    }
+    swap(a: { controller: number; location: number; sequence: number }, b: { controller: number; location: number; sequence: number }) {
+        const ka = `${a.controller}:${a.location}:${a.sequence}`, kb = `${b.controller}:${b.location}:${b.sequence}`;
+        const ua = this.slots.get(ka), ub = this.slots.get(kb);
+        if (ub) this.slots.set(ka, ub); else this.slots.delete(ka);
+        if (ua) this.slots.set(kb, ua); else this.slots.delete(kb);
+    }
+    /** If the engine's count of a pile differs from what was tracked, believe the engine. */
+    fit(controller: number, location: number, count: number) {
+        const p = this.pile(controller, location);
+        while (p.length < count) p.push(this.fresh());
+        p.length = count;
+    }
+}
+
+const zoneOf = (location: number, sequence: number): Zone => {
+    switch (location) {
+        case L.HAND: return 'hand';
+        case L.MZONE: return 'monster';
+        case L.SZONE: return sequence === 5 ? 'field' : sequence >= 6 ? 'pendulum' : 'spell';
+        case L.GRAVE: return 'grave';
+        case L.REMOVED: return 'banished';
+        case L.EXTRA: return 'extra';
+        default: return 'deck';
+    }
+};
+const phaseOf = (p: number): Phase =>
+    p === OcgPhase.DRAW ? 'DP' : p === OcgPhase.STANDBY ? 'SP' : p === OcgPhase.MAIN1 ? 'M1' : p === OcgPhase.MAIN2 ? 'M2' : p === OcgPhase.END ? 'EP' : 'BP';
+/** The engine's select hint for "Select the attack target" (HINTMSG_ATTACKTARGET in constant.lua). */
+const HINT_ATTACK_TARGET = 549;
+const faceUp = (position: number) => (position & P.FACEUP) !== 0;
+/** Where a card lies on the field (its position says whether it is Set). */
+const FIELD_LOCATIONS: ReadonlySet<number> = new Set([L.MZONE, L.SZONE]);
+const POSITION_LABEL: Record<number, string> = {
+    [P.FACEUP_ATTACK]: 'Attack Position',
+    [P.FACEDOWN_ATTACK]: 'Face-down Attack Position',
+    [P.FACEUP_DEFENSE]: 'Defense Position',
+    [P.FACEDOWN_DEFENSE]: 'Set (face-down Defense Position)',
+};
+const RACES = ['Warrior', 'Spellcaster', 'Fairy', 'Fiend', 'Zombie', 'Machine', 'Aqua', 'Pyro', 'Rock', 'Winged Beast', 'Plant', 'Insect', 'Thunder', 'Dragon', 'Beast', 'Beast-Warrior', 'Dinosaur', 'Fish', 'Sea Serpent', 'Reptile', 'Psychic', 'Divine-Beast', 'Creator God', 'Wyrm', 'Cyberse'];
+const ATTRIBUTES = ['EARTH', 'WATER', 'FIRE', 'WIND', 'LIGHT', 'DARK', 'DIVINE'];
+/**
+ * The ways to take `count` counters from cards holding `have` each (at most 24, the first ones
+ * found): each is how many come off each card.
+ */
+export const counterSplits = (count: number, have: number[]): number[][] => {
+    const out: number[][] = [];
+    const walk = (i: number, left: number, acc: number[]) => {
+        if (out.length >= 24) return;
+        if (i === have.length) { if (left === 0) out.push(acc); return; }
+        for (let k = Math.min(left, have[i]!); k >= 0; k--) walk(i + 1, left - k, [...acc, k]);
+    };
+    walk(0, count, []);
+    return out;
+};
+/**
+ * An answer as the engine reads it. A SORT_CARD answer is one byte per card, its place in the new
+ * order, but ocgcore-wasm writes the list's length before the list, which the engine takes as the
+ * first card's place (and then reads one card short, so every answer looked invalid). The length
+ * it writes is the list's `length` and the bytes after it are what the list iterates: so the first
+ * place goes in `length` and the rest are iterated. Answers are stored as plain lists (they go to
+ * the database and rebuild the duel); this is done only as one goes to the engine.
+ */
+const forEngine = (r: OcgResponse): OcgResponse => {
+    if (r.type !== R.SORT_CARD || !r.order?.length) return r;
+    const places = r.order;
+    return { type: R.SORT_CARD, order: { length: places[0]!, [Symbol.iterator]: () => places.slice(1)[Symbol.iterator]() } as never };
+};
+/** The names of the bits set in a Type or Attribute mask. */
+const bitNames = (mask: bigint | number, names: readonly string[]) => names.filter((_, i) => (BigInt(mask) >> BigInt(i)) & 1n);
+
+/** The question the engine is waiting on, and how to turn an answer into the engine's response. */
+interface Question {
+    team: Team;
+    prompt: DuelPrompt;
+    toResponse: (answer: DuelAnswer) => OcgResponse | null;
+}
+
+export class DuelSession {
+    readonly answers: OcgResponse[] = [];
+    seq = 0;
+    result: { winner: Team | null; reason: string; calledOff?: boolean } | null = null;
+    /** Who has asked to call the duel off, while the other hasn't answered. */
+    callOffBy: Team | null = null;
+    private handle: OcgDuelHandle | null = null;
+    private tracker = new Tracker();
+    private question: Question | null = null;
+    private retry = false;
+    private replayQueue: OcgResponse[] = [];
+    private repairing = false;
+    /**
+     * The stored answer for a question the server or the bot answers, or this fresh one: when
+     * repairing, a stored answer of another kind was given to a later question (this one's was lost).
+     */
+    private storedOr(fresh: OcgResponse): OcgResponse {
+        const next = this.replayQueue[0];
+        if (next && this.repairing && next.type !== fresh.type) return fresh;
+        return this.replayQueue.shift() ?? fresh;
+    }
+    private frames: [DuelFrame[], DuelFrame[]] = [[], []];
+    /**
+     * Every frame a player was sent lately, numbered, so a page that lost its connection (a phone
+     * put away mid-turn) can be shown what it missed. `epoch` tells this session's numbering from a
+     * rebuilt one's.
+     */
+    private history: [DuelFrame[], DuelFrame[]] = [[], []];
+    private pushed: [number, number] = [0, 0];
+    private readonly epoch = Math.random().toString(36).slice(2, 10);
+    private lp: [number, number] = [START_LP, START_LP];
+    /**
+     * Zones a card has taken out of use (the engine's last FIELD_DISABLED): player 0's Monster
+     * Zones in bits 0-4 and Spell & Trap Zones in 8-12, player 1's 16 higher. A set bit is locked.
+     */
+    private locked = 0;
+    /**
+     * The Decks are turned over (Convulsion of Nature), so both players see each Deck's top card.
+     * The engine names the top card, and before a draw the card under it (the next top).
+     */
+    private reversed = false;
+    private deckTop: [number | null, number | null] = [null, null];
+    private deckNext: [number | null, number | null] = [null, null];
+    /** What effects wrote on cards (by uid, one line per kind of note) and on players. */
+    private cardNotes = new Map<string, Map<string, string>>();
+    private playerNotes: [Set<string>, Set<string>] = [new Set(), new Set()];
+    /** Who the engine last asked to declare something. */
+    private announcer: Team | null = null;
+    private turn = 0;
+    private turnPlayer: Team = 0;
+    private phase: Phase = 'DP';
+    /** The chain: each link's card, and the cards its activation targeted. */
+    private chain: { code: number; team: Team; uid?: string; targets?: string[] }[] = [];
+    /** Who made the last play (a summon, Set, attack or activation): a chain window after your own play is quiet. */
+    private lastActor: Team | null = null;
+    /** Cards whose chain link just resolved: a spell or trap going to the Graveyard after it isn't destroyed. */
+    private resolved = new Set<string>();
+    /**
+     * In the damage step: the few cards usable there (Injection Fairy Lily, Reinforcements) are made
+     * for that moment. What a player was already offered in it, so each comes up once, not at every window.
+     */
+    private damageStep = false;
+    private damageOffered: [Set<string>, Set<string>] = [new Set(), new Set()];
+    /** The attack under way (for the question's words): its attacker and target, as uids. */
+    private attacking: { team: Team; attacker: string; target?: string } | null = null;
+    /** The monster that last left the field for the Graveyard (for the question's words), until the next play or phase. */
+    private lastSent: { team: Team; code: number } | null = null;
+    /** The last summon or Set (for the question's words), until the phase changes. */
+    private lastPlay: { team: Team; k: 'summon' | 'set'; code: number; how: 'normal' | 'special' | 'flip'; monster: boolean } | null = null;
+    /** For the bot: actions taken this turn, so it can't loop. */
+    botActions = 0;
+
+    /**
+     * The WASM core this duel runs on, kept from the start: if the engine is ever replaced after a
+     * fault (`Engine.revive`), a duel begun on the old core must never touch the new one.
+     */
+    private readonly core: OcgCoreSync;
+
+    constructor(readonly engine: Engine, readonly setup: DuelSetup, private readonly options: SessionOptions = {}) {
+        this.core = engine.core;
+    }
+
+    /** The code a player sees: an older version shows as the card they own. */
+    private show = (code: number) => this.setup.shown?.[String(code)] ?? code;
+
+    /**
+     * Starts the duel, replaying `answers` (from storage) to rebuild where it was.
+     *
+     * `repair`: for duels stored before answers the server gave by itself right after a rebuild
+     * were saved (the passes before the first move of a new duel). There, a stored answer of the
+     * wrong kind for a question the server or the bot answers means that answer was never saved:
+     * it's given again instead. The rebuild still has to use every stored answer, each accepted.
+     */
+    start(answers: readonly OcgResponse[] = [], options: { repair?: boolean } = {}): void {
+        this.repairing = !!options.repair;
+        this.botWaiting = null;
+        const core = this.core;
+        const seed = this.setup.seed.map(BigInt) as [bigint, bigint, bigint, bigint];
+        const team = { startingLP: START_LP, startingDrawCount: 5, drawCountPerTurn: 1 };
+        const handle = core.createDuel({
+            flags: MODE_FLAGS[this.setup.mode],
+            seed,
+            team1: team,
+            team2: team,
+            cardReader: (code) => this.engine.cardData(code),
+            scriptReader: (name) => this.engine.readScript(name),
+            errorHandler: () => undefined,
+        });
+        if (!handle) throw new Error('The duel engine could not start a duel');
+        this.handle = handle;
+        for (const lib of ['constant.lua', 'utility.lua']) core.loadScript(handle, lib, this.engine.readScript(lib) ?? '');
+        for (const t of [0, 1] as const) {
+            const deck = this.setup.decks[t];
+            for (const code of shuffled(deck.main, seed[0] * 2n + BigInt(t)))
+                core.duelNewCard(handle, { team: t, duelist: 0, code, controller: t, location: L.DECK, sequence: 0, position: P.FACEDOWN_DEFENSE });
+            for (const code of deck.extra)
+                core.duelNewCard(handle, { team: t, duelist: 0, code, controller: t, location: L.EXTRA, sequence: 0, position: P.FACEDOWN_DEFENSE });
+        }
+        core.startDuel(handle);
+        this.replayQueue = [...answers];
+        this.run();
+        // Every stored answer must land where it was given. One left over, or one the engine refused,
+        // means the replay went another way (the rules changed under the duel): say so, don't stall.
+        const left = this.replayQueue.length;
+        this.replayQueue = [];
+        this.repairing = false;
+        if (answers.length && (left || this.retry)) throw new Error(`The duel could not be rebuilt from its answers (${left} left over${this.retry ? ', one refused' : ''})`);
+        // A rebuilt duel's frames (from before a restart) are history: the board starts from the state
+        // now. A new duel keeps them, so the first look at it shows the decks dealt out.
+        if (answers.length) {
+            this.frames = [[], []];
+            this.history = [[], []];
+            this.pushed = [0, 0];
+            this.delivered = [true, true];
+            this.moved = [true, true];
+            this.opening = [[], []];
+        }
+    }
+
+    /** Whether a player has been sent this duel's frames yet: the first connection gets them from the start. */
+    private delivered: [boolean, boolean] = [false, false];
+    /** Whether a player has answered anything yet; before that, the frames of the duel so far (the opening). */
+    private moved: [boolean, boolean] = [false, false];
+    private opening: [DuelFrame[], DuelFrame[]] = [[], []];
+
+    /**
+     * What a player connecting now should watch: the duel from its start if they're the first to
+     * look (the opening hands drawn, the bot's first turn), otherwise nothing (they get the board as it is).
+     */
+    framesOnConnect(team: Team): DuelFrame[] {
+        // Until they've made a move, every look starts from the top (a page that connects twice
+        // while it loads still shows the opening hands drawn).
+        if (!this.moved[team]) {
+            this.frames[team] = [];
+            this.delivered[team] = true;
+            return [...this.opening[team]];
+        }
+        const fresh = !this.delivered[team];
+        const frames = this.takeFrames(team);
+        return fresh ? frames : [];
+    }
+
+    /** Where a player's page is in the duel's frames, once it has everything sent so far. */
+    cursor(team: Team): string {
+        return `${this.epoch}:${this.pushed[team]}`;
+    }
+
+    /**
+     * The frames since `cursor` (a page reconnecting after it lost touch), or null if that's not
+     * known any more (another session's numbering, or longer ago than is kept).
+     */
+    framesSince(team: Team, cursor: string): DuelFrame[] | null {
+        const [epoch, at] = cursor.split(':');
+        const n = Number(at);
+        const first = this.pushed[team] - this.history[team].length;
+        if (epoch !== this.epoch || !Number.isInteger(n) || n < first || n > this.pushed[team]) return null;
+        this.takeFrames(team);
+        return this.history[team].slice(n - first);
+    }
+
+    destroy(): void {
+        if (this.handle) this.core.destroyDuel(this.handle);
+        this.handle = null;
+    }
+
+    /**
+     * A chance to respond, in words for `team`: the moment it's at (the engine's own timing for the
+     * window: an attack declared, the damage step, damage calculation, a summon, a phase) and the
+     * cards involved, then the question. "Respond?" after the rival's play, "Activate a card?" otherwise.
+     */
+    private askFor(team: Team, timing: number, answering = false): string {
+        const view = this.view(team);
+        const cards = new Map([view.me, view.opp].flatMap((s) => [...s.monsters, ...s.spells, s.field]).filter((c): c is DuelCardView => !!c).map((c) => [c.uid, c]));
+        const yours = (t: Team) => (t === team ? 'your' : `${this.setup.names[t]}'s`);
+        const who = (t: Team) => (t === team ? 'You' : this.setup.names[t]!);
+        const card = (uid: string | undefined, t: Team) => {
+            const c = uid ? cards.get(uid) : undefined;
+            if (!c) return `${yours(t)} monster`;
+            return c.code && c.faceUp ? `${yours(t)} ${this.engine.name(c.code)}` : c.code ? `${yours(t)} Set ${this.engine.name(c.code)}` : `${yours(t)} Set monster`;
+        };
+        const PHASE: Record<Phase, string> = { DP: 'Draw Phase', SP: 'Standby Phase', M1: 'Main Phase 1', BP: 'Battle Phase', M2: 'Main Phase 2', EP: 'End Phase' };
+        const T = { STANDBY: 0x2, MAIN_END: 0x4, BATTLE_START: 0x8, BATTLE_END: 0x10, END: 0x20, SUMMON: 0x40, SPSUMMON: 0x80, FLIPSUMMON: 0x100, MSET: 0x200, SSET: 0x400, ATTACK: 0x1000, DAMAGE_STEP: 0x2000, DAMAGE_CAL: 0x4000, CHAIN_END: 0x8000 };
+        const a = this.attacking, play = this.lastPlay, tp = this.turnPlayer;
+        const battle = a ? `${card(a.attacker, a.team)} ${a.target ? `battles ${card(a.target, (1 - a.team) as Team)}` : `attacks ${a.team === team ? `${this.setup.names[1 - team]}` : 'you'} directly`}` : '';
+        let moment: string, rivals = false;
+        const sent = this.lastSent;
+        // A monster just went to the Graveyard and a card of yours answers that: say so (it's no
+        // longer on the field to be named as the attacker or the target).
+        if (answering && sent) moment = `${yours(sent.team)[0]!.toUpperCase()}${yours(sent.team).slice(1)} ${this.engine.name(this.show(sent.code))} was sent to the Graveyard`;
+        else if (a && timing & T.DAMAGE_CAL) moment = `Damage calculation: ${battle}`;
+        else if (a && (timing & T.DAMAGE_STEP || this.damageStep)) moment = `Damage step: ${battle}`;
+        else if (a && timing & T.ATTACK) {
+            const by = card(a.attacker, a.team), at = a.target ? `an attack on ${card(a.target, (1 - a.team) as Team)}` : 'a direct attack';
+            moment = `${by[0]!.toUpperCase()}${by.slice(1)} declared ${at}`;
+            rivals = a.team !== team;
+        } else if (play && timing & (T.SUMMON | T.SPSUMMON | T.FLIPSUMMON | T.MSET | T.SSET)) {
+            const how = play.how === 'normal' ? 'Normal Summoned' : play.how === 'flip' ? 'Flip Summoned' : 'Special Summoned';
+            moment = play.k === 'set' ? `${who(play.team)} Set a ${play.monster ? 'monster' : 'card'}` : `${who(play.team)} ${how} ${this.engine.name(this.show(play.code))}`;
+            rivals = play.team !== team;
+        } else if (timing & T.CHAIN_END) moment = 'The chain has resolved';
+        else if (timing & T.BATTLE_START) moment = `Start of ${yours(tp)} Battle Phase`;
+        else if (timing & T.BATTLE_END) moment = `End of ${yours(tp)} Battle Phase`;
+        else if (timing & T.MAIN_END) moment = `End of ${yours(tp)} ${PHASE[this.phase]}`;
+        else moment = `${yours(tp)[0]!.toUpperCase()}${yours(tp).slice(1)} ${PHASE[this.phase]}`;
+        return `${moment}. ${rivals ? 'Respond?' : 'Activate a card?'}`;
+    }
+
+    /** Whose answer the duel is waiting for. */
+    waitingFor(): Team | null {
+        return this.question?.team ?? null;
+    }
+
+    /** A player's answer. False if it isn't their question, it's stale, or it doesn't fit the question. */
+    answer(team: Team, seq: number, answer: DuelAnswer): boolean {
+        const q = this.question;
+        if (!q || q.team !== team || seq !== this.seq || this.result) return false;
+        const response = q.toResponse(answer);
+        if (!response) return false;
+        // A quiet chain window is passed by the page on its own the moment it connects: not a move.
+        if (!(q.prompt.kind === 'chain' && q.prompt.quiet)) {
+            this.moved[team] = true;
+            this.opening[team] = [];
+        }
+        // Choosing what to do on your turn can be taken back while it's still being set up (its
+        // zone, position or Tributes), until anything shows on the board.
+        if (q.prompt.kind === 'actions') this.backPoint = { team, answers: this.answers.length };
+        this.respond(response);
+        return true;
+    }
+
+    /** Where "Back" would rebuild the duel to: the answers before the move being set up. */
+    private backPoint: { team: Team; answers: number } | null = null;
+
+    /** The answers to rebuild the duel from to take back the move a player is setting up, if they can. */
+    backAnswers(team: Team): OcgResponse[] | null {
+        const q = this.question, b = this.backPoint;
+        if (!q || !b || b.team !== team || q.team !== team || this.result) return null;
+        if (q.prompt.kind !== 'place' && q.prompt.kind !== 'position' && q.prompt.kind !== 'cards') return null;
+        return this.answers.slice(0, b.answers);
+    }
+
+    /**
+     * Calling the duel off, which takes both players: `agree` asks (or accepts the rival's asking),
+     * otherwise the request is withdrawn or refused. A bot agrees at once. Returns what came of it.
+     */
+    callOff(team: Team, agree: boolean): 'asked' | 'cleared' | 'done' | null {
+        if (this.result) return null;
+        const rival = (1 - team) as Team;
+        if (!agree) {
+            if (this.callOffBy === null) return null;
+            this.callOffBy = null;
+            return 'cleared';
+        }
+        if (this.callOffBy !== rival && !this.setup.bots[rival]) {
+            if (this.callOffBy === team) return null;
+            this.callOffBy = team;
+            return 'asked';
+        }
+        this.callOffBy = null;
+        this.result = { winner: null, reason: 'Both players agreed to call the duel off', calledOff: true };
+        this.question = null;
+        for (const t of [0, 1] as const) this.pushFrame([{ k: 'win', side: null, reason: this.result.reason }], t);
+        this.destroy();
+        return 'done';
+    }
+
+    concede(team: Team): void {
+        if (this.result) return;
+        this.result = { winner: (1 - team) as Team, reason: `${this.setup.names[team]} surrendered` };
+        this.question = null;
+        this.pushFrame([{ k: 'win', side: 'me', reason: this.result.reason }], 1 - team as Team);
+        this.destroy();
+    }
+
+    /** The frames a player hasn't been sent yet (cleared). */
+    takeFrames(team: Team): DuelFrame[] {
+        this.delivered[team] = true;
+        const out = this.frames[team];
+        this.frames[team] = [];
+        return out;
+    }
+
+    state(team: Team, duelId: string): DuelState {
+        const rival = (1 - team) as Team;
+        const mine = this.question?.team === team;
+        return {
+            duelId,
+            seq: this.seq,
+            you: { name: this.setup.names[team] },
+            rival: { name: this.setup.names[rival], bot: this.setup.bots[rival], ...(this.setup.solo ? { solo: true } : {}) },
+            view: this.view(team),
+            prompt: mine && !this.result ? (this.backAnswers(team) ? ({ ...this.question!.prompt, back: true } as DuelPrompt) : this.question!.prompt) : null,
+            ...(mine && this.retry ? { retry: true } : {}),
+            result: this.result ? { winner: this.result.winner === null ? null : this.result.winner === team ? 'me' : 'opp', reason: this.result.reason, ...(this.result.calledOff ? { calledOff: true } : {}) } : null,
+            ...(this.callOffBy !== null && !this.result ? { callOff: this.callOffBy === team ? ('asked' as const) : ('asking' as const) } : {}),
+        };
+    }
+
+    // ---- the engine loop ------------------------------------------------------------------
+
+    private respond(response: OcgResponse) {
+        this.pickHint = [0, 0];
+        this.noteCall(response);
+        this.answers.push(response);
+        this.seq++;
+        this.retry = false;
+        this.question = null;
+        this.core.duelSetResponse(this.handle!, forEngine(response));
+        this.run();
+    }
+
+    private run() {
+        const core = this.core;
+        for (let guard = 0; guard < 200_000 && this.handle; guard++) {
+            const status = core.duelProcess(this.handle);
+            const messages = core.duelGetMessage(this.handle);
+            const events = this.apply(messages);
+            if (events.length) this.backPoint = null;
+            if (events.length && !this.replayQueue.length) for (const t of [0, 1] as const) this.pushFrame(this.eventsFor(events, t), t);
+            if (this.result || status === OcgProcessResult.END) {
+                this.result ??= { winner: null, reason: 'The duel ended' };
+                this.destroy();
+                return;
+            }
+            if (status === OcgProcessResult.CONTINUE) continue;
+
+            const last = messages[messages.length - 1];
+            if (!last) return;
+            if (last.type === M.RETRY) {
+                // The last answer wasn't allowed: take it back and ask the same question again.
+                this.answers.pop();
+                this.retry = true;
+                const asked = [...messages].reverse().find((m: OcgMessage) => m.type !== M.RETRY && 'player' in m);
+                this.question = asked ? this.ask(asked) : this.lastQuestion;
+                if (this.question?.team !== undefined && this.setup.bots[this.question.team]) {
+                    throw new Error('The bot gave an answer the engine refused');
+                }
+                return;
+            }
+            // Answers come, in order, from: the server itself (zones, ordering), the bot, or a player.
+            // When rebuilding a stored duel, each is taken from the stored list instead.
+            const auto = this.autoAnswer(last);
+            if (auto) {
+                this.feed(this.storedOr(auto));
+                continue;
+            }
+            const question = this.ask(last);
+            if (!question) throw new Error(`The duel server can't ask engine message ${last.type}`);
+            if (this.setup.bots[question.team]) {
+                if (this.replayQueue.length && !this.repairing) {
+                    this.feed(this.replayQueue.shift()!);
+                    continue;
+                }
+                if (this.options.pauseForBot && !this.replayQueue.length) {
+                    this.botWaiting = { m: last, team: question.team };
+                    return;
+                }
+                // (When repairing, the bot's answer is worked out to compare it with the stored one.)
+                this.feed(this.storedOr(this.botDecides(last, question.team)));
+                continue;
+            }
+            const replayed = this.replayQueue.shift();
+            if (replayed) {
+                this.seq++;
+                this.feed(replayed);
+                continue;
+            }
+            this.question = question;
+            this.lastQuestion = question;
+            return;
+        }
+    }
+
+    /** Cards of the rival's shown to a player (by uid) until the chain is over: they may see them in a question. */
+    private revealed: [Set<string>, Set<string>] = [new Set(), new Set()];
+    /** A coin call being asked (who, and which option is Heads), then the call made, shown with the toss. */
+    private calling: { team: Team; heads: number } | null = null;
+    /** What the engine said the next pick of each player is for ("Select an attack target"): its title. */
+    private selectHint: [string, string] = ['', ''];
+    /** The engine's code for that hint: 549 (HINTMSG_ATTACKTARGET) marks the pick of what to attack. */
+    private selectHintCode: [number, number] = [0, 0];
+    private call: { team: Team; heads: boolean } | null = null;
+    private noteCall(response: OcgResponse) {
+        if (this.calling && response.type === R.SELECT_OPTION) this.call = { team: this.calling.team, heads: response.index === this.calling.heads };
+        this.calling = null;
+    }
+
+    private botDecides(m: OcgMessage, team: Team): OcgResponse {
+        return (this.options.answerer ?? botAnswer)(m, this, team, this.setup.solo);
+    }
+
+    /** The bot's question the duel stopped at (`pauseForBot`), for `botThink()`. */
+    private botWaiting: { m: OcgMessage; team: Team } | null = null;
+    /** Whether the duel waits on the bot to decide (`pauseForBot`). */
+    get botToThink(): boolean {
+        return !!this.botWaiting && !!this.handle;
+    }
+    /** The bot makes the decision the duel stopped at, and the duel goes on to the next stop. */
+    botThink(): void {
+        const waiting = this.botWaiting;
+        if (!waiting || !this.handle) return;
+        this.botWaiting = null;
+        this.feed(this.botDecides(waiting.m, waiting.team));
+        this.run();
+    }
+
+    private feed(response: OcgResponse) {
+        this.pickHint = [0, 0];
+        this.noteCall(response);
+        this.answers.push(response);
+        this.core.duelSetResponse(this.handle!, forEngine(response));
+    }
+    private lastQuestion: Question | null = null;
+
+    private pushFrame(events: DuelEvent[], team: Team) {
+        if (!events.length) return;
+        const list = this.frames[team];
+        const frame = { events, view: this.view(team) };
+        list.push(frame);
+        if (list.length > FRAME_CAP) list.splice(0, list.length - FRAME_CAP);
+        const kept = this.history[team];
+        kept.push(frame);
+        this.pushed[team]++;
+        if (kept.length > FRAME_CAP) kept.splice(0, kept.length - FRAME_CAP);
+        if (!this.moved[team] && this.opening[team].length < FRAME_CAP) this.opening[team].push(frame);
+    }
+
+    /** Questions nobody needs to see: zone placement, ordering, passing with nothing to chain. */
+    private autoAnswer(m: OcgMessage): OcgResponse | null {
+        switch (m.type) {
+            case M.SELECT_PLACE:
+            case M.SELECT_DISFIELD: {
+                // A player chooses the zone (as on EDOPro), unless there's no choice to make; the bot takes the middle-most.
+                if (!this.setup.bots[m.player as Team] && openZones(m.field_mask).length > m.count) return null;
+                const places = [];
+                let mask = m.field_mask;
+                for (let i = 0; i < m.count; i++) {
+                    const place = freePlace(mask, m.player);
+                    places.push(place.place);
+                    mask |= 1 << place.bit;
+                }
+                return m.type === M.SELECT_PLACE ? { type: R.SELECT_PLACE, places } : { type: R.SELECT_DISFIELD, places };
+            }
+            case M.SORT_CARD:
+                // A player puts the cards in order themselves (Spellbook Organization); the bot keeps the engine's.
+                if (!this.setup.bots[m.player as Team] && m.cards.length > 1 && (this.setup.rules ?? 1) >= 4) return null;
+                return { type: R.SORT_CARD, order: null };
+            case M.SORT_CHAIN:
+                return { type: R.SORT_CARD, order: null };
+            case M.SELECT_CHAIN:
+                // Nothing to activate: pass. One mandatory effect (Ekibyo Drakmord destroying its monster):
+                // there's no choice to make, so it just happens.
+                if (!m.selects.length && !m.forced) return { type: R.SELECT_CHAIN, index: null };
+                if (m.forced && m.selects.length === 1 && (this.setup.rules ?? 1) >= 2) return { type: R.SELECT_CHAIN, index: 0 };
+                // Several mandatory effects at once are put on the chain in the order their player picks.
+                // When they're all the same effect of the same card (copies of Mask of the Accursed each
+                // inflicting its 500 damage), every order comes to the same thing: no question.
+                if (m.forced && m.selects.length > 1 && (this.setup.rules ?? 1) >= 3) {
+                    const same = m.selects.every((c) => c.code === m.selects[0]!.code && BigInt(c.description) === BigInt(m.selects[0]!.description));
+                    if (same) return { type: R.SELECT_CHAIN, index: 0 };
+                }
+                return null;
+            case M.SELECT_COUNTER: {
+                // A player chooses which cards lose the counters, when there's a choice to make.
+                if (!this.setup.bots[m.player as Team] && (this.setup.rules ?? 1) >= 4 && counterSplits(m.count, m.cards.map((c) => (c as unknown as { count: number }).count ?? 0)).length > 1) return null;
+                let left = m.count;
+                const counters = m.cards.map((c) => {
+                    const take = Math.min(left, (c as unknown as { count: number }).count ?? 0);
+                    left -= take;
+                    return take;
+                });
+                return { type: R.SELECT_COUNTER, counters };
+            }
+            case M.ROCK_PAPER_SCISSORS:
+                return { type: R.ROCK_PAPER_SCISSORS, value: 1 };
+            default:
+                return null;
+        }
+    }
+
+    // ---- messages → state and events -------------------------------------------------------
+
+    /** Updates what the server tracks from the engine's messages; returns events (with teams, not sides). */
+    private apply(messages: OcgMessage[]): TeamEvent[] {
+        const out: TeamEvent[] = [];
+        for (const m of messages) {
+            if (NEW_MOMENT.has(m.type)) this.lastSent = null;
+            switch (m.type) {
+                case M.ANNOUNCE_RACE: case M.ANNOUNCE_ATTRIB: case M.ANNOUNCE_CARD: case M.ANNOUNCE_NUMBER:
+                    this.announcer = m.player as Team;
+                    break;
+                case M.NEW_TURN:
+                    this.turn++;
+                    this.turnPlayer = m.player as Team;
+                    this.botActions = 0;
+                    out.push({ k: 'turn', team: m.player as Team, turn: this.turn });
+                    break;
+                case M.NEW_PHASE:
+                    this.resolved.clear();
+                    this.phase = phaseOf(m.phase);
+                    this.attacking = null;
+                    this.lastPlay = null;
+                    out.push({ k: 'phase', phase: this.phase });
+                    break;
+                case M.HINT:
+                    if (m.hint_type === 3 && (m.player === 0 || m.player === 1)) {
+                        this.selectHint[m.player] = this.engine.describe(m.hint);
+                        this.selectHintCode[m.player] = Number(m.hint);
+                        this.pickHint[m.player] = Number(m.hint);
+                    }
+                    // A declaration (Type, Attribute, card, number): the one who declared is whoever was
+                    // last asked to (the engine's own hint names them; a script's may name the rival).
+                    if (m.hint_type >= 6 && m.hint_type <= 9 && (m.player === 0 || m.player === 1)) {
+                        const d = BigInt(m.hint);
+                        const team = this.announcer ?? (m.player as Team);
+                        this.announcer = null;
+                        if (m.hint_type === 6) out.push({ k: 'declare', team, what: 'type', text: bitNames(d, RACES).join(', ') });
+                        else if (m.hint_type === 7) out.push({ k: 'declare', team, what: 'attribute', text: bitNames(d, ATTRIBUTES).join(', ') });
+                        else if (m.hint_type === 8) out.push({ k: 'declare', team, what: 'card', text: this.engine.name(Number(d)), code: Number(d) });
+                        else out.push({ k: 'declare', team, what: 'number', text: String(d) });
+                    }
+                    break;
+                case M.TOSS_COIN:
+                    out.push({ k: 'coin', team: m.player as Team, results: m.results, call: this.call });
+                    this.call = null;
+                    break;
+                case M.TOSS_DICE:
+                    out.push({ k: 'dice', team: m.player as Team, results: m.results });
+                    break;
+                case M.SHUFFLE_DECK:
+                    this.deckTop[m.player as Team] = this.deckNext[m.player as Team] = null;
+                    out.push({ k: 'shuffle', team: m.player as Team });
+                    break;
+                case M.SHUFFLE_HAND:
+                    out.push({ k: 'hand-shuffle', team: m.player as Team });
+                    break;
+                case M.REVERSE_DECK:
+                    this.reversed = !this.reversed;
+                    this.deckTop = [null, null];
+                    this.deckNext = [null, null];
+                    break;
+                case M.DECK_TOP:
+                    // `count` cards from the top: 0 is the top card, 1 the one that's next once it's drawn.
+                    if (m.player === 0 || m.player === 1) {
+                        if (m.count === 0) this.deckTop[m.player] = m.code;
+                        else if (m.count === 1) this.deckNext[m.player] = m.code;
+                    }
+                    break;
+                case M.DRAW:
+                    // One card drawn: the card under it is the top now, if the engine named it.
+                    this.deckTop[m.player as Team] = m.drawn.length === 1 ? this.deckNext[m.player as Team] : null;
+                    this.deckNext[m.player as Team] = null;
+                    this.tracker.draw(m.player, m.drawn.length);
+                    out.push({ k: 'draw', team: m.player as Team, count: m.drawn.length });
+                    break;
+                case M.SUMMONING:
+                case M.SPSUMMONING:
+                case M.FLIPSUMMONING:
+                    out.push({ k: 'summon', team: m.controller, code: m.code, how: m.type === M.SUMMONING ? 'normal' : m.type === M.FLIPSUMMONING ? 'flip' : 'special' });
+                    this.lastPlay = { team: m.controller as Team, k: 'summon', code: m.code, how: m.type === M.SUMMONING ? 'normal' : m.type === M.FLIPSUMMONING ? 'flip' : 'special', monster: true };
+                    break;
+                case M.SET:
+                    out.push({ k: 'set', team: m.controller });
+                    this.lastPlay = { team: m.controller as Team, k: 'set', code: m.code, how: 'normal', monster: m.location === L.MZONE };
+                    break;
+                case M.CHAINING: {
+                    const uid = m.location === L.DECK ? undefined : this.tracker.uidAt(m.controller, m.location, m.sequence);
+                    this.chain.push({ code: m.code, team: m.controller, uid });
+                    out.push({ k: 'activate', team: m.controller, code: m.code, uid, link: this.chain.length });
+                    break;
+                }
+                case M.BECOME_TARGET: {
+                    // Targets are chosen while a card is activated, after it joins the chain: they're the
+                    // newest link's. (Targets chosen as a link resolves are that link's too: it's on top then.)
+                    const top = this.chain[this.chain.length - 1];
+                    if (top) top.targets = [...(top.targets ?? []), ...m.cards.map((c) => this.tracker.uidAt(c.controller, c.location, c.sequence))];
+                    break;
+                }
+                case M.CHAIN_SOLVED: {
+                    const link = this.chain[m.chain_size - 1];
+                    if (link?.uid) this.resolved.add(link.uid);
+                    this.chain.length = Math.max(0, m.chain_size - 1);
+                    out.push({ k: 'resolved', link: m.chain_size });
+                    break;
+                }
+                case M.CHAIN_NEGATED:
+                case M.CHAIN_DISABLED:
+                    out.push({ k: 'negated', link: m.chain_size });
+                    break;
+                case M.CONFIRM_CARDS:
+                    for (const c of m.cards) this.revealed[m.player as Team]?.add(this.tracker.uidAt(c.controller, c.location, c.sequence));
+                    // Shown to `m.player` (its owner knows them anyway); the board shows them too.
+                    if (m.cards.length) out.push({ k: 'reveal', viewer: m.player as Team, owner: m.cards[0]!.controller as Team, location: m.cards[0]!.location, codes: m.cards.map((c) => c.code) });
+                    break;
+                case M.CONFIRM_DECKTOP:
+                    // Cards turned over from the top of a Deck: both players see them.
+                    if (m.cards.length) out.push({ k: 'reveal', viewer: null, owner: m.cards[0]!.controller as Team, location: L.DECK, codes: m.cards.map((c) => c.code) });
+                    break;
+                case M.RANDOM_SELECTED:
+                    out.push({ k: 'random', uids: m.cards.map((c) => this.tracker.uidAt(c.controller, c.location, c.sequence)) });
+                    break;
+                case M.CHAIN_END:
+                    this.revealed = [new Set(), new Set()];
+                    this.chain = [];
+                    break;
+                case M.DAMAGE_STEP_START:
+                    this.damageStep = true;
+                    this.damageOffered = [new Set(), new Set()];
+                    break;
+                case M.DAMAGE_STEP_END:
+                    this.damageStep = false;
+                    break;
+                case M.ATTACK: {
+                    const a = m.card;
+                    this.attacking = {
+                        team: a.controller as Team,
+                        attacker: this.tracker.uidAt(a.controller, a.location, a.sequence),
+                        ...(m.target ? { target: this.tracker.uidAt(m.target.controller, m.target.location, m.target.sequence) } : {}),
+                    };
+                    out.push({
+                        k: 'attack', team: a.controller,
+                        attacker: this.tracker.uidAt(a.controller, a.location, a.sequence),
+                        target: m.target ? this.tracker.uidAt(m.target.controller, m.target.location, m.target.sequence) : undefined,
+                    });
+                    break;
+                }
+                case M.MOVE: {
+                    // A card that changes place starts afresh: what effects wrote on it is gone.
+                    if (m.from.location) this.cardNotes.delete(this.tracker.uidAt(m.from.controller, m.from.location, m.from.sequence));
+                    const fromField = m.from.location === L.MZONE || m.from.location === L.SZONE;
+                    const uidBefore = fromField ? this.tracker.uidAt(m.from.controller, m.from.location, m.from.sequence) : undefined;
+                    // A monster leaving the field for the Graveyard breaks; a spell that just resolved doesn't.
+                    if (uidBefore && m.to.location === L.GRAVE && (m.from.location === L.MZONE || !(this.chain.some((c) => c.uid === uidBefore) || this.resolved.has(uidBefore))))
+                        out.push({ k: 'destroyed', uid: uidBefore, code: m.card });
+                    // A card leaving a Deck any other way: its top isn't known until the engine names it again.
+                    if (m.from.location === L.DECK) this.deckTop[m.from.controller as Team] = this.deckNext[m.from.controller as Team] = null;
+                    if (m.to.location === L.DECK) this.deckTop[m.to.controller as Team] = this.deckNext[m.to.controller as Team] = null;
+                    if (m.from.location === L.MZONE && m.to.location === L.GRAVE) this.lastSent = { team: m.from.controller as Team, code: m.card };
+                    const uid = this.tracker.move(m.from, m.to);
+                    out.push({
+                        k: 'move', uid, code: m.card, team: (m.to.location ? m.to.controller : m.from.controller) as Team,
+                        from: zoneOf(m.from.location, m.from.sequence), to: zoneOf(m.to.location, m.to.sequence),
+                        public: faceUp(m.to.position) && m.to.location !== L.HAND && m.to.location !== L.DECK,
+                    });
+                    break;
+                }
+                case M.SWAP:
+                    this.tracker.swap(m.card1, m.card2);
+                    break;
+                case M.ATTACK_DISABLED:
+                    // The attack declared last is stopped: say so, and whose it was.
+                    if (this.attacking) out.push({ k: 'attack-negated', team: this.attacking.team, attacker: this.attacking.attacker });
+                    break;
+                case M.FIELD_DISABLED:
+                    this.locked = m.field_mask;
+                    break;
+                case M.CARD_HINT: {
+                    const uid = this.tracker.uidAt(m.controller, m.location, m.sequence);
+                    const notes = this.cardNotes.get(uid) ?? new Map<string, string>();
+                    const d = m.description;
+                    if (m.card_hint === 2) notes.set('card', this.engine.name(Number(d)));
+                    else if (m.card_hint === 3) notes.set('type', bitNames(d, RACES).join(', '));
+                    else if (m.card_hint === 4) notes.set('attribute', bitNames(d, ATTRIBUTES).join(', '));
+                    else if (m.card_hint === 5) notes.set('number', String(d));
+                    else if (m.card_hint === 6) notes.set(`desc:${d}`, this.engine.describe(d));
+                    else if (m.card_hint === 7) notes.delete(`desc:${d}`);
+                    this.cardNotes.set(uid, notes);
+                    break;
+                }
+                case M.PLAYER_HINT:
+                    if (m.player === 0 || m.player === 1) {
+                        if (m.player_hint === 6) this.playerNotes[m.player].add(this.engine.describe(m.description));
+                        else if (m.player_hint === 7) this.playerNotes[m.player].delete(this.engine.describe(m.description));
+                    }
+                    break;
+                case M.POS_CHANGE:
+                    out.push({ k: 'reposition', uid: this.tracker.uidAt(m.controller, m.location, m.sequence), code: m.code, public: faceUp(m.position) });
+                    break;
+                case M.DAMAGE:
+                    this.lp[m.player as Team] = Math.max(0, this.lp[m.player as Team] - m.amount);
+                    out.push({ k: 'damage', team: m.player as Team, amount: m.amount });
+                    break;
+                case M.PAY_LPCOST:
+                    this.lp[m.player as Team] = Math.max(0, this.lp[m.player as Team] - m.amount);
+                    out.push({ k: 'pay', team: m.player as Team, amount: m.amount });
+                    break;
+                case M.RECOVER:
+                    this.lp[m.player as Team] += m.amount;
+                    out.push({ k: 'recover', team: m.player as Team, amount: m.amount });
+                    break;
+                case M.LPUPDATE:
+                    // Set outright by an effect (Reversal Quiz): no damage or gain to show, so it's its own event.
+                    if (this.lp[m.player as Team] !== m.lp) out.push({ k: 'lp', team: m.player as Team, lp: m.lp, was: this.lp[m.player as Team] });
+                    this.lp[m.player as Team] = m.lp;
+                    break;
+                case M.WIN:
+                    this.result = { winner: m.player === 0 || m.player === 1 ? (m.player as Team) : null, reason: this.engine.victoryReason(m.reason) };
+                    out.push({ k: 'win', team: this.result.winner, reason: this.result.reason });
+                    break;
+                default:
+                    break;
+            }
+        }
+        for (const e of out) {
+            if (e.k === 'turn') this.lastActor = null;
+            if ((e.k === 'summon' || e.k === 'set' || e.k === 'attack' || e.k === 'activate') && 'team' in e) this.lastActor = e.team;
+        }
+        return out;
+    }
+
+    /** The events as `team` may see them: sides instead of teams, hidden cards without codes. */
+    private eventsFor(events: TeamEvent[], team: Team): DuelEvent[] {
+        const side = (t: Team | null): Side => (t === team ? 'me' : 'opp');
+        return events.map((e): DuelEvent => {
+            switch (e.k) {
+                case 'turn': return { k: 'turn', side: side(e.team), turn: e.turn };
+                case 'draw': return { k: 'draw', side: side(e.team), count: e.count };
+                case 'shuffle': return { k: 'shuffle', side: side(e.team) };
+                case 'hand-shuffle': return { k: 'hand-shuffle', side: side(e.team) };
+                case 'coin': return { k: 'coin', side: side(e.team), results: e.results.map((h) => (h ? 'heads' : 'tails')), ...(e.call ? { call: { side: side(e.call.team), heads: e.call.heads } } : {}) };
+                case 'dice': return { k: 'dice', side: side(e.team), results: e.results };
+                case 'summon': return { k: 'summon', side: side(e.team), code: this.show(e.code), how: e.how };
+                case 'set': return { k: 'set', side: side(e.team) };
+                case 'activate': return { k: 'activate', side: side(e.team), code: this.show(e.code), uid: e.uid, link: e.link };
+                case 'attack': return { k: 'attack', side: side(e.team), attacker: e.attacker, target: e.target };
+                case 'reveal': {
+                    const sees = e.viewer === null || e.viewer === team || e.owner === team;
+                    return { k: 'reveal', side: side(e.owner), by: e.viewer === null ? null : side(e.viewer), from: zoneOf(e.location, 0), codes: sees ? e.codes.map((c) => this.show(c)) : [], count: e.codes.length };
+                }
+                case 'random': return { k: 'random', uids: e.uids };
+                case 'declare': return { k: 'declare', side: side(e.team), what: e.what, text: e.text, ...(e.code ? { code: this.show(e.code) } : {}) };
+                case 'attack-negated': return { k: 'attack-negated', side: side(e.team), ...(e.attacker ? { attacker: e.attacker } : {}) };
+                case 'move': return { k: 'move', uid: e.uid, code: e.public || e.team === team ? this.show(e.code) : 0, side: side(e.team), from: e.from, to: e.to };
+                case 'reposition': return { k: 'reposition', uid: e.uid, code: e.public ? this.show(e.code) : 0 };
+                case 'damage': case 'pay': case 'recover': return { k: e.k, side: side(e.team), amount: e.amount };
+                case 'lp': return { k: 'lp', side: side(e.team), lp: e.lp, was: e.was };
+                case 'win': return { k: 'win', side: e.team === null ? null : side(e.team), reason: e.reason };
+                case 'destroyed': return { k: 'destroyed', uid: e.uid, code: this.show(e.code) };
+                default: return e;
+            }
+        });
+    }
+
+    // ---- views -------------------------------------------------------------------------------
+
+    /** The field as `team` may see it. */
+    view(team: Team): DuelView {
+        const side = (t: Team): DuelSideView => this.sideView(t, team);
+        const me = side(team), opp = side((1 - team) as Team);
+        this.markAffected({ [team]: me, [1 - team]: opp } as Record<Team, DuelSideView>);
+        const emz: DuelView['extraMonsters'] = [null, null];
+        if (this.setup.mode === 'MR4' && this.handle) {
+            for (const t of [0, 1] as const) {
+                const row = this.core.duelQueryLocation(this.handle, { flags: CARD_FLAGS, controller: t, location: L.MZONE });
+                for (const seq of [5, 6]) {
+                    const card = row[seq] ? this.cardView(row[seq]!, t, L.MZONE, seq, team) : null;
+                    // Sequence 5 is the left zone as team 0 sees it; the other team sees it mirrored.
+                    if (card) emz[t === team ? seq - 5 : 6 - seq] = { side: t === team ? 'me' : 'opp', card };
+                }
+            }
+        }
+        return {
+            mode: this.setup.mode,
+            turn: this.turn,
+            turnPlayer: this.turnPlayer === team ? 'me' : 'opp',
+            phase: this.phase,
+            me,
+            opp,
+            extraMonsters: emz,
+            chain: this.chain.map((c) => ({ code: this.show(c.code), side: c.team === team ? 'me' : 'opp', uid: c.uid, ...(c.targets?.length ? { targets: c.targets } : {}) })),
+        };
+    }
+
+    /** Whether `owner`'s Graveyard is closed to `viewer`: the owner's Question is on the chain. */
+    private graveClosed(owner: Team, viewer: Team): boolean {
+        return owner !== viewer && this.chain.some((c) => c.team === owner && this.show(c.code) === QUESTION);
+    }
+
+    private sideView(t: Team, viewer: Team): DuelSideView {
+        const empty: DuelSideView = { name: this.setup.names[t], lp: this.lp[t], hand: [], monsters: Array(5).fill(null), spells: Array(5).fill(null), field: null, pendulum: [null, null], grave: [], banished: [], deck: 0, extra: 0 };
+        if (!this.handle) return empty;
+        const core = this.core;
+        const query = (location: number) => core.duelQueryLocation(this.handle!, { flags: CARD_FLAGS, controller: t, location: location as never });
+        const pile = (location: number) => {
+            const cards = query(location);
+            this.tracker.fit(t, location, cards.length);
+            return cards.flatMap((c, i) => (c ? [this.cardView(c, t, location, i, viewer)] : []));
+        };
+        const mz = query(L.MZONE), sz = query(L.SZONE);
+        const slot = (row: typeof mz, location: number, seq: number) => (row[seq] ? this.cardView(row[seq]!, t, location, seq, viewer) : null);
+        return {
+            ...empty,
+            hand: pile(L.HAND),
+            monsters: [0, 1, 2, 3, 4].map((s) => slot(mz, L.MZONE, s)),
+            spells: [0, 1, 2, 3, 4].map((s) => slot(sz, L.SZONE, s)),
+            field: slot(sz, L.SZONE, 5),
+            pendulum: [slot(sz, L.SZONE, 6), slot(sz, L.SZONE, 7)],
+            // Closed to the rival while this player's Question resolves: the cards are there, unnamed.
+            ...(this.graveClosed(t, viewer) ? { grave: pile(L.GRAVE).map((c) => ({ uid: c.uid, code: 0, faceUp: false, defense: false })), graveHidden: true } : { grave: pile(L.GRAVE) }),
+            banished: pile(L.REMOVED),
+            deck: core.duelQueryCount(this.handle, t, L.DECK),
+            ...(this.reversed && this.deckTop[t] ? { deckTop: this.show(this.deckTop[t]!) } : {}),
+            extra: core.duelQueryCount(this.handle, t, L.EXTRA),
+            // Your own Extra Deck is yours to look through; the rival's stays a face-down count.
+            ...(t === viewer ? { extraCards: pile(L.EXTRA) } : {}),
+            ...lockedOf(this.locked, t),
+            ...(this.playerNotes[t].size ? { notes: [...this.playerNotes[t]] } : {}),
+        };
+    }
+
+    /** Marks the cards on the field that something acts on, so the board can show it. */
+    private markAffected(sides: Record<Team, DuelSideView>) {
+        if (!this.handle) return;
+        const core = this.core;
+        const at = (t: number, location: number, seq: number): DuelCardView | null => {
+            const side = sides[t as Team];
+            if (location === L.MZONE) return side.monsters[seq] ?? null;
+            if (location === L.SZONE) return seq < 5 ? (side.spells[seq] ?? null) : seq === 5 ? side.field : (side.pendulum[seq - 6] ?? null);
+            return null;
+        };
+        for (const t of [0, 1] as const) {
+            for (const location of [L.MZONE, L.SZONE]) {
+                core.duelQueryLocation(this.handle, { flags: LINK_FLAGS, controller: t, location }).forEach((c, seq) => {
+                    const card = c && at(t, location, seq);
+                    if (!c || !card || !faceUp(c.position ?? 0)) return;
+                    const total = Object.values(c.counters ?? {}).reduce((a, n) => a + n, 0);
+                    if (total) card.counters = total;
+                    if ((c.status ?? 0) & STATUS_DISABLED) card.negated = true;
+                    for (const target of [...(c.equipCard ? [c.equipCard] : []), ...(c.targetCards ?? [])]) {
+                        const hit = at(target.controller, target.location, target.sequence);
+                        if (hit && hit.uid !== card.uid && !hit.by?.some((b) => b.uid === card.uid)) (hit.by ??= []).push({ uid: card.uid, code: card.code });
+                    }
+                });
+            }
+        }
+    }
+
+    private cardView(c: { code?: number; position?: number; attack?: number; defense?: number; baseAttack?: number; baseDefense?: number }, controller: Team, location: number, sequence: number, viewer: Team): DuelCardView {
+        const position = c.position ?? P.FACEDOWN_DEFENSE;
+        const up = location === L.GRAVE || (location === L.REMOVED ? faceUp(position) : location === L.HAND ? false : faceUp(position));
+        // The owner sees their own hand and Set cards; nobody sees the rival's.
+        const visible = up || controller === viewer;
+        const field = location === L.MZONE;
+        const token = visible && c.code && this.engine.isToken(c.code) ? this.engine.name(c.code) : null;
+        const uid = this.tracker.uidAt(controller, location, sequence);
+        // Notes are public, but a face-down card's would give it away.
+        const notes = up && location !== L.HAND ? [...(this.cardNotes.get(uid)?.values() ?? [])].filter(Boolean) : [];
+        return {
+            uid,
+            ...(notes.length ? { notes } : {}),
+            ...(token ? { token } : {}),
+            code: visible ? this.show(c.code ?? 0) : 0,
+            faceUp: location === L.HAND ? controller === viewer : up,
+            defense: field && (position & P.DEFENSE) !== 0,
+            ...(field && up ? { atk: c.attack, def: c.defense, baseAtk: c.baseAttack, baseDef: c.baseDefense } : {}),
+        };
+    }
+
+    // ---- engine questions → prompts --------------------------------------------------------
+
+    /** A card's position on the field, from the engine (a question's card list doesn't carry it). */
+    private positionOf(c: OcgCardLoc): number {
+        const info = this.core.duelQuery(this.handle!, { flags: Q.POSITION as OcgQueryFlags, controller: c.controller as Team, location: c.location as never, sequence: c.sequence, overlaySequence: 0 });
+        return info?.position ?? P.FACEDOWN_DEFENSE;
+    }
+
+    private ref(c: OcgCardLoc, id: number, asker: Team): PromptCard {
+        const uid = c.location !== L.DECK ? this.tracker.uidAt(c.controller, c.location, c.sequence) : undefined;
+        // The rival's hidden cards (their Deck, their hand, their Set cards) stay hidden in a question,
+        // unless a card showed them to you (Confiscation: "look at your opponent's hand").
+        const hidden = c.controller !== asker && (c.location === L.DECK || c.location === L.HAND || (FIELD_LOCATIONS.has(c.location) && !faceUp(this.positionOf(c))) || (c.location === L.GRAVE && this.graveClosed(c.controller as Team, asker)));
+        return {
+            id, code: hidden && !(uid && this.revealed[asker].has(uid)) ? 0 : this.show(c.code), side: c.controller === asker ? 'me' : 'opp',
+            where: zoneOf(c.location, c.sequence),
+            ...(uid ? { uid } : {}),
+        };
+    }
+
+    private ask(m: OcgMessage): Question | null {
+        if (!('player' in m)) return null;
+        const team = m.player as Team;
+        const describe = (d: bigint) => this.engine.describe(d) || undefined;
+        const q = (prompt: DuelPrompt, toResponse: Question['toResponse']): Question => ({ team, prompt, toResponse });
+        const choice = (a: DuelAnswer) => (a.kind === 'choice' ? a.id : null);
+        const many = (a: DuelAnswer) => (a.kind === 'many' ? a.ids : null);
+        const inRange = (ids: number[] | null, n: number, min: number, max: number) =>
+            ids && ids.length >= min && ids.length <= max && new Set(ids).size === ids.length && ids.every((i) => i >= 0 && i < n) ? ids : null;
+
+        switch (m.type) {
+            case M.SELECT_IDLECMD: {
+                const groups: [I, ActionVerb, OcgCardLoc[]][] = [
+                    [I.SELECT_SUMMON, 'summon', m.summons], [I.SELECT_SPECIAL_SUMMON, 'special', m.special_summons],
+                    [I.SELECT_POS_CHANGE, 'reposition', m.pos_changes], [I.SELECT_MONSTER_SET, 'set', m.monster_sets],
+                    [I.SELECT_SPELL_SET, 'set-spell', m.spell_sets], [I.SELECT_ACTIVATE, 'activate', m.activates],
+                ];
+                const actions = groups.flatMap(([action, verb, list]) => list.map((c, index) => {
+                    const r = this.ref(c, action * 1000 + index, team);
+                    const text = 'description' in c ? describe((c as { description: bigint }).description) : undefined;
+                    return { id: r.id, uid: r.uid, code: this.show(c.code), where: r.where, verb, ...(text ? { text } : {}) };
+                }));
+                const next = [...(m.to_bp ? [{ id: I.TO_BP * 1000, to: 'BP' as const }] : []), ...(m.to_ep ? [{ id: I.TO_EP * 1000, to: 'EP' as const }] : [])];
+                const ids = new Set([...actions.map((a) => a.id), ...next.map((n) => n.id)]);
+                return q({ kind: 'actions', phase: 'main', actions, next }, (a) => {
+                    const id = choice(a);
+                    if (id === null || !ids.has(id)) return null;
+                    const action = Math.floor(id / 1000) as I;
+                    return { type: R.SELECT_IDLECMD, action, index: action === I.TO_BP || action === I.TO_EP ? null : id % 1000 };
+                });
+            }
+            case M.SELECT_BATTLECMD: {
+                const actions = [
+                    ...m.chains.map((c, index) => {
+                        const r = this.ref(c, B.SELECT_CHAIN * 1000 + index, team);
+                        const text = describe(c.description);
+                        return { id: r.id, uid: r.uid, code: this.show(c.code), where: r.where, verb: 'activate' as const, ...(text ? { text } : {}) };
+                    }),
+                    ...m.attacks.map((c, index) => {
+                        const r = this.ref(c, B.SELECT_BATTLE * 1000 + index, team);
+                        return { id: r.id, uid: r.uid, code: this.show(c.code), where: r.where, verb: c.can_direct ? ('attack-direct' as const) : ('attack' as const) };
+                    }),
+                ];
+                const next = [...(m.to_m2 ? [{ id: B.TO_M2 * 1000, to: 'M2' as const }] : []), ...(m.to_ep ? [{ id: B.TO_EP * 1000, to: 'EP' as const }] : [])];
+                const ids = new Set([...actions.map((a) => a.id), ...next.map((n) => n.id)]);
+                return q({ kind: 'actions', phase: 'battle', actions, next }, (a) => {
+                    const id = choice(a);
+                    if (id === null || !ids.has(id)) return null;
+                    const action = Math.floor(id / 1000) as B;
+                    return { type: R.SELECT_BATTLECMD, action, index: action === B.TO_M2 || action === B.TO_EP ? null : id % 1000 };
+                });
+            }
+            case M.SELECT_CHAIN: {
+                // A forced list at a phase mixes what must happen (an upkeep, a mandatory trigger) with
+                // what could be activated then: a Set or hand card is always the latter, and so is a
+                // face-up card whose script has only optional effects for a phase. If that leaves
+                // nothing, the list is taken as the engine gave it: all of it must happen.
+                const optional = m.selects.map((c) => c.location === L.HAND || (FIELD_LOCATIONS.has(c.location) && !faceUp(this.positionOf(c))) || !this.engine.mandatoryInPhase(c.code));
+                const mixed = m.forced && optional.some(Boolean) && !optional.every(Boolean);
+                const options = m.selects.map((c, i) => {
+                    const r = this.ref(c, i, team);
+                    const text = describe(c.description);
+                    return { id: i, uid: r.uid, code: this.show(c.code), where: r.where, ...(text ? { text } : {}), ...(m.forced && !(mixed && optional[i]) ? { must: true } : {}) };
+                });
+                const pass = m.forced ? null : 1 << 20;
+                // One question per moment, listing every card you can legally use then; none if there's
+                // nothing (the engine offers only what's legal, and gives priority: after a play, the other
+                // player answers first). Beyond that, a window is worth asking about:
+                // - with a chain: always, if you can add to it. Its newest link is the rival's (respond to
+                //   it), or yours and the rival passed (chain a second card of yours on top);
+                // - without one: never on your own turn (cards you can use then are offered as actions,
+                //   like an attack), and on theirs only after their play, when the engine flags a card of
+                //   yours as made for the moment (spe_count: Trap Hole on a summon);
+                // - in a battle's damage step, once per card per attack, where it counts: not at its start
+                //   (anything usable then still is right before damage calculation), and Lily, usable only
+                //   during the calculation, then.
+                // Optional triggers ("you can...") are asked separately, so none is lost by passing here.
+                const top = this.chain[this.chain.length - 1];
+                const fresh = this.damageStep && Number(m.hint_timing) !== 0 ? options.map((o) => `${o.uid}:${o.text ?? ''}`).filter((k) => !this.damageOffered[team].has(k)) : [];
+                fresh.forEach((k) => this.damageOffered[team].add(k));
+                // A card that answers what just happened (Michizure, when your monster went to the
+                // Graveyard) has only this moment, whoever's turn it is and whoever played last.
+                const answering = m.spe_count > 0 && m.selects.some((c) => this.engine.answersEvents(c.code));
+                const quiet = !m.forced && (!options.length || (!top && !fresh.length && !answering && (this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team)));
+                const ask = !top && !m.forced ? this.askFor(team, Number(m.hint_timing) | Number(m.hint_timing_other), answering) : null;
+                return q({ kind: 'chain', forced: m.forced, options, pass, ...(quiet ? { quiet } : {}), ...(ask ? { ask } : {}) }, (a) => {
+                    const id = choice(a);
+                    if (id === null) return null;
+                    if (id === pass) return { type: R.SELECT_CHAIN, index: null };
+                    return id >= 0 && id < options.length ? { type: R.SELECT_CHAIN, index: id } : null;
+                });
+            }
+            case M.SELECT_CARD:
+            case M.SELECT_TRIBUTE: {
+                const tribute = m.type === M.SELECT_TRIBUTE;
+                const attack = !tribute && this.selectHintCode[team] === HINT_ATTACK_TARGET;
+                this.selectHintCode[team] = 0;
+                const cards = m.selects.map((c, i) => this.ref(c, i, team));
+                const title = tribute ? `Choose ${m.min === m.max ? m.min : `${m.min} to ${m.max}`} monster${m.max > 1 ? 's' : ''} to Tribute` : this.hintTitle(m.min, m.max, team);
+                return q({ kind: 'cards', title, min: m.min, max: m.max, cancel: m.can_cancel, cards, ...(tribute ? { tribute } : {}), ...(attack ? { attack } : {}) }, (a) => {
+                    if (a.kind === 'cancel') return m.can_cancel ? (tribute ? { type: R.SELECT_TRIBUTE, indicies: null } : { type: R.SELECT_CARD, indicies: null }) : null;
+                    // Tribute counts in "release" units; the engine checks the total and asks again if it's wrong.
+                    const ids = inRange(many(a), cards.length, tribute ? 1 : m.min, m.max);
+                    if (!ids) return null;
+                    return tribute ? { type: R.SELECT_TRIBUTE, indicies: ids } : { type: R.SELECT_CARD, indicies: ids };
+                });
+            }
+            case M.SELECT_UNSELECT_CARD: {
+                const cards = m.select_cards.map((c, i) => this.ref(c, i, team));
+                const chosen = m.unselect_cards.map((c, i) => this.ref(c, m.select_cards.length + i, team));
+                return q({ kind: 'cards', title: this.hintTitle(m.min, m.max, team), min: m.min, max: m.max, cancel: m.can_cancel, cards, step: { chosen, canFinish: m.can_finish } }, (a) => {
+                    if (a.kind === 'done') return m.can_finish ? { type: R.SELECT_UNSELECT_CARD, index: null } : null;
+                    if (a.kind === 'cancel') return m.can_cancel ? { type: R.SELECT_UNSELECT_CARD, index: null } : null;
+                    const id = choice(a);
+                    return id !== null && id >= 0 && id < cards.length + chosen.length ? { type: R.SELECT_UNSELECT_CARD, index: id } : null;
+                });
+            }
+            case M.SELECT_SUM: {
+                const all = [...m.selects_must, ...m.selects];
+                const cards = all.map((c, i) => this.ref(c, i, team));
+                return q({ kind: 'cards', title: `Choose cards that add up to ${m.amount}`, min: m.min || 1, max: m.max || all.length, cancel: false, cards, sum: m.amount }, (a) => {
+                    const ids = inRange(many(a), cards.length, 1, cards.length);
+                    return ids ? { type: R.SELECT_SUM, indicies: ids } : null;
+                });
+            }
+            case M.SELECT_EFFECTYN:
+            case M.SELECT_YESNO: {
+                const code = m.type === M.SELECT_EFFECTYN ? m.code : undefined;
+                // The engine's own question templates ("Activate the Trigger Effect of "%ls" from [%ls]?")
+                // read better in plain words; a card's own question text is kept as written.
+                const own = describe(m.description);
+                const text = own && !own.includes('%ls') ? own : code ? `Activate the effect of ${this.engine.name(code)}?` : own ? own.replace(/\[?%ls\]?/g, '') : 'Yes or no?';
+                return q({ kind: 'yesno', title: text, ...(code ? { code: this.show(code) } : {}) }, (a) => {
+                    const id = choice(a);
+                    if (id !== 0 && id !== 1) return null;
+                    return m.type === M.SELECT_EFFECTYN ? { type: R.SELECT_EFFECTYN, yes: id === 1 } : { type: R.SELECT_YESNO, yes: id === 1 };
+                });
+            }
+            case M.SELECT_OPTION: {
+                const options = m.options.map((d, i) => ({ id: i, text: describe(d) ?? `Option ${i + 1}` }));
+                // Heads or Tails: a coin is about to be tossed and this player calls it.
+                const heads = options.findIndex((o) => o.text === 'Heads');
+                const coin = heads >= 0 && options.some((o) => o.text === 'Tails');
+                this.calling = coin ? { team: m.player as Team, heads } : null;
+                // What the choice is for, when the card said ("Declare 1 card type": Reversal Quiz).
+                const hinted = OPTION_HINTS.has(this.selectHintCode[team]) ? this.selectHint[team].replace(/^Select /, 'Choose ') : '';
+                this.selectHint[team] = '';
+                this.selectHintCode[team] = 0;
+                return q({ kind: 'option', title: coin ? 'Call the coin toss' : hinted || 'Choose one', options }, (a) => {
+                    const id = choice(a);
+                    return id !== null && id >= 0 && id < options.length ? { type: R.SELECT_OPTION, index: id } : null;
+                });
+            }
+            case M.SELECT_POSITION: {
+                const options = [P.FACEUP_ATTACK, P.FACEDOWN_ATTACK, P.FACEUP_DEFENSE, P.FACEDOWN_DEFENSE].filter((p) => m.positions & p).map((p) => ({ id: p, label: POSITION_LABEL[p]! }));
+                return q({ kind: 'position', code: this.show(m.code), options }, (a) => {
+                    const id = choice(a);
+                    return id !== null && options.some((o) => o.id === id) ? { type: R.SELECT_POSITION, position: id as P } : null;
+                });
+            }
+            case M.SORT_CARD: {
+                const cards = m.cards.map((c, i) => this.ref(c, i, team));
+                const n = cards.length;
+                return q({ kind: 'cards', title: 'Put them in order: the first you choose goes on top', min: n, max: n, cancel: false, cards, ordered: true }, (a) => {
+                    const ids = many(a);
+                    if (!ids || ids.length !== n || new Set(ids).size !== n || ids.some((i) => i < 0 || i >= n)) return null;
+                    // The engine wants each card's place in the new order.
+                    const order = Array<number>(n);
+                    ids.forEach((card, place) => (order[card] = place));
+                    return { type: R.SORT_CARD, order };
+                });
+            }
+            case M.SELECT_COUNTER: {
+                const have = m.cards.map((c) => (c as unknown as { count: number }).count ?? 0);
+                const splits = counterSplits(m.count, have);
+                const label = (split: number[]) => split.flatMap((k, i) => (k ? [`${k} from ${this.engine.name(m.cards[i]!.code)}${m.cards.filter((c) => c.code === m.cards[i]!.code).length > 1 ? ` (${zoneOf(m.cards[i]!.location, m.cards[i]!.sequence)})` : ''}`] : [])).join(', ');
+                const options = splits.map((split, id) => ({ id, text: label(split) }));
+                return q({ kind: 'option', title: `Remove ${m.count} counter${m.count > 1 ? 's' : ''}`, options }, (a) => {
+                    const id = choice(a);
+                    return id !== null && splits[id] ? { type: R.SELECT_COUNTER, counters: splits[id]! } : null;
+                });
+            }
+            case M.ANNOUNCE_NUMBER: {
+                const options = m.options.map((v, i) => ({ id: i, label: String(v) }));
+                return q({ kind: 'number', title: 'Declare a number', options }, (a) => {
+                    const id = choice(a);
+                    return id !== null && id >= 0 && id < options.length ? { type: R.ANNOUNCE_NUMBER, value: id } : null;
+                });
+            }
+            case M.ANNOUNCE_RACE:
+            case M.ANNOUNCE_ATTRIB: {
+                const race = m.type === M.ANNOUNCE_RACE;
+                const names = race ? RACES : ATTRIBUTES;
+                const available = BigInt(m.available);
+                const options = names.map((label, i) => ({ id: i, label })).filter((o) => available & (1n << BigInt(o.id)));
+                return q({ kind: 'declare', title: `Declare ${m.count > 1 ? m.count : 'a'} ${race ? 'Type' : 'Attribute'}${m.count > 1 ? 's' : ''}`, what: race ? 'type' : 'attribute', count: m.count, options }, (a) => {
+                    const ids = many(a);
+                    if (!ids || ids.length !== m.count || ids.some((i) => !options.some((o) => o.id === i))) return null;
+                    return race ? { type: R.ANNOUNCE_RACE, races: ids.map((i) => 1n << BigInt(i)) as never } : { type: R.ANNOUNCE_ATTRIB, attributes: ids.map((i) => 1 << i) as never };
+                });
+            }
+            case M.SELECT_PLACE:
+            case M.SELECT_DISFIELD: {
+                const disable = m.type === M.SELECT_DISFIELD;
+                const zones = openZones(m.field_mask).map((bit) => {
+                    const mine = bit < 16, seq = bit % 8, spell = bit % 16 >= 8;
+                    const zone: PlaceZone['zone'] = !spell ? (seq >= 5 ? 'extra-monster' : 'monster') : seq === 5 ? 'field' : seq >= 6 ? 'pendulum' : 'spell';
+                    // Extra Monster Zones are one shared row: as the asker sees it, the rival's are mirrored.
+                    const index = zone === 'extra-monster' ? (mine ? seq - 5 : 6 - seq) : zone === 'pendulum' ? seq - 6 : zone === 'field' ? 0 : seq;
+                    return { id: bit, side: (mine ? 'me' : 'opp') as Side, zone, index };
+                });
+                const title = disable ? `Choose ${m.count > 1 ? `${m.count} zones` : 'a zone'} to block` : `Choose ${m.count > 1 ? `${m.count} zones` : 'a zone'} for the card`;
+                return q({ kind: 'place', title, count: m.count, disable, zones }, (a) => {
+                    const ids = a.kind === 'many' ? a.ids : a.kind === 'choice' ? [a.id] : null;
+                    if (!ids || ids.length !== m.count || new Set(ids).size !== ids.length || ids.some((id) => !zones.some((z) => z.id === id))) return null;
+                    const places = ids.map((bit) => ({ player: bit < 16 ? m.player : 1 - m.player, location: bit % 16 >= 8 ? L.SZONE : L.MZONE, sequence: bit % 8 }));
+                    return disable ? { type: R.SELECT_DISFIELD, places } : { type: R.SELECT_PLACE, places };
+                });
+            }
+            case M.ANNOUNCE_CARD: {
+                // The usual filter is one type of card (Question: a monster): the page can say so.
+                const [type, op] = m.opcodes.map((o) => BigInt(o));
+                const only = m.opcodes.length === 2 && op === OPCODE_ISTYPE ? (type === 1n ? 'monster' : type === 2n ? 'spell' : type === 4n ? 'trap' : undefined) : undefined;
+                return q({ kind: 'card-name', title: only ? `Declare a ${only === 'monster' ? 'monster' : only === 'spell' ? 'Spell' : 'Trap'}'s name` : 'Declare a card name', ...(only ? { only } : {}) }, (a) => {
+                    if (a.kind !== 'name') return null;
+                    // By passcode when the page picked the card from a list (one the engine knows), else by its exact name.
+                    const code = (a.code && this.engine.cardData(a.code) ? a.code : null) ?? this.engine.codeByName(a.name);
+                    return code ? { type: R.ANNOUNCE_CARD, card: code } : null;
+                });
+            }
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * A pick's title: what the engine said it's for ("Choose the card to Special Summon"), else
+     * how many to choose. The engine's hint is used once, by the pick it came before.
+     */
+    private hintTitle(min: number, max: number, team: Team) {
+        const hint = this.selectHint[team];
+        this.selectHint[team] = '';
+        const count = min === max ? `${min}` : `${min} to ${max}`;
+        if (!hint || hint.includes('%')) return `Choose ${count} card${max > 1 ? 's' : ''}`;
+        const plural = max > 1;
+        const text = hint.replace(/^Select /, 'Choose ').replace(/\((s)\)/g, plural ? '$1' : '').replace(/\bits\b/g, plural ? 'their' : 'its');
+        return plural ? `${text} (${count})` : text;
+    }
+
+    // ---- for the bot -------------------------------------------------------------------------
+
+    /** A card's ATK, DEF and position on the field, as the engine has them now. */
+    stats(c: { controller: number; location: number; sequence: number }) {
+        const info = this.core.duelQuery(this.handle!, { flags: STAT_FLAGS, controller: c.controller as Team, location: c.location as never, sequence: c.sequence, overlaySequence: 0 });
+        return { atk: info?.attack ?? 0, def: info?.defense ?? 0, position: info?.position ?? P.FACEDOWN_DEFENSE, code: info?.code ?? 0 };
+    }
+
+    monstersOf(t: Team) {
+        const row = this.core.duelQueryLocation(this.handle!, { flags: STAT_FLAGS, controller: t, location: L.MZONE });
+        return row.flatMap((c, sequence) => (c ? [{ sequence, atk: c.attack ?? 0, def: c.defense ?? 0, position: c.position ?? P.FACEDOWN_DEFENSE, code: c.code ?? 0 }] : []));
+    }
+
+    isMonster(code: number) {
+        return this.engine.isMonster(code);
+    }
+
+    baseAttack(code: number) {
+        return this.engine.baseAttack(code);
+    }
+
+    level(code: number) {
+        return this.engine.level(code);
+    }
+
+    /** The bot's monster declaring an attack this moment (its ATK), so it picks a target it can beat. */
+    botAttacker: number | null = null;
+    /** The card the bot is activating (its targets are picked to suit what it does). */
+    botUsing: number | null = null;
+
+    /** A copy of a duel the bot plays on in to look ahead (not a duel anyone plays). */
+    get isCopy(): boolean {
+        return !!this.options.answerer;
+    }
+
+    /**
+     * For the bot: the engine's code for what the pick it's asked is for (HINTMSG_DESTROY,
+     * HINTMSG_SPSUMMON…), kept until the pick is answered (the question's title uses it up).
+     */
+    private pickHint: [number, number] = [0, 0];
+    selectHintOf(team: Team): number {
+        return this.pickHint[team];
+    }
+
+    get currentPhase(): Phase {
+        return this.phase;
+    }
+
+    effectKind(code: number) {
+        return this.engine.effectKind(code);
+    }
+
+    isContinuousTrap(code: number) {
+        return this.engine.isContinuousTrap(code);
+    }
+
+    get currentTurnPlayer(): Team {
+        return this.turnPlayer;
+    }
+}
+
+type TeamEvent =
+    | { k: 'turn'; team: Team; turn: number }
+    | { k: 'phase'; phase: Phase }
+    | { k: 'draw'; team: Team; count: number }
+    | { k: 'shuffle'; team: Team }
+    | { k: 'hand-shuffle'; team: Team }
+    | { k: 'coin'; team: Team; results: boolean[]; call: { team: Team; heads: boolean } | null }
+    | { k: 'dice'; team: Team; results: number[] }
+    | { k: 'summon'; team: Team; code: number; how: 'normal' | 'special' | 'flip' }
+    | { k: 'set'; team: Team }
+    | { k: 'activate'; team: Team; code: number; uid?: string; link: number }
+    | { k: 'resolved'; link: number }
+    | { k: 'negated'; link: number }
+    | { k: 'attack'; team: Team; attacker?: string; target?: string }
+    | { k: 'attack-negated'; team: Team; attacker?: string }
+    | { k: 'declare'; team: Team; what: 'type' | 'attribute' | 'card' | 'number'; text: string; code?: number }
+    /** `viewer` null: shown to both players. */
+    | { k: 'reveal'; viewer: Team | null; owner: Team; location: number; codes: number[] }
+    | { k: 'random'; uids: string[] }
+    | { k: 'destroyed'; uid: string; code: number }
+    | { k: 'move'; uid: string; code: number; team: Team; from: Zone; to: Zone; public: boolean }
+    | { k: 'reposition'; uid: string; code: number; public: boolean }
+    | { k: 'damage' | 'pay' | 'recover'; team: Team; amount: number }
+    | { k: 'lp'; team: Team; lp: number; was: number }
+    | { k: 'win'; team: Team | null; reason: string };
+
+/** The zones a placement mask leaves open (a set bit is a blocked zone), as bit numbers. */
+function openZones(mask: number): number[] {
+    const out = [];
+    for (const base of [0, 8, 16, 24]) for (let seq = 0; seq < 8; seq++) if (!(mask & (1 << (base + seq)))) out.push(base + seq);
+    return out;
+}
+
+/** The first open zone, nearest the middle, as players usually place cards. A set bit is a blocked zone. */
+function freePlace(mask: number, player: number) {
+    const order = [2, 1, 3, 0, 4, 5, 6, 7];
+    for (const base of [0, 8, 16, 24]) {
+        for (const seq of order) {
+            const bit = base + seq;
+            if (!(mask & (1 << bit))) {
+                return { bit, place: { player: base >= 16 ? 1 - player : player, location: base % 16 === 0 ? L.MZONE : L.SZONE, sequence: seq } };
+            }
+        }
+    }
+    throw new Error('No open zone to place a card');
+}
+
+/** The zones of player `t` that a card has locked, for the board (left out when none are). */
+export function lockedOf(mask: number, t: Team): { locked?: { monsters: boolean[]; spells: boolean[] } } {
+    const bit = (b: number) => (mask & (1 << (t * 16 + b))) !== 0;
+    const monsters = [0, 1, 2, 3, 4].map(bit), spells = [8, 9, 10, 11, 12].map(bit);
+    return monsters.some(Boolean) || spells.some(Boolean) ? { locked: { monsters, spells } } : {};
+}

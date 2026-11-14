@@ -55,7 +55,7 @@ try {
         const end = page.locator('[role="tab"][aria-label="End"]:not([disabled])');
         const listed = page.locator(".df-sheet__list .df-listcard");
         for (let i = 0; i < 150 && !played; i++) {
-            if (await page.getByText(/ wins$/).count()) break; // over before anyone drew it: try another
+            if (await page.getByText(/ wins( game \d+)?$/).count()) break; // over before anyone drew it: try another
             await page.waitForTimeout(800);
             // Hand cards glow when they can be played too: discard only when asked to.
             const discard = (await page.getByText("Choose the card to discard").count()) ? page.locator(".df-hand__card.is-glow").first() : page.locator("#none");

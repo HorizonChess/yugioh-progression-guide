@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { BOT_LEVELS, CardIdSchema, PregameActionSchema, deckProblem, ownedCountsById } from '@ygo/shared';
+import { BOT_LEVELS, CardIdSchema, DeviceAnswersSchema, PregameActionSchema, deckProblem, ownedCountsById } from '@ygo/shared';
 import { z } from 'zod';
 import { duelsCollection, type Deck, type DuelDoc, type DuelProblem, type Seat } from '../duel/hub';
 import type { Team } from '../duel/session';
@@ -68,6 +68,7 @@ const summary = (d: DuelDoc) => ({
  *   POST /duels/:duelId/decline           the rival turns it down (or the challenger withdraws it)
  *   POST /duels/:duelId/pregame           before a game of a match: { rps } | { first } | { deck }
  *   POST /duels/:duelId/concede
+ *   POST /duels/:duelId/answers           { from, answers, end? }: a game played on your device (against the bot)
  *   GET  /duels/:duelId/live              WebSocket: the duel as it happens, and your answers
  * A guest's duel is opened with its token (the `x-duel-token` header, or `?token=` on the WebSocket).
  */
@@ -150,6 +151,10 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         // Before a game of a match: what's still to be done (a hand to throw, who goes first, side decking).
         if (team !== null && duel.status === 'pregame') return { duel: summary(duel), state: null, pregame: app.duels.pregameView(duel, team as Seat) };
         if (team === null || !(duel.status === 'active' || (duel.status === 'finished' && duel.setup))) return { duel: summary(duel), state: null, ...(team !== null && duel.match ? { match: app.duels.matchView(duel, team) } : {}) };
+        // Played on the player's device: what it takes to play it there (or look at it again).
+        if (duel.setup?.onDevice) {
+            return { duel: summary(duel), state: null, device: await app.duels.onDevice(duel, team), ...(duel.match ? { match: app.duels.matchView(duel, team) } : {}) };
+        }
         try {
             return { duel: summary(duel), state: (await app.duels.stateFor(duel, team)).state };
         } catch (error) {
@@ -218,9 +223,22 @@ export async function duelRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(204).send();
     });
 
+    app.post('/duels/:duelId/answers', { preHandler: loadUser, config: { rateLimit: { max: 600, timeWindow: '1 minute' } } }, async (request, reply) => {
+        const body = DeviceAnswersSchema.safeParse(request.body);
+        if (!body.success) return reply.code(400).send({ error: 'Invalid input' });
+        const duel = await duelFor(request, reply);
+        if (!duel) return;
+        const team = teamIn(duel, request);
+        if (team === null) return fail(reply, 'not-now');
+        const after = await app.duels.record(duel, team, body.data);
+        if (typeof after === 'string') return fail(reply, after);
+        return { duel: summary(after), ...(after.match ? { match: app.duels.matchView(after, team) } : {}) };
+    });
+
     app.get('/duels/:duelId/live', { websocket: true, preHandler: loadUser }, async (socket, request) => {
         const duel = await visibleDuel(request);
-        const team = duel && duel.status === 'active' ? teamIn(duel, request) : null;
+        // (A game played on the device has no live socket: the page plays it.)
+        const team = duel && duel.status === 'active' && !duel.setup?.onDevice ? teamIn(duel, request) : null;
         if (!duel || team === null) return socket.close(4404, 'No such duel');
         const after = (request.query as { after?: unknown }).after;
         app.duels.connect(duel, team, socket, typeof after === 'string' ? after : undefined);

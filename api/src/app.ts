@@ -99,10 +99,13 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
             directives: {
                 defaultSrc: ["'self'"],
                 // Next's static export inlines its bootstrap scripts and can't nonce them.
-                scriptSrc: ["'self'", "'unsafe-inline'"],
+                // A practice game runs the duel engine in the browser: WebAssembly ('wasm-unsafe-eval'),
+                // in a worker the bundler starts from a blob: URL, with its data fetched from IMAGE_HOST.
+                scriptSrc: ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'"],
+                workerSrc: ["'self'", 'blob:'],
                 styleSrc: ["'self'", "'unsafe-inline'"],
                 imgSrc: ["'self'", 'data:', 'blob:', ...PACK_ART_HOSTS, ...(config.IMAGE_HOST ? [config.IMAGE_HOST] : [])],
-                connectSrc: ["'self'", YGOPRODECK_API],
+                connectSrc: ["'self'", YGOPRODECK_API, ...(config.IMAGE_HOST ? [config.IMAGE_HOST] : [])],
                 fontSrc: ["'self'", 'data:'],
                 objectSrc: ["'none'"],
                 baseUri: ["'self'"],

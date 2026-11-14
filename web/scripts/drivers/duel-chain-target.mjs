@@ -47,7 +47,7 @@ try {
         let summoned = 0, setOne = 0;
         for (let i = 0; i < 220 && !asked; i++) {
             await page.waitForTimeout(500);
-            if (await page.getByText(/ wins$/).count()) break;
+            if (await page.getByText(/ wins( game \d+)?$/).count()) break;
             if (await page.locator(".df-sheet__title", { hasText: "Respond to Change of Heart?" }).count()) { asked = true; break; }
             const discard = page.locator(".df-hand__card.is-glow").first();
             if (await btn("No").count()) { await btn("No").click().catch(() => {}); continue; }

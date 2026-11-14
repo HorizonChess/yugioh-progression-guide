@@ -8,6 +8,6 @@ export default defineConfig({
     outDir: 'dist',
     clean: true,
     sourcemap: true,
-    // @ygo/shared ships TypeScript source, so bundle it in; npm packages stay external.
-    noExternal: ['@ygo/shared'],
+    // @ygo/shared and @ygo/duel ship TypeScript source, so bundle them in; npm packages stay external.
+    noExternal: ['@ygo/shared', '@ygo/duel'],
 });

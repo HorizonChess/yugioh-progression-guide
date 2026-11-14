@@ -2,13 +2,13 @@ import { createHash, randomBytes } from 'node:crypto';
 import { MongoServerError, ObjectId, type Db } from 'mongodb';
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
-import type { OcgResponse } from 'ocgcore-wasm';
 import {
     BOT_NAMES, DuelClientMessageSchema, cardVersionAt, ruleEraFor, resolveSetIndex,
-    type BotLevel, type DuelMatchView, type DuelModeId, type DuelPregameView, type DuelServerMessage, type DuelState, type MatchDeck, type PregameAction, type RpsHand,
+    type BotLevel, type DeviceAnswers, type DuelMatchView, type DuelOnDevice, type DuelModeId, type DuelPregameView, type DuelServerMessage, type DuelState, type MatchDeck, type PregameAction, type RpsHand,
 } from '@ygo/shared';
 import { confirmReport, reportDuoMatch } from '../game/matches';
 import { findSeries } from '../game/series';
+import { engineDataId } from '@ygo/duel/engine';
 import { engineFaulted, loadEngine } from './engine';
 import { DUEL_RULES, DuelSession, type DuelSetup, type Team } from './session';
 
@@ -21,6 +21,10 @@ import { DUEL_RULES, DuelSession, type DuelSetup, type Team } from './session';
  * and is opened with a secret token, and storage drops it after a day. A rival
  * duel is between the two members of a duo series: one challenges with a deck, the other
  * accepts with theirs, and the result goes through the series like a confirmed report.
+ *
+ * A practice game is played on the player's device (DuelSetup.onDevice): the engine and the bot
+ * run in their browser, and the server only keeps its answers and books how it ended (`record`).
+ * Rival duels are played here, and so are practice games begun before that.
  *
  * A duel against the rival or the bot is a game of a match, best of 3. Each game is a duel of its
  * own (its own document, setup and answers), linked by `match`. Before a game there's a pregame:
@@ -124,8 +128,8 @@ export async function ensureDuelIndexes(db: Db): Promise<void> {
     await duelsCollection(db).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 }
 
-export const encode = (r: OcgResponse) => JSON.stringify(r, (_k, v) => (typeof v === 'bigint' ? { $b: v.toString() } : v));
-export const decode = (s: string): OcgResponse => JSON.parse(s, (_k, v) => (v && typeof v === 'object' && '$b' in v ? BigInt(v.$b) : v));
+import { decodeAnswer as decode, encodeAnswer as encode } from '@ygo/duel/answers';
+export { encode, decode };
 const newSeed = (): DuelSetup['seed'] => {
     const b = randomBytes(32);
     // Xoshiro256** must not be seeded with all zeros.
@@ -163,6 +167,13 @@ export interface DuelHub {
     connect(duel: DuelDoc, team: Team, socket: WebSocket, after?: string): void;
     /** Rule check before a duel: are these all cards the engine knows? */
     unknownCards(codes: number[]): Promise<number[]>;
+    /** A game played on the player's device: what their page needs to play it, or pick it up again. */
+    onDevice(duel: DuelDoc, team: Team): Promise<DuelOnDevice>;
+    /**
+     * Keeps the answers of a game played on the device; at its end, books the result it's told
+     * (the duel as it then stands, for the match's next step).
+     */
+    record(duel: DuelDoc, team: Team, input: DeviceAnswers): Promise<DuelDoc | DuelProblem>;
 }
 
 const IDLE_MS = 30 * 60_000;
@@ -416,9 +427,12 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const date = await setDate(duel);
         const decks = [await playedAt(pre.decks[seats[0]]!, date, shown), await playedAt(pre.decks[seats[1]]!, date, shown)] as DuelSetup['decks'];
         const botLevel = players.find((p) => p.bot)?.level;
+        // Against the bot, the game is played on the player's device: the server only keeps its answers.
+        const onDevice = players.some((p) => p.bot);
         const setup: DuelSetup = {
             seed: newSeed(), mode: duel.mode, decks, names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown, rules: DUEL_RULES,
             ...(botLevel ? { botLevel } : {}),
+            ...(onDevice ? { onDevice } : {}),
         };
         const match: MatchInfo = { ...m, current: [pre.decks[0]!, pre.decks[1]!] };
         // Rock-paper-scissors, kept by team (the seats are now in turn order) for the showdown.
@@ -530,17 +544,50 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const setup: DuelSetup = {
             seed: newSeed(), mode, decks: [played, played], names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown, rules: DUEL_RULES,
             ...(against === 'solo' ? { solo: true } : {}),
+            onDevice: true,
         };
         return { players, setup };
     }
 
+    /** A game played on the device is over: booked as it's told, and the match moves on. */
+    async function finishOnDevice(duel: DuelDoc, winner: Team | null, reason: string) {
+        const done = await duels().updateOne(
+            { _id: duel._id, status: 'active' },
+            { $set: { status: 'finished', winner, reason, updatedAt: new Date() }, $unset: { openKey: '', callOffBy: '' } },
+        );
+        if (done.modifiedCount && duel.match) await closeGame(duel, winner, false);
+    }
+
     async function start(duel: DuelDoc) {
+        // (A game played on the device starts there, when its page opens it.)
+        if (duel.setup?.onDevice) return;
         await sessionOf(duel);
         await persistAndBroadcast(duel);
     }
 
     return {
         unknownCards,
+        async onDevice(duel, team) {
+            const engine = await loadEngine();
+            const codes = duel.setup!.decks.flatMap((d) => [...d.main, ...d.extra]);
+            await unknownCards(codes);
+            return { setup: duel.setup, answers: duel.answers, engine: engineDataId(duel.engineVersion), learned: engine.learnedOf(codes), team, over: duel.status !== 'active' };
+        },
+        record(duel, team, { from, answers, end }) {
+            const id = duel._id.toHexString();
+            return serial(id, async () => {
+                const fresh = await duels().findOne({ _id: duel._id });
+                if (!fresh || fresh.status !== 'active' || !fresh.setup?.onDevice || from > fresh.answers.length) return 'not-now' as const;
+                // Answers from `from` on replace what was kept there (a move taken back on the device).
+                const all = [...fresh.answers.slice(0, from), ...answers];
+                await duels().updateOne({ _id: duel._id, status: 'active' }, { $set: { answers: all, updatedAt: new Date() } });
+                Object.assign(duel, fresh, { answers: all });
+                if (!end) return duel;
+                const winner = end.winner === null ? null : ((end.winner === 'me' ? team : 1 - team) as Team);
+                await finishOnDevice(duel, winner, end.reason);
+                return (await duels().findOne({ _id: duel._id })) ?? duel;
+            });
+        },
         async create({ seriesId, userId, name, deck, deckId, against, level }) {
             const at = await setOf(seriesId);
             if (!at) return 'finished';
@@ -710,6 +757,8 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         concede(duel, team, wholeMatch) {
             return serial(duel._id.toHexString(), async () => {
                 if (wholeMatch) givenUp.add(duel._id.toHexString());
+                // Played on the device: nothing to play back, the surrender is booked as it stands.
+                if (duel.setup?.onDevice) return finishOnDevice(duel, (1 - team) as Team, `${duel.players[team]!.name} surrendered`);
                 const entry = await sessionOf(duel).catch((error: unknown) => {
                     app.log.error({ err: error, duel: duel._id }, 'duel could not be rebuilt; closing it as conceded');
                     return null;

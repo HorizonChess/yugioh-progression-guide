@@ -1,0 +1,21 @@
+{
+  "name": "@ygo/duel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The duel engine around ocgcore and the practice bot: runs on the server and, for the bot's thinking, in the player's browser",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ygo/shared": "*",
+    "ocgcore-wasm": "^0.1.6"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

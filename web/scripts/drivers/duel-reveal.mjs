@@ -32,6 +32,7 @@ try {
     // Which cards come first is down to the shuffle: a duel that ends before anyone draws
     // Reinforcement is played again (up to five times).
     let played = false, words = "";
+    const banner = page.locator(".df-reveal");
     for (let attempt = 0; attempt < 5 && !played && !words; attempt++) {
         await page.goto(`${BASE}/record-match/`, { waitUntil: "networkidle" });
         // (Playing here is what the board opens on.)
@@ -54,16 +55,20 @@ try {
         const activate = page.getByRole("button", { name: "Activate", exact: true });
         const end = page.locator('[role="tab"][aria-label="End"]:not([disabled])');
         const listed = page.locator(".df-sheet__list .df-listcard");
-        const banner = page.locator(".df-reveal");
         for (let i = 0; i < 150 && !played; i++) {
-            if (await page.getByText(/ wins$/).count()) break; // over before anyone drew it: try another
+            if (await page.getByText(/ wins( game \d+)?$/).count()) break; // over before anyone drew it: try another
             await page.waitForTimeout(800);
             // The bot plays a copy of your deck, so it may show you its Warrior first: that counts too.
             if (await banner.count()) { words = (await banner.textContent()) ?? ""; break; }
-            const discard = page.locator(".df-hand__card.is-glow").first();
-            if (!(await card.count()) || (await discard.count())) {
-                if (await discard.count()) await discard.click({ force: true }).catch(() => {});
-                else if (await end.count()) await end.click().catch(() => {});
+            // (On your turn the cards you can play glow too: only a discard is clicked.)
+            const discard = (await page.getByText("Choose the card to discard").count()) ? page.locator(".df-hand__card.is-glow").first() : page.locator("#none");
+            const canEnd = (await end.count()) > 0;
+            if (await discard.count()) {
+                await discard.click({ force: true }).catch(() => {});
+                continue;
+            }
+            if (!(await card.count()) || !canEnd) {
+                if (canEnd) await end.click().catch(() => {});
                 else if (await listed.count()) {
                     await listed.first().click().catch(() => {});
                     const ok = page.getByRole("button", { name: /^(Confirm|Done|OK)$/ });
@@ -77,9 +82,14 @@ try {
         }
     }
     check(played || words, "Reinforcement of the Army activates");
-    // Pick the Warrior (the first card offered) and confirm if asked.
+    // Put the Spell in a zone (the first offered), then pick the Warrior (the first card offered) and confirm if asked.
     for (let i = 0; i < 20 && played; i++) {
         await page.waitForTimeout(500);
+        const zone = page.locator(".df-zone.is-offered").first();
+        if (await zone.count()) {
+            await zone.click({ force: true }).catch(() => {});
+            continue;
+        }
         const pick = page.locator(".df-sheet__list .df-listcard").first();
         if (await pick.count()) {
             await pick.click();

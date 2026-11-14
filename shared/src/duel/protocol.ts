@@ -316,3 +316,36 @@ export interface DuelServerMessage {
     /** Where this page now is in the duel's frames: sent back on a reconnect to be shown what it missed. */
     cursor?: string;
 }
+
+/**
+ * A practice game played on the player's device: the rules engine and the bot run in the
+ * browser (a Web Worker), so the server does no work while it's played. The page is handed what
+ * it takes to play it (or pick it up again, from the answers so far) and sends the answers back
+ * to keep as it goes (to pick the game up again after a reload, and for a bug report). The
+ * result is the device's word: practice is never booked on the series.
+ */
+export interface DuelOnDevice {
+    /** The duel's setup as the server keeps it (DuelSetup in @ygo/duel): both decks and the seed. */
+    setup: unknown;
+    /** Every answer so far (JSON, bigints as {$b}). */
+    answers: string[];
+    /** Which engine data the duel is played with (its folder in storage). */
+    engine: string;
+    /** Passcodes the engine knows by another code (an alternate art's): code → the engine's code. */
+    learned: Record<string, number>;
+    /** The player's team (0 goes first). */
+    team: 0 | 1;
+    /** The game is over and booked (it's only looked at again). */
+    over: boolean;
+}
+
+/**
+ * The answers of a game played on the device, from answer `from` on (earlier ones taken back are
+ * replaced). `end`: the game is over, and how (the server books it as it's told).
+ */
+export const DeviceAnswersSchema = z.strictObject({
+    from: z.number().int().min(0).max(20_000),
+    answers: z.array(z.string().max(4000)).max(5000),
+    end: z.strictObject({ winner: z.enum(['me', 'opp']).nullable(), reason: z.string().max(300) }).optional(),
+});
+export type DeviceAnswers = z.infer<typeof DeviceAnswersSchema>;

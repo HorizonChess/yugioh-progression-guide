@@ -102,6 +102,15 @@ npm run fetch-engine -w @ygo/api
 npx tsx api/scripts/build-card-ids.ts
 ```
 
+Practice games against the bot are played in the browser (the engine and the bot in a Web
+Worker, from [duel/](duel/)), with the same engine data, which the browser fetches from R2. After
+the engine data changes (a new pinned version in `fetch-engine`), upload it before deploying, or
+practice games can't start:
+
+```bash
+node web/scripts/engine/upload-engine.mjs
+```
+
 More detail on the architecture, pack logic and design system is in
 [web/README.md](web/README.md) and
 [web/src/data/pack_opening_rules.md](web/src/data/pack_opening_rules.md).
