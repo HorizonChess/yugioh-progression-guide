@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode, type TouchEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BOT_LEVELS, DUELISTS, duelistById, duelistDeck, ruleEraFor, type BotLevel, type Duelist } from "@ygo/shared";
 import { alertRepoError } from "@/context/ProgressionContext";
@@ -54,6 +54,9 @@ const FACE_X: Record<string, string> = { mai: "58%" };
 
 const sprite = (d: Duelist) => asset(`/sprites/${d.sprite}.webp`);
 const firstName = (d: Duelist) => (d.id === "pegasus" ? "Pegasus" : d.name.split(" ")[0]!);
+/** Their face, as on their tablet in the roster. */
+const faceOf = (o: Opponent, d: Duelist | undefined) =>
+    d ? <span className="op-face" style={{ backgroundImage: `url('${sprite(d)}')`, backgroundPositionX: FACE_X[d.id] ?? "50%" }} /> : <span className="op-face op-face--bot">{o.kind === "solo" ? <HandGlyph /> : <BotGlyph />}</span>;
 const duelistOf = (o: Opponent) => (o.kind === "duelist" ? duelistById(o.id) : undefined);
 /** Who you'd be dueling, by name, for the button. */
 const opponentName = (o: Opponent) => {
@@ -103,6 +106,19 @@ export default function BotsArena({ seriesId, guest, setName, setDate, decks }: 
     const chooseGames = (n: MatchGames) => {
         setGames(n);
         localStorage.setItem(GAMES_KEY, String(n));
+    };
+    // On a phone the stage is a door over the roster: shut at first, opened by picking someone,
+    // and swiped (or tapped) open and shut. (On a wider screen it's always open.)
+    const [door, setDoor] = useState(false);
+    const swipeFrom = useRef<number | null>(null);
+    const swipe = {
+        onTouchStart: (e: TouchEvent) => { swipeFrom.current = e.touches[0]?.clientY ?? null; },
+        onTouchEnd: (e: TouchEvent) => {
+            const from = swipeFrom.current, to = e.changedTouches[0]?.clientY;
+            swipeFrom.current = null;
+            if (from === null || to === undefined || Math.abs(to - from) < 40) return;
+            setDoor(to > from);
+        },
     };
     /** The practice match still going (one at a time), once looked for. */
     const [open, setOpen] = useState<DuelSummary | null | undefined>(undefined);
@@ -161,7 +177,7 @@ export default function BotsArena({ seriesId, guest, setName, setDate, decks }: 
     const mine = recordText(record[duelist?.id ?? (choice.kind === "bot" ? "bot" : "")]);
 
     const tile = (key: string, on: boolean, label: string, face: ReactNode, sub: string, won: string, pick: () => void) => (
-        <button key={key} type="button" role="radio" aria-checked={on} aria-label={label} className={`op-tile ${on ? "is-on" : ""}`} disabled={busy} onClick={pick}>
+        <button key={key} type="button" role="radio" aria-checked={on} aria-label={label} className={`op-tile ${on ? "is-on" : ""}`} disabled={busy} onClick={() => { pick(); setDoor(true); }}>
             {face}
             <span className="op-tile__name">{label}</span>
             <small>{sub}</small>
@@ -181,7 +197,7 @@ export default function BotsArena({ seriesId, guest, setName, setDate, decks }: 
     return (
         <div className="ba-screen" data-theme={THEME} style={themeStyle(THEME)}>
             <div className="op" aria-label="Bots Arena">
-                <div className="op-side">
+                <div className={`op-side ${door ? "is-open" : ""}`} {...swipe}>
                     {/* A match still going comes first: one at a time. */}
                     {open && (
                         <div className="ba-open" role="status">
@@ -195,52 +211,66 @@ export default function BotsArena({ seriesId, guest, setName, setDate, decks }: 
                         </div>
                     )}
 
-                    <div className="op-stage">
-                        <div className={`op-figure ${duelist ? "" : "op-figure--bot"}`}>{duelist ? <img key={duelist.id} src={sprite(duelist)} alt="" /> : choice.kind === "solo" ? <HandGlyph /> : <BotGlyph />}</div>
-                        <div className="op-info">
-                            <b className="op-name">{duelist ? duelist.name : choice.kind === "solo" ? "Solo" : "Practice Bot"}</b>
-                            <span className="op-rating">
-                                {duelist ? <><i>{duelist.rating}</i> · {LEVEL_NAMES[duelist.level]}</> : choice.kind === "solo" ? "Only passes its turns" : "Plays a copy of your deck"}
-                            </span>
-                            {choice.kind !== "solo" && <span className="op-record">Your record: <b>{mine || "no matches yet"}</b></span>}
-                            <p className="op-blurb">
-                                {duelist
-                                    ? duelist.blurb
-                                    : choice.kind === "solo"
-                                      ? "Draw and play out your own deck, to see how it runs."
-                                      : "A mirror match: learn your own deck from both sides of the table."}
-                            </p>
-                            {duelist && duelist.eras.length > 1 && chips(`${firstName(duelist)}'s deck`, duelist.eras.map((e) => ({ id: e.id, text: e.label, on: era?.era.id === e.id, pick: () => choose({ kind: "duelist", id: duelist.id, era: e.id }) })))}
-                            {duelist && duelist.eras.length === 1 && <span className="op-era">{duelist.eras[0]!.label}</span>}
-                            {choice.kind === "bot" && chips("How well the bot plays", BOT_LEVELS.map((l) => ({ id: l, text: LEVEL_NAMES[l], on: choice.level === l, pick: () => choose({ kind: "bot", level: l }) })))}
-                            {era && (
-                                <small className="op-credit">
-                                    Deck: <a href={encodeURI(era.deck.url)} target="_blank" rel="noreferrer">{era.era.source.name}</a> by {era.era.source.author}
-                                </small>
-                            )}
+                    {/* The door shut (a phone): who's chosen, on its lintel. */}
+                    <button type="button" className="op-door__lintel" aria-expanded={door} aria-controls="op-door" tabIndex={door ? -1 : 0} onClick={() => setDoor(true)}>
+                        {faceOf(choice, duelist)}
+                        <span className="op-door__who">
+                            <b>{duelist ? duelist.name : choice.kind === "solo" ? "Solo" : "Practice Bot"}</b>
+                            <small>Tap someone, or swipe down</small>
+                        </span>
+                        <i className="op-door__chev" aria-hidden="true" />
+                    </button>
+                    <div className="op-door" id="op-door">
+                        <div className="op-door__body">
+                        <div className="op-stage">
+                            <div className={`op-figure ${duelist ? "" : "op-figure--bot"}`}>{duelist ? <img key={duelist.id} src={sprite(duelist)} alt="" /> : choice.kind === "solo" ? <HandGlyph /> : <BotGlyph />}</div>
+                            <div className="op-info">
+                                <b className="op-name">{duelist ? duelist.name : choice.kind === "solo" ? "Solo" : "Practice Bot"}</b>
+                                <span className="op-rating">
+                                    {duelist ? <><i>{duelist.rating}</i> · {LEVEL_NAMES[duelist.level]}</> : choice.kind === "solo" ? "Only passes its turns" : "Plays a copy of your deck"}
+                                </span>
+                                {choice.kind !== "solo" && <span className="op-record">Your record: <b>{mine || "no matches yet"}</b></span>}
+                                <p className="op-blurb">
+                                    {duelist
+                                        ? duelist.blurb
+                                        : choice.kind === "solo"
+                                          ? "Draw and play out your own deck, to see how it runs."
+                                          : "A mirror match: learn your own deck from both sides of the table."}
+                                </p>
+                                {duelist && duelist.eras.length > 1 && chips(`${firstName(duelist)}'s deck`, duelist.eras.map((e) => ({ id: e.id, text: e.label, on: era?.era.id === e.id, pick: () => choose({ kind: "duelist", id: duelist.id, era: e.id }) })))}
+                                {duelist && duelist.eras.length === 1 && <span className="op-era">{duelist.eras[0]!.label}</span>}
+                                {choice.kind === "bot" && chips("How well the bot plays", BOT_LEVELS.map((l) => ({ id: l, text: LEVEL_NAMES[l], on: choice.level === l, pick: () => choose({ kind: "bot", level: l }) })))}
+                                {era && (
+                                    <small className="op-credit">
+                                        Deck: <a href={encodeURI(era.deck.url)} target="_blank" rel="noreferrer">{era.era.source.name}</a> by {era.era.source.author}
+                                    </small>
+                                )}
+                            </div>
+                        </div>
+
+                        {legal.length ? (
+                            <label className="dl-deck">
+                                <span>Your deck</span>
+                                <select value={deckId} onChange={(e) => setDeckId(e.target.value)}>
+                                    {legal.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.mainDeck.length})</option>)}
+                                </select>
+                            </label>
+                        ) : (
+                            <p className="dl-note">Build a deck of 40 to 60 cards in the deck builder first.</p>
+                        )}
+                        {choice.kind !== "solo" && chips("How many games", [
+                            { id: "3", text: "Best of 3", on: games === 3, pick: () => chooseGames(3) },
+                            { id: "1", text: "Single game", on: games === 1, pick: () => chooseGames(1) },
+                        ])}
+                        <div className="dl-row">
+                            <button type="button" className="dl-btn dl-btn--main" disabled={!deckId || busy || open !== null} onClick={start}>
+                                {choice.kind === "solo" ? "Start a solo duel" : `Duel ${opponentName(choice)} · ${games === 1 ? "one game" : "best of 3"}`}
+                            </button>
+                        </div>
+                        <p className="dl-note">Played by {rules.name}, with the cards of {setName}. Practice doesn&rsquo;t count for the series: play it whenever you like.</p>
                         </div>
                     </div>
-
-                    {legal.length ? (
-                        <label className="dl-deck">
-                            <span>Your deck</span>
-                            <select value={deckId} onChange={(e) => setDeckId(e.target.value)}>
-                                {legal.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.mainDeck.length})</option>)}
-                            </select>
-                        </label>
-                    ) : (
-                        <p className="dl-note">Build a deck of 40 to 60 cards in the deck builder first.</p>
-                    )}
-                    {choice.kind !== "solo" && chips("How many games", [
-                        { id: "3", text: "Best of 3", on: games === 3, pick: () => chooseGames(3) },
-                        { id: "1", text: "Single game", on: games === 1, pick: () => chooseGames(1) },
-                    ])}
-                    <div className="dl-row">
-                        <button type="button" className="dl-btn dl-btn--main" disabled={!deckId || busy || open !== null} onClick={start}>
-                            {choice.kind === "solo" ? "Start a solo duel" : `Duel ${opponentName(choice)} · ${games === 1 ? "one game" : "best of 3"}`}
-                        </button>
-                    </div>
-                    <p className="dl-note">Played by {rules.name}, with the cards of {setName}. Practice doesn&rsquo;t count for the series: play it whenever you like.</p>
+                    <button type="button" className="op-door__handle" aria-label="Close the door" tabIndex={door ? 0 : -1} onClick={() => setDoor(false)} />
                 </div>
 
                 {/* Everyone, weakest first. */}

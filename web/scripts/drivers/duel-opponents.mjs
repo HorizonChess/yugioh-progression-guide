@@ -51,7 +51,7 @@ try {
 
     // Joey on stage: his name, rating, level, and his three eras; Battle City chosen.
     await radio("Joey Wheeler").click();
-    await page.getByText("Joey Wheeler", { exact: true }).first().waitFor();
+    await page.locator(".op-name", { hasText: "Joey Wheeler" }).waitFor();
     check((await page.locator(".op-name").textContent()) === "Joey Wheeler", "Joey takes the stage");
     check(/1200/.test((await page.locator(".op-rating").textContent()) ?? "") && /Normal/.test((await page.locator(".op-rating").textContent()) ?? ""), "with his rating and level");
     const figure = page.locator(".op-figure img");
@@ -69,7 +69,12 @@ try {
     await page.getByRole("radiogroup", { name: "Opponents" }).waitFor({ timeout: 15000 });
     check((await page.locator(".op-name").textContent()) === "Joey Wheeler" && (await radio("Battle City").getAttribute("aria-checked")) === "true", "the choice is remembered");
 
-    // The match is against him.
+    // The match is against him. (On a phone the stage is a door, shut again after the reload: opened from its lintel.)
+    if (phone) {
+        check((await page.locator(".op-side.is-open").count()) === 0, "a phone: the door is shut at first");
+        await page.locator(".op-door__lintel").click();
+        await page.locator(".op-side.is-open").waitFor({ timeout: 3000 });
+    }
     await page.getByRole("button", { name: /^Duel Joey/ }).click();
     await page.waitForURL(/duel/, { timeout: 30000 });
     check(starts.at(-1)?.duelist?.id === "joey" && starts.at(-1)?.duelist?.era === "bc", `the match is asked for against Joey, Battle City (${JSON.stringify(starts.at(-1)?.duelist)})`);
