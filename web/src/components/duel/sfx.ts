@@ -8,6 +8,10 @@ import { duelPrefs } from "./duel-prefs";
  * saws, digital glitches, glassy FM shimmer) in a small reverberant room, with physical weight
  * underneath (card slides, thuds) so it doesn't turn into generic beeps. Browsers only start
  * audio after the player has touched the page; until then these are silent.
+ *
+ * Kept light for phones, where an audio thread that falls behind is heard as pops and crackle: a
+ * larger buffer, a short reverb, a cap on sounds at once (a bot's turn fires many in a burst), every
+ * sound's nodes let go when it ends, and no sub-bass a phone speaker can't play (it only distorts).
  */
 
 let ctx: AudioContext | null = null;
@@ -15,28 +19,39 @@ let ctx: AudioContext | null = null;
 let dry: GainNode | null = null;
 let wet: GainNode | null = null;
 let noiseBuffer: AudioBuffer | null = null;
-
+/** Sounds playing now, and the most at once. */
+let voices = 0;
+const MAX_VOICES = 48;
+/** A phone (its speaker can't play deep bass, and its CPU is smaller). */
+const phone = () => window.matchMedia?.("(pointer: coarse)").matches ?? false;
 function audio(): AudioContext | null {
     if (typeof window === "undefined" || !duelPrefs().sound) return null;
     if (!ctx) {
         const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if (!Ctx) return null;
-        ctx = new Ctx();
+        // "playback": a larger buffer, so a busy moment doesn't run it dry (heard as a pop).
+        ctx = new Ctx({ latencyHint: "playback" });
         const master = ctx.createGain();
         master.gain.value = 0.5;
         const limit = ctx.createDynamicsCompressor();
         limit.threshold.value = -12;
         limit.ratio.value = 5;
-        master.connect(limit).connect(ctx.destination);
+        // On a phone, nothing under its speaker's range: there it only distorts.
+        const low = ctx.createBiquadFilter();
+        low.type = "highpass";
+        low.frequency.value = phone() ? 110 : 30;
+        master.connect(low).connect(limit).connect(ctx.destination);
         dry = ctx.createGain();
         dry.connect(master);
         // The room: a short stereo tail, made from decaying noise.
         const room = ctx.createConvolver();
-        const len = Math.floor(ctx.sampleRate * 1.6);
+        const len = Math.floor(ctx.sampleRate * (phone() ? 0.8 : 1.2));
         const ir = ctx.createBuffer(2, len, ctx.sampleRate);
         for (let ch = 0; ch < 2; ch++) {
             const d = ir.getChannelData(ch);
             for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3.2;
+            // (faded in over the first few samples: a hard start clicks)
+            for (let i = 0; i < 64; i++) d[i]! *= i / 64;
         }
         room.buffer = ir;
         wet = ctx.createGain();
@@ -61,6 +76,21 @@ export function unlockSound() {
 
 // ---- building blocks ------------------------------------------------------------------------
 
+/** Plays `sources` and lets go of every node in `nodes` once the last has ended. */
+function voice(sources: AudioScheduledSourceNode[], nodes: AudioNode[]) {
+    voices++;
+    let left = sources.length;
+    for (const src of sources) {
+        src.onended = () => {
+            if (--left) return;
+            voices--;
+            for (const n of [...sources, ...nodes]) n.disconnect();
+        };
+    }
+}
+/** Whether there's room for another sound (a burst past the cap is dropped, not crackled). */
+const hasRoom = () => voices < MAX_VOICES;
+
 /** An envelope into the mix: `room` is how much goes to the reverb. */
 function amp(a: AudioContext, t: number, peak: number, attack: number, dur: number, room = 0.2) {
     const g = a.createGain();
@@ -72,14 +102,17 @@ function amp(a: AudioContext, t: number, peak: number, attack: number, dur: numb
         const send = a.createGain();
         send.gain.value = room;
         g.connect(send).connect(wet!);
+        (g as GainNode & { send?: GainNode }).send = send;
     }
     return g;
 }
+/** The nodes of an envelope, to let go of. */
+const ampNodes = (g: GainNode) => [g, ...((g as GainNode & { send?: GainNode }).send ? [(g as GainNode & { send?: GainNode }).send!] : [])];
 
 interface Osc { type?: OscillatorType; to?: number; detune?: number; gain?: number; attack?: number; room?: number; delay?: number; filter?: { type: BiquadFilterType; from: number; to?: number; q?: number } }
 function osc(freq: number, dur: number, o: Osc = {}) {
     const a = audio();
-    if (!a) return;
+    if (!a || !hasRoom()) return;
     const t = a.currentTime + (o.delay ?? 0);
     const v = a.createOscillator();
     v.type = o.type ?? "sine";
@@ -87,15 +120,19 @@ function osc(freq: number, dur: number, o: Osc = {}) {
     if (o.to) v.frequency.exponentialRampToValueAtTime(o.to, t + dur);
     if (o.detune) v.detune.value = o.detune;
     let node: AudioNode = v;
+    const extra: AudioNode[] = [];
     if (o.filter) {
         const f = a.createBiquadFilter();
+        extra.push(f);
         f.type = o.filter.type;
         f.Q.value = o.filter.q ?? 1;
         f.frequency.setValueAtTime(o.filter.from, t);
         if (o.filter.to) f.frequency.exponentialRampToValueAtTime(o.filter.to, t + dur);
         node = v.connect(f);
     }
-    node.connect(amp(a, t, o.gain ?? 0.15, o.attack ?? 0.005, dur, o.room));
+    const g = amp(a, t, o.gain ?? 0.15, o.attack ?? 0.005, dur, o.room);
+    node.connect(g);
+    voice([v], [...extra, ...ampNodes(g)]);
     v.start(t);
     v.stop(t + dur + 0.05);
 }
@@ -103,7 +140,7 @@ function osc(freq: number, dur: number, o: Osc = {}) {
 interface Noise { filter?: BiquadFilterType; freq?: number; to?: number; q?: number; gain?: number; delay?: number; attack?: number; room?: number }
 function noise(dur: number, o: Noise = {}) {
     const a = audio();
-    if (!a) return;
+    if (!a || !hasRoom()) return;
     if (!noiseBuffer) {
         noiseBuffer = a.createBuffer(1, a.sampleRate * 2, a.sampleRate);
         const d = noiseBuffer.getChannelData(0);
@@ -116,7 +153,9 @@ function noise(dur: number, o: Noise = {}) {
     f.Q.value = o.q ?? 1;
     f.frequency.setValueAtTime(o.freq ?? 1000, t);
     if (o.to) f.frequency.exponentialRampToValueAtTime(o.to, t + dur);
-    src.connect(f).connect(amp(a, t, o.gain ?? 0.2, o.attack ?? 0.004, dur, o.room ?? 0.1));
+    const g = amp(a, t, o.gain ?? 0.2, o.attack ?? 0.004, dur, o.room ?? 0.1);
+    src.connect(f).connect(g);
+    voice([src], [f, ...ampNodes(g)]);
     src.start(t, Math.random());
     src.stop(t + dur + 0.05);
 }
@@ -124,7 +163,7 @@ function noise(dur: number, o: Noise = {}) {
 /** A glassy FM tone: a carrier shaken by a modulator; inharmonic ratios ring like metal. */
 function bell(freq: number, dur: number, { ratio = 1.4, index = 2.5, gain = 0.08, delay = 0, room = 0.45 } = {}) {
     const a = audio();
-    if (!a) return;
+    if (!a || !hasRoom()) return;
     const t = a.currentTime + delay;
     const car = a.createOscillator(), mod = a.createOscillator(), depth = a.createGain();
     car.frequency.value = freq;
@@ -132,7 +171,9 @@ function bell(freq: number, dur: number, { ratio = 1.4, index = 2.5, gain = 0.08
     depth.gain.setValueAtTime(freq * index, t);
     depth.gain.exponentialRampToValueAtTime(freq * 0.05, t + dur);
     mod.connect(depth).connect(car.frequency);
-    car.connect(amp(a, t, gain, 0.003, dur, room));
+    const g = amp(a, t, gain, 0.003, dur, room);
+    car.connect(g);
+    voice([car, mod], [depth, ...ampNodes(g)]);
     car.start(t);
     mod.start(t);
     car.stop(t + dur + 0.05);
@@ -226,7 +267,7 @@ export const sfx = {
     /** The attacker gathers power: a rising, trembling charge. */
     windup: () => {
         const a = audio();
-        if (!a) return;
+        if (!a || !hasRoom()) return;
         const t = a.currentTime;
         const v = a.createOscillator(), lfo = a.createOscillator(), wob = a.createGain(), f = a.createBiquadFilter();
         v.type = "sawtooth";
@@ -243,6 +284,7 @@ export const sfx = {
         trem.gain.value = 0.6;
         lfo.connect(wob).connect(trem.gain);
         v.connect(f).connect(trem).connect(g);
+        voice([v, lfo], [f, wob, trem, ...ampNodes(g)]);
         v.start(t);
         lfo.start(t);
         v.stop(t + 0.45);
