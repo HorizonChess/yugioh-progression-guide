@@ -102,6 +102,16 @@ export function reward(overrides = {}) {
 }
 
 /**
+ * Starts a practice match against the practice bot (it plays a mirror of your deck): "Duel the bot"
+ * opens the choice of opponent, where the practice bot is picked and the match is started.
+ */
+export async function practiceAgainstBot(page) {
+    await page.getByRole("button", { name: "Practice against the bot", exact: true }).click();
+    await page.getByRole("radio", { name: "Practice Bot", exact: true }).click();
+    await page.getByRole("button", { name: /^Duel the bot/ }).click();
+}
+
+/**
  * A duel against the bot or the rival is a match that opens on its pregame: throws Rock until
  * rock-paper-scissors is decided, goes first when that's yours to choose, and keeps the deck as it
  * is when there's side decking, until the board is up.

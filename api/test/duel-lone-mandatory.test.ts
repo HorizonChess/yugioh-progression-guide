@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loneMust, type DuelAnswer, type DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DUEL_RULES, DuelSession } from '../src/duel/session';
+import { DUEL_RULES, DuelSession } from '@ygo/duel/session';
 
 const IMPERIAL_ORDER = 61740673, WABOKU = 12607053, MASK = 56948373, MESSENGER_OF_PEACE = 44656491, GEMINI_ELF = 69140098;
 const generic = (p: DuelPrompt): DuelAnswer => {

@@ -1414,11 +1414,6 @@ export class DuelSession {
     /** The card the bot is activating (its targets are picked to suit what it does). */
     botUsing: number | null = null;
 
-    /** A copy of a duel the bot plays on in to look ahead (not a duel anyone plays). */
-    get isCopy(): boolean {
-        return !!this.options.answerer;
-    }
-
     /**
      * For the bot: the engine's code for what the pick it's asked is for (HINTMSG_DESTROY,
      * HINTMSG_SPSUMMON…), kept until the pick is answered (the question's title uses it up).

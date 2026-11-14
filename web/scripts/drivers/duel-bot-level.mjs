@@ -74,7 +74,9 @@ try {
     const old = btn("End it, start a new one"), practice = btn("Practice against the bot");
     await old.or(practice).first().waitFor({ timeout: 15000 });
     if (await old.count()) await old.click();
-    await practice.waitFor();
+    // "Duel the bot" opens the choice of opponent: the practice bot is the first, at a level.
+    await practice.click();
+    await page.getByRole("radio", { name: "Practice Bot", exact: true }).click();
 
     const levels = page.getByRole("radiogroup", { name: "How well the bot plays" }).getByRole("radio");
     check((await levels.allTextContents()).join(",") === "Easy,Normal,Hard", "Easy, Normal and Hard are offered");
@@ -85,10 +87,10 @@ try {
 
     // Remembered on the next visit.
     await page.reload({ waitUntil: "networkidle" });
-    await practice.waitFor();
+    await practice.click();
     check((await page.getByRole("radio", { name: "Hard" }).getAttribute("aria-checked")) === "true", "the choice is remembered");
 
-    await practice.click();
+    await page.getByRole("button", { name: /^Duel the bot/ }).click();
     await page.waitForURL(/duel/, { timeout: 30000 });
     await page.getByText("Practice Bot (Hard)").first().waitFor({ timeout: 15000 });
     check(true, "the match is against Practice Bot (Hard)");

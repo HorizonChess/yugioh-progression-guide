@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { DuelAnswer, DuelPrompt } from '@ygo/shared';
+import type { DuelAnswer, DuelEvent, DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DuelSession } from '../src/duel/session';
+import { DuelSession } from '@ygo/duel/session';
 
 // Confiscation: look at your opponent's hand, pick a card from it. The pick names their cards
-// (they were shown to you); anywhere else, the rival's hand stays hidden in a question.
+// (they were shown to you); anywhere else, the rival's hand stays hidden in a question. The look
+// comes just before the pick and the pick holds every card shown, so the board shows them once:
+// in the pick, with no banner first.
 const CONFISCATION = 17375316;
 const MON = [91152256, 76184692, 90357090, 15025844, 4206964, 17814387, 74677422];
 
@@ -24,7 +26,9 @@ describe.skipIf(!engineDataAvailable())('seeing the rival\'s cards', () => {
         const duel = new DuelSession(await loadEngine(), { seed: ['2', '11400714819323198485', '77', '2685821657736338717'], mode: 'MR1', decks: [{ main: mine, extra: [] }, { main: theirs, extra: [] }], names: ['A', 'B'], bots: [false, false], rules: 2 });
         duel.start();
         let picks = 0;
+        let look: Extract<DuelEvent, { k: 'reveal' }> | undefined;
         for (let i = 0; i < 300 && !duel.result && picks < 2; i++) {
+            for (const f of duel.takeFrames(0)) for (const e of f.events) if (e.k === 'reveal') look = e;
             const team = duel.waitingFor()!;
             const { prompt, seq } = duel.state(team, 'd');
             const p = prompt!;
@@ -38,6 +42,10 @@ describe.skipIf(!engineDataAvailable())('seeing the rival\'s cards', () => {
                 if (team === 0 && p.title !== '') {
                     // Confiscation showed their hand: the pick names every card.
                     expect(hand.every((c) => c.code > 0)).toBe(true);
+                    expect(look).toMatchObject({ side: 'opp', by: 'me', from: 'hand' });
+                    expect(look!.codes.length).toBe(hand.length);
+                    expect(look!.codes.every((code) => hand.some((c) => c.code === code))).toBe(true);
+                    look = undefined;
                     picks++;
                 }
             }

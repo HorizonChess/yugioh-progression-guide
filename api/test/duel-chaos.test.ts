@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { DuelAnswer, DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DuelSession } from '../src/duel/session';
+import { DuelSession } from '@ygo/duel/session';
 
 const POOL: Record<string, number> = {
     Scapegoat: 73915052, FiendsSanctuary: 24874630, OjamaTrio: 29843091, MonsterReborn: 83764718, ChangeOfHeart: 4031928,

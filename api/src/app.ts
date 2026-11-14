@@ -136,7 +136,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
         app.runInBackground(() => app.notifier.send(userId, type, seriesId, payload)),
     );
     await app.register(websocket, { options: { maxPayload: 1024 } });
-    app.decorate('duels', createDuelHub(app));
+    app.decorate('duels', createDuelHub(app, { engineHost: config.IMAGE_HOST }));
 
     const publicUrl = config.PUBLIC_URL ?? `http://localhost:${config.PORT}`;
     const emailFlows = createEmailFlows(app, mailer ?? createMailer(config, app.log), config.WEB_URL ?? publicUrl);

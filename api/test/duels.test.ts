@@ -2,11 +2,11 @@ import type { FastifyInstance } from 'fastify';
 import { ObjectId } from 'mongodb';
 import type { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { cardVersionAt, collectionKey, type DuelAnswer, type DuelMatchView, type DuelOnDevice, type DuelPrompt, type DuelServerMessage, type DuelState } from '@ygo/shared';
+import { cardVersionAt, collectionKey, duelistById, duelistDeck, type DuelAnswer, type DuelMatchView, type DuelOnDevice, type DuelPrompt, type DuelServerMessage, type DuelState } from '@ygo/shared';
 import { cardSetsCollection, cardsCollection } from '../src/cards/sync';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
 import { decode, encode } from '../src/duel/hub';
-import { DuelSession, type DuelSetup, type Team } from '../src/duel/session';
+import { DuelSession, type DuelSetup, type Team } from '@ygo/duel/session';
 import { packSessions } from '../src/game/packs';
 import { seriesCollection, seriesPlayersCollection } from '../src/game/series';
 import { startMongo, testApp } from './helpers';
@@ -33,16 +33,22 @@ afterAll(async () => {
     await mongo.stop();
 });
 beforeEach(async () => {
-    ({ app } = await testApp(mongo));
+    app = await appWithCards();
+});
+afterEach(async () => {
+    await app.close();
+});
+
+/** The API, with the sets and cards the duels here play. */
+async function appWithCards(env: Record<string, string> = {}) {
+    const { app } = await testApp(mongo, env);
     await cardSetsCollection(app.db).insertMany(TIMELINE.map((set_name, i) => ({ _id: set_name, set_name, set_code: `S${i}`, num_of_cards: 100, tcg_date: `2002-0${i + 3}-08` })));
     await cardsCollection(app.db).insertMany(CARDS.map(([id, name, type]) => ({
         _id: id, id, name, type, frameType: type.startsWith('Spell') ? 'spell' : type.startsWith('Trap') ? 'trap' : 'normal', desc: '', race: 'Warrior',
         card_sets: [{ set_name: TIMELINE[0]!, set_code: 'LOB-EN001', set_rarity: 'Common', set_rarity_code: '', set_price: '0' }], card_images: [],
     })) as never);
-});
-afterEach(async () => {
-    await app.close();
-});
+    return app;
+}
 
 async function player(name: string) {
     const res = await app.inject({ method: 'POST', url: '/api/auth/signup', payload: { email: `${name.toLowerCase()}@example.com`, password: 'heart of the cards', duelistName: name } });
@@ -270,6 +276,44 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect(JSON.stringify(stored)).not.toContain(token);
     });
 
+    it('keeps a device game\'s answers: added at the end, replaced from where a move was taken back, never past the end', async () => {
+        const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'solo' } });
+        const { duel, token } = started.json();
+        const headers = { 'x-duel-token': token };
+        const send = (from: number, answers: string[]) => app.inject({ method: 'POST', url: `/api/duels/${duel.id}/answers`, headers, payload: { from, answers } });
+        const kept = async () => (await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) }))!.answers as string[];
+        await playOnDevice(duel.id, headers, 6);
+        const six = await kept();
+        expect(six.length).toBeGreaterThanOrEqual(6);
+
+        // Past the end: refused, nothing kept changes.
+        expect((await send(six.length + 1, [six[0]!])).statusCode).toBe(409);
+        expect(await kept()).toEqual(six);
+        // From the end: added.
+        expect((await send(six.length, [])).statusCode).toBe(200);
+        expect(await kept()).toEqual(six);
+        // From earlier (taken back on the device): what was kept from there is replaced.
+        expect((await send(2, [six[3]!, six[2]!])).statusCode).toBe(200);
+        expect(await kept()).toEqual([six[0], six[1], six[3], six[2]]);
+        // From the start.
+        expect((await send(0, six.slice(0, 3))).statusCode).toBe(200);
+        expect(await kept()).toEqual(six.slice(0, 3));
+        expect((await send(3, six.slice(3))).statusCode).toBe(200);
+        expect(await kept()).toEqual(six);
+    });
+
+    it("plays practice games on the server while the engine data isn't uploaded for browsers", async () => {
+        await app.close();
+        // (Nothing answers there: as if the upload never happened.)
+        app = await appWithCards({ IMAGE_HOST: 'http://127.0.0.1:9' });
+        const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'solo' } });
+        expect(started.statusCode).toBe(201);
+        const { duel, token } = started.json();
+        const look = await lookAt(duel.id, { 'x-duel-token': token });
+        expect(look.device).toBeUndefined();
+        expect(look.state).toMatchObject({ rival: { name: 'Solo Practice' } });
+    });
+
     it('takes back a summon while its zone is being chosen', async () => {
         const started = await app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'solo' } });
         const { duel, token } = started.json();
@@ -404,6 +448,34 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect((await post({ deck: { main: [...DECK.slice(4), 46986414, 46986414, 46986414, 46986414], extra: [] } })).statusCode).toBe(409);
         expect((await post({ setName: 'Nope' })).statusCode).toBe(404);
         expect((await post({})).statusCode).toBe(201);
+    });
+
+    it('practices against a duelist from the anime: their name, their level and their deck of that era', async () => {
+        const post = (payload: object) => app.inject({ method: 'POST', url: '/api/duels/practice', payload: { deck: { main: DECK, extra: [] }, setName: TIMELINE[0], against: 'bot', ...payload } });
+        // Only one of the roster, an era of theirs, and only against the bot.
+        expect((await post({ duelist: { id: 'kaiba' } })).statusCode).toBe(400);
+        expect((await post({ duelist: { id: 'joey', era: 'gx' } })).statusCode).toBe(400);
+        expect((await post({ against: 'solo', duelist: { id: 'joey' } })).statusCode).toBe(400);
+
+        const started = await post({ duelist: { id: 'joey', era: 'bc' } });
+        expect(started.statusCode).toBe(201);
+        const { duel, token } = started.json();
+        const stored = await app.db.collection('duels').findOne({ _id: new ObjectId(duel.id) });
+        const botSeat = (stored!.players as { bot: boolean }[]).findIndex((p) => p.bot);
+        expect(stored!.players[botSeat]).toMatchObject({ name: 'Joey Wheeler', bot: true, level: 'normal', duelist: 'joey', era: 'bc' });
+        const joey = duelistDeck(duelistById('joey')!, 'bc').deck;
+        expect(stored!.match.registered[botSeat]).toEqual({ main: joey.main, extra: joey.extra, side: [] });
+        expect(stored!.match.registered[1 - botSeat]).toMatchObject({ main: DECK });
+
+        // The game is dealt with Joey's deck on his side, and the board names him.
+        await ready(duel.id, [{ 'x-duel-token': token }]);
+        const device = (await app.inject({ method: 'GET', url: `/api/duels/${duel.id}`, headers: { 'x-duel-token': token } })).json().device as DuelOnDevice;
+        const setup = device.setup as DuelSetup;
+        const his = 1 - device.team;
+        expect(setup.names[his]).toBe('Joey Wheeler');
+        expect(setup.decks[his]!.main.length).toBe(joey.main.length);
+        expect(setup.decks[his]!.extra.length).toBe(joey.extra.length);
+        expect(setup.botLevel).toBe('normal');
     });
 
     it('lets the rival accept a challenge, plays it out, and records the result on the series', async () => {

@@ -259,7 +259,7 @@ export interface DuelMatchView {
 export type RpsHand = 'rock' | 'paper' | 'scissors';
 
 /** A deck as registered for a match: what's played, and the side deck to swap with between games. */
-/** How well the practice bot plays (api/src/duel/bot.ts), weakest first. */
+/** How well the practice bot plays (duel/src/bot.ts), weakest first. */
 export const BOT_LEVELS = ['easy', 'normal', 'hard'] as const;
 export type BotLevel = (typeof BOT_LEVELS)[number];
 /** The bot's name at each level. */

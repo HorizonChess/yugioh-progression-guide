@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DuelAnswer, DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DuelSession, type DuelSetup } from '../src/duel/session';
+import { DuelSession, type DuelSetup } from '@ygo/duel/session';
 
 const MON = [91152256, 76184692, 90357090, 15025844, 4206964, 17814387, 74677422];
 const deck = { main: Array.from({ length: 40 }, (_, i) => MON[i % MON.length]!), extra: [] };

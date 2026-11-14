@@ -2,7 +2,7 @@ import {
     OcgLocation as L, OcgMessageType as M, OcgPosition as P, OcgResponseType as R, SelectBattleCMDAction as B, SelectIdleCMDAction as I,
     type OcgMessage, type OcgResponse,
 } from 'ocgcore-wasm';
-import type { DuelSession, Team } from '../../src/duel/session';
+import type { DuelSession, Team } from '@ygo/duel/session';
 
 /*
  * The practice opponent: plain, legal play. It summons its strongest monster, plays its

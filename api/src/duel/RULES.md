@@ -120,7 +120,10 @@ R2 (`engine/<data id>/`, see `web/scripts/engine/upload-engine.mjs`). The server
 (the decks as played at the set's date, the seed), then only keeps what the page sends: the answers
 as they're given, so a reload or a bug report has the whole game, and at the end how it ended, which
 it books as told (practice is never booked on the series, so it's taken on trust). Rival duels, and
-practice games begun before this, are played on the server.
+practice games begun before this, are played on the server. So are practice games while the engine
+data of the server's version isn't on R2 (its `done.json`, checked with a HEAD request; once found
+it's kept, else asked again a minute later): a deploy before the upload slows practice down rather
+than breaking it.
 
 The worker's duel stops before each decision the bot has to think about (`pauseForBot`): what has
 happened is shown first, then the bot thinks. So a player's move shows at once, and the bot's turn
@@ -164,6 +167,18 @@ card the copy turns up: a small leak, not used to aim at hidden cards.)
 
 `plain` (no copies) is for tests of the duel server only. `scripts/bot-lab` plays bots against
 each other headless (`match.ts`, `trace.ts`) and flags any harmful pick of the bot's own card.
+
+## Duelists from the anime (shared/src/duel/duelists.ts; page, `OpponentPicker`)
+
+Besides the practice bot (a mirror of your deck at the level you pick), you can practice against
+the anime's duelists, chosen as on chess.com: each has a sprite, a rating, a level of their own
+(Easy, Normal or Hard, the bot underneath) and their deck in one or more eras of the show. The
+decks are fans' rebuilds from YGOPRODeck's "Anime Decks", picked for being faithful and made only
+of cards out in the TCG before the cutoff; `api/scripts/build-duelists.ts` fetches and checks them
+(every card one the engine plays, under its one id; at most three copies) into
+`duelist-decks.json`. Anime cards were mostly printed years after the show, so a duelist always
+plays their deck as listed, whatever set the series has reached: the level is what makes them
+easier or harder. The bot never side-decks.
 
 ## Ordering cards and removing counters (rules 4)
 

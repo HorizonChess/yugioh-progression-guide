@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { DuelAnswer, DuelEvent, DuelPrompt } from '@ygo/shared';
-import { BOT_LEVELS, type BotLevel } from '../src/duel/bot';
+import { BOT_LEVELS, type BotLevel } from '@ygo/duel/bot';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DuelSession } from '../src/duel/session';
+import { DuelSession } from '@ygo/duel/session';
 
 // At every level the bot never makes a play that only hurts itself, and Sets what's meant to be Set.
 const MST = 5318639, WABOKU = 12607053, DARK_HOLE = 53129443, VORSE_RAIDER = 14898066, MYSTICAL_ELF = 15025844, MAN_EATER_BUG = 54652250;

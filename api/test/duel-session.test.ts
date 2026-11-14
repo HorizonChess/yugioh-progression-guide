@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DuelAnswer, DuelPrompt } from '@ygo/shared';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DuelSession, type DuelSetup } from '../src/duel/session';
+import { DuelSession, type DuelSetup } from '@ygo/duel/session';
 
 // Two Legend of Blue Eyes decks (40 cards each).
 const LOB = [

@@ -31,9 +31,15 @@ export interface DuelSummary {
 /** Practice: `bot` plays against you; `solo` only passes its turns, to try your deck out. */
 export type PracticeOpponent = "bot" | "solo";
 
-/** `level`: how well the bot plays (against the bot). */
-export const startDuel = async (seriesId: string, deckId: string, against: PracticeOpponent | "rival", level?: BotLevel) =>
-    (await apiRequest<{ duel: DuelSummary }>("POST", `/api/series/${seriesId}/duels`, { deckId, against, ...(against === "bot" && level ? { level } : {}) })).duel;
+/**
+ * Who the bot is: the practice bot at a level (it plays your deck), or a duelist from the anime
+ * (their deck, at their own level), in one of their eras.
+ */
+export type BotChoice = { level: BotLevel } | { duelist: { id: string; era?: string } };
+const botBody = (against: string, bot?: BotChoice) => (against === "bot" && bot ? bot : {});
+
+export const startDuel = async (seriesId: string, deckId: string, against: PracticeOpponent | "rival", bot?: BotChoice) =>
+    (await apiRequest<{ duel: DuelSummary }>("POST", `/api/series/${seriesId}/duels`, { deckId, against, ...botBody(against, bot) })).duel;
 
 const TOKENS_KEY = "guestDuelTokens";
 const TOKEN_MS = 24 * 60 * 60_000;
@@ -62,8 +68,8 @@ const tokenHeader = (duelId: string): Record<string, string> | undefined => {
 };
 
 /** A guest's practice duel with a deck from this browser, at a set of the timeline. */
-export async function startGuestDuel(deck: { main: number[]; extra: number[]; side?: number[] }, setName: string, against: PracticeOpponent, level?: BotLevel) {
-    const { duel, token } = await apiRequest<{ duel: DuelSummary; token: string }>("POST", "/api/duels/practice", { deck, setName, against, ...(against === "bot" && level ? { level } : {}) });
+export async function startGuestDuel(deck: { main: number[]; extra: number[]; side?: number[] }, setName: string, against: PracticeOpponent, bot?: BotChoice) {
+    const { duel, token } = await apiRequest<{ duel: DuelSummary; token: string }>("POST", "/api/duels/practice", { deck, setName, against, ...botBody(against, bot) });
     localStorage.setItem(TOKENS_KEY, JSON.stringify({ ...readTokens(), [duel.id]: { token, at: Date.now() } }));
     return duel;
 }

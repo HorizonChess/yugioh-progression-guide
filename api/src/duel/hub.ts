@@ -3,14 +3,14 @@ import { MongoServerError, ObjectId, type Db } from 'mongodb';
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
 import {
-    BOT_NAMES, DuelClientMessageSchema, cardVersionAt, ruleEraFor, resolveSetIndex,
+    BOT_NAMES, DuelClientMessageSchema, cardVersionAt, duelistById, duelistDeck, ruleEraFor, resolveSetIndex,
     type BotLevel, type DeviceAnswers, type DuelMatchView, type DuelOnDevice, type DuelModeId, type DuelPregameView, type DuelServerMessage, type DuelState, type MatchDeck, type PregameAction, type RpsHand,
 } from '@ygo/shared';
 import { confirmReport, reportDuoMatch } from '../game/matches';
 import { findSeries } from '../game/series';
 import { engineDataId } from '@ygo/duel/engine';
 import { engineFaulted, loadEngine } from './engine';
-import { DUEL_RULES, DuelSession, type DuelSetup, type Team } from './session';
+import { DUEL_RULES, DuelSession, type DuelSetup, type Team } from '@ygo/duel/session';
 
 /*
  * Duels: stored in Mongo as their setup and every answer (enough to rebuild one exactly),
@@ -74,6 +74,9 @@ export interface DuelPlayer {
     bot: boolean;
     /** The bot's: how well it plays (missing: normal). */
     level?: BotLevel;
+    /** The bot as a duelist from the anime (shared/src/duel/duelists.ts), and the era of their deck. */
+    duelist?: string;
+    era?: string;
 }
 
 export interface DuelDoc {
@@ -141,14 +144,16 @@ const GUEST_DUEL_MS = 24 * 60 * 60_000;
 
 export type Deck = MatchDeck;
 export type Opponent = 'bot' | 'solo';
+/** Practice against a duelist from the anime: who, and the era of their deck (their first if missing). */
+export interface PracticeDuelist { id: string; era?: string }
 
 export type DuelProblem = 'no-set' | 'no-deck' | 'deck-illegal' | 'unknown-card' | 'busy' | 'finished' | 'no-rival' | 'not-yours' | 'not-waiting' | 'not-now' | 'bad-side';
 
 export interface DuelHub {
     /** Starts a practice duel or challenges the rival. */
-    create(input: { seriesId: ObjectId; userId: ObjectId; name: string; deck: Deck; deckId: string; against: Opponent | 'rival'; level?: BotLevel }): Promise<DuelDoc | DuelProblem>;
+    create(input: { seriesId: ObjectId; userId: ObjectId; name: string; deck: Deck; deckId: string; against: Opponent | 'rival'; level?: BotLevel; duelist?: PracticeDuelist }): Promise<DuelDoc | DuelProblem>;
     /** A guest's practice duel at a set of the timeline, opened later with the returned token. */
-    createGuest(input: { deck: Deck; setName: string; against: Opponent; level?: BotLevel }): Promise<{ duel: DuelDoc; token: string } | DuelProblem>;
+    createGuest(input: { deck: Deck; setName: string; against: Opponent; level?: BotLevel; duelist?: PracticeDuelist }): Promise<{ duel: DuelDoc; token: string } | DuelProblem>;
     accept(input: { duel: DuelDoc; userId: ObjectId; name: string; deck: Deck; deckId: string }): Promise<DuelDoc | DuelProblem>;
     /** Before a game: a hand thrown, who goes first chosen, or a side-decked deck handed in. */
     pregame(duel: DuelDoc, seat: Seat, action: PregameAction): Promise<DuelDoc | DuelProblem>;
@@ -178,7 +183,7 @@ export interface DuelHub {
 
 const IDLE_MS = 30 * 60_000;
 
-export function createDuelHub(app: FastifyInstance): DuelHub {
+export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where browsers fetch the engine data from (IMAGE_HOST). */ engineHost?: string } = {}): DuelHub {
     const duels = () => duelsCollection(app.db);
     const live = new Map<string, { session: DuelSession; stored: number; touched: number }>();
     const sockets = new Map<string, Set<{ socket: WebSocket; team: Team }>>();
@@ -428,7 +433,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const decks = [await playedAt(pre.decks[seats[0]]!, date, shown), await playedAt(pre.decks[seats[1]]!, date, shown)] as DuelSetup['decks'];
         const botLevel = players.find((p) => p.bot)?.level;
         // Against the bot, the game is played on the player's device: the server only keeps its answers.
-        const onDevice = players.some((p) => p.bot);
+        const onDevice = players.some((p) => p.bot) && (await deviceReady());
         const setup: DuelSetup = {
             seed: newSeed(), mode: duel.mode, decks, names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown, rules: DUEL_RULES,
             ...(botLevel ? { botLevel } : {}),
@@ -529,11 +534,18 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
     const setDate = async (duel: Pick<DuelDoc, 'setName'>) => (await app.catalog.timeline()).find((s) => s.set_name === duel.setName)?.tcg_date;
 
     /**
-     * A practice duel. Against the bot (which plays a mirror of your deck) it's a match like any
-     * other, opening on its pregame. Solo, where the opponent only passes, is one game: it's set up
-     * here, and a coin decides who goes first.
+     * A practice duel. Against the bot it's a match like any other, opening on its pregame: the bot
+     * plays a mirror of your deck, or as a duelist from the anime, their deck at their own level.
+     * Solo, where the opponent only passes, is one game: it's set up here, and a coin decides who
+     * goes first.
      */
-    async function practice(id: ObjectId, me: DuelPlayer, deck: Deck, date: string | undefined, mode: DuelModeId, against: Opponent, level: BotLevel = 'normal'): Promise<Partial<DuelDoc>> {
+    async function practice(id: ObjectId, me: DuelPlayer, deck: Deck, date: string | undefined, mode: DuelModeId, against: Opponent, level: BotLevel = 'normal', chosen?: PracticeDuelist): Promise<Partial<DuelDoc>> {
+        const duelist = against === 'bot' && chosen ? duelistById(chosen.id) : undefined;
+        if (duelist) {
+            const { era, deck: theirs } = duelistDeck(duelist, chosen?.era);
+            const bot: DuelPlayer = { userId: null, name: duelist.name, deckId: null, bot: true, level: duelist.level, duelist: duelist.id, era: era.id };
+            return openMatch(id, [me, bot], [deck, { main: theirs.main, extra: theirs.extra, side: [] }]);
+        }
         const bot: DuelPlayer = against === 'solo'
             ? { userId: null, name: 'Solo Practice', deckId: null, bot: true }
             : { userId: null, name: BOT_NAMES[level], deckId: null, bot: true, level };
@@ -544,9 +556,26 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         const setup: DuelSetup = {
             seed: newSeed(), mode, decks: [played, played], names: [players[0]!.name, players[1]!.name], bots: [players[0]!.bot, players[1]!.bot], shown, rules: DUEL_RULES,
             ...(against === 'solo' ? { solo: true } : {}),
-            onDevice: true,
+            ...((await deviceReady()) ? { onDevice: true } : {}),
         };
         return { players, setup };
+    }
+
+    /**
+     * Whether a browser can play a practice game: the engine data of this version is on the image
+     * host (upload-engine.mjs writes done.json last). Until it is, the server plays them itself, and
+     * says why. Found: kept for good; missing: asked again a minute later. (No host: the data is
+     * served with the web app.)
+     */
+    let uploaded: { ok: boolean; at: number } | null = null;
+    async function deviceReady(): Promise<boolean> {
+        if (!engineHost) return true;
+        if (uploaded && (uploaded.ok || Date.now() - uploaded.at < 60_000)) return uploaded.ok;
+        const id = engineDataId((await loadEngine()).version);
+        const ok = await fetch(`${engineHost}/engine/${id}/done.json`, { method: 'HEAD', signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
+        if (!ok) app.log.error({ engine: id }, 'engine data not uploaded, so practice games are played on the server: npx tsx web/scripts/engine/upload-engine.mjs');
+        uploaded = { ok, at: Date.now() };
+        return ok;
     }
 
     /** A game played on the device is over: booked as it's told, and the match moves on. */
@@ -576,19 +605,29 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
         record(duel, team, { from, answers, end }) {
             const id = duel._id.toHexString();
             return serial(id, async () => {
-                const fresh = await duels().findOne({ _id: duel._id });
-                if (!fresh || fresh.status !== 'active' || !fresh.setup?.onDevice || from > fresh.answers.length) return 'not-now' as const;
-                // Answers from `from` on replace what was kept there (a move taken back on the device).
-                const all = [...fresh.answers.slice(0, from), ...answers];
-                await duels().updateOne({ _id: duel._id, status: 'active' }, { $set: { answers: all, updatedAt: new Date() } });
-                Object.assign(duel, fresh, { answers: all });
+                // The duel as it is now, with how many answers it keeps (not the answers: a long game has many).
+                const [fresh] = await duels()
+                    .aggregate<Omit<DuelDoc, 'answers'> & { kept: number }>([{ $match: { _id: duel._id } }, { $set: { kept: { $size: '$answers' } } }, { $unset: 'answers' }])
+                    .toArray();
+                if (!fresh || fresh.status !== 'active' || !fresh.setup?.onDevice || from > fresh.kept) return 'not-now' as const;
+                // Usually the answers carry on from the end, and are added to it. From earlier, they
+                // replace what was kept from there on (a move taken back on the device).
+                const kept = { _id: duel._id, status: 'active' as const, answers: { $size: fresh.kept } };
+                const now = new Date();
+                const stored =
+                    from === fresh.kept
+                        ? await duels().updateOne(kept, { $push: { answers: { $each: answers } }, $set: { updatedAt: now } })
+                        : await duels().updateOne(kept, [{ $set: { answers: from ? { $concatArrays: [{ $slice: ['$answers', from] }, { $literal: answers }] } : { $literal: answers }, updatedAt: now } }]);
+                if (!stored.matchedCount) return 'not-now' as const;
+                const { kept: _, ...rest } = fresh;
+                Object.assign(duel, rest, { answers: [...duel.answers.slice(0, from), ...answers] });
                 if (!end) return duel;
                 const winner = end.winner === null ? null : ((end.winner === 'me' ? team : 1 - team) as Team);
                 await finishOnDevice(duel, winner, end.reason);
                 return (await duels().findOne({ _id: duel._id })) ?? duel;
             });
         },
-        async create({ seriesId, userId, name, deck, deckId, against, level }) {
+        async create({ seriesId, userId, name, deck, deckId, against, level, duelist }) {
             const at = await setOf(seriesId);
             if (!at) return 'finished';
             if ((await unknownCards([...deck.main, ...deck.extra, ...deck.side])).length) return 'unknown-card';
@@ -619,7 +658,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 updatedAt: now,
             };
             if (solo) {
-                Object.assign(doc, await practice(doc._id, me, deck, at.set.tcg_date, mode, against, level));
+                Object.assign(doc, await practice(doc._id, me, deck, at.set.tcg_date, mode, against, level, duelist));
             } else {
                 doc.challengerDeck = deck;
             }
@@ -632,7 +671,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
             if (doc.status === 'active') await start(doc);
             return doc;
         },
-        async createGuest({ deck, setName, against, level }) {
+        async createGuest({ deck, setName, against, level, duelist }) {
             const timeline = await app.catalog.timeline();
             const setIndex = timeline.findIndex((s) => s.set_name === setName);
             const set = timeline[setIndex];
@@ -653,7 +692,7 @@ export function createDuelHub(app: FastifyInstance): DuelHub {
                 status: 'active',
                 players: [],
                 setup: null,
-                ...(await practice(_id, me, deck, set.tcg_date, mode, against, level)),
+                ...(await practice(_id, me, deck, set.tcg_date, mode, against, level, duelist)),
                 challengerId: null,
                 guestTokenHash: hashGuestToken(token),
                 expiresAt: new Date(now.getTime() + GUEST_DUEL_MS),

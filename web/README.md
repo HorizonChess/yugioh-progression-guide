@@ -103,12 +103,7 @@ We use a suite of custom scripts to maintain assets and data integrity:
 -   **`migrate_images.js`**: Batch downloads card images and uploads them to Cloudflare R2.
 -   **`migrate_missing_artworks.js`**: Uploads alternate card artworks to Cloudflare R2.
 -   **`optimize_images.js`**: Generates and uploads multiple pre-optimized image sizes (sm/md/lg) to R2.
--   **`check_missing_sets.js`**: Validates that all sets in the timeline have associated images and data.
 -   **`process_sprites.js`**: Removes solid backgrounds from Guide sprite PNGs in `public/`.
-
-**Button/UI asset generation (`web/scripts/buttons/`)**
--   **`generate_wide_button.js`** / **`generate_wide_button_v3.js`**: Stretch button templates into wide variants.
--   **`process_button_transparency.js`**: Applies transparency processing to button assets.
 
 ## Architecture Overview
 
