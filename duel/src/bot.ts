@@ -3,7 +3,7 @@ import {
     type OcgMessage, type OcgResponse,
 } from 'ocgcore-wasm';
 import { evaluate } from './bot-eval';
-import { simulate } from './bot-sim';
+import { simulate, type Through } from './bot-sim';
 import { BOT_LEVELS as PLAYABLE, type BotLevel as PlayableLevel } from '@ygo/shared';
 import type { DuelSession, Team } from './session';
 
@@ -31,7 +31,8 @@ import type { DuelSession, Team } from './session';
 export type BotLevel = PlayableLevel | 'plain' | 'expert';
 
 /** BOT_DEBUG set (on the server; a browser has no environment): print what the bot weighs. */
-const debugging = !!(globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.BOT_DEBUG;
+/** For the lab: print what the look-ahead scores (BOT_DEBUG=1, or set here). */
+export const botDebug = { on: !!(globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.BOT_DEBUG };
 /** The levels a player can choose. */
 export const BOT_LEVELS: readonly BotLevel[] = PLAYABLE;
 
@@ -210,8 +211,10 @@ export function heuristicAnswer(m: OcgMessage, duel: DuelSession, team: Team, ru
         case M.SELECT_BATTLECMD:
             return battle(m, duel, team, rules);
         case M.SELECT_CHAIN: {
-            // Only what helps: a boost while its monster is in a battle, a wipe when it's behind,
-            // anything else when the engine offers it (traps only come up when their moment is right).
+            // Not in a quiet window (nothing to answer: a card used then is used for nothing). Else only
+            // what helps: a boost while its monster is in a battle, a wipe when it's behind, anything
+            // else when the engine offers it (traps only come up when their moment is right).
+            if (duel.quietFor(m, team)) return { type: R.SELECT_CHAIN, index: null };
             const pick = m.selects.findIndex((c) => worthUsing(c.code, duel, team, true));
             const index = pick >= 0 ? pick : m.forced && m.selects.length ? 0 : null;
             if (index !== null) duel.botUsing = m.selects[index]!.code;
@@ -422,17 +425,19 @@ function guessPolicy(m: OcgMessage, duel: DuelSession, team: Team): OcgResponse 
     return heuristicAnswer(m, duel, team, IN_GUESSES);
 }
 /** (For the lab: GUESS_MODE=rival plays the copies through the rival's next turn, not to the end of the bot's.) */
-const guessMode = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.GUESS_MODE === 'rival' ? 'rival' : true;
+const guessMode: Through = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.GUESS_MODE === 'rival' ? 'rival' : (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.GUESS_MODE === 'end' ? 'end' : true;
+/** (For the lab: GUESS_TURN=0 judges a response on the rival's turn only to their next action.) */
+const guessTurn = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.GUESS_TURN !== '0';
 /**
  * An answer scored to the end of the bot's turn, the rival responding as it might: the average over
  * `k` guesses at what the bot can't see. `through`: false for the next decision only (a response).
  */
-function guessed(duel: DuelSession, team: Team, k: number, through = true): Scorer {
+function guessed(duel: DuelSession, team: Team, k: number, through: Through = true): Scorer {
     return (r) => {
         let sum = 0, n = 0;
         for (let g = 0; g < k; g++) {
-            const s = simulate(duel, team, r, guessPolicy, through ? guessMode : false, g);
-            if (debugging) console.log(`        guess ${g}: ${s?.toFixed(0)}`);
+            const s = simulate(duel, team, r, guessPolicy, guessMode === 'end' && through !== false ? 'end' : through === true ? guessMode : through, g);
+            if (botDebug.on) console.log(`        guess ${g}: ${s?.toFixed(0)}`);
             if (s !== null) {
                 sum += s;
                 n++;
@@ -454,7 +459,7 @@ function choose(duel: DuelSession, team: Team, tries: Try[], baseline: number, m
             const on = simulate(duel, team, t.response, simPolicy, 'rollout');
             if (on !== null && (score === null || on > score)) score = on;
         }
-        if (debugging) console.log(`      t${duel.view(team).turn} try ${t.label ?? JSON.stringify(t.response)}: ${score?.toFixed(0)} (pass ${baseline.toFixed(0)})`);
+        if (botDebug.on) console.log(`      t${duel.view(team).turn} try ${t.label ?? JSON.stringify(t.response)}: ${score?.toFixed(0)} (pass ${baseline.toFixed(0)})`);
         if (score === null) continue;
         if (firstSound && score > baseline + margin) return t;
         if (score > bestScore) [best, bestScore] = [t, score];
@@ -519,6 +524,9 @@ function idle(m: IdleMsg, duel: DuelSession, team: Team, rules: LevelRules): Ocg
 
 function chain(m: ChainMsg, duel: DuelSession, team: Team, rules: LevelRules): OcgResponse {
     if (m.forced || !m.selects.length) return heuristicAnswer(m, duel, team, rules);
+    // A quiet window (nothing to answer) is passed, but for the rival's End Phase: the moment to use
+    // a card that works at any time (a Special Summon the rival can't answer on their turn).
+    if (duel.quietFor(m, team) && !(duel.currentTurnPlayer !== team && duel.currentPhase === 'EP')) return { type: R.SELECT_CHAIN, index: null };
     const tries: Try[] = [];
     const seen = new Set<string>();
     m.selects.forEach((c, i) => {
@@ -530,8 +538,9 @@ function chain(m: ChainMsg, duel: DuelSession, team: Team, rules: LevelRules): O
     });
     if (!tries.length) return { type: R.SELECT_CHAIN, index: null };
     if (rules.guesses && guessTuning.chain) {
-        // Using a response now, or keeping it for when it counts.
-        const scorer = guessed(duel, team, rules.guesses);
+        // Using a response now, or keeping it for when it counts: on the rival's turn, judged by how
+        // their turn goes on (what it stops them doing), on its own by the end of it.
+        const scorer = guessed(duel, team, rules.guesses, duel.currentTurnPlayer === team || !guessTurn ? true : 'turn');
         const kept = scorer({ type: R.SELECT_CHAIN, index: null });
         if (kept !== null) {
             const best = choose(duel, team, tries, kept, rules.chainMargin, false, scorer);

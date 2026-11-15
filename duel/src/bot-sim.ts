@@ -36,15 +36,17 @@ import { DuelSession, type SessionOptions, type Team } from './session';
 class Stop extends Error {}
 
 /** Questions answered in the copy after the tried one, at most (a runaway loop of effects); a whole turn when played through. */
-const MAX_STEPS = 80, MAX_STEPS_THROUGH = 160, MAX_STEPS_RIVAL = 500;
+const MAX_STEPS = 80, MAX_STEPS_THROUGH = 160, MAX_STEPS_RIVAL = 500, MAX_STEPS_END = 4000;
 
 /**
  * How far the copy plays on: to the bot's next choice (false), to the end of its turn (true), or to
  * the end of its turn with the rest of this Main Phase played by plain play too (`rollout`), or
  * through the rival's next turn (`rival`): in a copy where what the bot can't see is a guess
- * (bot-belief.ts), so the rival plays too, responding and taking its turn, by `policy`.
+ * (bot-belief.ts), so the rival plays too, responding and taking its turn, by `policy`. Or (`turn`,
+ * for a response on the rival's turn, in such a copy) to the end of the rival's turn: what the
+ * response stops them doing (Floodgate Trap Hole on a summon: the attack it would have made).
  */
-export type Through = boolean | 'rollout' | 'rival';
+export type Through = boolean | 'rollout' | 'rival' | 'turn' | 'end';
 
 export type SimPolicy = (m: OcgMessage, duel: DuelSession, team: Team, bot: Team) => OcgResponse;
 
@@ -52,6 +54,8 @@ export type SimPolicy = (m: OcgMessage, duel: DuelSession, team: Team, bot: Team
 export const simStats = { runs: 0, ms: 0, replayMs: 0, forks: 0, guessed: 0, guessFailed: 0 };
 /** For the lab: whether to fork (false: rebuild the copy for every try, as before). */
 export const simTuning = { fork: true };
+/** For the lab: shown each copy where it stops, before it's scored. */
+export const simDebug: { stop: ((copy: DuelSession, team: Team) => void) | null } = { stop: null };
 
 type Answerer = NonNullable<SessionOptions['answerer']>;
 
@@ -70,6 +74,15 @@ function answerer(duel: DuelSession, team: Team, first: OcgResponse, policy: Sim
         }
         const own = t === team && d.currentTurnPlayer === team;
         const turnsAction = m.type === M.SELECT_IDLECMD || m.type === M.SELECT_BATTLECMD;
+        if (through === 'end') {
+            // (The lab: on to the end of the duel, everyone by plain play.)
+            if (++steps > MAX_STEPS_END) throw new Stop();
+            return policy(m, d, t, team);
+        }
+        if (through === 'turn') {
+            if (++steps > MAX_STEPS_RIVAL || d.view(team).turn > startTurn) throw new Stop();
+            return policy(m, d, t, team);
+        }
         if (through === 'rival') {
             // On through the rival's turn: to the bot's next chance to act on a turn of its own.
             if (++steps > MAX_STEPS_RIVAL || (own && turnsAction && d.view(team).turn > startTurn)) throw new Stop();
@@ -92,7 +105,8 @@ function answerer(duel: DuelSession, team: Team, first: OcgResponse, policy: Sim
 
 function score(copy: DuelSession, duel: DuelSession, team: Team, best: number, through: Through): number {
     if (copy.result) return copy.result.winner === null ? 0 : copy.result.winner === team ? WIN_VALUE : -WIN_VALUE;
-    if (through === 'rival') return evaluate(copy.view(team), duel.engine);
+    if (through === 'end') return Math.max(-WIN_VALUE, Math.min(WIN_VALUE, evaluate(copy.view(team), duel.engine))) / 100;
+    if (through === 'rival' || through === 'turn') return evaluate(copy.view(team), duel.engine);
     return through ? Math.max(best, evaluate(copy.view(team), duel.engine, true)) : evaluate(copy.view(team), duel.engine);
 }
 
@@ -115,7 +129,7 @@ export function simulate(duel: DuelSession, team: Team, first: OcgResponse, poli
         }
     }
     // (Through the rival's turn needs the guesses, which need the look-ahead's own core: never the real cards.)
-    if (result === undefined && (through === 'rival' || guess !== undefined)) {
+    if (result === undefined && (through === 'rival' || through === 'turn' || through === 'end' || guess !== undefined)) {
         if ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.DEBUG_SIM) console.log('rival look-ahead without a fork', !!duel.engine.simCore());
         return null;
     }
@@ -243,7 +257,7 @@ function tryFork(f: Fork, duel: DuelSession, team: Team, first: OcgResponse, pol
     f.copy.loadState(f.state);
     // Through the rival's turn: what the bot can't see made a guess first (the same guess for every
     // answer tried with this number, so they're compared on the same footing).
-    if (guess !== undefined) {
+    if (guess !== undefined && !oracle) {
         const belief = beliefFor(duel, team);
         if (!f.copy.runScript(guessScript(f.copy, team, belief, rng(hash(duel.setup.seed[0]) ^ (duel.answers.length * 7919) ^ (guess * 104729))))) {
             simStats.guessFailed++;
@@ -263,8 +277,12 @@ function tryFork(f: Fork, duel: DuelSession, team: Team, first: OcgResponse, pol
             return null;
         }
     }
+    simDebug.stop?.(f.copy, team);
     return score(f.copy, duel, team, a.best, through);
 }
+
+/** (For the lab: ORACLE=1 leaves the copies' hidden cards as they really are: what seeing them would be worth.) */
+const oracle = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.ORACLE === '1';
 
 let belief: { duel: DuelSession; at: number; team: Team; belief: Belief } | null = null;
 /** The bot's belief about what it can't see, worked out once per decision. */

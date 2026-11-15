@@ -1,21 +1,25 @@
 // Bot lab: a stored game (its setup and answers, as the duels collection keeps them) told play by
 // play, with the bot's side's view at each of its decisions. With AGAIN=1, also what the bot would
-// answer now at each of its decisions where that differs.
+// answer now at each of its decisions where that differs (LEVEL=expert: as that level would).
 //   npx tsx scripts/bot-lab/replay-game.ts <game.json>
 import { readFileSync } from 'node:fs';
 import { OcgMessageType as M, OcgResponseType as R, type OcgMessage, type OcgResponse } from 'ocgcore-wasm';
 import type { DuelEvent } from '@ygo/shared';
-import { botAnswer } from '@ygo/duel/bot';
+import { botAnswer, botDebug } from '@ygo/duel/bot';
 import { decodeAnswer } from '@ygo/duel/answers';
+import { simDebug } from '@ygo/duel/bot-sim';
 import { loadEngine } from '../../src/duel/engine';
 import { DuelSession, type Team } from '@ygo/duel/session';
 
 const stored = JSON.parse(readFileSync(process.argv[2]!, 'utf-8')) as { setup: DuelSession['setup']; answers: string[] };
+if (process.env.LEVEL) (stored.setup as { botLevel?: string }).botLevel = process.env.LEVEL;
 const game = { setup: stored.setup, answers: stored.answers.map(decodeAnswer) as OcgResponse[] };
 const engine = await loadEngine();
 engine.simCore();
 while (!engine.simCore()) await new Promise((r) => setTimeout(r, 10));
 const again = process.env.AGAIN === '1';
+/** AT=n: only the bot's decision at answer n, with what its look-ahead scores. */
+const at = process.env.AT !== undefined ? Number(process.env.AT) : null;
 const bot = game.setup.bots.indexOf(true) as Team;
 const IDLE = ['summon', 'special', 'reposition', 'set monster', 'set spell/trap', 'activate', 'to BP', 'to EP'];
 const name = (c?: number) => (c ? engine.name(c) : '?');
@@ -40,6 +44,7 @@ const board = (d: DuelSession, t: Team) => {
     return `LP ${v.me.lp}/${v.opp.lp} hand=${v.me.hand.map((c) => name(c.code)).join('; ')}\n        mine: ${mons(v.me)} | ${sts(v.me)}\n        theirs: ${mons(v.opp)} | ${sts(v.opp)}`;
 };
 
+if (at !== null) simDebug.stop = (c, t) => console.log(`          stops t${c.view(t).turn} ${c.view(t).phase} ${board(c, t)}`);
 const lines: string[] = [];
 let lastBoard = '';
 const answerer = (m: OcgMessage, d: DuelSession, t: Team) => {
@@ -52,13 +57,15 @@ const answerer = (m: OcgMessage, d: DuelSession, t: Team) => {
             lastBoard = b;
         }
         let note = '';
-        if (again) {
+        if (again && (at === null || at === d.answers.length)) {
+            botDebug.on = at !== null;
             const state = d.saveState();
             const now = botAnswer(m, d, t);
             d.loadState(state);
+            botDebug.on = false;
             if (json(now) !== json(r)) note = `   [now: ${describe(m, now, d, t)}]`;
         }
-        lines.push(`     t${v.turn} ${v.phase} -> ${describe(m, r, d, t)}${note}`);
+        lines.push(`     #${d.answers.length} t${v.turn} ${v.phase} -> ${describe(m, r, d, t)}${note}`);
     } else if (t !== bot && m.type === M.SELECT_CHAIN && r.type === R.SELECT_CHAIN && r.index !== null) {
         lines.push(`  YOU t${v.turn} ${v.phase} chain ${name(m.selects[r.index]!.code)}`);
     }

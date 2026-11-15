@@ -1511,6 +1511,20 @@ export class DuelSession {
         return this.engine.effectKind(code);
     }
 
+    /**
+     * Whether a chain window is a quiet one, as a player sees it (`ask`): nothing on the chain, no
+     * attack's damage step, and on your own turn, or on theirs with no card of yours made for the
+     * moment (Trap Hole on a summon) or after your own play. A player isn't asked then; the bot's
+     * plain play passes it too (a Quick-Play used then is used for nothing it answers).
+     */
+    quietFor(m: Extract<OcgMessage, { type: M.SELECT_CHAIN }>, team: Team): boolean {
+        if (m.forced) return false;
+        if (!m.selects.length) return true;
+        const answering = m.spe_count > 0 && m.selects.some((c) => this.engine.answersEvents(c.code));
+        const damage = this.damageStep && Number(m.hint_timing) !== 0;
+        return !this.chain.length && !damage && !answering && (this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team);
+    }
+
     isContinuousTrap(code: number) {
         return this.engine.isContinuousTrap(code);
     }

@@ -33,7 +33,9 @@ const a = player(specA!), b = player(specB!);
 const x = POOL[(pair * 7 + 3) % POOL.length]!, y = POOL[(pair * 13 + 8) % POOL.length]!;
 const wins = { a: 0, b: 0 };
 for (const round of [0, 1] as const) {
-    // Each goes first once; a level's deck is the pair's, swapped between the games.
+    // Each goes first once; a level's deck is the pair's, swapped between the games. Both games are
+    // dealt from the same seed: each deck draws the same cards from the same seat both times, only
+    // its pilot changes (duplicate, as in bridge: the luck of the draw cancels out).
     const aSeat: Team = round === 0 ? 0 : 1;
     const deckA = a.deck ?? (round === 0 ? x : y), deckB = b.deck ?? (round === 0 ? y : x);
     const who = aSeat === 0 ? [a, b] : [b, a];
@@ -41,7 +43,7 @@ for (const round of [0, 1] as const) {
         Object.assign(d.setup, { botLevel: who[t]!.level, botBlunder: who[t]!.blunder });
         return botAnswer(m, d, t);
     };
-    const duel = new DuelSession(engine, { seed: [String(70000 + pair * 2 + round), '11400714819323198485', '77', '2685821657736338717'], mode: 'MR3', decks: aSeat === 0 ? [deckA, deckB] : [deckB, deckA], names: ['A', 'B'], bots: [true, true], rules: DUEL_RULES } as never, { answerer });
+    const duel = new DuelSession(engine, { seed: [String(90000 + pair), '11400714819323198485', '77', '2685821657736338717'], mode: 'MR3', decks: aSeat === 0 ? [deckA, deckB] : [deckB, deckA], names: ['A', 'B'], bots: [true, true], rules: DUEL_RULES } as never, { answerer });
     try {
         duel.start();
     } catch {
