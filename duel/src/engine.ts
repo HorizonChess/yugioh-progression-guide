@@ -63,6 +63,8 @@ export interface Engine {
     victoryReason(reason: number): string;
     /** A card's passcode by its exact name (case ignored), for "declare a card name". */
     codeByName(name: string): number | null;
+    /** Every card's passcode (for a declaration the bot's own guesses don't fit). */
+    codes(): readonly number[];
     isMonster(code: number): boolean;
     /** A card that goes in the Extra Deck (Fusion, Synchro, Xyz, Link). */
     isExtra(code: number): boolean;
@@ -130,6 +132,7 @@ export function createEngine(source: EngineData): Engine {
     const row = (code: number) => rows[String(code)];
     const sim: { core: OcgCoreSync | null; started: boolean } = { core: null, started: false };
 
+    let allCodes: number[] | null = null;
     const engine: Engine = {
         core: source.core,
         version: source.version,
@@ -192,6 +195,7 @@ export function createEngine(source: EngineData): Engine {
         },
         victoryReason: (reason) => strings.victory[String(reason)] ?? 'The duel is over',
         codeByName: (name) => byName.get(name.trim().toLowerCase()) ?? null,
+        codes: () => (allCodes ??= Object.keys(rows).map(Number)),
         isMonster: (code) => ((row(code)?.type ?? 0) & TYPE_MONSTER) !== 0,
         isExtra: (code) => ((row(learned.get(code) ?? code)?.type ?? 0) & TYPE_EXTRA) !== 0,
         isToken: (code) => ((row(code)?.type ?? 0) & TYPE_TOKEN) !== 0,

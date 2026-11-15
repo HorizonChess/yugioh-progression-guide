@@ -2,6 +2,7 @@ import {
     OcgLocation as L, OcgMessageType as M, OcgPosition as P, OcgResponseType as R, SelectBattleCMDAction as B, SelectIdleCMDAction as I,
     type OcgMessage, type OcgResponse,
 } from 'ocgcore-wasm';
+import { declarableCard } from './declare';
 import { evaluate } from './bot-eval';
 import { simulate, type Through } from './bot-sim';
 import { BOT_LEVELS as PLAYABLE, type BotLevel as PlayableLevel } from '@ygo/shared';
@@ -273,7 +274,7 @@ export function heuristicAnswer(m: OcgMessage, duel: DuelSession, team: Team, ru
             return { type: R.ANNOUNCE_ATTRIB, attributes: bits as never };
         }
         case M.ANNOUNCE_CARD:
-            return { type: R.ANNOUNCE_CARD, card: announceCard(duel, team) };
+            return { type: R.ANNOUNCE_CARD, card: announceCard(m, duel, team) };
         default:
             throw new Error(`The practice bot can't answer engine message ${m.type}`);
     }
@@ -363,13 +364,16 @@ function attackWith(m: BattleMsg, duel: DuelSession, index: number, atk: number)
 }
 
 /** For "declare a card name": a card the rival has shown (the one seen most), else Raigeki. */
-function announceCard(duel: DuelSession, team: Team): number {
+/**
+ * The card the bot names: the one the rival shows most, among those the question's filter allows
+ * (a card outside it is refused: "declare a monster card name"), else any card it allows.
+ */
+function announceCard(m: Extract<OcgMessage, { type: M.ANNOUNCE_CARD }>, duel: DuelSession, team: Team): number {
     const opp = duel.view(team).opp;
     const seen = new Map<number, number>();
     for (const c of [...opp.grave, ...opp.banished, ...opp.monsters, ...opp.spells]) if (c?.code) seen.set(c.code, (seen.get(c.code) ?? 0) + 1);
-    let best = 12580477, n = 0;
-    for (const [code, count] of seen) if (count > n) [best, n] = [code, count];
-    return best;
+    const preferred = [...[...seen.entries()].sort((a, b) => b[1] - a[1]).map(([code]) => code), 12580477];
+    return declarableCard(duel.engine, m.opcodes, preferred) ?? preferred[0]!;
 }
 
 /**
