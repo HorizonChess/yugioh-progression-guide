@@ -34,6 +34,12 @@ class Stop extends Error {}
 /** Questions answered in the copy after the tried one, at most (a runaway loop of effects); a whole turn when played through. */
 const MAX_STEPS = 80, MAX_STEPS_THROUGH = 160;
 
+/**
+ * How far the copy plays on: to the bot's next choice (false), to the end of its turn (true), or to
+ * the end of its turn with the rest of this Main Phase played by plain play too (`rollout`).
+ */
+export type Through = boolean | 'rollout';
+
 export type SimPolicy = (m: OcgMessage, duel: DuelSession, team: Team, bot: Team) => OcgResponse;
 
 /** Running totals, for the lab (how much looking ahead costs, and how much of it is rebuilding the duel). */
@@ -44,7 +50,7 @@ export const simTuning = { fork: true };
 type Answerer = NonNullable<SessionOptions['answerer']>;
 
 /** The copy's answers: `first`, then on as far as the look-ahead goes. Tracks the best stop. */
-function answerer(duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: boolean, started: number) {
+function answerer(duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: Through, started: number) {
     let tried = false, steps = 0;
     // Played through, the best of the positions it could stop at (each of its own chances to act, and
     // the end): it decides again at each, so the plain play after a stop never counts against a play.
@@ -62,7 +68,8 @@ function answerer(duel: DuelSession, team: Team, first: OcgResponse, policy: Sim
         if (turnsAction && !(through && own)) throw new Stop();
         if (m.type === M.SELECT_IDLECMD) {
             // The rest of this Main Phase is the bot's own next choice: on to the battle.
-            if (d.currentPhase === 'M1') return { type: R.SELECT_IDLECMD, action: m.to_bp ? I.TO_BP : I.TO_EP, index: null };
+            // (Or, `rollout`, the rest of it by plain play: what the tried play leads on to this phase.)
+            if (d.currentPhase === 'M1') return through === 'rollout' ? policy(m, d, t, team) : { type: R.SELECT_IDLECMD, action: m.to_bp ? I.TO_BP : I.TO_EP, index: null };
             out.best = Math.max(out.best, evaluate(d.view(team), duel.engine, true));
         }
         return policy(m, d, t, team);
@@ -70,7 +77,7 @@ function answerer(duel: DuelSession, team: Team, first: OcgResponse, policy: Sim
     return out;
 }
 
-function score(copy: DuelSession, duel: DuelSession, team: Team, best: number, through: boolean): number {
+function score(copy: DuelSession, duel: DuelSession, team: Team, best: number, through: Through): number {
     if (copy.result) return copy.result.winner === null ? 0 : copy.result.winner === team ? WIN_VALUE : -WIN_VALUE;
     return through ? Math.max(best, evaluate(copy.view(team), duel.engine, true)) : evaluate(copy.view(team), duel.engine);
 }
@@ -79,7 +86,7 @@ function score(copy: DuelSession, duel: DuelSession, team: Team, best: number, t
  * The bot's score of the position after `first` answers the question the duel is waiting on, or
  * null if the engine wouldn't take that answer.
  */
-export function simulate(duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through = false): number | null {
+export function simulate(duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: Through = false): number | null {
     const started = performance.now();
     let result: number | null | undefined;
     if (simTuning.fork) {
@@ -100,7 +107,7 @@ export function simulate(duel: DuelSession, team: Team, first: OcgResponse, poli
 }
 
 /** The copy rebuilt from the duel's seed and answers, on the duel's own core, for one try. */
-function replayed(duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: boolean, started: number): number | null {
+function replayed(duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: Through, started: number): number | null {
     const a = answerer(duel, team, first, policy, through, started);
     const copy = new DuelSession(duel.engine, { ...duel.setup, bots: [true, true], solo: false }, { answerer: a.answer, unwatched: true });
     try {
@@ -212,7 +219,7 @@ function drop() {
     fork = null;
 }
 
-function tryFork(f: Fork, duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: boolean, started: number): number | null {
+function tryFork(f: Fork, duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: Through, started: number): number | null {
     load(f.core, f.memory);
     f.copy.loadState(f.state);
     const a = answerer(duel, team, first, policy, through, started);

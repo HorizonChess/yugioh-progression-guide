@@ -8,7 +8,7 @@ export type Feature =
     | 'hand' | 'handRemoval' | 'handStrength'
     | 'monster' | 'monsterAtk' | 'monsterDef' | 'hiddenBonus' | 'pressure'
     | 'set' | 'faceUp'
-    | 'riskMine' | 'riskTheirs' | 'latent' | 'control';
+    | 'riskMine' | 'riskTheirs' | 'latent' | 'control' | 'exposure';
 
 /** Set by hand: what the bot played with before its weights were fitted. */
 export const HAND_SET: Record<Feature, number> = {
@@ -26,6 +26,8 @@ export const HAND_SET: Record<Feature, number> = {
     riskMine: -0.75, riskTheirs: 0.35, latent: -0.4,
     /** Holding the strongest monster on the field (board advantage), or the rival holding it. */
     control: 0,
+    /** What each side's monsters stand to lose to a board wipe: the rival's unseen Set cards and hand (over-extending), or the bot's own. */
+    exposure: 1,
 };
 
 /**
@@ -42,6 +44,7 @@ export const FITTED: Record<Feature, number> = {
     set: 443, faceUp: 155,
     riskMine: -0.043, riskTheirs: -0.047, latent: -0.478,
     control: 1100,
+    exposure: 1,
 };
 
 /**

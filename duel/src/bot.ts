@@ -28,7 +28,7 @@ import type { DuelSession, Team } from './session';
  */
 
 /** `plain`: no looking ahead, for tests of the duel server (quick, and never offered to players). */
-export type BotLevel = PlayableLevel | 'plain';
+export type BotLevel = PlayableLevel | 'plain' | 'expert';
 
 /** BOT_DEBUG set (on the server; a browser has no environment): print what the bot weighs. */
 const debugging = !!(globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.BOT_DEBUG;
@@ -51,6 +51,8 @@ interface LevelRules {
     wary: boolean;
     /** Looks past each play to the end of its turn (bot-sim.ts). */
     through: boolean;
+    /** Looking through, also plays the rest of the Main Phase after each play by plain play, and takes the better: a play that sets up another. */
+    rollout?: boolean;
     /**
      * Attacks face-down monsters. Not in the copies it looks ahead in: they hold the rival's real
      * cards, and an attack there would show it what a face-down monster is.
@@ -58,10 +60,12 @@ interface LevelRules {
     attacksHidden?: boolean;
 }
 
-const LEVELS: Record<PlayableLevel, LevelRules> = {
+const LEVELS: Record<PlayableLevel | 'expert', LevelRules> = {
     easy: { hiddenGuess: 1000, idleMargin: 0, chainMargin: 0, firstSound: true, overlook: 0.5, weighChoices: false, wary: false, through: false },
     normal: { hiddenGuess: 1400, idleMargin: 20, chainMargin: 60, firstSound: false, overlook: 0, weighChoices: true, wary: false, through: false },
     hard: { hiddenGuess: 1500, idleMargin: 20, chainMargin: 300, firstSound: false, overlook: 0, weighChoices: true, wary: true, through: true },
+    /** (Not offered yet: for the lab.) */
+    expert: { hiddenGuess: 1500, idleMargin: 20, chainMargin: 300, firstSound: false, overlook: 0, weighChoices: true, wary: true, through: true, rollout: true },
 };
 
 /**
@@ -395,11 +399,15 @@ function chance(duel: DuelSession, salt: number): number {
 type Try = { response: OcgResponse; using?: number; /** For the lab's debug output. */ label?: string };
 
 /** Of the plays to try, the one to make (or null for none better than doing nothing). */
-function choose(duel: DuelSession, team: Team, tries: Try[], baseline: number, margin: number, firstSound: boolean, through = false): Try | null {
+function choose(duel: DuelSession, team: Team, tries: Try[], baseline: number, margin: number, firstSound: boolean, through: boolean | 'both' = false): Try | null {
     let best: Try | null = null, bestScore = baseline + margin;
     for (const [i, t] of tries.entries()) {
         if (i > 0 && timeUp()) break;
-        const score = simulate(duel, team, t.response, simPolicy, through);
+        let score = simulate(duel, team, t.response, simPolicy, through !== false);
+        if (through === 'both') {
+            const on = simulate(duel, team, t.response, simPolicy, 'rollout');
+            if (on !== null && (score === null || on > score)) score = on;
+        }
         if (debugging) console.log(`      t${duel.view(team).turn} try ${t.label ?? JSON.stringify(t.response)}: ${score?.toFixed(0)} (pass ${baseline.toFixed(0)})`);
         if (score === null) continue;
         if (firstSound && score > baseline + margin) return t;
@@ -439,7 +447,7 @@ function idle(m: IdleMsg, duel: DuelSession, team: Team, rules: LevelRules): Ocg
     // played out too, so the plays and the pass are scored at the same point.
     const pass: OcgResponse = { type: R.SELECT_IDLECMD, action: m.to_bp ? I.TO_BP : I.TO_EP, index: null };
     const baseline = rules.through ? simulate(duel, team, pass, simPolicy, true) : null;
-    const best = choose(duel, team, tries, baseline ?? evaluate(duel.view(team), duel.engine), rules.idleMargin, rules.firstSound, rules.through && baseline !== null);
+    const best = choose(duel, team, tries, baseline ?? evaluate(duel.view(team), duel.engine), rules.idleMargin, rules.firstSound, rules.through && baseline !== null ? (rules.rollout ? 'both' : true) : false);
     if (best) {
         duel.botUsing = best.using ?? null;
         return best.response;
@@ -468,6 +476,47 @@ function chain(m: ChainMsg, duel: DuelSession, team: Team, rules: LevelRules): O
     return best?.response ?? { type: R.SELECT_CHAIN, index: null };
 }
 
+/**
+ * A beginner's answer, for a bot that blunders now and then (`botBlunder`): any of its plays at
+ * random, or going on to the battle or ending the turn; any attack, into whatever is there; not
+ * responding when it could; yes or no at random. Never a card that only hurts itself (as plain
+ * play judges it): a beginner misjudges, they don't wreck their own field. Null: no blunder here.
+ */
+function blunderAnswer(m: OcgMessage, duel: DuelSession, team: Team): OcgResponse | null {
+    const pick = <T>(xs: T[]): T | undefined => xs[Math.floor(chance(duel, 37) * xs.length)];
+    switch (m.type) {
+        case M.SELECT_IDLECMD: {
+            const options: OcgResponse[] = [
+                ...m.summons.map((_, index) => ({ type: R.SELECT_IDLECMD, action: I.SELECT_SUMMON, index }) as const),
+                ...m.special_summons.map((_, index) => ({ type: R.SELECT_IDLECMD, action: I.SELECT_SPECIAL_SUMMON, index }) as const),
+                ...m.monster_sets.map((_, index) => ({ type: R.SELECT_IDLECMD, action: I.SELECT_MONSTER_SET, index }) as const),
+                ...m.spell_sets.map((_, index) => ({ type: R.SELECT_IDLECMD, action: I.SELECT_SPELL_SET, index }) as const),
+                ...m.activates.flatMap((c, index) => (worthUsing(c.code, duel, team) ? [{ type: R.SELECT_IDLECMD, action: I.SELECT_ACTIVATE, index } as const] : [])),
+                { type: R.SELECT_IDLECMD, action: m.to_bp ? I.TO_BP : I.TO_EP, index: null },
+            ];
+            const r = pick(options) ?? null;
+            if (r && 'action' in r && r.action === I.SELECT_ACTIVATE) duel.botUsing = m.activates[r.index!]!.code;
+            return r;
+        }
+        case M.SELECT_BATTLECMD: {
+            const i = pick([...range(m.attacks.length), -1]);
+            if (i === undefined || i < 0) return m.to_m2 || m.to_ep ? { type: R.SELECT_BATTLECMD, action: m.to_m2 ? B.TO_M2 : B.TO_EP, index: null } : null;
+            return attackWith(m, duel, i, duel.stats(m.attacks[i]!).atk);
+        }
+        case M.SELECT_CHAIN:
+            return m.forced ? null : { type: R.SELECT_CHAIN, index: null };
+        case M.SELECT_EFFECTYN:
+            return { type: R.SELECT_EFFECTYN, yes: chance(duel, 41) < 0.5 };
+        case M.SELECT_YESNO:
+            return { type: R.SELECT_YESNO, yes: chance(duel, 41) < 0.5 };
+        case M.SELECT_CARD:
+            // What to attack: whatever is there (not an effect's target, which could be its own card).
+            if (duel.botAttacker === null || m.min !== 1 || m.selects.length < 2) return null;
+            return { type: R.SELECT_CARD, indicies: [Math.floor(chance(duel, 43) * m.selects.length)] };
+    }
+    return null;
+}
+
 /** Of a few answers, the one whose outcome scores best (the first on a tie), or null if none could be tried. */
 function weigh(duel: DuelSession, team: Team, answers: OcgResponse[]): OcgResponse | null {
     let best: OcgResponse | null = null, bestScore = -Infinity;
@@ -492,6 +541,11 @@ export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = f
     if (duel.setup.botLevel === 'plain') return heuristicAnswer(m, duel, team);
     deadline = performance.now() + botTuning.budgetMs;
     const rules = LEVELS[duel.setup.botLevel ?? 'normal'];
+    const blunder = duel.setup.botBlunder ?? 0;
+    if (blunder > 0 && chance(duel, 31) < blunder) {
+        const b = blunderAnswer(m, duel, team);
+        if (b) return b;
+    }
     switch (m.type) {
         case M.SELECT_IDLECMD:
             return idle(m, duel, team, rules);

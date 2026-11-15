@@ -4,6 +4,7 @@ import type { DuelEvent } from '@ygo/shared';
 import { botAnswer, type BotLevel } from '@ygo/duel/bot';
 import { loadEngine } from '../../src/duel/engine';
 import { DuelSession, type Team } from '@ygo/duel/session';
+import { DUELISTS, duelistDeck } from '@ygo/shared';
 import { BEATDOWN, LOB, TRICKS } from './decks';
 import { botAnswer as oldBot } from './old-bot';
 
@@ -12,6 +13,13 @@ const engine = await loadEngine();
 const who: [string, string] = [a, b];
 const IDLE = ['summon', 'special', 'reposition', 'set monster', 'set spell/trap', 'activate', 'to BP', 'to EP'];
 const log: string[] = [];
+// DECKS=yugi:dsod+,kaiba:bc+ : the duelists' decks (A's, B's).
+const duelistDecks = process.env.DECKS?.split(',').map((k) => { const [id, era] = k.split(':'); return duelistDeck(DUELISTS.find((x) => x.id === id)!, era).deck; });
+for (const [i, d] of (duelistDecks ?? []).entries()) {
+    const n = new Map<string, number>();
+    for (const c of d.main) n.set(engine.name(c), (n.get(engine.name(c)) ?? 0) + 1);
+    console.log(`${'AB'[i]}: ${[...n].map(([k, v]) => (v > 1 ? `${v}x ${k}` : k)).join('; ')}`);
+}
 const answerer = (m: OcgMessage, d: DuelSession, t: Team) => {
     const r = who[t] === 'old' ? oldBot(m, d, t) : (((d.setup as { botLevel?: BotLevel }).botLevel = who[t] as BotLevel), botAnswer(m, d, t));
     const P = 'AB'[t];
@@ -33,7 +41,7 @@ const answerer = (m: OcgMessage, d: DuelSession, t: Team) => {
     }
     return r;
 };
-const duel = new DuelSession(engine, { seed: [seed, '11400714819323198485', '77', '2685821657736338717'], mode: 'MR1', decks: process.env.LOB ? [{ main: LOB, extra: [] }, { main: LOB, extra: [] }] : [{ main: BEATDOWN, extra: [] }, { main: TRICKS, extra: [] }], names: [`A(${a})`, `B(${b})`], bots: [true, true], rules: 4 } as never, { answerer });
+const duel = new DuelSession(engine, { seed: [seed, '11400714819323198485', '77', '2685821657736338717'], mode: 'MR1', decks: duelistDecks ?? (process.env.LOB ? [{ main: LOB, extra: [] }, { main: LOB, extra: [] }] : [{ main: BEATDOWN, extra: [] }, { main: TRICKS, extra: [] }]), names: [`A(${a})`, `B(${b})`], bots: [true, true], rules: 4 } as never, { answerer });
 try { duel.start(); } catch (e) { console.log('error', (e as Error).message); }
 if (process.env.DECISIONS) { console.log(log.join(String.fromCharCode(10))); console.log(JSON.stringify(duel.result)); process.exit(0); }
 const name = (c?: number) => (c ? engine.name(c) : '?');

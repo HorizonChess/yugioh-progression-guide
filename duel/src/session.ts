@@ -43,6 +43,8 @@ export interface DuelSetup {
     solo?: boolean;
     /** How well the bot plays (bot.ts). Missing: `normal`. */
     botLevel?: BotLevel;
+    /** How often the bot blunders like a beginner (bot.ts `blunder`), 0 to 1; missing: never. */
+    botBlunder?: number;
     /**
      * Played on the player's device (practice against the bot): the engine and the bot run in their
      * browser, which sends the answers to the server to keep. The server only plays them back.

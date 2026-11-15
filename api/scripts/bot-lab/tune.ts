@@ -17,7 +17,7 @@ const FEATURES = Object.keys(HAND_SET) as Feature[];
 /** How far each weight is nudged to try it (about what would change a decision). */
 const STEP: Record<Feature, number> = {
     lp: 0.1, lowLp: 0.1, hand: 60, handRemoval: 100, handStrength: 100, monster: 60, monsterAtk: 0.1, monsterDef: 0.05,
-    hiddenBonus: 0.3, pressure: 0.3, set: 60, faceUp: 50, riskMine: 0.15, riskTheirs: 0.1, latent: 0.1, control: 150,
+    hiddenBonus: 0.3, pressure: 0.3, set: 60, faceUp: 50, riskMine: 0.15, riskTheirs: 0.1, latent: 0.1, control: 150, exposure: 0.25,
 };
 /** How far it moves, in steps, when one side wins every game (shrinking as rounds go). */
 const RATE = 2;

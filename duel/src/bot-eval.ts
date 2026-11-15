@@ -138,6 +138,27 @@ function handCard(engine: Engine, code: number): { removal: number; strength: nu
     return v;
 }
 
+/**
+ * Board wipes (Mirror Force, Torrential Tribute, Raigeki, Dark Hole): the chance that one of the
+ * rival's cards the bot can't see is one. Of the duelists' decks' Traps about 1 in 10 removes many of
+ * the rival's monsters at once, of their Spells 1 in 25 (2026-11, by the cards' scripts). A Set
+ * Spell or Trap is counted as one of those odds, a card in hand at the lower.
+ */
+const WIPE_IN_SET = 0.1, WIPE_IN_HAND = 0.03;
+/** The chance a known card of the bot's own is used on the rival's monsters, when it holds one. */
+const OWN_WIPE_USED = 0.7;
+const wipes = new Map<number, boolean>();
+/** A card that removes many of the rival's monsters at once (by its script). */
+export function isWipe(engine: Engine, code: number): boolean {
+    let w = wipes.get(code);
+    if (w === undefined) {
+        const s = engine.readScript(`c${code}.lua`) ?? '';
+        w = /CATEGORY_(DESTROY|REMOVE|TOHAND|TODECK|TOGRAVE)/.test(s) && /GetMatchingGroup\([^)]*?(LOCATION_MZONE,LOCATION_MZONE|,0,LOCATION_MZONE)/.test(s);
+        wipes.set(code, w);
+    }
+    return w;
+}
+
 /** The position's features, for the viewer (their side counted plus, the rival's minus, where it's both). */
 export function features(view: DuelView, engine: Engine, turnEnd = false): Record<Feature, number> {
     // The Battle Phase still to come this turn, for whoever's turn it is.
@@ -149,7 +170,7 @@ export function features(view: DuelView, engine: Engine, turnEnd = false): Recor
         lp: view.me.lp - view.opp.lp, lowLp: Math.min(view.me.lp, 2000) - Math.min(view.opp.lp, 2000),
         hand: view.me.hand.length - view.opp.hand.length, handRemoval: 0, handStrength: 0,
         monster: 0, monsterAtk: 0, monsterDef: 0, hiddenBonus: 0, pressure: 0,
-        set: 0, faceUp: 0, riskMine: 0, riskTheirs: 0, latent: 0, control: 0,
+        set: 0, faceUp: 0, riskMine: 0, riskTheirs: 0, latent: 0, control: 0, exposure: 0,
     };
     for (const c of view.me.hand) {
         if (!c.code) continue;
@@ -188,6 +209,13 @@ export function features(view: DuelView, engine: Engine, turnEnd = false): Recor
     const likely = Math.min(1, (view.opp.hand.length + 1) / 3);
     for (const d of mine) if (d.attack && d.atk < EXPECTED_ATTACKER) f.latent += likely * (d.value + 0.45 * (EXPECTED_ATTACKER - d.atk));
     f.control = control(mine, theirs);
+    // Over-extending: what the bot has out, lost to a board wipe it can't see coming (the more
+    // Set cards the rival has, the likelier), against the rival's monsters, lost to one it holds.
+    const unseenSet = view.opp.spells.filter((c) => c && !c.faceUp && !c.code).length;
+    const wipe = 1 - (1 - WIPE_IN_SET) ** unseenSet * (1 - WIPE_IN_HAND) ** view.opp.hand.length;
+    const own = [...view.me.hand, ...view.me.spells.filter((c) => c && !c.faceUp)].some((c) => c?.code && isWipe(engine, c.code));
+    const worth = (xs: Stats[]) => xs.reduce((sum, x) => sum + x.value, 0);
+    f.exposure = (own ? OWN_WIPE_USED * worth(theirs) : 0) - wipe * worth(mine);
     return f;
 }
 
