@@ -641,8 +641,14 @@
 /* Cards shown by an effect: dealt face up in a row under who shows them. */
 .df-reveal { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 4px 8px; text-align: center; }
 .df-reveal p { margin: 0; }
-.df-reveal__cards { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; max-width: min(92vw, 640px); }
+/* However many cards, the panel fits the screen: they scroll, and "Got it" stays in reach under them. */
+.df-banner--reveal { top: 50%; max-height: calc(100% - 16px); }
+.df-reveal__cards {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; max-width: min(92vw, 640px);
+    max-height: min(55dvh, 560px); overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 4px 6px 10px;
+}
 .df-reveal__cards img { width: clamp(64px, 11vw, 112px); aspect-ratio: 59 / 86; border-radius: 4px; box-shadow: 0 6px 16px #000, 0 0 0 1px #d4af37; animation: df-reveal-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+.df--phone .df-reveal__cards img { width: clamp(52px, 17vw, 76px); }
 /* Cards you didn't know stay up until you've seen them: the banner takes taps, and says so. */
 .df-banner--reveal:has(.df-reveal__ok) { pointer-events: auto; }
 .df-reveal__ok {

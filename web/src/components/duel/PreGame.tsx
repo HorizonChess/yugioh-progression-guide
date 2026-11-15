@@ -46,13 +46,15 @@ export default function PreGame({ duelId, view, busy, onAct, onGiveUp }: {
         return () => clearTimeout(t);
     }, [tie]);
     const decided = chooser?.why === "rps" && chooser.hands ? chooser.hands : null;
-    // Seen here only once it's had time to play out: when the bot won, it chooses at once and the
-    // board replaces this before the cards turn over, so the board plays the showdown instead.
+    // Seen here when you won (you choose here, under it), or once it's had time to play out: when
+    // the bot won, it chooses at once and the board replaces this before the cards turn over, so
+    // the board plays the showdown instead.
+    const mineToChoose = chooser?.side === "me";
     useEffect(() => {
         if (!decided) return;
-        const t = setTimeout(() => sessionStorage.setItem(rpsSeenKey(duelId), "1"), RPS_SEEN_MS);
+        const t = setTimeout(() => sessionStorage.setItem(rpsSeenKey(duelId), "1"), mineToChoose ? 0 : RPS_SEEN_MS);
         return () => clearTimeout(t);
-    }, [decided, duelId]);
+    }, [decided, duelId, mineToChoose]);
     const throwHand = (hand: RpsHand) => {
         setThrown(hand);
         onAct({ rps: hand });
