@@ -54,6 +54,12 @@ interface LevelRules {
     /** Looking through, also plays the rest of the Main Phase after each play by plain play, and takes the better: a play that sets up another. */
     rollout?: boolean;
     /**
+     * Looks ahead through the rival's next turn, in this many copies where what it can't see is a
+     * guess (bot-belief.ts): the rival responds and plays its turn in them. Each play, response,
+     * attack and choice is scored by the average over the guesses.
+     */
+    guesses?: number;
+    /**
      * Attacks face-down monsters. Not in the copies it looks ahead in: they hold the rival's real
      * cards, and an attack there would show it what a face-down monster is.
      */
@@ -65,8 +71,11 @@ const LEVELS: Record<PlayableLevel | 'expert', LevelRules> = {
     normal: { hiddenGuess: 1400, idleMargin: 20, chainMargin: 60, firstSound: false, overlook: 0, weighChoices: true, wary: false, through: false },
     hard: { hiddenGuess: 1500, idleMargin: 20, chainMargin: 300, firstSound: false, overlook: 0, weighChoices: true, wary: true, through: true },
     /** (Not offered yet: for the lab.) */
-    expert: { hiddenGuess: 1500, idleMargin: 20, chainMargin: 300, firstSound: false, overlook: 0, weighChoices: true, wary: true, through: true, rollout: true },
+    expert: { hiddenGuess: 1500, idleMargin: 20, chainMargin: 40, firstSound: false, overlook: 0, weighChoices: true, wary: true, through: true, guesses: 4 },
 };
+// (For the lab: GUESSES=n guesses for the expert.)
+const labGuesses = Number((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.GUESSES ?? 0);
+if (labGuesses) LEVELS.expert.guesses = labGuesses;
 
 /**
  * How long one decision may take to think, in ms: once it's up, the plays not yet tried are left out
@@ -396,14 +405,51 @@ function chance(duel: DuelSession, salt: number): number {
     return ((h >>> 0) % 10000) / 10000;
 }
 
+/** For the lab: which of the expert's decisions look ahead with guesses (GUESS=idle,chain,battle,choice). */
+export const guessTuning = { idle: true, chain: true, battle: true, choice: true };
+const labGuess = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.GUESS;
+if (labGuess !== undefined) {
+    const on = new Set(labGuess.split(','));
+    for (const k of Object.keys(guessTuning) as (keyof typeof guessTuning)[]) guessTuning[k] = on.has(k);
+}
+
+/** A look-ahead's score of an answer (null: the engine wouldn't take it). */
+type Scorer = (r: OcgResponse) => number | null;
+
+/** In the copies where the rival plays too (guesses at what the bot can't see): everyone plays plain, responses included. */
+const IN_GUESSES: LevelRules = { hiddenGuess: 1400, idleMargin: 0, chainMargin: 0, firstSound: false, overlook: 0, weighChoices: false, wary: false, through: false };
+function guessPolicy(m: OcgMessage, duel: DuelSession, team: Team): OcgResponse {
+    return heuristicAnswer(m, duel, team, IN_GUESSES);
+}
+/** (For the lab: GUESS_MODE=rival plays the copies through the rival's next turn, not to the end of the bot's.) */
+const guessMode = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.GUESS_MODE === 'rival' ? 'rival' : true;
+/**
+ * An answer scored to the end of the bot's turn, the rival responding as it might: the average over
+ * `k` guesses at what the bot can't see. `through`: false for the next decision only (a response).
+ */
+function guessed(duel: DuelSession, team: Team, k: number, through = true): Scorer {
+    return (r) => {
+        let sum = 0, n = 0;
+        for (let g = 0; g < k; g++) {
+            const s = simulate(duel, team, r, guessPolicy, through ? guessMode : false, g);
+            if (debugging) console.log(`        guess ${g}: ${s?.toFixed(0)}`);
+            if (s !== null) {
+                sum += s;
+                n++;
+            }
+        }
+        return n ? sum / n : null;
+    };
+}
+
 type Try = { response: OcgResponse; using?: number; /** For the lab's debug output. */ label?: string };
 
 /** Of the plays to try, the one to make (or null for none better than doing nothing). */
-function choose(duel: DuelSession, team: Team, tries: Try[], baseline: number, margin: number, firstSound: boolean, through: boolean | 'both' = false): Try | null {
+function choose(duel: DuelSession, team: Team, tries: Try[], baseline: number, margin: number, firstSound: boolean, through: boolean | 'both' | Scorer = false): Try | null {
     let best: Try | null = null, bestScore = baseline + margin;
     for (const [i, t] of tries.entries()) {
         if (i > 0 && timeUp()) break;
-        let score = simulate(duel, team, t.response, simPolicy, through !== false);
+        let score = typeof through === 'function' ? through(t.response) : simulate(duel, team, t.response, simPolicy, through !== false);
         if (through === 'both') {
             const on = simulate(duel, team, t.response, simPolicy, 'rollout');
             if (on !== null && (score === null || on > score)) score = on;
@@ -446,6 +492,20 @@ function idle(m: IdleMsg, duel: DuelSession, team: Team, rules: LevelRules): Ocg
     // Doing nothing more: on to the Battle Phase (or the end of the turn). Looking through, that's
     // played out too, so the plays and the pass are scored at the same point.
     const pass: OcgResponse = { type: R.SELECT_IDLECMD, action: m.to_bp ? I.TO_BP : I.TO_EP, index: null };
+    if (rules.guesses && guessTuning.idle) {
+        const scorer = guessed(duel, team, rules.guesses);
+        const passed = scorer(pass);
+        if (passed !== null) {
+            const best = choose(duel, team, tries, passed, rules.idleMargin, false, scorer);
+            if (best) {
+                duel.botUsing = best.using ?? null;
+                return best.response;
+            }
+            // Nothing better than doing nothing more: Spells and Traps to Set first (as plain play would).
+            const set = spellToSet(m, duel);
+            return set !== null ? { type: R.SELECT_IDLECMD, action: I.SELECT_SPELL_SET, index: set } : pass;
+        }
+    }
     const baseline = rules.through ? simulate(duel, team, pass, simPolicy, true) : null;
     const best = choose(duel, team, tries, baseline ?? evaluate(duel.view(team), duel.engine), rules.idleMargin, rules.firstSound, rules.through && baseline !== null ? (rules.rollout ? 'both' : true) : false);
     if (best) {
@@ -469,6 +529,16 @@ function chain(m: ChainMsg, duel: DuelSession, team: Team, rules: LevelRules): O
         tries.push({ response: { type: R.SELECT_CHAIN, index: i }, using: c.code });
     });
     if (!tries.length) return { type: R.SELECT_CHAIN, index: null };
+    if (rules.guesses && guessTuning.chain) {
+        // Using a response now, or keeping it for when it counts.
+        const scorer = guessed(duel, team, rules.guesses);
+        const kept = scorer({ type: R.SELECT_CHAIN, index: null });
+        if (kept !== null) {
+            const best = choose(duel, team, tries, kept, rules.chainMargin, false, scorer);
+            duel.botUsing = best?.using ?? null;
+            return best?.response ?? { type: R.SELECT_CHAIN, index: null };
+        }
+    }
     const pass = simulate(duel, team, { type: R.SELECT_CHAIN, index: null }, simPolicy);
     if (pass === null) return heuristicAnswer(m, duel, team, rules);
     const best = choose(duel, team, tries, pass, rules.chainMargin, rules.firstSound);
@@ -518,11 +588,11 @@ function blunderAnswer(m: OcgMessage, duel: DuelSession, team: Team): OcgRespons
 }
 
 /** Of a few answers, the one whose outcome scores best (the first on a tie), or null if none could be tried. */
-function weigh(duel: DuelSession, team: Team, answers: OcgResponse[]): OcgResponse | null {
+function weigh(duel: DuelSession, team: Team, answers: OcgResponse[], scorer?: Scorer): OcgResponse | null {
     let best: OcgResponse | null = null, bestScore = -Infinity;
     for (const [i, a] of answers.entries()) {
         if (i > 0 && timeUp()) break;
-        const score = simulate(duel, team, a, simPolicy);
+        const score = scorer ? scorer(a) : simulate(duel, team, a, simPolicy);
         if (score !== null && score > bestScore) [best, bestScore] = [a, score];
     }
     return best;
@@ -541,6 +611,7 @@ export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = f
     if (duel.setup.botLevel === 'plain') return heuristicAnswer(m, duel, team);
     deadline = performance.now() + botTuning.budgetMs;
     const rules = LEVELS[duel.setup.botLevel ?? 'normal'];
+    const scorer = rules.guesses && guessTuning.choice ? guessed(duel, team, rules.guesses) : undefined;
     const blunder = duel.setup.botBlunder ?? 0;
     if (blunder > 0 && chance(duel, 31) < blunder) {
         const b = blunderAnswer(m, duel, team);
@@ -552,20 +623,30 @@ export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = f
         case M.SELECT_CHAIN:
             return chain(m, duel, team, rules);
         case M.SELECT_EFFECTYN:
-            if (rules.weighChoices) return weigh(duel, team, [{ type: R.SELECT_EFFECTYN, yes: true }, { type: R.SELECT_EFFECTYN, yes: false }]) ?? heuristicAnswer(m, duel, team, rules);
+            if (rules.weighChoices) return weigh(duel, team, [{ type: R.SELECT_EFFECTYN, yes: true }, { type: R.SELECT_EFFECTYN, yes: false }], scorer) ?? heuristicAnswer(m, duel, team, rules);
             break;
         case M.SELECT_YESNO:
-            if (rules.weighChoices) return weigh(duel, team, [{ type: R.SELECT_YESNO, yes: true }, { type: R.SELECT_YESNO, yes: false }]) ?? heuristicAnswer(m, duel, team, rules);
+            if (rules.weighChoices) return weigh(duel, team, [{ type: R.SELECT_YESNO, yes: true }, { type: R.SELECT_YESNO, yes: false }], scorer) ?? heuristicAnswer(m, duel, team, rules);
             break;
         case M.SELECT_OPTION:
-            if (rules.weighChoices && m.options.length > 1) return weigh(duel, team, m.options.map((_, index) => ({ type: R.SELECT_OPTION, index }))) ?? heuristicAnswer(m, duel, team, rules);
+            if (rules.weighChoices && m.options.length > 1) return weigh(duel, team, m.options.map((_, index) => ({ type: R.SELECT_OPTION, index })), scorer) ?? heuristicAnswer(m, duel, team, rules);
             break;
+        case M.SELECT_BATTLECMD: {
+            // Which attack, or none: through the rival's turn, with what its Set cards might be.
+            if (!scorer || !guessTuning.battle || !m.attacks.length) break;
+            const options: OcgResponse[] = range(m.attacks.length).map((index) => ({ type: R.SELECT_BATTLECMD, action: B.SELECT_BATTLE, index }));
+            if (m.to_m2 || m.to_ep) options.push({ type: R.SELECT_BATTLECMD, action: m.to_m2 ? B.TO_M2 : B.TO_EP, index: null });
+            const best = weigh(duel, team, options, scorer);
+            if (!best) break;
+            if (best.type === R.SELECT_BATTLECMD && best.action === B.SELECT_BATTLE) duel.botAttacker = duel.stats(m.attacks[best.index!]!).atk;
+            return best;
+        }
         case M.SELECT_CARD: {
-            // One card to pick for an effect (not an attack target, which hides what it would show):
-            // try each, up to 8, in the order plain play would pick them.
-            if (!rules.weighChoices || duel.botAttacker !== null || m.min !== 1 || m.max !== 1 || m.selects.length < 2 || m.selects.length > 8) break;
+            // One card to pick for an effect (not an attack target, which hides what it would show,
+            // unless looking ahead with guesses at it): try each, up to 8, in the order plain play would pick them.
+            if (!rules.weighChoices || (duel.botAttacker !== null && !scorer) || m.min !== 1 || m.max !== 1 || m.selects.length < 2 || m.selects.length > 8) break;
             const order = pickOrder(duel, team, m.selects, intentOf(duel, team), rules.hiddenGuess);
-            const best = weigh(duel, team, order.map((i) => ({ type: R.SELECT_CARD, indicies: [i] })));
+            const best = weigh(duel, team, order.map((i) => ({ type: R.SELECT_CARD, indicies: [i] })), scorer);
             if (best) {
                 duel.botUsing = null;
                 return best;

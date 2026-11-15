@@ -720,6 +720,11 @@ export class DuelSession {
         this.run();
     }
 
+    /** For the bot's look-ahead: Lua run in the duel as it stands (bot-belief.ts `guessScript`). False if it failed. */
+    runScript(lua: string): boolean {
+        return !!this.handle && this.core.loadScript(this.handle, 'guess.lua', lua);
+    }
+
     /**
      * For the bot's look-ahead: a copy stopped at a question (`pauseForBot`) plays on with the duel's
      * answers since, to stop again where the duel is. False if they didn't all land (or it ended).

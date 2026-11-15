@@ -1,5 +1,6 @@
 import { OcgMessageType as M, OcgResponseType as R, SelectIdleCMDAction as I, type OcgCoreSync, type OcgMessage, type OcgResponse } from 'ocgcore-wasm';
 import { evaluate, WIN_VALUE } from './bot-eval';
+import { beliefOf, guessScript, rng, type Belief } from './bot-belief';
 import { engineFaulted, type Engine } from './engine';
 import { DuelSession, type SessionOptions, type Team } from './session';
 
@@ -13,6 +14,9 @@ import { DuelSession, type SessionOptions, type Team } from './session';
  * state). Each answer tried starts from that save, put back (a copy of memory, about 2 ms, where
  * rebuilding took 12-20 ms and grew with the duel), and as the duel goes on the copy goes on with
  * it from the save. Until that core is ready, each try rebuilds the copy on the duel's own core.
+ *
+ * With a `guess` number, the copy is one guess at what the bot can't see (bot-belief.ts): the rival's
+ * hidden cards are made cards it might hold, so the policy may let the rival respond with them.
  *
  * Played `through` (the hard bot, choosing what to do on its turn), the copy goes on to the end of
  * the bot's turn: the play, then on to the Battle Phase (nothing more in this Main Phase: that is
@@ -32,18 +36,20 @@ import { DuelSession, type SessionOptions, type Team } from './session';
 class Stop extends Error {}
 
 /** Questions answered in the copy after the tried one, at most (a runaway loop of effects); a whole turn when played through. */
-const MAX_STEPS = 80, MAX_STEPS_THROUGH = 160;
+const MAX_STEPS = 80, MAX_STEPS_THROUGH = 160, MAX_STEPS_RIVAL = 500;
 
 /**
  * How far the copy plays on: to the bot's next choice (false), to the end of its turn (true), or to
- * the end of its turn with the rest of this Main Phase played by plain play too (`rollout`).
+ * the end of its turn with the rest of this Main Phase played by plain play too (`rollout`), or
+ * through the rival's next turn (`rival`): in a copy where what the bot can't see is a guess
+ * (bot-belief.ts), so the rival plays too, responding and taking its turn, by `policy`.
  */
-export type Through = boolean | 'rollout';
+export type Through = boolean | 'rollout' | 'rival';
 
 export type SimPolicy = (m: OcgMessage, duel: DuelSession, team: Team, bot: Team) => OcgResponse;
 
 /** Running totals, for the lab (how much looking ahead costs, and how much of it is rebuilding the duel). */
-export const simStats = { runs: 0, ms: 0, replayMs: 0, forks: 0 };
+export const simStats = { runs: 0, ms: 0, replayMs: 0, forks: 0, guessed: 0, guessFailed: 0 };
 /** For the lab: whether to fork (false: rebuild the copy for every try, as before). */
 export const simTuning = { fork: true };
 
@@ -52,6 +58,7 @@ type Answerer = NonNullable<SessionOptions['answerer']>;
 /** The copy's answers: `first`, then on as far as the look-ahead goes. Tracks the best stop. */
 function answerer(duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: Through, started: number) {
     let tried = false, steps = 0;
+    const startTurn = duel.view(team).turn;
     // Played through, the best of the positions it could stop at (each of its own chances to act, and
     // the end): it decides again at each, so the plain play after a stop never counts against a play.
     const out = { best: -Infinity, answer: null as unknown as Answerer };
@@ -63,6 +70,12 @@ function answerer(duel: DuelSession, team: Team, first: OcgResponse, policy: Sim
         }
         const own = t === team && d.currentTurnPlayer === team;
         const turnsAction = m.type === M.SELECT_IDLECMD || m.type === M.SELECT_BATTLECMD;
+        if (through === 'rival') {
+            // On through the rival's turn: to the bot's next chance to act on a turn of its own.
+            if (++steps > MAX_STEPS_RIVAL || (own && turnsAction && d.view(team).turn > startTurn)) throw new Stop();
+            if (own && m.type === M.SELECT_IDLECMD && d.currentPhase === 'M1') return { type: R.SELECT_IDLECMD, action: m.to_bp ? I.TO_BP : I.TO_EP, index: null };
+            return policy(m, d, t, team);
+        }
         if (++steps > (through ? MAX_STEPS_THROUGH : MAX_STEPS)) throw new Stop();
         // Looking one action ahead it stops at the next; played through, at the rival's on their turn.
         if (turnsAction && !(through && own)) throw new Stop();
@@ -79,6 +92,7 @@ function answerer(duel: DuelSession, team: Team, first: OcgResponse, policy: Sim
 
 function score(copy: DuelSession, duel: DuelSession, team: Team, best: number, through: Through): number {
     if (copy.result) return copy.result.winner === null ? 0 : copy.result.winner === team ? WIN_VALUE : -WIN_VALUE;
+    if (through === 'rival') return evaluate(copy.view(team), duel.engine);
     return through ? Math.max(best, evaluate(copy.view(team), duel.engine, true)) : evaluate(copy.view(team), duel.engine);
 }
 
@@ -86,19 +100,24 @@ function score(copy: DuelSession, duel: DuelSession, team: Team, best: number, t
  * The bot's score of the position after `first` answers the question the duel is waiting on, or
  * null if the engine wouldn't take that answer.
  */
-export function simulate(duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: Through = false): number | null {
+export function simulate(duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: Through = false, guess?: number): number | null {
     const started = performance.now();
     let result: number | null | undefined;
     if (simTuning.fork) {
         try {
             const f = forkOf(duel);
-            if (f) result = tryFork(f, duel, team, first, policy, through, started);
+            if (f) result = tryFork(f, duel, team, first, policy, through, started, guess);
         } catch (e) {
             if (!engineFaulted(e)) throw e;
             // The look-ahead's core is broken: a new one, and this try rebuilt on the duel's own core.
             duel.engine.dropSimCore();
             fork = null;
         }
+    }
+    // (Through the rival's turn needs the guesses, which need the look-ahead's own core: never the real cards.)
+    if (result === undefined && (through === 'rival' || guess !== undefined)) {
+        if ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.DEBUG_SIM) console.log('rival look-ahead without a fork', !!duel.engine.simCore());
+        return null;
     }
     if (result === undefined) result = replayed(duel, team, first, policy, through, started);
     simStats.runs++;
@@ -219,9 +238,19 @@ function drop() {
     fork = null;
 }
 
-function tryFork(f: Fork, duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: Through, started: number): number | null {
+function tryFork(f: Fork, duel: DuelSession, team: Team, first: OcgResponse, policy: SimPolicy, through: Through, started: number, guess: number | undefined): number | null {
     load(f.core, f.memory);
     f.copy.loadState(f.state);
+    // Through the rival's turn: what the bot can't see made a guess first (the same guess for every
+    // answer tried with this number, so they're compared on the same footing).
+    if (guess !== undefined) {
+        const belief = beliefFor(duel, team);
+        if (!f.copy.runScript(guessScript(f.copy, team, belief, rng(hash(duel.setup.seed[0]) ^ (duel.answers.length * 7919) ^ (guess * 104729))))) {
+            simStats.guessFailed++;
+            return null;
+        }
+        simStats.guessed++;
+    }
     const a = answerer(duel, team, first, policy, through, started);
     f.options.pauseForBot = false;
     f.options.answerer = a.answer;
@@ -229,9 +258,22 @@ function tryFork(f: Fork, duel: DuelSession, team: Team, first: OcgResponse, pol
         f.copy.botThink();
     } catch (e) {
         if (!(e instanceof Stop)) {
+            if ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.DEBUG_SIM) console.log('copy failed:', (e as Error).message);
             if (engineFaulted(e)) throw e;
             return null;
         }
     }
     return score(f.copy, duel, team, a.best, through);
 }
+
+let belief: { duel: DuelSession; at: number; team: Team; belief: Belief } | null = null;
+/** The bot's belief about what it can't see, worked out once per decision. */
+function beliefFor(duel: DuelSession, team: Team): Belief {
+    if (!belief || belief.duel !== duel || belief.at !== duel.answers.length || belief.team !== team) belief = { duel, at: duel.answers.length, team, belief: beliefOf(duel, team) };
+    return belief.belief;
+}
+const hash = (s: string) => {
+    let h = 2166136261;
+    for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    return h >>> 0;
+};
