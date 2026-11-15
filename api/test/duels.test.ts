@@ -481,7 +481,7 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         expect((await post({ duelist: { id: 'jaden' } })).statusCode).toBe(400);
         expect((await post({ duelist: { id: 'joey', era: 'gx' } })).statusCode).toBe(400);
         // (a competitive build only where the era has one)
-        expect((await post({ duelist: { id: 'joey', era: 'bc+' } })).statusCode).toBe(400);
+        expect((await post({ duelist: { id: 'ishizu', era: 'bc+' } })).statusCode).toBe(400);
         expect((await post({ against: 'solo', duelist: { id: 'joey' } })).statusCode).toBe(400);
 
         const started = await post({ duelist: { id: 'joey', era: 'bc' } });

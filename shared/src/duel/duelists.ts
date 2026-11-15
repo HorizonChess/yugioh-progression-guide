@@ -42,7 +42,7 @@ export interface Duelist {
 
 const DK = 'Duelist Kingdom', BC = 'Battle City', WTD = 'Waking the Dragons', VW = 'Virtual World', CD = 'Ceremonial Duel', DSOD = 'Dark Side of Dimensions';
 const era = (id: string, label: string, deckNum: number, name: string, author: string, competitive?: DuelistEra['competitive']): DuelistEra => ({ id, label, source: { deckNum, name, author }, ...(competitive ? { competitive } : {}) });
-const META = 'Meta Decks', GOAT = 'Goat Format Decks';
+const META = 'Meta Decks', GOAT = 'Goat Format Decks', NON_META = 'Non-Meta Decks', CASUAL = 'Fun/Casual Decks';
 const comp = (deckNum: number, name: string, author: string, format: string, played: string): DuelistEra['competitive'] => ({ deckNum, name, author, format, played });
 
 /** Weakest first. */
@@ -105,24 +105,31 @@ export const DUELISTS: readonly Duelist[] = [
         id: 'mai', name: 'Mai Valentine', sprite: 'mai_neutral_transparent', rating: 1100, level: 'normal',
         blurb: 'Harpie Ladies, and she always knows what you hold.',
         eras: [
-            era('dk', DK, 22675, 'Mai Valentine (Duelist Kingdom) Deck', 'kale115'),
-            era('bc', BC, 22890, 'Mai Valentine (Battle City) Deck', 'kale115'),
-            era('wtd', WTD, 24217, 'Mai Valentine (Waking The Dragons) Deck', 'kale115'),
+            era('dk', DK, 22675, 'Mai Valentine (Duelist Kingdom) Deck', 'kale115',
+                comp(377525, 'Goat Format - Harpie Lady', 'Deathcrush', GOAT, 'Goat format, 2005')),
+            era('bc', BC, 22890, 'Mai Valentine (Battle City) Deck', 'kale115',
+                comp(295143, 'Proto-Harpie (SPIRIT CALLER 2006)', '9monthfan', CASUAL, 'Spirit Caller format, 2006')),
+            era('wtd', WTD, 24217, 'Mai Valentine (Waking The Dragons) Deck', 'kale115',
+                comp(534391, 'EDISON Harpie', 'Pietre', NON_META, 'Edison format, 2010')),
         ],
     },
     {
         id: 'joey', name: 'Joey Wheeler', sprite: 'joey_neutral_transparent', rating: 1200, level: 'normal',
         blurb: 'Warriors, dice and coins: he never counts himself out.',
         eras: [
-            era('dk', DK, 22681, 'Joey Wheeler (Duelist Kingdom) Deck', 'kale115'),
-            era('bc', BC, 22878, 'Joey Wheeler (Battle City) Deck', 'kale115'),
-            era('wtd', WTD, 23264, 'Joey Wheeler (Waking The Dragons) Deck', 'kale115'),
+            era('dk', DK, 22681, 'Joey Wheeler (Duelist Kingdom) Deck', 'kale115',
+                comp(302661, 'Red-Eyes Black Dragon - GOAT', 'Beta464', GOAT, 'Goat format, 2005')),
+            era('bc', BC, 22878, 'Joey Wheeler (Battle City) Deck', 'kale115',
+                comp(699269, 'Coin Toss', 'ThousandStareDragon', GOAT, 'Goat format, 2005')),
+            era('wtd', WTD, 23264, 'Joey Wheeler (Waking The Dragons) Deck', 'kale115',
+                comp(306388, 'Gearfried Zoo', 'Goat Format Decks', GOAT, 'Goat format, 2005')),
         ],
     },
     {
         id: 'marik', name: 'Marik Ishtar', sprite: 'marik_neutral_transparent', rating: 1300, level: 'normal',
         blurb: 'Slimes, traps and a god card he can\'t wait to show you.',
-        eras: [era('bc', BC, 22729, 'Marik Ishtar (Battle City) Deck', 'kale115')],
+        eras: [era('bc', BC, 22729, 'Marik Ishtar (Battle City) Deck', 'kale115',
+            comp(60994, 'The Winged Dragon of Ra', 'IAMNOTANOOB', META, 'the 2017 meta'))],
     },
     {
         id: 'ishizu', name: 'Ishizu Ishtar', sprite: 'ishizu_neutral_transparent', rating: 1450, level: 'hard',
@@ -132,7 +139,8 @@ export const DUELISTS: readonly Duelist[] = [
     {
         id: 'pegasus', name: 'Maximillion Pegasus', sprite: 'pegasus_neutral_transparent', rating: 1600, level: 'hard',
         blurb: 'Toon World, Relinquished, and he reads you like a book.',
-        eras: [era('dk', DK, 22690, 'Pegasus Deck', 'kale115')],
+        eras: [era('dk', DK, 22690, 'Pegasus Deck', 'kale115',
+            comp(276029, 'Toon GOAT', 'DoesMachines', GOAT, 'Goat format, 2005'))],
     },
     {
         id: 'yami_bakura', name: 'Yami Bakura', sprite: 'yami_bakura_neutral_transparent', rating: 1750, level: 'hard',
@@ -145,7 +153,8 @@ export const DUELISTS: readonly Duelist[] = [
     {
         id: 'yami_marik', name: 'Yami Marik', sprite: 'yami_marik_neutral_transparent', rating: 1900, level: 'hard',
         blurb: 'The Winged Dragon of Ra, and pain for the loser.',
-        eras: [era('bc', BC, 24569, 'Yami Marik - Battle City', 'AkaiRosé')],
+        eras: [era('bc', BC, 24569, 'Yami Marik - Battle City', 'AkaiRosé',
+            comp(252443, 'goat burn', 'snoreos', GOAT, 'Goat format, 2005'))],
     },
     {
         id: 'yugi', name: 'Yugi Muto', sprite: 'yugi_muto_neutral_transparent', rating: 1950, level: 'hard',

@@ -56,14 +56,18 @@ try {
     check(/1200/.test((await page.locator(".op-rating").textContent()) ?? "") && /Normal/.test((await page.locator(".op-rating").textContent()) ?? ""), "with his rating and level");
     const figure = page.locator(".op-figure img");
     check(/joey_neutral_transparent/.test((await figure.getAttribute("src")) ?? ""), "and his sprite");
-    const eras = page.getByRole("radiogroup", { name: "Joey's deck" }).getByRole("radio");
+    const eras = page.getByRole("radiogroup", { name: "Joey's deck", exact: true }).getByRole("radio");
     check((await eras.allTextContents()).join(",") === "Duelist Kingdom,Battle City,Waking the Dragons", "his three eras are offered");
     await radio("Battle City").click();
     check((await radio("Battle City").getAttribute("aria-checked")) === "true", "Battle City is chosen");
     check(/Joey Wheeler \(Battle City\) Deck/.test((await page.locator(".op-credit").textContent()) ?? ""), "the deck's source is credited");
     await page.waitForTimeout(600); // (his figure steps in)
     await shot("joey");
-    check((await page.getByRole("radiogroup", { name: "How Joey's deck is built" }).count()) === 0, "Joey's decks are only the anime's");
+    // Joey's Battle City deck can be built competitively too: Coin Toss, his gamble as Goat format played it. (Back to the anime's for the match.)
+    check((await page.getByRole("radiogroup", { name: "How Joey's deck is built" }).getByRole("radio").allTextContents()).join(",") === "As in the anime,Competitive", "Joey's deck can be the anime's or competitive");
+    await radio("Competitive").click();
+    check(/Coin Toss/.test((await page.locator(".op-credit").textContent()) ?? ""), `his competitive build is Coin Toss (${await page.locator(".op-credit").textContent()})`);
+    await radio("As in the anime").click();
 
     // Kaiba: his Battle City deck as in the anime, or as Goat format played Blue-Eyes; the build is kept across eras.
     await radio("Seto Kaiba").click();
