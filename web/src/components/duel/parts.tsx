@@ -119,12 +119,18 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
                 {/* What an effect wrote on it: a declared Type, Attribute or card (DNA Surgery, Prohibition). */}
                 {up && card.notes?.length ? <span className={`df-note ${card.defense ? "is-def" : ""}`} title={card.notes.join("\n")}>{card.notes.join(" · ")}</span> : null}
                 {/* What acts on it: the Equip Spell or continuous card's art, negation, counters. */}
-                {up && (card.by?.length || card.negated || card.counters) ? (
+                {up && (card.by?.length || card.negated) ? (
                     <span className={`df-affect ${card.defense ? "is-def" : ""}`} aria-label={affectLabel(card)}>
                         {card.by?.slice(0, 2).map((b) => <img key={b.uid} src={cardImage(b.code)} alt="" draggable={false} />)}
                         {(card.by?.length ?? 0) > 2 && <b>+{card.by!.length - 2}</b>}
                         {card.negated && <i className="df-affect__neg">⊘</i>}
-                        {card.counters ? <i className="df-affect__count">{card.counters}</i> : null}
+                    </span>
+                ) : null}
+                {/* Its counters: an orb and how many, on the card's lower left (a Spell Counter is a glowing orb). */}
+                {up && card.counters ? (
+                    <span className={`df-counters ${card.defense ? "is-def" : ""}`} role="img" aria-label={countersLabel(card)} title={countersLabel(card)}>
+                        <i aria-hidden />
+                        <b key={card.counters}>{card.counters}</b>
                     </span>
                 ) : null}
             </span>
@@ -141,7 +147,10 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
 }
 
 const affectLabel = (card: DuelCardView) =>
-    [card.by?.length ? `affected by ${card.by.length} card${card.by.length > 1 ? "s" : ""}` : "", card.negated ? "negated" : "", card.counters ? `${card.counters} counters` : ""].filter(Boolean).join(", ");
+    [card.by?.length ? `affected by ${card.by.length} card${card.by.length > 1 ? "s" : ""}` : "", card.negated ? "negated" : ""].filter(Boolean).join(", ");
+
+const countersLabel = (card: DuelCardView) =>
+    (card.counterKinds?.length ? card.counterKinds : [{ name: "Counter", count: card.counters ?? 0 }]).map((k) => `${k.count} ${k.name}${k.count === 1 ? "" : "s"}`).join(", ");
 
 /** An empty zone or one holding a card. */
 export function Zone({ card, label, marks, onTap, onHover, side, className = "", zone, locked = false }: {

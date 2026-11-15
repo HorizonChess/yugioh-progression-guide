@@ -2,9 +2,11 @@
 // driver wants to test, and stores the answers there (the page, reloaded, picks the game up at it).
 // The player's side is scripted for the moment; the bot's side plays as the bot.
 //
-//   npx tsx scripts/duel-moment.ts <api base> bls
+//   npx tsx scripts/duel-moment.ts <api base> bls|breaker
 //     bls: Graceful Charity discards a LIGHT and a DARK, Black Luster Soldier is Special Summoned,
 //          and the game stops at the player's Battle Phase with it ready to attack a monster.
+//     breaker: Breaker the Magical Warrior is Normal Summoned (a Spell Counter on it), and the game
+//          stops at the player's next question.
 import { OcgMessageType as M, OcgResponseType as R, SelectIdleCMDAction as I, type OcgMessage, type OcgResponse } from 'ocgcore-wasm';
 import { botAnswer, heuristicAnswer } from '@ygo/duel/bot';
 import { decodeAnswer, encodeAnswer } from '@ygo/duel/answers';
@@ -12,13 +14,13 @@ import { DuelSession, type DuelSetup, type Team } from '@ygo/duel/session';
 import { loadEngine } from '../src/duel/engine';
 
 const [base = 'http://localhost:4100', moment = 'bls'] = process.argv.slice(2);
-if (moment !== 'bls') throw new Error(`No moment "${moment}"`);
+if (moment !== 'bls' && moment !== 'breaker') throw new Error(`No moment "${moment}"`);
 const latest = (await (await fetch(`${base}/__test/duels/latest`)).json()) as { id: string; setup: DuelSetup; answers: string[] };
 const stored = latest.answers.map(decodeAnswer);
 const engine = await loadEngine();
 const you = latest.setup.bots.indexOf(false) as Team;
 const BLS = [72989439, 72989440, 504700118];
-const CHARITY = 79571449;
+const CHARITY = 79571449, BREAKER = 71413901;
 const LIGHT = 16, DARK = 32;
 class Stop extends Error {}
 
@@ -26,6 +28,13 @@ const isBls = (code: number) => BLS.includes(code) || /^Black Luster Soldier - E
 const attribute = (code: number) => engine.cardData(code)?.attribute ?? 0;
 
 function yours(m: OcgMessage, d: DuelSession): OcgResponse {
+    if (moment === 'breaker') {
+        if (d.monstersOf(you).some((c) => c.code === BREAKER)) throw new Stop();
+        if (m.type === M.SELECT_IDLECMD) {
+            const summon = m.summons.findIndex((c) => c.code === BREAKER);
+            if (summon >= 0) return { type: R.SELECT_IDLECMD, action: I.SELECT_SUMMON, index: summon };
+        }
+    }
     if (m.type === M.SELECT_IDLECMD) {
         const sp = m.special_summons.findIndex((c) => isBls(c.code));
         if (sp >= 0) return { type: R.SELECT_IDLECMD, action: I.SELECT_SPECIAL_SUMMON, index: sp };

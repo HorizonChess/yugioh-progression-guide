@@ -279,6 +279,14 @@ function copyOf<T>(v: T, seen = new Map<unknown, unknown>()): T {
     return out as T;
 }
 
+// The counters' names, by kind (the engine's ids, without the flag bits). The common ones; others are just "Counter".
+const COUNTER_NAMES: Record<number, string> = {
+    0x1: 'Spell Counter', 0x3: 'Bushido Counter', 0x9: 'Venom Counter', 0xe: 'A-Counter', 0x10: 'Feather Counter',
+    0x19: 'Fog Counter', 0x37: 'Kaiju Counter', 0x41: 'Predator Counter', 0x148: 'Signal Counter', 0x211: 'Resonance Counter',
+    0x217: 'E-Counter',
+};
+const counterName = (kind: number) => COUNTER_NAMES[kind & 0xfff] ?? 'Counter';
+
 export class DuelSession {
     readonly answers: OcgResponse[] = [];
     seq = 0;
@@ -1162,8 +1170,11 @@ export class DuelSession {
                 core.duelQueryLocation(this.handle, { flags: LINK_FLAGS, controller: t, location }).forEach((c, seq) => {
                     const card = c && at(t, location, seq);
                     if (!c || !card || !faceUp(c.position ?? 0)) return;
-                    const total = Object.values(c.counters ?? {}).reduce((a, n) => a + n, 0);
-                    if (total) card.counters = total;
+                    const kinds = Object.entries(c.counters ?? {}).filter(([, n]) => n > 0);
+                    if (kinds.length) {
+                        card.counters = kinds.reduce((a, [, n]) => a + n, 0);
+                        card.counterKinds = kinds.map(([kind, count]) => ({ name: counterName(Number(kind)), count }));
+                    }
                     if ((c.status ?? 0) & STATUS_DISABLED) card.negated = true;
                     for (const target of [...(c.equipCard ? [c.equipCard] : []), ...(c.targetCards ?? [])]) {
                         const hit = at(target.controller, target.location, target.sequence);

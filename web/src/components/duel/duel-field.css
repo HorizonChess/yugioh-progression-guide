@@ -177,7 +177,21 @@
 .df-affect img { width: 11px; height: 16px; border-radius: 1px; object-fit: cover; outline: 1px solid rgba(255, 255, 255, 0.35); }
 .df-affect b, .df-affect i { font: 9px/1 var(--font-techno); font-style: normal; color: #e6d4ff; padding: 0 1px; }
 .df-affect__neg { color: #ff8a7a !important; font-size: 11px !important; }
-.df-affect__count { min-width: 12px; text-align: center; border-radius: 6px; background: #b07cff; color: #1a0b2e !important; font-weight: 700; padding: 1px 2px !important; }
+/* Counters on a card: a glowing orb with how many, on the card's lower left, clear of the ATK/DEF readout. */
+.df-counters {
+    position: absolute; z-index: 4; left: calc(50% - var(--cw) / 2 - 6px); bottom: 14px; display: flex; align-items: center; gap: 3px;
+    padding: 2px 6px 2px 2px; border-radius: 999px; pointer-events: none;
+    background: rgba(20, 8, 40, 0.94); border: 1px solid #c49bff; box-shadow: 0 0 10px rgba(176, 124, 255, 0.75), 0 1px 4px rgba(0, 0, 0, 0.7);
+    animation: df-affect-in 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.df-counters.is-def { left: -6px; bottom: calc((var(--ch) - var(--cw)) / 2 + 2px); }
+.df-counters i {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff 0 12%, #d9c2ff 22%, #8f4dff 60%, #3c1580 100%);
+    box-shadow: 0 0 6px #b07cff; animation: df-orb 1.6s ease-in-out infinite alternate;
+}
+.df-counters b { font: 700 13px/1 var(--font-techno); color: #f1e6ff; animation: df-affect-in 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+@keyframes df-orb { to { box-shadow: 0 0 11px #c49bff; } }
 @keyframes df-affect-in { from { scale: 0.3; opacity: 0; } }
 
 /* The glow traces the card itself: upright, or sideways in Defense Position (the card's frame turns with it). */
@@ -694,3 +708,6 @@
 .df-result__score { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 6px 0 2px; font: 13px/1 var(--font-heading); color: #c9bc9a; }
 .df-result__score b { font: 700 30px/1 var(--font-techno); color: #f5c542; }
 .df-result__score i { font-style: normal; color: #8b7355; }
+.df--phone .df-counters { padding: 1px 4px 1px 1px; gap: 2px; bottom: 10px; }
+.df--phone .df-counters i { width: 10px; height: 10px; }
+.df--phone .df-counters b { font-size: 10px; }
