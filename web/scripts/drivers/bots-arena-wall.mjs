@@ -13,7 +13,8 @@ let failures = 0;
 const check = (ok, label) => { console.log(`${ok ? "PASS" : "FAIL"}  ${label}`); if (!ok) failures++; };
 // (on the GPU: the wall is a heavy shader)
 const browser = await chromium.launch({ ...(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}), args: ["--use-angle=d3d11", "--enable-gpu", "--ignore-gpu-blocklist"] });
-const ctx = await browser.newContext({ viewport: { width: 1440, height: 810 } });
+const [VW, VH] = (process.env.SIZE || "1440x810").split("x").map(Number);   // SIZE=2560x1080 for a wide screen
+const ctx = await browser.newContext({ viewport: { width: VW, height: VH } });
 const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
@@ -37,7 +38,7 @@ try {
     await page.locator("canvas.arena-3d.is-shown").waitFor({ timeout: 15000 });
     check(true, "in the arena, the 3D wall takes over");
     await page.waitForTimeout(5000);
-    await page.screenshot({ path: outPath("bots-arena-wall-arena.png") });
+    await page.screenshot({ path: outPath(`bots-arena-wall-arena-${VW}x${VH}.png`) });
     await nav("collection").click();
     await page.waitForFunction(() => !document.querySelector("canvas.arena-3d.is-shown"), null, { timeout: 15000 });
     check(true, "leaving, it moves back and goes");

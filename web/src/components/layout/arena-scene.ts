@@ -68,7 +68,7 @@ const stoneFrag = /* glsl */ `
         float ndl = max(dot(n, L), 0.0);
         vec3 H = normalize(L + V);
         float spec = pow(max(dot(n, H), 0.0), 24.0) * 0.06 * (0.3 + 0.7 * pow(1.0 - max(dot(V, H), 0.0), 5.0));
-        return (albedo / PI * ndl + spec) * power / pow(dist, 1.1) * shadow;
+        return (albedo / PI * ndl + spec) * power / (pow(dist, 1.1) + 0.45) * shadow;
     }
 
     void main() {
@@ -152,12 +152,14 @@ export async function createArenaScene(canvas: HTMLCanvasElement, url: (path: st
             return t;
         });
     const D = "/ui/bots-arena/3d/";
-    const [albedo, normal, height, flameAtlas, fA, fN, fH, pageWall] = await Promise.all([
+    const [albedo, normal, height, flameAtlas, fA, fN, fH, pageWall, cornerAlbedo, cornerNormal] = await Promise.all([
         tex(D + "wall-albedo.webp", true), tex(D + "wall-normal.webp", false), tex(D + "wall-height.webp", false), tex(D + "flame.webp", true, THREE.ClampToEdgeWrapping),
         tex(D + "floor-albedo.webp", true, THREE.RepeatWrapping), tex(D + "floor-normal.webp", false, THREE.RepeatWrapping), tex(D + "floor-height.webp", false, THREE.RepeatWrapping),
         // (the page's wall as raw sRGB numbers: the last pass works in the page's colours)
         tex("/bg-wall.webp", false, THREE.ClampToEdgeWrapping),
+        tex(D + "corner-albedo.webp", true, THREE.RepeatWrapping), tex(D + "corner-normal.webp", false, THREE.RepeatWrapping),
     ]);
+    const cornerTex = [cornerAlbedo, cornerNormal] as const;
 
     const scene = new THREE.Scene();
     const FOG = new THREE.Color(0x070302);
@@ -168,7 +170,8 @@ export async function createArenaScene(canvas: HTMLCanvasElement, url: (path: st
     // ---- lights: the torch by the corner, the next one down the hall, and the one the page's wall is seen in
     const TORCH = new THREE.Vector3(0.45, 0, 0.5), FLAME_Y = 1.86;
     const warm = new THREE.Color("#ffa865");
-    const torchLight = new THREE.PointLight(warm, 11, 0, 2);
+    const TORCH_POWER = 13;
+    const torchLight = new THREE.PointLight(warm, TORCH_POWER, 0, 2);
     torchLight.position.set(TORCH.x, FLAME_Y + 0.12, TORCH.z);
     const hallLight = new THREE.PointLight(warm, 7, 0, 2);
     hallLight.position.set(9.5, 1.95, 0.9);
@@ -212,10 +215,13 @@ export async function createArenaScene(canvas: HTMLCanvasElement, url: (path: st
     plane(20, 6, stone({ tbn: A_TBN, origin: [0, WALL_H, -9], offset: [0.37, 0.02], depth: 0.02, normalStrength: 0.4, tint: [0.8, 0.75, 0.7] }), [0, WALL_H + 3, -10], -Math.PI / 2);
     plane(60, 30, stone({ tbn: [1, 0, 0, 0, 0, 1, 0, -1, 0], origin: [-10, 0, 15], texSize: [4.5, 4.5], depth: 0.025, normalStrength: 0.8, tint: [0.62, 0.56, 0.5], maps: [fA, fN, fH] }), [20, 0, 0], 0, -Math.PI / 2);
     // the corner's rounded edge (a torus moulding, as temple corners have)
-    const cornerMap = fA.clone(); cornerMap.repeat.set(0.12, 2.5);
-    const cornerN = fN.clone(); cornerN.repeat.set(0.12, 2.5);
-    const corner = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 12, 48, 1, true),
-        new THREE.MeshStandardMaterial({ map: cornerMap, normalMap: cornerN, normalScale: new THREE.Vector2(0.6, 0.6), color: new THREE.Color(0.36, 0.3, 0.24), roughness: 0.95, metalness: 0 }));
+    // (plain dressed sandstone, as such mouldings are: fine grain, chips, a course joint every 1.25 m)
+    const R = 0.11;
+    const cornerRepeat = new THREE.Vector2(1, 12 / 5);
+    const cornerMap = cornerTex[0], cornerN = cornerTex[1];
+    for (const t of [cornerMap, cornerN]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.copy(cornerRepeat); }
+    const corner = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 12, 64, 1, true),
+        new THREE.MeshStandardMaterial({ map: cornerMap, normalMap: cornerN, normalScale: new THREE.Vector2(1.2, 1.2), color: new THREE.Color(0.95, 0.9, 0.85), roughness: 0.93, metalness: 0 }));
     corner.position.set(0, 6, 0);
     scene.add(corner);
 
@@ -249,11 +255,14 @@ export async function createArenaScene(canvas: HTMLCanvasElement, url: (path: st
             void main() {
                 vec4 a = mix(cell(floor(uFrame)), cell(floor(uFrame) + 1.0), smoothstep(0.0, 1.0, fract(uFrame)));
                 float l = max(a.r, max(a.g, a.b));
-                vec3 hot = mix(vec3(1.0, 0.35, 0.06), vec3(1.0, 0.85, 0.55), smoothstep(0.35, 0.95, l));
-                gl_FragColor = vec4(hot * l * 2.6 * a.a, 1.0);
+                // fire colours: deep orange at the edges, yellow in the core; the faint haze around it dropped
+                vec3 hot = mix(vec3(1.0, 0.24, 0.02), vec3(1.0, 0.68, 0.22), smoothstep(0.45, 1.0, l));
+                hot = mix(hot, vec3(1.0, 0.86, 0.6), smoothstep(0.93, 1.0, l) * 0.6);
+                float body = smoothstep(0.18, 0.6, l) * a.a;
+                gl_FragColor = vec4(hot * pow(l, 1.4) * 1.9 * body, 1.0);
             }`,
     });
-    const FW = 0.42, FH = (0.42 * 192) / 88;
+    const FW = 0.36, FH = (0.36 * 192) / 88;
     const flame = new THREE.Mesh(new THREE.PlaneGeometry(FW, FH), flameMat);
     flame.position.set(TORCH.x, 1.83 + FH / 2, TORCH.z);
     scene.add(flame);
@@ -261,9 +270,9 @@ export async function createArenaScene(canvas: HTMLCanvasElement, url: (path: st
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uI: { value: 1 } },
         vertexShader: billboard,
         fragmentShader: `uniform float uI; varying vec2 vUv; void main() { float d = length(vUv - 0.5) * 2.0; float g = exp(-d * d * 7.0) * 0.5 + exp(-d * d * 40.0) * 0.8;
-            gl_FragColor = vec4(vec3(1.0, 0.42, 0.12) * g * uI * 0.55, 1.0); }`,
+            gl_FragColor = vec4(vec3(1.0, 0.42, 0.12) * g * uI * 0.28, 1.0); }`,
     });
-    const glow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.6), glowMat);
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.8), glowMat);
     glow.position.set(TORCH.x, FLAME_Y + 0.1, TORCH.z);
     scene.add(glow);
 
@@ -285,7 +294,7 @@ export async function createArenaScene(canvas: HTMLCanvasElement, url: (path: st
         vertexShader: /* glsl */ `attribute float life, seed; uniform float uTime, uScale; varying float vA;
             void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
                 float fade = smoothstep(0.0, 0.15, life) * (1.0 - smoothstep(1.2 + seed * 1.6, 1.6 + seed * 2.0, life));
-                vA = fade * (0.6 + 0.4 * sin(uTime * 25.0 + seed * 40.0));
+                vA = fade * (0.65 + 0.35 * sin(uTime * 9.0 + seed * 40.0));
                 gl_PointSize = (0.016 + 0.026 * seed) * uScale / -mv.z; }`,
         fragmentShader: `varying float vA; void main() { float d = length(gl_PointCoord - 0.5) * 2.0; gl_FragColor = vec4(vec3(5.0, 1.8, 0.45) * exp(-d * d * 4.0) * vA, 1.0); }`,
     });
@@ -364,14 +373,14 @@ export async function createArenaScene(canvas: HTMLCanvasElement, url: (path: st
             if (progress <= 0 && pageMix >= 1 && onArrive) { const done = onArrive; onArrive = null; done(); }
         }
         const e = pose(progress);
-        const f = 1 + 0.13 * noise(t * 2.2) + 0.05 * noise(t * 7.7 + 3);
-        torchLight.intensity = 11 * f;
-        torchLight.position.set(TORCH.x + 0.025 * noise(t * 3.1 + 5), FLAME_Y + 0.12 + 0.03 * noise(t * 2.7 + 9), TORCH.z + 0.025 * noise(t * 2.9 + 1));
+        const f = 1 + 0.1 * noise(t * 1.3) + 0.035 * noise(t * 4.2 + 3);
+        torchLight.intensity = TORCH_POWER * f;
+        torchLight.position.set(TORCH.x + 0.02 * noise(t * 1.8 + 5), FLAME_Y + 0.12 + 0.025 * noise(t * 1.6 + 9), TORCH.z + 0.02 * noise(t * 1.7 + 1));
         hallLight.intensity = 7 * (1 + 0.12 * noise(t * 2.0 + 17));
         pageLight.intensity = PAGE_POWER * (0.3 + 0.7 * (1 - e)) * (1 + 0.06 * noise(t * 1.6 + 31));
         for (const m of walls) m.uniforms.uLightPower!.value = [torchLight.intensity, hallLight.intensity, pageLight.intensity];
         glowMat.uniforms.uI!.value = f;
-        flameMat.uniforms.uFrame!.value = t * 12;
+        flameMat.uniforms.uFrame!.value = t * 7;
         flame.quaternion.copy(camera.quaternion); glow.quaternion.copy(camera.quaternion);
         stepEmbers(t, dt);
         emberMat.uniforms.uTime!.value = t;
