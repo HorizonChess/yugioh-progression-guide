@@ -191,7 +191,7 @@ const IDLE_MS = 30 * 60_000;
 
 export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where browsers fetch the engine data from (IMAGE_HOST). */ engineHost?: string } = {}): DuelHub {
     const duels = () => duelsCollection(app.db);
-    const live = new Map<string, { session: DuelSession; stored: number; touched: number }>();
+    const live = new Map<string, { session: DuelSession; stored: number; touched: number; finished?: boolean }>();
     const sockets = new Map<string, Set<{ socket: WebSocket; team: Team }>>();
     // One change at a time per duel, so answers are stored in the order they were played.
     const queues = new Map<string, Promise<unknown>>();
@@ -201,7 +201,9 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
         return run;
     };
 
-    // Duels nobody has touched for a while leave memory; they're rebuilt from storage on return.
+    // Duels nobody has touched for a while leave memory; they're rebuilt from storage on return. A finished
+    // duel stays the same while (its session and log at hand for debugging), then goes the same way; the stored
+    // record (setup and every answer) is kept for good and replays it (scripts/replay-duel.ts).
     const sweep = setInterval(() => {
         const now = Date.now();
         for (const [id, entry] of live) {
@@ -289,7 +291,8 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
     async function persistAndBroadcast(duel: DuelDoc) {
         const id = duel._id.toHexString();
         const entry = live.get(id);
-        if (!entry) return;
+        // A finished duel stays in memory a while (see the sweep) but is booked only once.
+        if (!entry || entry.finished) return;
         const { session } = entry;
         const fresh = session.answers.slice(entry.stored).map(encode);
         entry.stored = session.answers.length;
@@ -311,7 +314,10 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
         if (finished && duel.match) await closeGame(duel, session.result!.winner, !!session.result!.calledOff);
         else if (finished && duel.kind === 'rival' && !session.result!.calledOff && session.result!.winner !== null) await recordResult(duel, duel.players[session.result!.winner]!, duel.players[1 - session.result!.winner]!);
         for (const s of sockets.get(id) ?? []) send(s.socket, { type: 'state', frames: session.takeFrames(s.team), state: stateOf(duel, session, s.team), cursor: session.cursor(s.team) });
-        if (finished) live.delete(id);
+        if (finished) {
+            entry.finished = true;
+            entry.touched = Date.now();
+        }
     }
 
     /**
@@ -330,6 +336,7 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
         const rebuilt = new DuelSession(await loadEngine(), duel.setup!);
         rebuilt.start(answers);
         live.set(id, { session: rebuilt, stored: answers.length, touched: Date.now() });
+        session.destroy();
         await duels().updateOne({ _id: duel._id }, { $set: { answers: answers.map(encode), updatedAt: new Date() } });
         for (const s of watchers) send(s.socket, { type: 'state', frames: [], state: stateOf(duel, rebuilt, s.team), cursor: rebuilt.cursor(s.team) });
     }
@@ -871,7 +878,15 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
                     // stored (the failed step is dropped) and send everyone the truth. If the engine
                     // itself failed on that step, the player is told the move can't be made.
                     const faulted = await recover(error).catch(() => false);
+                    const dropped = live.get(id);
                     live.delete(id);
+                    // (After a fault its handle belonged to the old core, which is gone.)
+                    if (!faulted)
+                        try {
+                            dropped?.session.destroy();
+                        } catch {
+                            /* already broken */
+                        }
                     try {
                         const { session } = await sessionOf(duel);
                         for (const s of sockets.get(id) ?? []) {

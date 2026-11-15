@@ -120,6 +120,38 @@ const TYPE_EXTRA = 0x40 | 0x2000 | 0x800000 | TYPE_LINK;
  */
 export const engineFaulted = (error: unknown): boolean => error instanceof WebAssembly.RuntimeError || (error instanceof RangeError && /call stack/i.test(error.message));
 
+type DuelOptions = Parameters<OcgCoreSync['createDuel']>[0];
+type DuelHandle = Parameters<OcgCoreSync['destroyDuel']>[0];
+
+/**
+ * ocgcore-wasm keeps each duel's card and script readers in a map that destroyDuel never clears. The readers
+ * are closures over the DuelSession, so every duel ever created stayed in memory with everything it held, long
+ * after the app had let go of it (in self-play: ~3 MB a duel, gigabytes within minutes). The core gets
+ * stand-ins that call the real readers until the duel is destroyed; the map then keeps only the stand-ins.
+ * This frees only what nothing else reaches: a session the app still holds is untouched.
+ */
+function releasing(core: OcgCoreSync): OcgCoreSync {
+    const live = new WeakMap<object, { options: DuelOptions | null }>();
+    const create = core.createDuel.bind(core), destroy = core.destroyDuel.bind(core);
+    core.createDuel = (options: DuelOptions) => {
+        const ref: { options: DuelOptions | null } = { options };
+        const handle = create({
+            ...options,
+            cardReader: (code: number) => ref.options!.cardReader(code),
+            scriptReader: (name: string) => ref.options!.scriptReader(name),
+            errorHandler: (...args: Parameters<NonNullable<DuelOptions['errorHandler']>>) => ref.options?.errorHandler?.(...args),
+        } as DuelOptions);
+        if (handle) live.set(handle as object, ref);
+        return handle;
+    };
+    core.destroyDuel = (handle: DuelHandle) => {
+        destroy(handle);
+        const ref = live.get(handle as object);
+        if (ref) ref.options = null;
+    };
+    return core;
+}
+
 export function createEngine(source: EngineData): Engine {
     const { rows, strings } = source;
     const byName = new Map<string, number>();
@@ -134,15 +166,15 @@ export function createEngine(source: EngineData): Engine {
 
     let allCodes: number[] | null = null;
     const engine: Engine = {
-        core: source.core,
+        core: releasing(source.core),
         version: source.version,
         async revive() {
-            engine.core = await source.newCore();
+            engine.core = releasing(await source.newCore());
         },
         simCore() {
             if (!sim.started) {
                 sim.started = true;
-                source.newCore().then((core) => (sim.core = core), () => undefined);
+                source.newCore().then((core) => (sim.core = releasing(core)), () => undefined);
             }
             return sim.core;
         },
