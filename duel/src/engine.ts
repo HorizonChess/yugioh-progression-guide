@@ -45,6 +45,14 @@ export interface Engine {
      * is unusable for every duel, so the duels in memory are dropped and rebuilt on the new core.
      */
     revive(): Promise<void>;
+    /**
+     * A second WASM core of the engine's own, for the bot's look-ahead (bot-sim.ts) to play copies
+     * of a duel on, and put back from saved memory: never one a real duel is on. Started the first
+     * time it's asked for; null until it's ready (or if it faulted).
+     */
+    simCore(): OcgCoreSync | null;
+    /** Drops the look-ahead's core (it faulted): a new one is started next time it's asked for. */
+    dropSimCore(): void;
     /** The pinned commits the data came from, stored with each duel (a replay needs the same ones). */
     version: string;
     cardData(code: number): OcgCardData | null;
@@ -120,12 +128,24 @@ export function createEngine(source: EngineData): Engine {
     /** Passcodes learned from their names: code → the engine's own code for that card. */
     const learned = new Map<number, number>();
     const row = (code: number) => rows[String(code)];
+    const sim: { core: OcgCoreSync | null; started: boolean } = { core: null, started: false };
 
     const engine: Engine = {
         core: source.core,
         version: source.version,
         async revive() {
             engine.core = await source.newCore();
+        },
+        simCore() {
+            if (!sim.started) {
+                sim.started = true;
+                source.newCore().then((core) => (sim.core = core), () => undefined);
+            }
+            return sim.core;
+        },
+        dropSimCore() {
+            sim.core = null;
+            sim.started = false;
         },
         cardData(code) {
             const cached = data.get(code);

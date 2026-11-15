@@ -86,6 +86,11 @@ try {
     await page.getByRole("radiogroup", { name: "Opponents" }).waitFor({ timeout: 15000 });
     check((await page.getByRole("radio", { name: "Hard" }).getAttribute("aria-checked")) === "true", "the choice is remembered");
 
+    // (On a phone the stage is a door, shut again after the reload: opened from its lintel.)
+    if (phone && !(await page.locator(".op-side.is-open").count())) {
+        await page.locator(".op-door__lintel").click();
+        await page.locator(".op-side.is-open").waitFor({ timeout: 3000 });
+    }
     await page.getByRole("button", { name: /^Duel the bot/ }).click();
     await page.waitForURL(/duel/, { timeout: 30000 });
     await page.getByText("Practice Bot (Hard)").first().waitFor({ timeout: 15000 });
@@ -95,14 +100,16 @@ try {
     const duel = btn("Duel!");
     if (await duel.count()) await duel.click();
 
-    // A few turns: end each of ours at once, and time how long the bot takes with its own.
+    // A few turns: end each of ours at once, and time how long the bot takes with its own. (To our
+    // turn 4, or on to 6 for a few answers to time when we go first: the hard bot wins by turn 7
+    // or so against a player who only passes.)
     let slowest = 0;
     const turnLabel = page.getByText(/^Turn \d+/).first();
     const turnNo = async () => Number((/Turn (\d+)/.exec((await turnLabel.textContent().catch(() => "")) ?? "") ?? [])[1] ?? 0);
     const end = page.getByRole("tab", { name: "End", exact: true }).and(page.locator(":enabled"));
     const pass = page.getByRole("button", { name: /^(Pass|No|Don't)/ }).first();
     let waitFrom = Date.now();
-    for (let step = 0; step < 40 && (await turnNo()) < 7; step++) {
+    for (let step = 0; step < 40 && ((await turnNo()) < 4 || ((await page.evaluate(() => window.__lags.length)) < 3 && (await turnNo()) < 6)); step++) {
         // (A card to discard at the end of the turn: the first that glows.)
         const discard = page.locator(".df-hand__card.is-glow").first();
         await end.or(pass).or(discard).first().waitFor({ timeout: 60000 });
@@ -110,18 +117,19 @@ try {
         if (step > 0) slowest = Math.max(slowest, Date.now() - waitFrom);
         // Let the board's animations settle, then answer.
         await page.waitForTimeout(800);
-        if ((await discard.count()) && !(await end.count())) await discard.click({ force: true }).catch(() => {});
+        // (The prompt's sheet covers the hand on a phone: the click goes to the card itself.)
+        if (await page.getByText("Choose the card to discard").count()) await discard.dispatchEvent("click").catch(() => {});
         else if (await pass.count()) await pass.click().catch(() => {});
         else await end.click().catch(() => {});
         await page.waitForTimeout(400);
         waitFrom = Date.now();
     }
-    check((await turnNo()) >= 5, `a few turns were played (turn ${await turnNo()})`);
+    check((await turnNo()) >= 4, `a few turns were played (turn ${await turnNo()})`);
     await shot("board");
     check(slowest < 8000, `your turn comes back in good time (slowest wait, the bot's turn played out: ${slowest} ms)`);
     const { lags, thinks } = await page.evaluate(() => ({ lags: window.__lags, thinks: window.__thinks }));
     const sorted = [...lags].sort((a, b) => a - b);
-    check(lags.length > 3 && sorted.at(-1) < 1000, `each answer shows at once, before the bot thinks (${lags.length} answers: median ${sorted[sorted.length >> 1]} ms, slowest ${sorted.at(-1)} ms)`);
+    check(lags.length >= 3 && sorted.at(-1) < 1000, `each answer shows at once, before the bot thinks (${lags.length} answers: median ${sorted[sorted.length >> 1]} ms, slowest ${sorted.at(-1)} ms)`);
     // The rest of a wait for your turn is the board playing out what the bot did.
     check(thinks.length > 0 && Math.max(...thinks) < 2000, `the bot's thinking is quick (until your next question: ${thinks.join(", ")} ms)`);
     check(!sockets.some((u) => u.includes("/api/duels/")), `the game has no live socket (${sockets.join(", ") || "none"})`);

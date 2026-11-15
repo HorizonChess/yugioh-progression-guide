@@ -27,6 +27,8 @@ export interface SessionOptions {
      * so what has happened so far can be shown first: a move shows at once, and the bot's turn as it plays.
      */
     pauseForBot?: boolean;
+    /** Nobody watches (the bot's look-ahead): no frames of what happens are made. */
+    unwatched?: boolean;
 }
 
 export interface DuelSetup {
@@ -115,8 +117,13 @@ class Tracker {
     private n = 0;
     private slots = new Map<string, string>();
     private piles = new Map<string, string[]>();
-    fresh = () => `u${++this.n}`;
-    private isPile = (location: number) => (PILES as readonly number[]).includes(location);
+    // (Methods, not arrow functions: a copy of the tracker, for the bot's look-ahead, must count its own.)
+    fresh() {
+        return `u${++this.n}`;
+    }
+    private isPile(location: number) {
+        return (PILES as readonly number[]).includes(location);
+    }
     private pile(controller: number, location: number) {
         const key = `${controller}:${location}`;
         let p = this.piles.get(key);
@@ -235,6 +242,39 @@ interface Question {
     team: Team;
     prompt: DuelPrompt;
     toResponse: (answer: DuelAnswer) => OcgResponse | null;
+}
+
+/** A session's fields its saved state leaves alone (what it plays with), and keeps as they are, not copied (its duel in the core). */
+const SHARED = new Set(['engine', 'setup', 'options', 'core', 'show']), AS_IS = new Set(['handle']);
+/** A deep copy of plain data and class instances (kept as their class), sharing functions. */
+function copyOf<T>(v: T, seen = new Map<unknown, unknown>()): T {
+    if (typeof v !== 'object' || v === null) return v;
+    if (seen.has(v)) return seen.get(v) as T;
+    let out: unknown;
+    if (v instanceof Map) {
+        const m = new Map();
+        seen.set(v, m);
+        for (const [k, x] of v) m.set(copyOf(k, seen), copyOf(x, seen));
+        out = m;
+    } else if (v instanceof Set) {
+        const s = new Set();
+        seen.set(v, s);
+        for (const x of v) s.add(copyOf(x, seen));
+        out = s;
+    } else if (Array.isArray(v)) {
+        const a: unknown[] = [];
+        seen.set(v, a);
+        for (const x of v) a.push(copyOf(x, seen));
+        out = a;
+    } else if (ArrayBuffer.isView(v)) {
+        out = (v as unknown as Uint8Array).slice();
+    } else {
+        const o = Object.create(Object.getPrototypeOf(v)) as Record<PropertyKey, unknown>;
+        seen.set(v, o);
+        for (const k of Reflect.ownKeys(v)) o[k] = copyOf((v as Record<PropertyKey, unknown>)[k], seen);
+        out = o;
+    }
+    return out as T;
 }
 
 export class DuelSession {
@@ -423,6 +463,20 @@ export class DuelSession {
     }
 
     /**
+     * For the bot's look-ahead (bot-sim.ts): this session's own state, to go back to with
+     * `loadState` after the duel is played on from here. The engine's side of the duel is in the
+     * WASM core's memory, which the look-ahead saves and puts back itself.
+     */
+    saveState(): Record<string, unknown> {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(this)) if (!SHARED.has(k)) out[k] = AS_IS.has(k) ? v : copyOf(v);
+        return out;
+    }
+    loadState(state: Record<string, unknown>): void {
+        for (const [k, v] of Object.entries(state)) (this as Record<string, unknown>)[k] = AS_IS.has(k) ? v : copyOf(v);
+    }
+
+    /**
      * A chance to respond, in words for `team`: the moment it's at (the engine's own timing for the
      * window: an attack declared, the damage step, damage calculation, a summon, a phase) and the
      * cards involved, then the question. "Respond?" after the rival's play, "Activate a card?" otherwise.
@@ -575,7 +629,7 @@ export class DuelSession {
             const messages = core.duelGetMessage(this.handle);
             const events = this.apply(messages);
             if (events.length) this.backPoint = null;
-            if (events.length && !this.replayQueue.length) for (const t of [0, 1] as const) this.pushFrame(this.eventsFor(events, t), t);
+            if (events.length && !this.replayQueue.length && !this.options.unwatched) for (const t of [0, 1] as const) this.pushFrame(this.eventsFor(events, t), t);
             if (this.result || status === OcgProcessResult.END) {
                 this.result ??= { winner: null, reason: 'The duel ended' };
                 this.destroy();
@@ -662,6 +716,22 @@ export class DuelSession {
         this.botWaiting = null;
         this.feed(this.botDecides(waiting.m, waiting.team));
         this.run();
+    }
+
+    /**
+     * For the bot's look-ahead: a copy stopped at a question (`pauseForBot`) plays on with the duel's
+     * answers since, to stop again where the duel is. False if they didn't all land (or it ended).
+     */
+    catchUp(answers: readonly OcgResponse[]): boolean {
+        const waiting = this.botWaiting;
+        if (!waiting || !this.handle || !answers.length) return false;
+        this.botWaiting = null;
+        this.replayQueue = answers.slice(1);
+        this.feed(answers[0]!);
+        this.run();
+        const left = this.replayQueue.length;
+        this.replayQueue = [];
+        return !left && !this.retry && this.botToThink;
     }
 
     private feed(response: OcgResponse) {
