@@ -19,6 +19,8 @@ const TIE_MS = 2800;
 
 /** The rock-paper-scissors showdown of this duel was seen here: the board doesn't play it again. */
 export const rpsSeenKey = (duelId: string) => `ygo-rps-seen:${duelId}`;
+/** How long the showdown must be on screen to count as seen (its cards turn over and strike by then). */
+const RPS_SEEN_MS = 2400;
 
 export default function PreGame({ duelId, view, busy, onAct, onGiveUp }: {
     duelId: string;
@@ -44,8 +46,12 @@ export default function PreGame({ duelId, view, busy, onAct, onGiveUp }: {
         return () => clearTimeout(t);
     }, [tie]);
     const decided = chooser?.why === "rps" && chooser.hands ? chooser.hands : null;
+    // Seen here only once it's had time to play out: when the bot won, it chooses at once and the
+    // board replaces this before the cards turn over, so the board plays the showdown instead.
     useEffect(() => {
-        if (decided) sessionStorage.setItem(rpsSeenKey(duelId), "1");
+        if (!decided) return;
+        const t = setTimeout(() => sessionStorage.setItem(rpsSeenKey(duelId), "1"), RPS_SEEN_MS);
+        return () => clearTimeout(t);
     }, [decided, duelId]);
     const throwHand = (hand: RpsHand) => {
         setThrown(hand);

@@ -372,7 +372,8 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
     const [rpsOpen, setRpsOpen] = useState(false);
     if (!rpsChecked && state && view) {
         setRpsChecked(true);
-        setRpsOpen(!!state.match?.rps && view.turn <= 1 && !sessionStorage.getItem(rpsSeenKey(duelId)));
+        // (By the first look the bot may have played its first turn already.)
+        setRpsOpen(!!state.match?.rps && view.turn <= 2 && !sessionStorage.getItem(rpsSeenKey(duelId)));
     }
     useEffect(() => {
         if (!rpsOpen) return;
@@ -560,6 +561,18 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
                 const title = prompt.forced ? (lone ? `${musts[0]}'s effect happens now` : "These all happen: which goes on the chain first?") : !last ? (prompt.ask ?? "Activate a card?") : last.side === "me" ? "Chain another card?" : `Respond to ${name(last.code)}?`;
                 const aimed = last?.targets?.length ? targetsInWords(view, last.targets, name, view.opp.name) : "";
                 const said = last ? `${last.side === "me" ? "You" : view.opp.name} activated it as chain link ${view.chain.length}${aimed ? `, targeting ${aimed}` : ""}.` : undefined;
+                // One of your cards' optional triggers (Black Luster Soldier's second attack): asked as
+                // that card's effect, whatever else is on the chain; yes uses it.
+                const trigger = prompt.trigger !== undefined ? prompt.options.find((o) => o.id === prompt.trigger) : undefined;
+                if (!choosing && !prompt.forced && trigger) {
+                    question = sheet(`Use ${name(trigger.code)}'s effect${trigger.text ? `: ${trigger.text}` : ""}?`, (
+                        <div className="df-sheet__options df-sheet__options--row">
+                            {option("Yes", () => (prompt.options.length > 1 ? setChoosing(true) : answer({ kind: "choice", id: trigger.id })))}
+                            {prompt.pass !== null && option("No", () => answer({ kind: "choice", id: prompt.pass! }), { quiet: true })}
+                        </div>
+                    ), { text: last ? `${last.side === "me" ? "You" : view.opp.name} activated ${name(last.code)} first${aimed ? `, targeting ${aimed}` : ""}.` : undefined, code: trigger.code });
+                    break;
+                }
                 if (!choosing && !prompt.forced) {
                     question = sheet(title, (
                         <div className="df-sheet__options df-sheet__options--row">

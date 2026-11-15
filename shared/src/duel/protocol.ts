@@ -166,6 +166,12 @@ export type DuelPrompt =
            * attack on your Celtic Guardian. Respond?"), when no chain is going.
            */
           ask?: string;
+          /**
+           * The option that is one of your cards' optional trigger effects, at the moment it triggered
+           * ("Attack again", for Black Luster Soldier): asked about as that card's effect, even
+           * with a chain going (else "Respond to Magician of Faith?" hides that it's yours to use).
+           */
+          trigger?: number;
       }
     /** Choose cards. `step` mode: one at a time, with `done` to finish. */
     | { kind: 'cards'; title: string; min: number; max: number; cancel: boolean; cards: PromptCard[]; tribute?: boolean; /** The pick of what to attack: the glowing targets say it all. */ attack?: boolean; sum?: number; step?: { chosen: PromptCard[]; canFinish: boolean }; back?: boolean; /** The order they're tapped in counts (the first goes on top): number them. */ ordered?: boolean }

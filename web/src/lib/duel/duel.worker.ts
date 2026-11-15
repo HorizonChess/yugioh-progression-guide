@@ -22,23 +22,28 @@ const BREATHER_MS = 16;
  */
 
 export type ToWorker =
-    | { type: "open"; base: string; duelId: string; device: DuelOnDevice }
+    /** `conn`: which opening of the game this is; what the worker says back carries it. */
+    | { type: "open"; base: string; duelId: string; conn: number; device: DuelOnDevice }
     | { type: "answer"; seq: number; answer: DuelAnswer }
     | { type: "back"; seq: number }
     | { type: "concede" }
     /** The game is left: its duel is let go. */
     | { type: "close" };
 
-/** Each names the game it's about (`duelId`): one left may still have a message on its way. */
-export type FromWorker = { duelId: string } & (
+/**
+ * Each names the game it's about (`duelId`) and the opening of it (`conn`): one left, or opened
+ * again (a page reconnecting; React's development mode does it at once), may still have a message
+ * on its way, and its frames shown again would play the opening draw twice.
+ */
+export type FromWorker = { duelId: string; conn: number } & (
     | { type: "state"; frames: DuelFrame[]; state: DuelState }
     /** The game's answers from `from` on (earlier ones past `from` are taken back), and how it ended once it's over. */
     | ({ type: "answers" } & DeviceAnswers)
     | { type: "error"; message: string }
 );
 
-type Unnamed<T> = T extends unknown ? Omit<T, "duelId"> : never;
-const post = (m: Unnamed<FromWorker>) => self.postMessage({ ...m, duelId });
+type Unnamed<T> = T extends unknown ? Omit<T, "duelId" | "conn"> : never;
+const post = (m: Unnamed<FromWorker>) => self.postMessage({ ...m, duelId, conn });
 
 async function json<T>(url: string): Promise<T> {
     const res = await fetch(url);
@@ -92,6 +97,7 @@ async function fetchScripts(names: Iterable<string>) {
 }
 
 let duelId = "";
+let conn = 0;
 let setup: DuelSetup;
 let team: Team = 0;
 let session: DuelSession | null = null;
@@ -157,6 +163,7 @@ async function handle(m: ToWorker) {
             session?.destroy();
             session = null;
             duelId = m.duelId;
+            conn = m.conn;
             setup = m.device.setup as DuelSetup;
             team = m.device.team;
             booked = m.device.over;

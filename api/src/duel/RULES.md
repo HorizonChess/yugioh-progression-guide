@@ -50,8 +50,12 @@ respond: when it matters", as Master Duel's *Auto*) a moment is asked about:
   The window at the very start of the damage step isn't asked: anything usable then is still usable
   just before damage calculation. A card usable only *during* damage calculation (Injection Fairy
   Lily) is asked then. Copies of one card share one question.
-- **Optional triggers** ("you can…", Sangan, Witch of the Black Forest) are always asked as a yes/no
-  of their own: passing a chain window never loses one.
+- **Optional triggers** ("you can…", Sangan, Witch of the Black Forest) are asked as a yes/no of
+  their own when one triggers alone. With others at the same moment, the engine offers it in a chain
+  window instead (Black Luster Soldier's second attack, as the face-down Magician of Faith it attacked
+  flips and goes on the chain first). That window is its only chance, so it's always asked, and
+  as that card's effect: "Use Black Luster Soldier's effect: Attack again?", not "Respond to
+  Magician of Faith?" (`optionalTrigger` in engine.ts; the prompt's `trigger`).
 
 "Ask me to respond: at every chance" (Master Duel's *ON*) asks at every moment a card could be used.
 

@@ -1298,9 +1298,14 @@ export class DuelSession {
                 // A card that answers what just happened (Michizure, when your monster went to the
                 // Graveyard) has only this moment, whoever's turn it is and whoever played last.
                 const answering = m.spe_count > 0 && m.selects.some((c) => this.engine.answersEvents(c.code));
-                const quiet = !m.forced && (!options.length || (!top && !fresh.length && !answering && (this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team)));
+                // An optional trigger that came with others at the same moment (Black Luster Soldier's
+                // second attack, as the Magician of Faith it attacked flips) is offered here, not as a
+                // yes/no of its own: this is its only chance, so it's asked.
+                const trigger = this.optionalTriggerIn(m);
+                const quiet = !m.forced && (!options.length || (!top && !fresh.length && !answering && !trigger && (this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team)));
                 const ask = !top && !m.forced ? this.askFor(team, Number(m.hint_timing) | Number(m.hint_timing_other), answering) : null;
-                return q({ kind: 'chain', forced: m.forced, options, pass, ...(quiet ? { quiet } : {}), ...(ask ? { ask } : {}) }, (a) => {
+                const triggered = trigger ? options.find((o) => this.engine.optionalTrigger(o.code)) : undefined;
+                return q({ kind: 'chain', forced: m.forced, options, pass, ...(quiet ? { quiet } : {}), ...(ask ? { ask } : {}), ...(triggered && !m.forced ? { trigger: triggered.id } : {}) }, (a) => {
                     const id = choice(a);
                     if (id === null) return null;
                     if (id === pass) return { type: R.SELECT_CHAIN, index: null };
@@ -1522,7 +1527,12 @@ export class DuelSession {
         if (!m.selects.length) return true;
         const answering = m.spe_count > 0 && m.selects.some((c) => this.engine.answersEvents(c.code));
         const damage = this.damageStep && Number(m.hint_timing) !== 0;
-        return !this.chain.length && !damage && !answering && (this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team);
+        return !this.chain.length && !damage && !answering && !this.optionalTriggerIn(m) && (this.turnPlayer === team || m.spe_count === 0 || this.lastActor === team);
+    }
+
+    /** Whether a chain window offers a card's optional trigger effect, at the moment it triggered (its only chance). */
+    private optionalTriggerIn(m: Extract<OcgMessage, { type: M.SELECT_CHAIN }>): boolean {
+        return m.spe_count > 0 && m.selects.some((c) => this.engine.optionalTrigger(c.code));
     }
 
     isContinuousTrap(code: number) {

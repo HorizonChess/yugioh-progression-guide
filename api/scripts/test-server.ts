@@ -6,6 +6,7 @@
 //
 // Captured email is readable at GET /__test/mail (cleared by DELETE /__test/mail).
 // POST /__test/reward { seriesId, duelistName, prizeId } books a reward for a player.
+// GET /__test/duels/latest, PUT /__test/duels/:id/answers { answers, setup? }: the newest duel, and its answers (and setup) replaced.
 // Start the web dev server pointing at it:  NEXT_PUBLIC_API_URL=http://localhost:4100 npm run dev -w web
 //
 // When api/.env has MONGODB_URI, the synced card data is copied (read-only) from
@@ -72,6 +73,20 @@ app.post('/__test/reward', async (request, reply) => {
     };
     await app.db.collection('seriesPlayers').updateOne({ seriesId: series._id, userId: user._id }, { $push: { rewards: reward } } as never);
     return reward;
+});
+
+// The newest duel's setup and answers, and replacing a duel's answers: a driver can play a game on
+// to a moment it wants to test (scripts/duel-setup-moment.ts) and have the page pick it up there.
+app.get('/__test/duels/latest', async (_request, reply) => {
+    const duel = await app.db.collection('duels').find({ setup: { $ne: null } }).sort({ _id: -1 }).limit(1).next();
+    if (!duel) return reply.code(404).send({ error: 'No duel' });
+    return { id: duel._id.toHexString(), setup: duel.setup, answers: duel.answers };
+});
+app.put('/__test/duels/:id/answers', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { answers, setup } = request.body as { answers: string[]; setup?: Record<string, unknown> };
+    const done = await app.db.collection('duels').updateOne({ _id: new ObjectId(id) }, { $set: { answers, ...(setup ? { setup } : {}), updatedAt: new Date() } });
+    return done.matchedCount ? reply.code(204).send() : reply.code(404).send({ error: 'No such duel' });
 });
 
 app.get('/__test/mail', async () => sent);

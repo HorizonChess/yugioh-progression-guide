@@ -98,6 +98,13 @@ export interface Engine {
      * can only be used at that moment, unlike one usable at any time.
      */
     answersEvents(code: number): boolean;
+    /**
+     * Whether a card has an optional trigger effect ("If ...: you can ..."), as far as its script
+     * shows. Alone, the engine asks about one as a yes/no; with others at the same moment (Black
+     * Luster Soldier's second attack as a Magician of Faith it attacked flips), it's offered in a
+     * chain window, and that moment is its only chance.
+     */
+    optionalTrigger(code: number): boolean;
     /** A Continuous Trap (it stays on the field once flipped). */
     isContinuousTrap(code: number): boolean;
     /** A token (Sheep Token, Ojama Token): made by an effect, never in a deck. */
@@ -265,6 +272,10 @@ export function createEngine(source: EngineData): Engine {
         answersEvents(code) {
             const script = engine.readScript(`c${learned.get(code) ?? code}.lua`) ?? '';
             return script.split(/Effect\.CreateEffect\(/).slice(1).some((e) => /SetType\([^)]*EFFECT_TYPE_(ACTIVATE|QUICK_[OF])/.test(e) && /SetCode\(\s*EVENT_(?!FREE_CHAIN)/.test(e));
+        },
+        optionalTrigger(code) {
+            const script = engine.readScript(`c${learned.get(code) ?? code}.lua`) ?? '';
+            return /EFFECT_TYPE_TRIGGER_O/.test(script);
         },
         effectKind(code) {
             const script = engine.readScript(`c${learned.get(code) ?? code}.lua`) ?? '';

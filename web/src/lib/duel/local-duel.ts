@@ -16,6 +16,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * tab that started one a game ran out of memory within a few games.
  */
 let shared: Worker | null = null;
+/** Openings of games so far, to tell one from the next (see FromWorker). */
+let opened = 0;
 function duelWorker(): Worker {
     if (shared) return shared;
     const w = new Worker(new URL("./duel.worker.ts", import.meta.url), { type: "module" });
@@ -34,6 +36,7 @@ export function connectLocalDuel(
     onError: (message: string) => void,
 ): DuelConnection {
     const worker = duelWorker();
+    const conn = ++opened;
     const send = (m: ToWorker) => worker.postMessage(m);
     let last: DuelState | null = null;
     const show = (state: DuelState, frames: DuelServerMessage["frames"] = []) => onMessage({ type: "state", frames, state: match ? { ...state, match } : state });
@@ -76,8 +79,8 @@ export function connectLocalDuel(
 
     const onWorker = (event: MessageEvent<FromWorker>) => {
         const m = event.data;
-        // (A message about the game before this one, still on its way.)
-        if (m.duelId !== duelId) return;
+        // (A message about the game before this one, or an earlier opening of this one, still on its way.)
+        if (m.duelId !== duelId || m.conn !== conn) return;
         if (m.type === "state") {
             last = m.state;
             show(m.state, m.frames);
@@ -91,7 +94,7 @@ export function connectLocalDuel(
     const onFailure = (event: ErrorEvent) => onError(event.message || "The duel engine failed to start");
     worker.addEventListener("message", onWorker);
     worker.addEventListener("error", onFailure);
-    send({ type: "open", base: BASE, duelId, device });
+    send({ type: "open", base: BASE, duelId, conn, device });
 
     return {
         answer: (seq, answer) => send({ type: "answer", seq, answer }),

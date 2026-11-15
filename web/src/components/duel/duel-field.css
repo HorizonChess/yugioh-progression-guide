@@ -200,9 +200,10 @@
 .df-pile.is-targeted { border: 1px solid #ff4a3a; box-shadow: 0 0 0 1px #ff4a3a, 0 0 14px rgba(255, 74, 58, 0.7); }
 .df-pile .df-target { width: 78%; }
 .df-card.is-picked .df-card__turn, .df-hand__card.is-picked, .df-listcard.is-picked img { box-shadow: 0 0 0 3px #8dff8d, 0 0 16px #8dff8d; border-radius: 4px; }
-/* The card you've picked up rises out of the hand (or off its zone). */
+/* The card you've picked up rises out of the hand (or off its zone): over its neighbours and the
+   field, but under a question's panel (.df-sheet, 50), which it would otherwise hide on a desk. */
 .df-hand__card { transition: translate 0.18s ease-out, scale 0.18s ease-out; }
-.df-hand__card.is-raised { translate: 0 calc(var(--hw) * -0.32); scale: 1.12; z-index: 60 !important; }
+.df-hand__card.is-raised { translate: 0 calc(var(--hw) * -0.32); scale: 1.12; z-index: 49 !important; }
 /* In a tight hand the raised card makes room, so it never hides the card next to it. */
 .df-hand__card.is-raised { margin-inline: calc(var(--hw) * 0.16) !important; transition: margin 0.15s ease; }
 .df-card.is-raised .df-card__turn { translate: 0 -5px; scale: 1.08; filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.7)); }

@@ -1,8 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import type { RpsHand } from "@ygo/shared";
 import { CARD_BACK } from "./parts";
+import { sfx } from "./sfx";
 import "./rps-showdown.css";
 
 /*
@@ -38,6 +39,16 @@ export default function RpsShowdown({ mine, theirs, rival, children, compact }: 
     compact?: boolean;
 }) {
     const outcome = mine === theirs ? "tie" : info(mine).beats === theirs ? "win" : "lose";
+    // Its sound, in time with the cards (rps-showdown.css): both dealt, turned over together, then
+    // the winner strikes and the loser cracks (a tie: both bounce back).
+    useEffect(() => {
+        const at = (s: number, play: () => void) => setTimeout(play, s * 1000);
+        const timers = [
+            at(0, sfx.whoosh), at(0.12, sfx.whoosh), at(0.85, sfx.flip),
+            ...(outcome === "tie" ? [at(1.5, sfx.click), at(1.6, sfx.click)] : [at(1.5, () => sfx.impact()), at(1.72, sfx.shatter)]),
+        ];
+        return () => timers.forEach(clearTimeout);
+    }, [outcome]);
     const said = outcome === "tie" ? `You both threw ${handLabel(mine)}. Again!` : outcome === "win" ? "You win!" : `${rival} wins!`;
     return (
         <div className={`rps rps--${outcome} ${compact ? "rps--compact" : ""}`} role="status" aria-label={`${rival} threw ${handLabel(theirs)}, you threw ${handLabel(mine)}. ${said}`}>
