@@ -793,6 +793,11 @@ html::-webkit-scrollbar-corner,
   animation: flicker 3.2s infinite steps(1, end);
 }
 .wall-torch--b { animation-duration: 2.7s; animation-delay: -1.3s; }
+/* The Bots Arena's wall in 3D (GlobalBackground's ArenaWall): over the page's wall and its vignette,
+   which it draws itself to begin and end with. Desktop only. */
+.arena-3d { position: fixed; inset: 0; z-index: -1; width: 100vw; height: 100vh; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0s 0.2s; }
+.arena-3d.is-shown { opacity: 1; visibility: visible; transition: opacity 0.2s; }
+@media (max-width: 767px) { .arena-3d { display: none; } }
 @keyframes flicker {
   0% { opacity: 1; } 7% { opacity: 0.82; } 12% { opacity: 0.97; } 31% { opacity: 0.88; } 38% { opacity: 1; }
   54% { opacity: 0.78; } 59% { opacity: 0.95; } 77% { opacity: 0.86; } 84% { opacity: 1; }
