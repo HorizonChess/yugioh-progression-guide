@@ -135,17 +135,19 @@ type DuelHandle = Parameters<OcgCoreSync['destroyDuel']>[0];
  * are closures over the DuelSession, so every duel ever created stayed in memory with everything it held, long
  * after the app had let go of it (in self-play: ~3 MB a duel, gigabytes within minutes). The core gets
  * stand-ins that call the real readers until the duel is destroyed; the map then keeps only the stand-ins.
- * This frees only what nothing else reaches: a session the app still holds is untouched.
+ * This frees only what nothing else reaches: a session the app still holds is untouched. After the duel is
+ * destroyed the stand-ins call the engine's own readers (the same data): the bot's look-ahead restores saved
+ * copies of the core, in which a duel since destroyed is alive and still reads cards and scripts.
  */
-function releasing(core: OcgCoreSync): OcgCoreSync {
+function releasing(core: OcgCoreSync, engine: () => Engine): OcgCoreSync {
     const live = new WeakMap<object, { options: DuelOptions | null }>();
     const create = core.createDuel.bind(core), destroy = core.destroyDuel.bind(core);
     core.createDuel = (options: DuelOptions) => {
         const ref: { options: DuelOptions | null } = { options };
         const handle = create({
             ...options,
-            cardReader: (code: number) => ref.options!.cardReader(code),
-            scriptReader: (name: string) => ref.options!.scriptReader(name),
+            cardReader: (code: number) => (ref.options ? ref.options.cardReader(code) : engine().cardData(code) ?? null) as ReturnType<DuelOptions['cardReader']>,
+            scriptReader: (name: string) => (ref.options ? ref.options.scriptReader(name) : engine().readScript(name)) as ReturnType<DuelOptions['scriptReader']>,
             errorHandler: (...args: Parameters<NonNullable<DuelOptions['errorHandler']>>) => ref.options?.errorHandler?.(...args),
         } as DuelOptions);
         if (handle) live.set(handle as object, ref);
@@ -173,15 +175,15 @@ export function createEngine(source: EngineData): Engine {
 
     let allCodes: number[] | null = null;
     const engine: Engine = {
-        core: releasing(source.core),
+        core: releasing(source.core, () => engine),
         version: source.version,
         async revive() {
-            engine.core = releasing(await source.newCore());
+            engine.core = releasing(await source.newCore(), () => engine);
         },
         simCore() {
             if (!sim.started) {
                 sim.started = true;
-                source.newCore().then((core) => (sim.core = releasing(core)), () => undefined);
+                source.newCore().then((core) => (sim.core = releasing(core, () => engine)), () => undefined);
             }
             return sim.core;
         },
