@@ -10,8 +10,6 @@ import { useIsPhone } from "@/lib/useIsPhone";
 import { rpsSeenKey } from "./PreGame";
 import RpsShowdown from "./RpsShowdown";
 
-/** How long the opening showdown stays before the board is yours (a tap closes it sooner). */
-const RPS_SHOWDOWN_MS = 6000;
 import { DesktopBoard, PhoneBoard } from "./Boards";
 import { NameDeclare } from "./NameDeclare";
 import { cardImage, type CardMarks, type Pose } from "./parts";
@@ -129,7 +127,9 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
         const say = (name: (code: number) => string) => describe(e, view, name) ?? "";
         setLog((l) => [...l.slice(-199), { key: Math.random(), say, side: "side" in e ? (e.side ?? undefined) : undefined }]);
     }, []);
-    const duel = useDuel(duelId, onEvent, local);
+    // Game 1's showdown may open the board (below): until it's known, the duel holds after the opening deal.
+    const [holdOpening] = useState(() => typeof window !== "undefined" && !!duelId && !sessionStorage.getItem(rpsSeenKey(duelId)));
+    const duel = useDuel(duelId, onEvent, local, holdOpening);
     const { state, view, prompt, effects } = duel;
     const cards = useCards([...codesOf(view, prompt), ...shown]);
     // Tokens aren't in the card catalog: their names come with them, and are kept once seen (a
@@ -367,19 +367,23 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
     };
 
     // Game 1's rock-paper-scissors, when you didn't see it decided (your rival or the bot won and
-    // chose at once): its showdown opens the board. Once per duel in this browser.
+    // chose at once): its showdown opens the board, and the duel starts when you close it (Duel!),
+    // as it does when you won and chose. Once per duel in this browser.
     const [rpsChecked, setRpsChecked] = useState(false);
     const [rpsOpen, setRpsOpen] = useState(false);
     if (!rpsChecked && state && view) {
         setRpsChecked(true);
         // (By the first look the bot may have played its first turn already.)
-        setRpsOpen(!!state.match?.rps && view.turn <= 2 && !sessionStorage.getItem(rpsSeenKey(duelId)));
+        setRpsOpen(!!state.match?.rps && state.view.turn <= 2 && !sessionStorage.getItem(rpsSeenKey(duelId)));
     }
+    // The duel goes on once the showdown is closed (or there's none): the rival's first moves play after it, not under it.
+    const { release } = duel;
+    useEffect(() => {
+        if (rpsChecked && !rpsOpen) release();
+    }, [rpsChecked, rpsOpen, release]);
     useEffect(() => {
         if (!rpsOpen) return;
         sessionStorage.setItem(rpsSeenKey(duelId), "1");
-        const t = setTimeout(() => setRpsOpen(false), RPS_SHOWDOWN_MS);
-        return () => clearTimeout(t);
     }, [rpsOpen, duelId]);
 
     if (!state || !view) {

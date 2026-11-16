@@ -55,6 +55,8 @@
 .dl-btn { min-height: 44px; padding: 8px 14px; font: 800 13px/1.2 var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; text-shadow: var(--rm-ink-shadow, none); }
 .dl-btn--main { color: #2a1c05; text-shadow: 0 1px 0 rgba(255, 240, 190, 0.6); background: linear-gradient(#f3d98a, #c99a3a); }
 .dl-btn--quiet { background: transparent; box-shadow: inset 0 0 0 1px rgba(243, 231, 199, 0.45); }
+/* A button on its own row ("Back to your match with …"): its gold rim stays inside the board on a phone, and a long name wraps. */
+.dl > .dl-btn { max-width: calc(100% - 16px); overflow-wrap: anywhere; }
 @media (max-width: 899px) {
   .dl-slabs { gap: 10px; }
   .dl-slab { padding: 10px 6px 8px; }

@@ -134,12 +134,18 @@ export async function soloDuel(page) {
 
 /**
  * A duel against the bot or the rival is a match that opens on its pregame: throws Rock until
- * rock-paper-scissors is decided, goes first when that's yours to choose, and keeps the deck as it
- * is when there's side decking, until the board is up.
+ * rock-paper-scissors is decided, goes first when that's yours to choose (or closes the showdown
+ * when the bot won), and keeps the deck as it is when there's side decking, until the board is up.
  */
 export async function throughPregame(page) {
     for (let i = 0; i < 80; i++) {
-        if (await page.locator(".df-phases").count()) return;
+        if (await page.locator(".df-phases").count()) {
+            // The bot won and chose: its showdown opens the board, and the duel waits for Duel!.
+            const duel = page.getByRole("button", { name: "Duel!", exact: true });
+            await duel.waitFor({ timeout: 1500 }).catch(() => {});
+            if (await duel.count()) await duel.click().catch(() => {});
+            return;
+        }
         for (const name of ["Rock", "Go first", "Keep the deck as it is"]) {
             const button = page.getByRole("button", { name, exact: true });
             if (await button.count()) await button.click({ timeout: 2000 }).catch(() => {});

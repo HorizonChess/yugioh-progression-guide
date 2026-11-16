@@ -66,19 +66,32 @@ function yours(m: OcgMessage, d: DuelSession): OcgResponse {
     return heuristicAnswer(m, d, you);
 }
 
-const answerer = (m: OcgMessage, d: DuelSession, t: Team): OcgResponse => {
-    if (d.answers.length < stored.length) return stored[d.answers.length]!;
-    if (d.view(you).turn > 30) throw new Error('No moment by turn 30');
-    return t === you ? yours(m, d) : botAnswer(m, d, t);
-};
-const duel = new DuelSession(engine, { ...latest.setup, bots: [true, true], solo: false }, { answerer });
-try {
-    duel.start();
-    throw new Error(`The duel ended first: ${JSON.stringify(duel.result)}`);
-} catch (e) {
-    if (!(e instanceof Stop)) throw e;
+class TooLate extends Error {}
+// Breaker is 3 cards of 40: other deals (seeds) are tried until one reaches it early, with the setup stored too.
+const latestTurn = moment === 'breaker' ? 8 : 30;
+const tries = moment === 'breaker' ? 40 : 1;
+let duel: DuelSession | null = null, setup = latest.setup;
+for (let i = 0; i < tries && !duel; i++) {
+    const tried: DuelSetup = i === 0 ? latest.setup : { ...latest.setup, seed: latest.setup.seed.map((x, k) => (k === 0 ? String((BigInt(x) + BigInt(i)) % (1n << 64n)) : x)) as DuelSetup['seed'] };
+    const answerer = (m: OcgMessage, d: DuelSession, t: Team): OcgResponse => {
+        if (d.answers.length < stored.length) return stored[d.answers.length]!;
+        if (d.view(you).turn > latestTurn) throw new TooLate();
+        return t === you ? yours(m, d) : botAnswer(m, d, t);
+    };
+    const tryDuel = new DuelSession(engine, { ...tried, bots: [true, true], solo: false }, { answerer });
+    try {
+        tryDuel.start();
+        if (tries === 1) throw new Error(`The duel ended first: ${JSON.stringify(tryDuel.result)}`);
+    } catch (e) {
+        if (e instanceof Stop) {
+            duel = tryDuel;
+            setup = tried;
+        } else if (!(e instanceof TooLate) || tries === 1) throw e;
+    }
 }
+if (!duel) throw new Error(`No deal reached the moment by turn ${latestTurn}`);
 const answers = duel.answers.map(encodeAnswer);
-const res = await fetch(`${base}/__test/duels/${latest.id}/answers`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ answers }) });
+const body = setup === latest.setup ? { answers } : { answers, setup };
+const res = await fetch(`${base}/__test/duels/${latest.id}/answers`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 if (!res.ok) throw new Error(`Storing the answers failed (${res.status})`);
 console.log(JSON.stringify({ duelId: latest.id, answers: answers.length, from: stored.length, turn: duel.view(you).turn }));

@@ -174,7 +174,7 @@ export interface LocalGame {
     match?: DuelMatchView;
 }
 
-export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: DuelView) => void, local?: LocalGame) {
+export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: DuelView) => void, local?: LocalGame, holdOpening = false) {
     const [state, setState] = useState<DuelState | null>(null);
     const [shown, setShown] = useState<DuelView | null>(null);
     const [playing, setPlaying] = useState(false);
@@ -191,6 +191,9 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
     /** The field last put on screen: what's new in a frame is measured against it. */
     const shownRef = useRef<DuelView | null>(null);
     const busy = useRef(false);
+    /** Once the opening hands are dealt, the frames wait (the rock-paper-scissors showdown is on screen) until let go. */
+    const held = useRef(holdOpening);
+    const letGo = useRef<(() => void) | null>(null);
     /** A reveal waiting for you to say you've seen it: this lets the frames go on. */
     const seen = useRef<(() => void) | null>(null);
     const latest = useRef<DuelState | null>(null);
@@ -270,6 +273,7 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         busy.current = true;
         setPlaying(true);
         while (queue.current.length) {
+            if (held.current && shownRef.current) await new Promise<void>((r) => (letGo.current = r));
             let frame = queue.current.shift()!;
             // The opening hands: both duelists draw their five at the same time, each from their own
             // deck, so the two opening draws play as one.
@@ -506,6 +510,13 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         setAnswered(true);
     }, []);
 
+    /** The frames held for the opening showdown go on. */
+    const release = useCallback(() => {
+        held.current = false;
+        letGo.current?.();
+        letGo.current = null;
+    }, []);
+
     return {
         state,
         view: shown,
@@ -523,5 +534,6 @@ export function useDuel(duelId: string | null, onEvent?: (e: DuelEvent, view: Du
         concede,
         callOff,
         back,
+        release,
     };
 }
