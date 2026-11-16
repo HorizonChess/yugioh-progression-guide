@@ -56,6 +56,11 @@
 /* A match still going: it comes first. */
 .ba-open { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid rgba(245, 197, 66, 0.55); border-radius: 6px; background: rgba(245, 197, 66, 0.08); }
 .ba-open p { margin: 0; font: 600 13px/1.4 var(--font-main); }
+/* Under the greyed start button: why, and the way on. */
+.ba-blocked { margin: 2px 0 0; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(245, 197, 66, 0.55); background: rgba(245, 197, 66, 0.1); font: 600 13px/1.45 var(--font-main); text-align: center; }
+.ba-blocked b { color: #f5c542; }
+.ba-blocked__link { padding: 0; border: 0; background: none; font: inherit; color: #ffe08a; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.ba-blocked__link:disabled { opacity: 0.5; cursor: default; }
 .op-credit { font: 600 11px/1.4 var(--font-main); color: #a89a7a; }
 .op-credit a { color: #e0b54f; text-decoration: underline; text-underline-offset: 2px; }
 .op-side .dl-deck { justify-content: space-between; }

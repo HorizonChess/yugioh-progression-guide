@@ -336,6 +336,16 @@ export default function BotsArena({ seriesId, guest, setName, setDate, decks }: 
                                 {choice.kind === "solo" ? "Start a solo duel" : `Duel ${opponentName(choice)} · ${games === 1 ? "one game" : "best of 3"}`}
                             </button>
                         </div>
+                        {/* Why it can't start: one match at a time, and the one still on is said here, beside the button. */}
+                        {open && (
+                            <p className="ba-blocked" role="note">
+                                Your {open.match ? "match" : "duel"} against <b>{openFoe?.name ?? "the bot"}</b> is still on: {" "}
+                                <button type="button" className="ba-blocked__link" onClick={() => router.push(duelPath(open.id))}>continue it</button>
+                                {" "}or{" "}
+                                <button type="button" className="ba-blocked__link" disabled={busy} onClick={() => run(() => concedeDuel(open.id, true))}>end it</button>
+                                {" "}to start another.
+                            </p>
+                        )}
                         <p className="dl-note">Played by {rules.name}, with the cards of {setName}. Practice doesn&rsquo;t count for the series: play it whenever you like.</p>
                         </div>
                     </div>
