@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { engineDataAvailable, loadEngine } from '../src/duel/engine';
-import { DuelSession, type Team } from '@ygo/duel/session';
+import { DuelSession, type DuelSetup, type Team } from '@ygo/duel/session';
 import type { DuelAnswer, DuelPrompt, DuelView } from '@ygo/shared';
 
 // A duel is rebuilt from its answers on Back (a move taken back), after a restart and when it comes
@@ -49,7 +49,7 @@ describe.skipIf(!engineDataAvailable())('card uids in a rebuilt duel', () => {
             const engine = await loadEngine();
             let r = seed;
             const rand = () => ((r = (r * 1103515245 + 12345) % 2147483648) / 2147483648);
-            const setup = { seed: [String(seed), '11400714819323198485', '77', '2685821657736338717'] as [string, string, string, string], mode: 'MR1' as const, decks: [deck, deck], names: ['A', 'B'], bots: [false, false], rules: 4 as const };
+            const setup: DuelSetup = { seed: [String(seed), '11400714819323198485', '77', '2685821657736338717'] as [string, string, string, string], mode: 'MR1' as const, decks: [deck, deck], names: ['A', 'B'], bots: [false, false], rules: 4 as const };
             const live = new DuelSession(engine, setup);
             live.start();
             let checked = 0;
