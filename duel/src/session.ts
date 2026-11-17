@@ -412,6 +412,11 @@ export class DuelSession {
             for (const code of deck.extra)
                 core.duelNewCard(handle, { team: t, duelist: 0, code, controller: t, location: L.EXTRA, sequence: 0, position: P.FACEDOWN_DEFENSE });
         }
+        // The Extra Decks' cards get their uids now, before any card moves. Taken when first looked at
+        // instead, they took the numbers after whatever had happened by then: a live duel is looked at
+        // from the start, one rebuilt from its answers (Back, a restart) only at the end, so the rebuilt
+        // duel numbered every card drawn since differently, and the board flew cards to the wrong places.
+        for (const t of [0, 1] as const) this.tracker.fit(t, L.EXTRA, this.setup.decks[t].extra.length);
         core.startDuel(handle);
         this.replayQueue = [...answers];
         this.run();
