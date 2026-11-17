@@ -1,30 +1,16 @@
 import { ObjectId, type Db } from 'mongodb';
 import type { WebSocket } from 'ws';
+import { describeNotification, notificationTitle, type NotificationPayload, type NotificationType } from '@ygo/shared';
+import type { Pusher } from './push';
 
 /*
  * What happened to a player while they weren't looking: an invite, a rival's
- * match report, a snatched card. Stored, so it waits for their next visit, and
- * pushed at once to any tab they have open.
+ * match report, a snatched card. Stored, so it waits for their next visit,
+ * pushed at once to any tab they have open, and sent as a push notification to
+ * the devices they switched those on for.
  */
 
-export type NotificationType =
-    | 'invite'
-    | 'invite-accepted'
-    | 'invite-declined'
-    | 'report'
-    | 'report-confirmed'
-    | 'report-rejected'
-    | 'snatched'
-    | 'banlist'
-    | 'rival-left'
-    | 'duel-challenge'
-    | 'duel-accepted'
-    | 'duel-declined'
-    | 'duel-call-off'
-    | 'duel-result';
-
-/** Display-ready details: who did it, in which series, to which card. */
-export type NotificationPayload = Record<string, string | number | boolean>;
+export type { NotificationPayload, NotificationType } from '@ygo/shared';
 
 export interface NotificationDoc {
     _id: ObjectId;
@@ -63,7 +49,23 @@ export interface Notifier {
     listen(userId: ObjectId, socket: WebSocket): void;
 }
 
-export function createNotifier(db: Db): Notifier {
+/**
+ * The push for a notification. A tap opens the game on it (as a tap in the bell does). A rival's
+ * moves in one duel share a tag, so the newest replaces the last instead of piling up.
+ */
+export function pushOf(doc: NotificationDoc) {
+    const duelId = typeof doc.payload.duelId === 'string' ? doc.payload.duelId : null;
+    return {
+        id: doc._id.toHexString(),
+        title: notificationTitle(doc.type),
+        body: describeNotification(doc),
+        tag: duelId ? `duel:${duelId}` : `${doc.type}:${doc._id.toHexString()}`,
+        // Relative to the app's own address (the service worker resolves it).
+        url: `?notification=${doc._id.toHexString()}`,
+    };
+}
+
+export function createNotifier(db: Db, pusher?: Pusher): Notifier {
     const sockets = new Map<string, Set<WebSocket>>();
     return {
         async send(userId, type, seriesId, payload) {
@@ -71,6 +73,7 @@ export function createNotifier(db: Db): Notifier {
             await notificationsCollection(db).insertOne(doc);
             const message = JSON.stringify({ notification: publicNotification(doc) });
             for (const socket of sockets.get(userId.toHexString()) ?? []) socket.send(message);
+            await pusher?.send(userId, pushOf(doc));
         },
         listen(userId, socket) {
             const key = userId.toHexString();

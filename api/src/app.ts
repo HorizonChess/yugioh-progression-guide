@@ -35,6 +35,8 @@ import { cardRoutes } from './routes/cards';
 import { inviteRoutes } from './routes/invites';
 import { matchRoutes } from './routes/matches';
 import { notificationRoutes } from './routes/notifications';
+import { pushRoutes } from './routes/push';
+import { createPusher, pushSender, type Pusher, type PushDelivery } from './game/push';
 import { packRoutes } from './routes/packs';
 import { seriesRoutes } from './routes/series';
 import { nextSegmentRewrite } from './static-site';
@@ -63,6 +65,8 @@ export interface AppOptions {
     googleFetch?: typeof fetch;
     /** Delivers verification and reset emails. Defaults to SMTP from the config. */
     mailer?: Mailer;
+    /** Hands push notifications to the devices' push services. Defaults to web push; tests substitute a fake. */
+    pushDelivery?: PushDelivery;
 }
 
 declare module 'fastify' {
@@ -70,6 +74,8 @@ declare module 'fastify' {
         /** The synced card data, read and cached for game rules. */
         catalog: CardCatalog;
         notifier: Notifier;
+        /** Push notifications to players' devices. */
+        pusher: Pusher;
         /** Duels on the rules engine: storage, live sessions and their sockets. */
         duels: DuelHub;
         /** Stores a notification and pushes it live, without holding up the response. */
@@ -82,7 +88,7 @@ declare module 'fastify' {
  * routes and (when `WEB_DIST` is set) the static site, all from one origin so
  * session cookies can stay same-site.
  */
-export async function buildApp({ config, logger, googleFetch, mailer }: AppOptions): Promise<FastifyInstance> {
+export async function buildApp({ config, logger, googleFetch, mailer, pushDelivery }: AppOptions): Promise<FastifyInstance> {
     const rewriteSegment = config.WEB_DIST ? nextSegmentRewrite(config.WEB_DIST) : null;
     const app = Fastify({
         logger: logger ?? config.NODE_ENV !== 'test',
@@ -131,7 +137,8 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
     if (!moved.skipped) app.log.info({ moved }, 'card ids migrated');
     app.decorate('catalog', createCardCatalog(app.db));
     registerBackground(app);
-    app.decorate('notifier', createNotifier(app.db));
+    app.decorate('pusher', await createPusher(app.db, pushSender(config.PUBLIC_URL), pushDelivery));
+    app.decorate('notifier', createNotifier(app.db, app.pusher));
     app.decorate('notify', (userId: ObjectId, type: NotificationType, seriesId: ObjectId, payload: NotificationPayload) =>
         app.runInBackground(() => app.notifier.send(userId, type, seriesId, payload)),
     );
@@ -161,6 +168,7 @@ export async function buildApp({ config, logger, googleFetch, mailer }: AppOptio
         await api.register(deckRoutes, { prefix: '/series/:seriesId' });
         await api.register(duelRoutes);
         await api.register(notificationRoutes, { prefix: '/notifications' });
+        await api.register(pushRoutes, { prefix: '/push' });
         await api.register(inviteRoutes, { prefix: '/invites' });
         if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
             await api.register(googleRoutes, {

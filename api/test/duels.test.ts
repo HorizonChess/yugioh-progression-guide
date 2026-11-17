@@ -32,7 +32,10 @@ beforeAll(async () => {
 afterAll(async () => {
     await mongo.stop();
 });
+/** What reached the players' devices as push notifications: whose device, and the message. */
+let pushed: { endpoint: string; message: Record<string, string> }[] = [];
 beforeEach(async () => {
+    pushed = [];
     app = await appWithCards();
 });
 afterEach(async () => {
@@ -41,7 +44,7 @@ afterEach(async () => {
 
 /** The API, with the sets and cards the duels here play. */
 async function appWithCards(env: Record<string, string> = {}) {
-    const { app } = await testApp(mongo, env);
+    const { app } = await testApp(mongo, env, { pushDelivery: async (device, body) => void pushed.push({ endpoint: device.endpoint, message: JSON.parse(body) }) });
     await cardSetsCollection(app.db).insertMany(TIMELINE.map((set_name, i) => ({ _id: set_name, set_name, set_code: `S${i}`, num_of_cards: 100, tcg_date: `2002-0${i + 3}-08` })));
     await cardsCollection(app.db).insertMany(CARDS.map(([id, name, type]) => ({
         _id: id, id, name, type, frameType: type.startsWith('Spell') ? 'spell' : type.startsWith('Trap') ? 'trap' : 'normal', desc: '', race: 'Warrior',
@@ -552,7 +555,75 @@ describe.skipIf(!engineDataAvailable())('duels', () => {
         const series = await seriesCollection(app.db).findOne({ _id: new ObjectId(id) });
         expect(series!.matchHistory).toHaveLength(1);
         expect(series!.currentSetName).toBe(TIMELINE[1]);
-        expect((await yami.call('GET', '/api/notifications')).json().notifications[0]).toMatchObject({ type: 'duel-result' });
+        // Both played it to the end: neither is told the result, they saw it.
+        for (const p of [yami, kaiba]) expect((await p.call('GET', '/api/notifications')).json().notifications.map((n: { type: string }) => n.type)).not.toContain('duel-result');
+    });
+
+    it("tells a player who isn't looking that it's their move, once, and the result only if they weren't there", async () => {
+        const yami = await player('Yami');
+        const kaiba = await player('Kaiba');
+        const id = (await yami.call('POST', '/api/series', { name: 'Battle City', mode: 'duo', startSetIndex: 0, packsPerSet: 12 })).json().series.id;
+        const { code } = (await yami.call('POST', `/api/series/${id}/invites`)).json();
+        await kaiba.call('POST', '/api/invites/accept', { code });
+        for (const userId of [await withDeck(yami, id), await withDeck(kaiba, id)]) {
+            await packSessions(app.db).insertOne({ _id: new ObjectId(), seriesId: new ObjectId(id), userId, setIndex: 0, setName: TIMELINE[0]!, source: 'set', packs: [], flipped: [], stage: 'saved', active: true, createdAt: new Date() } as never);
+        }
+        for (const [p, endpoint] of [[yami, 'https://push.example/yami'], [kaiba, 'https://push.example/kaiba']] as const) {
+            await p.call('POST', '/api/push/subscriptions', { endpoint, keys: { p256dh: 'BPk3', auth: 'a1' } });
+        }
+        const duelId = (await yami.call('POST', `/api/series/${id}/duels`, { deckId: 'main', against: 'rival' })).json().duel.id;
+        await kaiba.call('POST', `/api/duels/${duelId}/accept`, { deckId: 'main' });
+        await ready(duelId, [{ cookie: yami.cookie }, { cookie: kaiba.cookie }]);
+        await app.settleBackground();
+        await app.db.collection('notifications').deleteMany({});
+        pushed = [];
+
+        /** Opens the duel and answers what's asked until it waits on the other player. Returns how many answers. */
+        const playUntilStuck = async (p: Player) => {
+            const socket = await app.injectWS(`/api/duels/${duelId}/live`, { headers: { cookie: p.cookie }, socket: { remoteAddress: '127.0.0.1' } } as never);
+            let answered = 0;
+            await new Promise<void>((resolve) => {
+                let quiet = setTimeout(resolve, 1500);
+                socket.on('message', (raw: Buffer) => {
+                    clearTimeout(quiet);
+                    quiet = setTimeout(resolve, 1500);
+                    const { state } = JSON.parse(raw.toString()) as DuelServerMessage;
+                    if (state.prompt) {
+                        answered++;
+                        socket.send(JSON.stringify({ type: 'answer', seq: state.seq, answer: humanAnswer(state.prompt) }));
+                    }
+                });
+            });
+            socket.terminate();
+            await new Promise((r) => setTimeout(r, 50));
+            return answered;
+        };
+        // Whoever the duel waits on moves first; the other isn't looking.
+        let [mover, away] = [kaiba, yami];
+        if ((await playUntilStuck(kaiba)) === 0) {
+            [mover, away] = [yami, kaiba];
+            expect(await playUntilStuck(yami)).toBeGreaterThan(1);
+        }
+        await app.settleBackground();
+        const told = (await away.call('GET', '/api/notifications')).json().notifications;
+        expect(told).toHaveLength(1);
+        expect(told[0]).toMatchObject({ type: 'duel-turn', read: false, payload: { from: mover.name, duelId } });
+        expect((await mover.call('GET', '/api/notifications')).json().notifications).toEqual([]);
+        expect(pushed).toEqual([{ endpoint: `https://push.example/${away.name.toLowerCase()}`, message: expect.objectContaining({ title: 'Your move', tag: `duel:${duelId}` }) }]);
+
+        // Opening the duel is reading it.
+        await playUntilStuck(away);
+        await app.settleBackground();
+        expect((await away.call('GET', '/api/notifications')).json().notifications.filter((n: { type: string; read: boolean }) => n.type === 'duel-turn' && !n.read)).toEqual([]);
+
+        // The mover gives the match up while the other is away: only the one who wasn't there hears how it ended.
+        await app.db.collection('notifications').deleteMany({});
+        pushed = [];
+        expect((await mover.call('POST', `/api/duels/${duelId}/concede?match=1`)).statusCode).toBe(204);
+        await app.settleBackground();
+        expect((await away.call('GET', '/api/notifications')).json().notifications).toMatchObject([{ type: 'duel-result', payload: { youWon: true, from: mover.name } }]);
+        expect((await mover.call('GET', '/api/notifications')).json().notifications).toEqual([]);
+        expect(pushed.map((p) => p.endpoint)).toEqual([`https://push.example/${away.name.toLowerCase()}`]);
     });
 
     it('calls a rival duel off only when both players agree: nothing is recorded, and a new challenge can be sent', async () => {

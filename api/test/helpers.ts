@@ -15,7 +15,7 @@ export async function startMongo(): Promise<MongoMemoryReplSet> {
 export async function testApp(
     mongo: MongoMemoryReplSet,
     env: Record<string, string> = {},
-    options: Pick<AppOptions, 'googleFetch' | 'mailer'> = {},
+    options: Pick<AppOptions, 'googleFetch' | 'mailer' | 'pushDelivery'> = {},
 ): Promise<{ app: FastifyInstance; config: Config }> {
     const config = loadConfig({
         NODE_ENV: 'test',

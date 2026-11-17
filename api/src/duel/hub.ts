@@ -8,6 +8,7 @@ import {
 } from '@ygo/shared';
 import { confirmReport, reportDuoMatch } from '../game/matches';
 import { findSeries } from '../game/series';
+import { notificationsCollection } from '../game/notifications';
 import { engineDataId } from '@ygo/duel/engine';
 import { engineFaulted, loadEngine } from './engine';
 import { DUEL_RULES, DuelSession, type DuelSetup, type Team } from '@ygo/duel/session';
@@ -193,6 +194,12 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
     const duels = () => duelsCollection(app.db);
     const live = new Map<string, { session: DuelSession; stored: number; touched: number; finished?: boolean }>();
     const sockets = new Map<string, Set<{ socket: WebSocket; team: Team }>>();
+    /** By duel: the team that gave it up (it knows how it ended), until the result is booked. */
+    const quitters = new Map<string, Team>();
+    /** `duel:team` pairs told it's their move, until they open the duel (one notification for a run of moves). */
+    const toldTurn = new Set<string>();
+    /** The teams with the duel open right now. */
+    const present = (id: string) => new Set([...(sockets.get(id) ?? [])].map((s) => s.team));
     // One change at a time per duel, so answers are stored in the order they were played.
     const queues = new Map<string, Promise<unknown>>();
     const serial = <T>(id: string, task: () => Promise<T>): Promise<T> => {
@@ -317,7 +324,20 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
         if (finished) {
             entry.finished = true;
             entry.touched = Date.now();
-        }
+        } else if (fresh.length) tellTurn(duel, session.waitingFor());
+    }
+
+    /**
+     * A rival moved and the duel now waits on a player who doesn't have it open: they're told it's
+     * their move (once, however many moves follow, until they open it).
+     */
+    function tellTurn(duel: DuelDoc, team: Team | null) {
+        const id = duel._id.toHexString();
+        if (team === null || duel.kind !== 'rival' || !duel.seriesId || present(id).has(team)) return;
+        const player = duel.players[team], rival = duel.players[1 - team];
+        if (!player?.userId || !rival || toldTurn.has(`${id}:${team}`)) return;
+        toldTurn.add(`${id}:${team}`);
+        app.notify(player.userId, 'duel-turn', duel.seriesId, { from: rival.name, setName: duel.setName, duelId: id });
     }
 
     /**
@@ -343,6 +363,13 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
 
     /** A rival duel's (or match's) result counts like a confirmed report: the set advances, rewards are booked. */
     async function recordResult(duel: DuelDoc, won: DuelPlayer, lost: DuelPlayer) {
+        // Told only to a player who wasn't there for the end: not one watching it, not one who gave it up.
+        const id = duel._id.toHexString();
+        const there = present(id);
+        const quitter = quitters.get(id);
+        quitters.delete(id);
+        if (quitter !== undefined) there.add(quitter);
+        const knows = (p: DuelPlayer) => [...there].some((t) => duel.players[t]?.userId?.equals(p.userId!));
         const winnerId = won.userId!, loserId = lost.userId!;
         const at = await setOf(duel.seriesId!);
         if (!at || at.setIndex !== duel.setIndex) return;
@@ -351,8 +378,8 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
         const fresh = await findSeries(app.db, duel.seriesId!);
         const confirmed = await confirmReport(app.mongo, app.db, { series: fresh!, userId: loserId, reportId: report._id, timeline: at.timeline });
         if (typeof confirmed === 'string') return app.log.warn({ duel: duel._id, problem: confirmed }, 'duel result not confirmed');
-        for (const [userId, rival, youWon] of [[winnerId, lost.name, true], [loserId, won.name, false]] as const) {
-            app.notify(userId, 'duel-result', duel.seriesId!, { seriesName: at.series.name, from: rival, setName: duel.setName, youWon });
+        for (const [player, rival, youWon] of [[won, lost.name, true], [lost, won.name, false]] as const) {
+            if (!knows(player)) app.notify(player.userId!, 'duel-result', duel.seriesId!, { seriesName: at.series.name, from: rival, setName: duel.setName, youWon });
         }
     }
 
@@ -790,6 +817,7 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
                 const fresh = await duels().findOne({ _id: duel._id });
                 if (!fresh || fresh.status !== 'pregame' || !fresh.match) return;
                 const winner = (1 - seat) as Seat;
+                quitters.set(fresh._id.toHexString(), seat);
                 const match: MatchInfo = { ...fresh.match, over: true, winner };
                 await duels().updateOne(
                     { _id: fresh._id, status: 'pregame' },
@@ -812,6 +840,7 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
         concede(duel, team, wholeMatch) {
             return serial(duel._id.toHexString(), async () => {
                 if (wholeMatch) givenUp.add(duel._id.toHexString());
+                quitters.set(duel._id.toHexString(), team);
                 // Played on the device: nothing to play back, the surrender is booked as it stands.
                 if (duel.setup?.onDevice) return finishOnDevice(duel, (1 - team) as Team, `${duel.players[team]!.name} surrendered`);
                 const entry = await sessionOf(duel).catch((error: unknown) => {
@@ -836,6 +865,12 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
             const entry = { socket, team };
             const set = sockets.get(id) ?? new Set();
             sockets.set(id, set.add(entry));
+            // They've seen it: a "your move" waiting for them is done with.
+            toldTurn.delete(`${id}:${team}`);
+            const userId = duel.players[team]?.userId;
+            if (userId) app.runInBackground(async () => {
+                await notificationsCollection(app.db).updateMany({ userId, type: 'duel-turn', 'payload.duelId': id, readAt: null }, { $set: { readAt: new Date() } });
+            });
             const ping = setInterval(() => socket.ping(), 30_000);
             socket.on('close', () => {
                 clearInterval(ping);
@@ -865,7 +900,10 @@ export function createDuelHub(app: FastifyInstance, { engineHost }: { /** Where 
                         if (other?.userId && duel.seriesId && outcome !== 'cleared') {
                             app.notify(other.userId, 'duel-call-off', duel.seriesId, { from: me.name, setName: duel.setName, duelId: id, done: outcome === 'done' });
                         }
-                    } else if (message.type === 'concede') session.concede(team);
+                    } else if (message.type === 'concede') {
+                        quitters.set(id, team);
+                        session.concede(team);
+                    }
                     else if (!session.answer(team, message.seq, message.answer)) {
                         // Not this player's turn to answer, or an answer that doesn't fit: resend the truth.
                         send(socket, { type: 'state', frames: [], state: stateOf(duel, session, team), cursor: session.cursor(team) });
