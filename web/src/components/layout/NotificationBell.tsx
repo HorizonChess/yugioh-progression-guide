@@ -1,17 +1,15 @@
 "use client";
 
-import { duelPath } from "@/lib/duel-client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { alertRepoError, useProgression } from "@/context/ProgressionContext";
 import { useNotifications } from "@/context/NotificationsContext";
 import { describeNotification, type AppNotification } from "@/lib/duo-client";
+import { useOpenNotification } from "@/lib/open-notification";
+import { disablePush, enablePush, pushStatus, type PushStatus } from "@/lib/push-client";
 
 /** The nav bar's bell: a rival's moves, newest first, each leading to where it's answered. */
 export default function NotificationBell() {
     const { notifications, unread, markAllRead } = useNotifications();
-    const { loadSeries } = useProgression();
-    const router = useRouter();
+    const openNotification = useOpenNotification();
     const [open, setOpen] = useState(false);
     const root = useRef<HTMLDivElement>(null);
 
@@ -34,16 +32,9 @@ export default function NotificationBell() {
         };
     }, [open, close]);
 
-    const go = async (n: AppNotification) => {
+    const go = (n: AppNotification) => {
         close();
-        if (n.type === "invite") return router.push(`/join/?invite=${n.payload.inviteId}`);
-        try {
-            await loadSeries(n.seriesId);
-        } catch (error) {
-            return alertRepoError(error);
-        }
-        if ((n.type === "duel-challenge" || n.type === "duel-accepted" || (n.type === "duel-call-off" && !n.payload.done)) && typeof n.payload.duelId === "string") return router.push(duelPath(n.payload.duelId));
-        router.push(n.type === "report" ? "/record-match" : n.type === "report-confirmed" || n.type === "duel-result" ? "/rewards" : "/timeline");
+        void openNotification(n);
     };
 
     return (
@@ -84,6 +75,51 @@ export default function NotificationBell() {
                             ))}
                         </ul>
                     )}
+                    <PushToggle />
+                </div>
+            )}
+        </div>
+    );
+}
+
+/** The bell's foot: these as notifications on this device, even with the game closed. */
+function PushToggle() {
+    const [status, setStatus] = useState<PushStatus | null>(null);
+    const [busy, setBusy] = useState(false);
+    const [failed, setFailed] = useState(false);
+    useEffect(() => {
+        void pushStatus().then(setStatus, () => setStatus("unsupported"));
+    }, []);
+    if (!status || status === "unsupported") return null;
+
+    const flip = async () => {
+        setBusy(true);
+        setFailed(false);
+        try {
+            setStatus(await (status === "on" ? disablePush() : enablePush()));
+        } catch {
+            setFailed(true);
+            setStatus(await pushStatus().catch(() => "off" as const));
+        } finally {
+            setBusy(false);
+        }
+    };
+    return (
+        <div className="p-3 text-xs text-gray-400 bg-gray-900/60 border-t border-gray-800 sticky bottom-0">
+            {status === "install" ? (
+                <p>To get these on your iPhone even with the game closed, add it to your Home Screen (Share, then Add to Home Screen) and open it from there.</p>
+            ) : status === "blocked" ? (
+                <p>Notifications are blocked for this site. Allow them in your browser&apos;s site settings to get these on this device.</p>
+            ) : (
+                <div className="flex items-center justify-between gap-3">
+                    <span>
+                        {failed
+                            ? "This browser couldn't turn them on (a private window can't get them). Try again?"
+                            : status === "on" ? "These come to this device too, even with the game closed." : "Get these on this device, even with the game closed?"}
+                    </span>
+                    <button type="button" disabled={busy} onClick={() => void flip()} className="shrink-0 px-3 py-1 rounded border border-gray-600 text-white hover:bg-gray-800 disabled:opacity-50">
+                        {status === "on" ? "Turn off" : "Turn on"}
+                    </button>
                 </div>
             )}
         </div>

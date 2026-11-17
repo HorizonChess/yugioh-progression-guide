@@ -1,6 +1,7 @@
 "use client";
 
 import { isValidElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { clearDuelPushes } from "@/lib/push-client";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import { loneMust, zoneKey, type ActionVerb, type DuelCardView, type DuelEvent, type DuelPrompt, type DuelView, type Phase, type PlaceZone, type PromptCard, type Side, type Zone } from "@ygo/shared";
 import { CardCloseUp, CardPlate } from "@/components/card/CardPlate";
@@ -142,6 +143,10 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
     useEffect(() => {
         namesRef.current = name;
     }, [name]);
+    // The duel is open: its "your move" on this device has done its job.
+    useEffect(() => {
+        if (duelId && !local) void clearDuelPushes(duelId).catch(() => undefined);
+    }, [duelId, local]);
 
     // What the player is looking at: the close-up (phones) or the detail panel (wide screens).
     const [closeUp, setCloseUp] = useState<StageCard | null>(null);

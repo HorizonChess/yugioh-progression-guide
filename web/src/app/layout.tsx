@@ -10,6 +10,7 @@ import SeriesGate from "@/components/layout/SeriesGate";
 import CardEraSync from "@/components/layout/CardEraSync";
 import { GameDialogHost } from "@/components/ui/GameDialog";
 import LongPressDetails from "@/components/card/LongPressDetails";
+import PushLanding from "@/components/layout/PushLanding";
 
 
 // The visible height, as --app-h: it follows the browser's own bars as they slide in and out, but
@@ -78,6 +79,7 @@ export default function RootLayout({
           <GameDialogHost />
           {/* A long press on any card (touch screens) opens its details. */}
           <LongPressDetails />
+          <PushLanding />
         </NotificationsProvider>
         </ProgressionProvider>
         </AuthProvider>
