@@ -25,8 +25,20 @@ export const OUT_DIR = join(HERE, "out");
  * Launch Chromium. Set PW_CHANNEL=chrome (or msedge) to use an installed browser
  * instead of Playwright's own download (`npx playwright install chromium`).
  */
-export function launchBrowser() {
-    return chromium.launch(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {});
+export async function launchBrowser() {
+    const browser = await chromium.launch(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {});
+    // RECORDER=1: what the duel recorder (on in development) catches is printed as it happens, in any driver.
+    if (process.env.RECORDER === "1") {
+        const newPage = browser.newPage.bind(browser);
+        browser.newPage = async (...args) => {
+            const page = await newPage(...args);
+            page.on("console", (m) => {
+                if (m.type() === "warning" && m.text().startsWith("[duel recorder]")) console.log(`  ${m.text()}`);
+            });
+            return page;
+        };
+    }
+    return browser;
 }
 
 /**

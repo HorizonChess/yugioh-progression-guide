@@ -18,6 +18,7 @@ import { asset } from "@/lib/utils";
 import { sfx } from "./sfx";
 import { useDuel, type LocalGame } from "./useDuel";
 import { useSteady } from "./useSteady";
+import { clearRecorder, noteEvent, noteRecorder, recorderLog, recorderOn, recorderText, useDuelRecorder } from "./recorder";
 import "./duel-field.css";
 import "./duel-mats.css";
 
@@ -121,6 +122,7 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
     const [shown, setShown] = useState<number[]>([]);
     const namesRef = useRef<(code: number) => string>(() => "a card");
     const onEvent = useCallback((e: DuelEvent, view: DuelView) => {
+        noteEvent(e);
         if (e.k === "reveal" && e.codes.length) setShown((s) => [...new Set([...s, ...e.codes])]);
         if (e.k === "declare" && e.code) setShown((s) => [...new Set([...s, e.code!])]);
         if (!describe(e, view, namesRef.current)) return;
@@ -369,6 +371,28 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
     // Game 1's rock-paper-scissors, when you didn't see it decided (your rival or the bot won and
     // chose at once): its showdown opens the board, and the duel starts when you close it (Duel!),
     // as it does when you won and chose. Once per duel in this browser.
+    // The recorder (off unless switched on): cards that move, vanish or are drawn twice, with what led up to it.
+    const [recording] = useState(recorderOn);
+    // Cards meant to move where they are: the one held up (and, for a hand card, the hand making room),
+    // one breaking, ones being dealt (hidden until their card lands).
+    const recQuiet = useMemo(() => [...(held ? [held.card.uid] : []), ...(held?.zone === "hand" && view ? view.me.hand.map((c) => c.uid) : []), ...effects.destroying, ...effects.dealing], [held, view, effects.destroying, effects.dealing]);
+    useDuelRecorder(recording, view, recQuiet);
+    useEffect(() => {
+        if (recording) noteRecorder("question", prompt ? { seq: state?.seq, kind: prompt.kind } : null);
+    }, [recording, promptKey]); // eslint-disable-line react-hooks/exhaustive-deps -- noted per question
+    useEffect(() => {
+        if (recording) noteRecorder("held", held ? { uid: held.card.uid, zone: held.zone } : null);
+    }, [recording, held]);
+    useEffect(() => {
+        if (recording) noteRecorder("detail", detail);
+    }, [recording, detail]);
+    useEffect(() => {
+        if (recording) noteRecorder("dealing", effects.dealing);
+    }, [recording, effects.dealing]);
+    useEffect(() => {
+        if (recording) noteRecorder("playing", duel.playing);
+    }, [recording, duel.playing]);
+
     const [rpsChecked, setRpsChecked] = useState(false);
     const [rpsOpen, setRpsOpen] = useState(false);
     if (!rpsChecked && state && view) {
@@ -541,6 +565,8 @@ export default function DuelScreen({ duelId, local, onLeave, onNext }: {
             {!state.rival.bot && (state.callOff === "asked"
                 ? option("Take back your request", () => (setDuelMenu("closed"), duel.callOff(false)), { note: `You asked to call the duel off; ${state.rival.name} hasn't answered` })
                 : option("Call the duel off", () => (setDuelMenu("closed"), duel.callOff(true)), { note: `Nobody wins and nothing is recorded, if ${state.rival.name} agrees` }))}
+            {recording && option(`Copy the recorder log (${recorderLog().incidents.length})`, () => void navigator.clipboard?.writeText(recorderText()), { note: "Cards that moved, vanished or were drawn twice, for a bug report" })}
+            {recording && recorderLog().incidents.length > 0 && option("Clear the recorder log", () => (clearRecorder(), setDuelMenu("closed")), { quiet: true })}
             {option("Surrender", () => setDuelMenu("surrender"))}
             {option("Back to the duel", () => setDuelMenu("closed"), { quiet: true })}
         </div>, { text: "Dueling in the app is experimental: if something looks wrong, tell us what happened.", onSwipe: () => setDuelMenu("closed") });
