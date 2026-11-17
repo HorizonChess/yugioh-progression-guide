@@ -339,6 +339,8 @@ export class DuelSession {
     private deckNext: [number | null, number | null] = [null, null];
     /** What effects wrote on cards (by uid, one line per kind of note) and on players. */
     private cardNotes = new Map<string, Map<string, string>>();
+    /** Turns counted on a card by its own effect (Swords of Revealing Light, Wave-Motion Cannon), by uid. */
+    private turnCounts = new Map<string, number>();
     private playerNotes: [Set<string>, Set<string>] = [new Set(), new Set()];
     /** Who the engine last asked to declare something. */
     private announcer: Team | null = null;
@@ -989,7 +991,11 @@ export class DuelSession {
                 }
                 case M.MOVE: {
                     // A card that changes place starts afresh: what effects wrote on it is gone.
-                    if (m.from.location) this.cardNotes.delete(this.tracker.uidAt(m.from.controller, m.from.location, m.from.sequence));
+                    if (m.from.location) {
+                        const gone = this.tracker.uidAt(m.from.controller, m.from.location, m.from.sequence);
+                        this.cardNotes.delete(gone);
+                        this.turnCounts.delete(gone);
+                    }
                     const fromField = m.from.location === L.MZONE || m.from.location === L.SZONE;
                     const uidBefore = fromField ? this.tracker.uidAt(m.from.controller, m.from.location, m.from.sequence) : undefined;
                     // A monster leaving the field for the Graveyard breaks; a spell that just resolved doesn't.
@@ -1019,6 +1025,10 @@ export class DuelSession {
                     break;
                 case M.CARD_HINT: {
                     const uid = this.tracker.uidAt(m.controller, m.location, m.sequence);
+                    if (m.card_hint === 1) {
+                        this.turnCounts.set(uid, Number(m.description));
+                        break;
+                    }
                     const notes = this.cardNotes.get(uid) ?? new Map<string, string>();
                     const d = m.description;
                     if (m.card_hint === 2) notes.set('card', this.engine.name(Number(d)));
@@ -1215,6 +1225,7 @@ export class DuelSession {
             uid,
             ...(notes.length ? { notes } : {}),
             ...(token ? { token } : {}),
+            ...(up && (field || location === L.SZONE) && this.turnCounts.has(uid) ? { turns: this.turnCounts.get(uid) } : {}),
             code: visible ? this.show(c.code ?? 0) : 0,
             faceUp: location === L.HAND ? controller === viewer : up,
             defense: field && (position & P.DEFENSE) !== 0,

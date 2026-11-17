@@ -31,6 +31,8 @@ export interface DuelCardView {
     counters?: number;
     /** The counters by kind ("Spell Counter"), when there are any. */
     counterKinds?: { name: string; count: number }[];
+    /** Turns its own effect has counted (Swords of Revealing Light, Wave-Motion Cannon). */
+    turns?: number;
     /** A token's name: tokens aren't in the card catalog, and some have no picture. */
     token?: string;
     /** What an effect wrote on it: a declared Type or Attribute (DNA Surgery), a named card, a number, a lasting effect. */
