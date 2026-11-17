@@ -1,5 +1,6 @@
 import { API_BASE } from "@/lib/auth-client";
 import { apiRequest } from "@/lib/repo/remote";
+import type { AppNotification } from "@ygo/shared";
 
 /*
  * The account-level side of duo play: invites (by name or link) and the
@@ -14,30 +15,8 @@ export interface Invite {
     expiresAt: string;
 }
 
-export type NotificationType =
-    | "invite"
-    | "invite-accepted"
-    | "invite-declined"
-    | "report"
-    | "report-confirmed"
-    | "report-rejected"
-    | "snatched"
-    | "banlist"
-    | "rival-left"
-    | "duel-challenge"
-    | "duel-accepted"
-    | "duel-declined"
-    | "duel-call-off"
-    | "duel-result";
-
-export interface AppNotification {
-    id: string;
-    type: NotificationType;
-    seriesId: string;
-    payload: Record<string, string | number | boolean>;
-    read: boolean;
-    createdAt: string;
-}
+export type { AppNotification, NotificationType } from "@ygo/shared";
+export { describeNotification } from "@ygo/shared";
 
 /** Invites `duelistName`, or (no name) makes a fresh link code; the old link stops working. */
 export const inviteRival = (seriesId: string, duelistName?: string) =>
@@ -102,36 +81,3 @@ export function liveNotifications(onNotification: (n: AppNotification) => void):
 }
 
 /** One line saying what happened. */
-export function describeNotification({ type, payload: p }: AppNotification): string {
-    const series = `“${p.seriesName}”`;
-    switch (type) {
-        case "invite":
-            return `${p.from} invites you to the duo series ${series}.`;
-        case "invite-accepted":
-            return `${p.from} joined ${series}. Let the duels begin!`;
-        case "invite-declined":
-            return `${p.from} declined your invite to ${series}.`;
-        case "report":
-            return `${p.from} reports that ${p.youWon ? "you" : "they"} won on ${p.setName}. Confirm it?`;
-        case "report-confirmed":
-            return `${p.from} confirmed your ${p.youWon ? "win" : "loss"} on ${p.setName}.`;
-        case "report-rejected":
-            return `${p.from} rejected your result on ${p.setName}. Report it again.`;
-        case "snatched":
-            return `${p.from} used Snatch Steal to copy one of your cards in ${series}.`;
-        case "banlist":
-            return `${p.from} ${p.banned ? "banned" : "unbanned"} a card in ${series}.`;
-        case "rival-left":
-            return `${p.from} left ${series}. The series is paused.`;
-        case "duel-challenge":
-            return `${p.from} challenges you to a duel on ${p.setName}!`;
-        case "duel-accepted":
-            return `${p.from} accepted your challenge on ${p.setName}. Your duel is on!`;
-        case "duel-declined":
-            return `Your challenge on ${p.setName} was declined.`;
-        case "duel-call-off":
-            return p.done ? `Your duel with ${p.from} on ${p.setName} was called off. Nothing was recorded.` : `${p.from} asks to call off your duel on ${p.setName}. Open it to answer.`;
-        case "duel-result":
-            return `You ${p.youWon ? "beat" : "lost to"} ${p.from} on ${p.setName}. It's on the series.`;
-    }
-}

@@ -16,3 +16,4 @@ export * from './duel/protocol';
 export * from './duel/versions';
 export * from './duel/errata-dates';
 export * from './duel/duelists';
+export * from './notifications';
