@@ -133,6 +133,13 @@ export function FieldCard({ card, marks, onTap, onHover, side }: {
                         <b key={card.counters}>{card.counters}</b>
                     </span>
                 ) : null}
+                {/* The turns its own effect has counted (Swords of Revealing Light, Wave-Motion Cannon): a clock and the number. */}
+                {up && card.turns !== undefined ? (
+                    <span className={`df-turns ${card.defense ? "is-def" : ""} ${card.counters ? "is-over" : ""}`} role="img" aria-label={`${card.turns} turn${card.turns === 1 ? "" : "s"}`} title={`${card.turns} turn${card.turns === 1 ? "" : "s"}`}>
+                        <i aria-hidden>⏱</i>
+                        <b key={card.turns}>{card.turns}</b>
+                    </span>
+                ) : null}
             </span>
             {breaking && (
                 <span className={`df-shards ${card.defense ? "is-def" : ""}`} aria-hidden style={{ "--img": `url(${up ? cardImage(card.code) : CARD_BACK})` } as CSSProperties}>

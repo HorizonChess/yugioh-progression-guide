@@ -194,6 +194,22 @@
     box-shadow: 0 0 6px #b07cff; animation: df-orb 1.6s ease-in-out infinite alternate;
 }
 .df-counters b { font: 700 13px/1 var(--font-techno); color: #f1e6ff; animation: df-affect-in 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+/* Turns counted by the card's own effect: a clock and the number, in gold, on the lower left (above its counters, if it has any). */
+.df-turns {
+    position: absolute; z-index: 4; left: calc(50% - var(--cw) / 2 - 6px); bottom: 14px; display: flex; align-items: center; gap: 3px;
+    padding: 2px 6px 2px 4px; border-radius: 999px; pointer-events: none;
+    background: rgba(40, 28, 6, 0.94); border: 1px solid #f5c542; box-shadow: 0 0 10px rgba(245, 197, 66, 0.6), 0 1px 4px rgba(0, 0, 0, 0.7);
+    animation: df-affect-in 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.df-turns.is-over { bottom: 36px; }
+.df-turns.is-def { left: -6px; bottom: calc((var(--ch) - var(--cw)) / 2 + 2px); }
+.df-turns.is-def.is-over { bottom: calc((var(--ch) - var(--cw)) / 2 + 24px); }
+.df-turns i { font-style: normal; font-size: 12px; line-height: 1; color: #f5c542; }
+.df-turns b { font: 700 13px/1 var(--font-techno); color: #fff1c4; animation: df-affect-in 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+.df--phone .df-turns { padding: 1px 4px 1px 3px; gap: 2px; bottom: 10px; }
+.df--phone .df-turns.is-over { bottom: 28px; }
+.df--phone .df-turns i { font-size: 9px; }
+.df--phone .df-turns b { font-size: 10px; }
 @keyframes df-orb { to { box-shadow: 0 0 11px #c49bff; } }
 @keyframes df-affect-in { from { scale: 0.3; opacity: 0; } }
 
@@ -541,6 +557,9 @@
 .df--phone .df-zone--mini .df-card__turn { width: var(--mw); height: calc(var(--mw) * 1.46); }
 .df--phone .df-zone--mini .df-stat { display: none; }
 .df--phone .df-zone--mini::before, .df--phone .df-pile--small::before { font-size: 7px; }
+/* A pile's name stays inside its box ("Banished" is wider than a phone's small pile), and goes when a card lies on it. */
+.df-pile::before { overflow: hidden; white-space: nowrap; }
+.df-pile:has(.df-pile__top)::before { display: none; }
 .df--phone .df-mid { margin: auto 0; }
 .df--phone .df-hand { height: calc(var(--hw) * 1.46 + 6px); margin-top: auto; }
 .df--phone .df-sheet { left: 0; right: 0; bottom: 0; padding-bottom: calc(env(safe-area-inset-bottom) + 14px); }
