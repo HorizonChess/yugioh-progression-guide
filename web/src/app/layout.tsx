@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cinzel, fell, inter, outfit, russo } from "@/app/fonts";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
@@ -25,9 +25,19 @@ const VISIBLE_HEIGHT = `(function(){var d=document.documentElement,v=window.visu
  */
 const IMAGE_READY = `(function(){function m(e){var t=e.target;if(t&&t.tagName==="IMG")t.setAttribute("data-loaded","")}document.addEventListener("load",m,true);document.addEventListener("error",m,true)})()`;
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export const metadata: Metadata = {
   title: "Yu-Gi-Oh! Progression Series",
   description: "Track your progression series journey",
+  // Installed on a phone's home screen it opens as an app (the manifest: app/manifest.ts).
+  applicationName: "YGO Series",
+  appleWebApp: { capable: true, title: "YGO Series", statusBarStyle: "black" },
+  icons: { apple: `${BASE}/icons/apple-touch-icon.png` },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0c0914",
 };
 
 export default function RootLayout({
