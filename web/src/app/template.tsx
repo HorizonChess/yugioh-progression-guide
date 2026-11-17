@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { packInFlight } from "@/lib/pack-flight";
+import { endFlights, packInFlight } from "@/lib/pack-flight";
 import { takeSwipe } from "@/lib/swipe-nav";
 
 export default function Template({ children }: { children: React.ReactNode }) {
@@ -11,6 +12,11 @@ export default function Template({ children }: { children: React.ReactNode }) {
     const [still] = useState(() => typeof window !== "undefined" && packInFlight());
     // Reached by a swipe between tabs (phones): it slides in from the side the finger came from.
     const [swiped] = useState(() => (typeof window !== "undefined" ? takeSwipe() : 0));
+    // Only the pack screen takes a pack flying in from the timeline; anywhere else, one is a ghost.
+    const onPacks = usePathname().startsWith("/packs");
+    useEffect(() => {
+        if (!onPacks) endFlights();
+    }, [onPacks]);
     return (
         <motion.div
             className="h-full"

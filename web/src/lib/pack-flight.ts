@@ -53,6 +53,27 @@ function place(f: Flight) {
     Object.assign(f.el.style, { left: at.left + "px", top: at.top + "px", width: at.width + "px", height: at.height + "px" });
 }
 
+/** Takes off any copy of a pack left on the page that isn't the one flying now. */
+function sweep() {
+    document.querySelectorAll<HTMLElement>("[data-pack-flight]").forEach((el) => {
+        if (el !== flight?.el) el.remove();
+    });
+}
+if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") sweep();
+    });
+}
+
+/**
+ * A page other than the pack screen opened: no pack is bound for it. A copy left on <body> sits
+ * above every page (a ghost of the campaign's pack over a duel), so it goes, flying or not.
+ */
+export function endFlights() {
+    clear();
+    sweep();
+}
+
 /** Whether a pack is on its way to the pack screen (which then shouldn't slide in under it). */
 export const packInFlight = () => flight !== null;
 
@@ -65,6 +86,7 @@ export function launchFlight(index: number) {
     const from = boxOf(art);
     const el = document.createElement("div");
     el.setAttribute("aria-hidden", "true");
+    el.dataset.packFlight = "";
     Object.assign(el.style, {
         position: "fixed", left: from.left + "px", top: from.top + "px", width: from.width + "px", height: from.height + "px",
         zIndex: "400", pointerEvents: "none", filter: "drop-shadow(0 26px 30px rgba(0,0,0,.7))",
@@ -105,7 +127,10 @@ export function landFlight(index: number, target: HTMLElement): (() => void) | n
     const swap = () => {
         if (f.target !== target) return;
         target.style.visibility = "";
-        requestAnimationFrame(() => requestAnimationFrame(() => f.el.remove()));
+        // (A phone pauses frames in a hidden tab: the timer takes the copy off if they never come.)
+        const drop = () => f.el.remove();
+        requestAnimationFrame(() => requestAnimationFrame(drop));
+        setTimeout(drop, 400);
         if (flight === f) flight = null;
     };
     const reveal = () => {

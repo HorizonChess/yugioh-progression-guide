@@ -55,6 +55,8 @@ reports the assertions each driver checks.
   sign-up letter, or moved later from the Campaign list (after "Not now"); they
   land as solo series placed by set name and leave the browser. Same test API as
   `auth.mjs`.
+- `pack-flight-ghost.mjs` — the campaign's pack flying onto the pack screen, and
+  never left over another page (Play / Record, the duel) or on the tab's return.
 
 Extend these rather than writing throwaway drivers. Keep the scripts checked in;
 keep generated images out of git.
