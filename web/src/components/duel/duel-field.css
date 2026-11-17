@@ -6,7 +6,10 @@
     position: fixed;
     inset: 0;
     z-index: 1;
+    /* Clipped, and never scrolled: not by a focus, nor anything brought into view. A scroll here would
+       be taken by the board's flights for every card moving at once (they slide back from where it put them). */
     overflow: hidden;
+    overflow: clip;
     color: #f0e6d2;
     font-family: var(--font-heading);
     user-select: none;
