@@ -223,10 +223,11 @@ export function heuristicAnswer(m: OcgMessage, duel: DuelSession, team: Team, ru
         }
         case M.SELECT_CARD:
         case M.SELECT_TRIBUTE: {
-            // Choosing what to attack: the strongest monster it beats (never one that beats it).
+            // Choosing what to attack: the strongest monster it beats (never one that beats it). An attack
+            // has one target: a question for more (an effect's, say "2 of your rival's monsters") isn't it.
             const attackerAtk = duel.botAttacker;
             duel.botAttacker = null;
-            if (m.type === M.SELECT_CARD && attackerAtk !== null && m.selects.every((c) => c.controller !== team && c.location === L.MZONE)) {
+            if (m.type === M.SELECT_CARD && attackerAtk !== null && m.min === 1 && m.max === 1 && m.selects.every((c) => c.controller !== team && c.location === L.MZONE)) {
                 const hidden = (c: (typeof m.selects)[number]) => !(duel.stats(c).position & P.FACEUP);
                 const value = (c: (typeof m.selects)[number]) => (rules.attacksHidden === false && hidden(c) ? Infinity : toBeat(seenBy(team, c.controller, duel.stats(c), rules.hiddenGuess)));
                 const order = range(m.selects.length).sort((a, b) => value(m.selects[a]!) - value(m.selects[b]!));
@@ -612,6 +613,9 @@ function weigh(duel: DuelSession, team: Team, answers: OcgResponse[], scorer?: S
 }
 
 export function botAnswer(m: OcgMessage, duel: DuelSession, team: Team, solo = false): OcgResponse {
+    // The attacker it declared is forgotten once it's choosing what to do next: a direct attack asks
+    // for no target, and the next card it chooses is for something else.
+    if (m.type === M.SELECT_IDLECMD || m.type === M.SELECT_BATTLECMD) duel.botAttacker = null;
     // Solo practice: the opponent never acts. It ends its turns and never chains; anything it
     // must answer (a hand-size discard) it answers like the bot.
     if (solo) {
