@@ -114,6 +114,13 @@ export function shuffled<T>(list: readonly T[], seed: bigint): T[] {
 
 const PILES = [L.HAND, L.GRAVE, L.REMOVED, L.EXTRA] as const;
 
+/**
+ * A Deck card shown to a player (Painful Choice: five cards shown, the rival picks one), by where it
+ * sits in the Deck: Deck cards have no lasting id, and nothing reorders the Deck between the look and
+ * the pick that follows it.
+ */
+const deckKey = (c: { controller: number; sequence: number }) => `deck:${c.controller}:${c.sequence}`;
+
 /** Follows cards between zones, so a card keeps one uid as it moves (the board animates by it). */
 class Tracker {
     private n = 0;
@@ -935,7 +942,11 @@ export class DuelSession {
                     out.push({ k: 'negated', link: m.chain_size });
                     break;
                 case M.CONFIRM_CARDS:
-                    for (const c of m.cards) this.revealed[m.player as Team]?.add(this.tracker.uidAt(c.controller, c.location, c.sequence));
+                    for (const c of m.cards) {
+                        // (uidAt is still asked for a Deck card: it hands out a fresh id, and the ids after it count on that.)
+                        const uid = this.tracker.uidAt(c.controller, c.location, c.sequence);
+                        this.revealed[m.player as Team]?.add(c.location === L.DECK ? deckKey(c) : uid);
+                    }
                     // Shown to `m.player` (its owner knows them anyway); the board shows them too.
                     if (m.cards.length) out.push({ k: 'reveal', viewer: m.player as Team, owner: m.cards[0]!.controller as Team, location: m.cards[0]!.location, codes: m.cards.map((c) => c.code) });
                     break;
@@ -1218,9 +1229,10 @@ export class DuelSession {
         const uid = c.location !== L.DECK ? this.tracker.uidAt(c.controller, c.location, c.sequence) : undefined;
         // The rival's hidden cards (their Deck, their hand, their Set cards) stay hidden in a question,
         // unless a card showed them to you (Confiscation: "look at your opponent's hand").
+        // (Deck cards have no uid: a shown one is known by its place in the Deck.)
         const hidden = c.controller !== asker && (c.location === L.DECK || c.location === L.HAND || (FIELD_LOCATIONS.has(c.location) && !faceUp(this.positionOf(c))) || (c.location === L.GRAVE && this.graveClosed(c.controller as Team, asker)));
         return {
-            id, code: hidden && !(uid && this.revealed[asker].has(uid)) ? 0 : this.show(c.code), side: c.controller === asker ? 'me' : 'opp',
+            id, code: hidden && !this.revealed[asker].has(uid ?? deckKey(c)) ? 0 : this.show(c.code), side: c.controller === asker ? 'me' : 'opp',
             where: zoneOf(c.location, c.sequence),
             ...(uid ? { uid } : {}),
         };
