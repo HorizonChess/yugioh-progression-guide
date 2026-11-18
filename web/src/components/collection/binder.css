@@ -244,6 +244,8 @@ button.binder-pocket { cursor: pointer; }
 .coll__view-btn--on:hover { color: #2a1c05; }
 
 .cscroll {
+  /* The rows out of view are padding that comes and goes: the browser mustn't shift the scroll to keep up with it. */
+  overflow-anchor: none;
   /* Up and down only: the spare copies peeking out of the last column never make it slide sideways. */
   flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y pinch-zoom; margin: 4px 12px 0; padding: 0 22px 28px; border-radius: 14px 14px 0 0;
   /* quilted black velvet, a warm light falling from above */
